@@ -13,7 +13,7 @@ Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo:
 
 ```env
 # API Configuration
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL=https://URL-DO-BACKEND-RAILWAY/api
 
 # App Configuration
 VITE_APP_NAME=AgilBank
@@ -28,7 +28,7 @@ VITE_DEBUG=true
 npm run dev
 ```
 
-A aplicação estará disponível em `http://localhost:5173`
+A aplicação estará disponível na URL exibida pelo Vite no terminal.
 
 ## 🔐 Credenciais de Teste
 
@@ -66,7 +66,7 @@ O frontend segue o design system do AgilBank com:
 
 ## 🔌 Backend
 
-O frontend se conecta ao backend na porta 3001. Se o backend não estiver rodando, a aplicação usa dados mock para demonstração.
+O frontend se conecta ao backend por `VITE_API_URL`. Em produção/staging, use a URL do backend no Railway terminando em `/api`.
 
 ## 📁 Estrutura
 
@@ -93,7 +93,7 @@ Para fazer deploy:
 ## 🆘 Problemas Comuns
 
 ### Erro de CORS
-Se houver erro de CORS, verifique se o backend está configurado para aceitar requisições de `http://localhost:5173`
+Se houver erro de CORS, verifique se o backend está configurado para aceitar requisições da URL pública do frontend.
 
 ### Porta em uso
 Se a porta 5173 estiver em uso, o Vite automaticamente tentará a próxima porta disponível.

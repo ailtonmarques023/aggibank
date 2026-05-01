@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { authService } from './services/authService';
 
 // Componente Home simples
 const Home = () => {
@@ -50,21 +51,9 @@ const Home = () => {
     }
 
     try {
-      // Chamada real para a API do backend
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          senha: passwordString
-        })
-      });
+      const data = await authService.login(email, passwordString);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         // Salvar token e dados do usuário
         localStorage.setItem('agilbank_token', data.token);
         localStorage.setItem('agilbank_user', JSON.stringify(data.user));
@@ -76,7 +65,7 @@ const Home = () => {
       }
     } catch (err) {
       console.error('Erro no login:', err);
-      setError('Erro ao conectar com o servidor. Verifique se o backend está rodando.');
+      setError(err.message || 'Erro ao conectar com o servidor. Verifique a configuração da API.');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { authService } from '../services/authService';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -43,20 +44,9 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          senha: passwordString
-        })
-      });
+      const data = await authService.login(email, passwordString);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         localStorage.setItem('agilbank_token', data.token);
         localStorage.setItem('agilbank_user', JSON.stringify(data.user));
         navigate('/dashboard');
@@ -65,7 +55,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Erro no login:', err);
-      setError('Erro ao conectar com o servidor. Verifique se o backend está rodando.');
+      setError(err.message || 'Erro ao conectar com o servidor. Verifique a configuração da API.');
     } finally {
       setLoading(false);
     }

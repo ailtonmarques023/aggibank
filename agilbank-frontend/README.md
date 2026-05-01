@@ -47,8 +47,8 @@ npm run dev
 ```
 
 ### 3. Acessar
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3001
+- Frontend: URL exibida pelo Vite ao rodar `npm run dev`
+- Backend: configure `VITE_API_URL` apontando para a URL do backend com `/api`
 
 ## 🔐 Login
 

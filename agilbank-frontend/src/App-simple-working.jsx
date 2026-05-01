@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Terms from './pages/Terms';
+import { authService } from './services/authService';
 
 // Context para autenticação
 const AuthContext = createContext();
@@ -38,20 +39,9 @@ const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          senha: password
-        })
-      });
+      const data = await authService.login(email, password);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         localStorage.setItem('agilbank_token', data.token);
         localStorage.setItem('agilbank_user', JSON.stringify(data.user));
         setIsAuthenticated(true);
@@ -65,7 +55,7 @@ const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Erro no login:', error);
       setLoading(false);
-      return { success: false, message: 'Erro ao conectar com o servidor' };
+      return { success: false, message: error.message || 'Erro ao conectar com o servidor' };
     }
   };
 
