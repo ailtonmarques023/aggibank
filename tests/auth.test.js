@@ -3,6 +3,7 @@ const app = require('../src/server');
 const { prisma } = require('../src/config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logger = require('../src/utils/logger');
 
 describe('Auth Routes', () => {
   beforeEach(() => {
@@ -83,7 +84,7 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /api/auth/login', () => {
-    it('should login successfully with valid credentials', async () => {
+    it('should login successfully with email and valid credentials', async () => {
       const loginData = {
         email: 'joao@test.com',
         senha: '123456',
@@ -113,15 +114,120 @@ describe('Auth Routes', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.token).toBeDefined();
       expect(response.body.data.user.email).toBe(loginData.email);
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: loginData.email },
+        include: {
+          configuracoes: true
+        }
+      });
     });
 
-    it('should return error for invalid credentials', async () => {
+    it('should login successfully with CPF and valid credentials', async () => {
       const loginData = {
-        email: 'joao@test.com',
-        senha: 'wrongpassword'
+        identificador: '09504464408',
+        senha: '123456',
       };
 
-      // Mock do Prisma - usuário não encontrado
+      const mockUser = {
+        id: 'user-id',
+        email: 'joao@test.com',
+        cpf: loginData.identificador,
+        senha: 'hashed_123456',
+        isAtivo: true,
+        isVerificado: true,
+        configuracoes: {}
+      };
+
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.token.create.mockResolvedValue({});
+      bcrypt.compare.mockResolvedValue(true);
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(loginData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.token).toBeDefined();
+      expect(response.body.data.user.email).toBe(mockUser.email);
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { cpf: loginData.identificador },
+        include: {
+          configuracoes: true
+        }
+      });
+    });
+
+    it('should login successfully with CPF sent in email field for compatibility', async () => {
+      const loginData = {
+        email: '09504464408',
+        senha: '123456',
+      };
+
+      const mockUser = {
+        id: 'user-id',
+        email: 'joao@test.com',
+        cpf: loginData.email,
+        senha: 'hashed_123456',
+        isAtivo: true,
+        isVerificado: true,
+        configuracoes: {}
+      };
+
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.token.create.mockResolvedValue({});
+      bcrypt.compare.mockResolvedValue(true);
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(loginData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.token).toBeDefined();
+      expect(response.body.data.user.email).toBe(mockUser.email);
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { cpf: loginData.email },
+        include: {
+          configuracoes: true
+        }
+      });
+    });
+
+    it('should return error for wrong password', async () => {
+      const loginData = {
+        email: 'joao@test.com',
+        senha: '654321',
+      };
+
+      const mockUser = {
+        id: 'user-id',
+        email: loginData.email,
+        senha: 'hashed_123456',
+        isAtivo: true,
+        isVerificado: true,
+        configuracoes: {}
+      };
+
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      bcrypt.compare.mockResolvedValue(false);
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(loginData)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Senha incorreta. Confira os 6 dígitos.');
+      expect(prisma.token.create).not.toHaveBeenCalled();
+    });
+
+    it('should return error when account is not found', async () => {
+      const loginData = {
+        identificador: '09504464408',
+        senha: '123456'
+      };
+
       prisma.user.findUnique.mockResolvedValue(null);
 
       const response = await request(app)
@@ -130,7 +236,12 @@ describe('Auth Routes', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('incorretos');
+      expect(response.body.message).toBe('Conta não encontrada. Abra sua conta AgilBank.');
+      expect(logger.security).toHaveBeenCalledWith('login_failed', {
+        identifierType: 'cpf',
+        reason: 'user_not_found'
+      });
+      expect(bcrypt.compare).not.toHaveBeenCalled();
     });
 
     it('should return error for inactive account', async () => {

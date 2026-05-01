@@ -14,6 +14,24 @@ const { sendEmail } = require('../utils/email');
 const { recordAudit } = require('../utils/auditLog');
 
 const router = express.Router();
+const CPF_LOGIN_REGEX = /^\d{11}$/;
+
+const getLoginIdentifier = (body) => {
+  const rawIdentifier = body.identificador || body.email;
+  const identifier = typeof rawIdentifier === 'string' ? rawIdentifier.trim() : '';
+
+  if (CPF_LOGIN_REGEX.test(identifier)) {
+    return {
+      type: 'cpf',
+      value: identifier.replace(/\D/g, ''),
+    };
+  }
+
+  return {
+    type: 'email',
+    value: identifier.toLowerCase(),
+  };
+};
 
 /**
  * @swagger
@@ -184,21 +202,22 @@ router.post('/register', validateUserRegistration, async (req, res) => {
  */
 router.post('/login', validateLogin, async (req, res) => {
   try {
-    const { email, senha } = req.body;
+    const { senha } = req.body;
+    const loginIdentifier = getLoginIdentifier(req.body);
 
     // Buscar usuário
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { [loginIdentifier.type]: loginIdentifier.value },
       include: {
         configuracoes: true
       }
     });
 
     if (!user) {
-      logger.security('login_failed', { email, reason: 'user_not_found' });
+      logger.security('login_failed', { identifierType: loginIdentifier.type, reason: 'user_not_found' });
       return res.status(401).json({
         success: false,
-        message: 'Email ou senha incorretos',
+        message: 'Conta não encontrada. Abra sua conta AgilBank.',
         code: 'INVALID_CREDENTIALS'
       });
     }
@@ -206,17 +225,17 @@ router.post('/login', validateLogin, async (req, res) => {
     // Verificar senha
     const senhaValida = await bcrypt.compare(senha, user.senha);
     if (!senhaValida) {
-      logger.security('login_failed', { email, reason: 'invalid_password' });
+      logger.security('login_failed', { identifierType: loginIdentifier.type, reason: 'invalid_password' });
       return res.status(401).json({
         success: false,
-        message: 'Email ou senha incorretos',
+        message: 'Senha incorreta. Confira os 6 dígitos.',
         code: 'INVALID_CREDENTIALS'
       });
     }
 
     // Verificar se conta está ativa
     if (!user.isAtivo) {
-      logger.security('login_failed', { email, reason: 'account_inactive' });
+      logger.security('login_failed', { userId: user.id, reason: 'account_inactive' });
       return res.status(401).json({
         success: false,
         message: 'Conta desativada',
@@ -242,7 +261,7 @@ router.post('/login', validateLogin, async (req, res) => {
     const { senha: _, ...userWithoutPassword } = user;
 
     logger.banking('user_login', user.id, {
-      email,
+      email: user.email,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
     });

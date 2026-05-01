@@ -4,9 +4,16 @@ export const authService = {
   async login(email, senha) {
     try {
       const response = await api.post('/auth/login', { email, senha });
-      return response.data;
+      return {
+        ...response.data,
+        ...(response.data?.data || {}),
+      };
     } catch (error) {
-      throw error.response?.data || error;
+      throw error.response?.data || {
+        code: error.code,
+        message: error.message,
+        request: Boolean(error.request),
+      };
     }
   },
 

@@ -3,6 +3,35 @@ import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { authService } from '../services/authService';
 
+const LOGIN_ERROR_MESSAGES = {
+  ACCOUNT_NOT_FOUND: 'Conta não encontrada. Abra sua conta AgilBank.',
+  INVALID_PASSWORD: 'Senha incorreta. Confira os 6 dígitos.',
+  VALIDATION_ERROR: 'Informe um e-mail válido ou CPF com 11 números.',
+};
+
+const isEmail = (identifier) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+const isCpf = (identifier) => /^\d{11}$/.test(identifier);
+const isValidIdentifier = (identifier) => isEmail(identifier) || isCpf(identifier);
+
+const getLoginErrorMessage = (error) => {
+  const errorCode = error?.code || error?.error || error?.type;
+
+  if (LOGIN_ERROR_MESSAGES[errorCode]) {
+    return LOGIN_ERROR_MESSAGES[errorCode];
+  }
+
+  if (
+    error?.request ||
+    error?.code === 'ERR_NETWORK' ||
+    error?.code === 'ECONNABORTED' ||
+    error?.message === 'Network Error'
+  ) {
+    return 'Não foi possível conectar ao AgilBank agora.';
+  }
+
+  return error?.message || 'Não foi possível conectar ao AgilBank agora.';
+};
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState(['', '', '', '', '', '']);
@@ -37,25 +66,32 @@ const Login = () => {
     setLoading(true);
 
     const passwordString = password.join('');
-    if (!email || passwordString.length !== 6) {
-      setError('Por favor, preencha todos os campos corretamente');
+    const identifier = email.trim();
+
+    if (!isValidIdentifier(identifier)) {
+      setError(LOGIN_ERROR_MESSAGES.VALIDATION_ERROR);
+      setLoading(false);
+      return;
+    }
+
+    if (passwordString.length !== 6) {
+      setError('Informe sua senha de 6 dígitos.');
       setLoading(false);
       return;
     }
 
     try {
-      const data = await authService.login(email, passwordString);
+      const data = await authService.login(identifier, passwordString);
 
       if (data.success) {
         localStorage.setItem('agilbank_token', data.token);
         localStorage.setItem('agilbank_user', JSON.stringify(data.user));
         navigate('/dashboard');
       } else {
-        setError(data.message || 'Email ou senha incorretos');
+        setError(getLoginErrorMessage(data));
       }
     } catch (err) {
-      console.error('Erro no login:', err);
-      setError(err.message || 'Erro ao conectar com o servidor. Verifique a configuração da API.');
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }

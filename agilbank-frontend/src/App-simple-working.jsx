@@ -6,6 +6,35 @@ import Dashboard from './pages/Dashboard';
 import Terms from './pages/Terms';
 import { authService } from './services/authService';
 
+const LOGIN_ERROR_MESSAGES = {
+  ACCOUNT_NOT_FOUND: 'Conta não encontrada. Abra sua conta AgilBank.',
+  INVALID_PASSWORD: 'Senha incorreta. Confira os 6 dígitos.',
+  VALIDATION_ERROR: 'Informe um e-mail válido ou CPF com 11 números.',
+};
+
+const isEmail = (identifier) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+const isCpf = (identifier) => /^\d{11}$/.test(identifier);
+const isValidIdentifier = (identifier) => isEmail(identifier) || isCpf(identifier);
+
+const getLoginErrorMessage = (error) => {
+  const errorCode = error?.code || error?.error || error?.type;
+
+  if (LOGIN_ERROR_MESSAGES[errorCode]) {
+    return LOGIN_ERROR_MESSAGES[errorCode];
+  }
+
+  if (
+    error?.request ||
+    error?.code === 'ERR_NETWORK' ||
+    error?.code === 'ECONNABORTED' ||
+    error?.message === 'Network Error'
+  ) {
+    return 'Não foi possível conectar ao AgilBank agora.';
+  }
+
+  return error?.message || 'Não foi possível conectar ao AgilBank agora.';
+};
+
 // Context para autenticação
 const AuthContext = createContext();
 
@@ -38,8 +67,20 @@ const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     setLoading(true);
+    const identifier = email.trim();
+
+    if (!isValidIdentifier(identifier)) {
+      setLoading(false);
+      return { success: false, message: LOGIN_ERROR_MESSAGES.VALIDATION_ERROR };
+    }
+
+    if (password.length !== 6) {
+      setLoading(false);
+      return { success: false, message: 'Informe sua senha de 6 dígitos.' };
+    }
+
     try {
-      const data = await authService.login(email, password);
+      const data = await authService.login(identifier, password);
 
       if (data.success) {
         localStorage.setItem('agilbank_token', data.token);
@@ -50,12 +91,11 @@ const AuthProvider = ({ children }) => {
         return { success: true };
       } else {
         setLoading(false);
-        return { success: false, message: data.message || 'Email ou senha incorretos' };
+        return { success: false, message: getLoginErrorMessage(data) };
       }
     } catch (error) {
-      console.error('Erro no login:', error);
       setLoading(false);
-      return { success: false, message: error.message || 'Erro ao conectar com o servidor' };
+      return { success: false, message: getLoginErrorMessage(error) };
     }
   };
 

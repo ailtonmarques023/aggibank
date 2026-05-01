@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, senha: password });
-      const { token, user } = response.data;
+      const { token, user } = response.data.data || response.data;
 
       localStorage.setItem('agilbank_token', token);
       localStorage.setItem('agilbank_user', JSON.stringify(user));
@@ -41,7 +41,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       return { success: true };
     } catch (error) {
-      console.error('Erro no login:', error);
       setLoading(false);
       return { success: false, message: error.response?.data?.message || 'Erro ao fazer login' };
     }

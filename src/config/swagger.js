@@ -86,16 +86,19 @@ const options = {
         },
         LoginRequest: {
           type: 'object',
-          required: ['email', 'senha'],
+          required: ['senha'],
           properties: {
             email: {
               type: 'string',
-              format: 'email',
-              description: 'Email do usuário',
+              description: 'E-mail cadastrado ou CPF cadastrado com 11 dígitos. Mantido para compatibilidade.',
+            },
+            identificador: {
+              type: 'string',
+              description: 'E-mail cadastrado ou CPF cadastrado com 11 dígitos.',
             },
             senha: {
               type: 'string',
-              description: 'Senha do usuário',
+              description: 'Senha de 6 dígitos',
             },
           },
         },

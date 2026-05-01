@@ -2,19 +2,52 @@ const { body, param, query, validationResult } = require('express-validator');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 
+const isLoginEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const isLoginCpf = (value) => /^\d{11}$/.test(value);
+const hasLoginValue = (value) => value !== undefined && value !== null && String(value).trim() !== '';
+
+const normalizeLoginIdentifier = (value) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  return isLoginCpf(trimmed) ? trimmed : trimmed.toLowerCase();
+};
+
+const redactValidationValue = (field, value) => {
+  const normalizedField = String(field || '').toLowerCase();
+  const isSensitiveField = ['senha', 'password', 'token', 'refreshtoken', 'cpf'].some((sensitive) =>
+    normalizedField.includes(sensitive)
+  );
+
+  if (isSensitiveField || (typeof value === 'string' && /^\d{11}$/.test(value))) {
+    return '[REDACTED]';
+  }
+
+  return value;
+};
+
 // Middleware para tratar erros de validação
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => ({
+    const validationErrors = errors.array();
+    const errorMessages = validationErrors.map(error => ({
       field: error.path,
       message: error.msg,
       value: error.value
     }));
+
+    const loggedErrors = validationErrors.map(error => ({
+      field: error.path,
+      message: error.msg,
+      value: redactValidationValue(error.path, error.value)
+    }));
     
     console.warn('Erro de validação:', {
-      errors: errorMessages,
+      errors: loggedErrors,
       url: req.url,
       method: req.method,
       ip: req.ip
@@ -135,13 +168,40 @@ const validateUserRegistration = [
 // Validações para login
 const validateLogin = [
   body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Email inválido'),
+    .customSanitizer(normalizeLoginIdentifier)
+    .custom((email, { req }) => {
+      if (hasLoginValue(req.body.identificador)) {
+        return true;
+      }
+
+      if (!hasLoginValue(email)) {
+        throw new Error('E-mail ou CPF é obrigatório');
+      }
+
+      if (!isLoginEmail(email) && !isLoginCpf(email)) {
+        throw new Error('Informe e-mail válido ou CPF com 11 dígitos');
+      }
+
+      return true;
+    }),
+
+  body('identificador')
+    .customSanitizer(normalizeLoginIdentifier)
+    .custom((identificador) => {
+      if (!hasLoginValue(identificador)) {
+        return true;
+      }
+
+      if (!isLoginEmail(identificador) && !isLoginCpf(identificador)) {
+        throw new Error('Informe e-mail válido ou CPF com 11 dígitos');
+      }
+
+      return true;
+    }),
   
   body('senha')
-    .notEmpty()
-    .withMessage('Senha é obrigatória'),
+    .matches(/^\d{6}$/)
+    .withMessage('Senha deve conter exatamente 6 dígitos numéricos'),
   
   handleValidationErrors
 ];

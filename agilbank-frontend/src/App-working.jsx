@@ -64,7 +64,6 @@ const Home = () => {
         setError(data.message || 'Email ou senha incorretos');
       }
     } catch (err) {
-      console.error('Erro no login:', err);
       setError(err.message || 'Erro ao conectar com o servidor. Verifique a configuração da API.');
     } finally {
       setLoading(false);
