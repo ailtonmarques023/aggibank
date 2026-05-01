@@ -165,6 +165,17 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     });
 
   } catch (error) {
+    if (error.code === 'P2002') {
+      const targetFields = Array.isArray(error.meta?.target) ? error.meta.target : [String(error.meta?.target || 'cadastro')];
+      const target = targetFields.join(', ');
+      logger.security('registration_duplicate', { target });
+      return res.status(409).json({
+        success: false,
+        message: 'Este e-mail ou CPF já está sendo usado. Faça login ou use outros dados.',
+        code: 'ACCOUNT_ALREADY_EXISTS'
+      });
+    }
+
     logger.error('Erro no registro:', error);
     res.status(500).json({
       success: false,

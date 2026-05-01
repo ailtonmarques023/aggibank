@@ -58,10 +58,11 @@ describe('Auth Routes', () => {
       const response = await request(app)
         .post('/api/auth/register')
         .send(userData)
-        .expect(500);
+        .expect(409);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.code).toBe('INTERNAL_ERROR');
+      expect(response.body.code).toBe('ACCOUNT_ALREADY_EXISTS');
+      expect(response.body.message).toBe('Este e-mail ou CPF já está sendo usado. Faça login ou use outros dados.');
     });
 
     it('should return error for invalid data', async () => {
