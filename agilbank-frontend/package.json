@@ -1,0 +1,27 @@
+{
+  "name": "agilbank-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend do AgilBank - Aplicativo bancário digital",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.13",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.7"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "axios": "^1.12.2",
+    "react-hook-form": "^7.63.0",
+    "react-router-dom": "^7.9.3"
+  }
+}

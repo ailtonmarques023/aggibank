@@ -1,0 +1,263 @@
+# AgilBank Backend
+
+Backend do AgilBank - Sistema Bancário Digital desenvolvido com Node.js, Express e Prisma.
+
+## 🚀 Tecnologias
+
+- **Node.js** - Runtime JavaScript
+- **Express.js** - Framework web
+- **Prisma** - ORM para banco de dados
+- **PostgreSQL** - Banco de dados (Neon)
+- **Redis** - Cache e sessões
+- **JWT** - Autenticação
+- **bcryptjs** - Criptografia de senhas
+- **Jest** - Testes
+- **Swagger** - Documentação da API
+
+## 📋 Pré-requisitos
+
+- Node.js >= 18.0.0
+- npm >= 8.0.0
+- PostgreSQL (ou conta no Neon)
+- Redis (opcional)
+
+## 🛠️ Instalação
+
+1. **Clone o repositório**
+```bash
+git clone <repository-url>
+cd agilbank-backend
+```
+
+2. **Instale as dependências**
+```bash
+npm install
+```
+
+3. **Configure as variáveis de ambiente**
+```bash
+cp env.example .env
+```
+
+Edite o arquivo `.env` com suas configurações:
+```env
+# Configurações do Servidor
+NODE_ENV=development
+PORT=5000
+HOST=0.0.0.0
+
+# Configurações do Banco de Dados Neon
+DATABASE_URL="postgresql://username:password@host:port/database"
+
+# Configurações de Autenticação
+JWT_SECRET=your-super-secret-jwt-key-here
+JWT_EXPIRES_IN=24h
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Configurações de Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+4. **Configure o banco de dados**
+```bash
+# Gerar cliente Prisma
+npm run build
+
+# Executar migrations
+npm run db:migrate
+
+# (Opcional) Popular com dados de exemplo
+npm run db:seed
+```
+
+5. **Inicie o servidor**
+```bash
+# Desenvolvimento
+npm run dev
+
+# Produção
+npm start
+```
+
+## 📚 Documentação da API
+
+Acesse a documentação interativa da API em:
+- **Desenvolvimento**: http://localhost:3001/api/docs
+- **Produção**: https://api.agilbank.com/api/docs
+
+## 🧪 Testes
+
+```bash
+# Executar todos os testes
+npm test
+
+# Executar testes em modo watch
+npm run test:watch
+
+# Executar testes com coverage
+npm test -- --coverage
+```
+
+## 📁 Estrutura do Projeto
+
+```
+src/
+├── config/          # Configurações
+│   ├── database.js  # Configuração do Prisma
+│   └── swagger.js   # Configuração do Swagger
+├── middleware/      # Middlewares
+│   ├── auth.js      # Autenticação JWT
+│   └── validation.js # Validação de dados
+├── routes/          # Rotas da API
+│   ├── auth.js      # Autenticação
+│   ├── user.js      # Usuários
+│   ├── pix.js       # PIX
+│   ├── cards.js     # Cartões
+│   ├── loans.js     # Empréstimos
+│   ├── boletos.js   # Boletos
+│   ├── notifications.js # Notificações
+│   ├── payments.js  # Pagamentos
+│   └── email.js     # Email
+├── utils/           # Utilitários
+│   ├── logger.js    # Sistema de logs
+│   ├── redis.js     # Cache Redis
+│   └── email.js     # Envio de emails
+└── server.js        # Servidor principal
+
+tests/               # Testes
+├── setup.js         # Configuração dos testes
+└── *.test.js        # Testes unitários
+
+prisma/              # Schema do banco
+├── schema.prisma    # Schema Prisma
+└── migrations/      # Migrations
+```
+
+## 🔐 Autenticação
+
+O sistema usa JWT para autenticação com refresh tokens:
+
+```javascript
+// Login
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "senha": "password"
+}
+
+// Resposta
+{
+  "success": true,
+  "data": {
+    "user": { ... },
+    "token": "jwt-token",
+    "refreshToken": "refresh-token"
+  }
+}
+```
+
+## 🏦 Funcionalidades
+
+### 👤 Usuários
+- Registro e login
+- Perfil do usuário
+- Configurações
+- Endereço
+
+### 💳 PIX
+- Cadastro de chaves PIX
+- Envio e recebimento
+- Histórico de transações
+- Limites diários/mensais
+
+### 🎴 Cartões
+- Solicitação de cartões
+- Aprovação/rejeição
+- Bloqueio/desbloqueio
+- Alteração de limites
+
+### 💰 Empréstimos
+- Simulação de empréstimos
+- Solicitação
+- Aprovação baseada em score
+- Controle de parcelas
+
+### 📄 Boletos
+- Geração de boletos
+- Pagamento
+- Validação de código de barras
+- Histórico
+
+### 🔔 Notificações
+- Notificações em tempo real
+- Configurações de preferência
+- Histórico de notificações
+
+## 🚀 Deploy
+
+### Variáveis de Ambiente para Produção
+
+```env
+NODE_ENV=production
+PORT=5000
+DATABASE_URL=postgresql://...
+JWT_SECRET=super-secret-key
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+### Docker (Opcional)
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+## 📊 Monitoramento
+
+- **Logs**: Sistema de logs estruturado com Pino
+- **Health Check**: `/api/health`
+- **Métricas**: Logs de operações bancárias
+- **Auditoria**: Logs de alterações de dados
+
+## 🔒 Segurança
+
+- Autenticação JWT com refresh tokens
+- Criptografia de senhas com bcrypt
+- Rate limiting
+- Validação de dados com Joi
+- CORS configurado
+- Headers de segurança com Helmet
+- Logs de auditoria
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 📞 Suporte
+
+Para suporte, entre em contato:
+- Email: contatoagilbank@gmail.com
+- Documentação: http://localhost:5000/api/docs
+
+---
+
+**AgilBank** - Seu banco digital de confiança 🏦

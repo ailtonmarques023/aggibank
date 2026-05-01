@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String                @id @default(cuid())
+  nomeCompleto        String
+  email               String                @unique
+  cpf                 String                @unique
+  telefone            String?
+  dataNascimento      DateTime
+  senha               String
+  saldoAtual          Decimal               @default(0) @db.Decimal(10, 2)
+  limiteCartao        Decimal?              @db.Decimal(10, 2)
+  limitePixDiario     Decimal?              @db.Decimal(10, 2)
+  limitePixMensal     Decimal?              @db.Decimal(10, 2)
+  scoreCredito        Int                   @default(0)
+  numeroConta         String?               @unique
+  digitoConta         String?
+  agencia             String?
+  isAtivo             Boolean               @default(true)
+  isVerificado        Boolean               @default(false)
+  tokenVerificacao    String?
+  dataVerificacao     DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  afiliacoes          afiliacoes[]
+  boletos             Boleto[]
+  campanhas           campanhas[]
+  cartoes             Cartao[]
+  chavesPix           ChavePix[]
+  configuracoes       ConfiguracoesUsuario?
+  dadosProfissionais  DadosProfissionais?
+  emprestimos         Emprestimo[]
+  endereco            Endereco?
+  gamificacao_usuario gamificacao_usuario?
+  movimentacoes       Movimentacao[]
+  notificacoes        Notificacao[]
+  pagamentos          Pagamento[]
+  tokens              Token[]
+  transacoesPix       TransacaoPix[]
+  auditLogs           AuditLog[]
+
+  @@map("usuarios")
+}
+
+model Endereco {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  cep         String
+  logradouro  String
+  numero      String
+  complemento String?
+  bairro      String
+  cidade      String
+  estado      String
+  pais        String   @default("Brasil")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("enderecos")
+}
+
+model DadosProfissionais {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  profissao     String
+  empresa       String?
+  rendaMensal   Decimal? @db.Decimal(10, 2)
+  tempoTrabalho String?
+  cargo         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("dados_profissionais")
+}
+
+model ConfiguracoesUsuario {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  notificacoesEmail Boolean  @default(true)
+  notificacoesSms   Boolean  @default(true)
+  notificacoesPush  Boolean  @default(true)
+  temaInterface     String   @default("claro")
+  idioma            String   @default("pt-BR")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("configuracoes_usuario")
+}
+
+model Cartao {
+  id              String    @id @default(cuid())
+  userId          String
+  maskedNumber    String
+  last4           String    @db.VarChar(4)
+  validade        String
+  bandeira        String
+  cardToken       String?   @unique
+  limite          Decimal   @db.Decimal(10, 2)
+  saldoUtilizado  Decimal   @default(0) @db.Decimal(10, 2)
+  status          String    @default("pendente")
+  tipo            String    @default("credito")
+  dataSolicitacao DateTime  @default(now())
+  dataAprovacao   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cartoes")
+}
+
+model Emprestimo {
+  id              String    @id @default(cuid())
+  userId          String
+  valorSolicitado Decimal   @db.Decimal(10, 2)
+  valorAprovado   Decimal?  @db.Decimal(10, 2)
+  prazoMeses      Int
+  taxaJuros       Decimal   @db.Decimal(5, 2)
+  valorParcela    Decimal?  @db.Decimal(10, 2)
+  status          String    @default("pendente")
+  dataSolicitacao DateTime  @default(now())
+  dataAprovacao   DateTime?
+  dataQuitacao    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emprestimos")
+}
+
+model Movimentacao {
+  id               String   @id @default(cuid())
+  userId           String
+  tipo             String
+  descricao        String
+  valor            Decimal  @db.Decimal(10, 2)
+  saldoAnterior    Decimal  @db.Decimal(10, 2)
+  saldoAtual       Decimal  @db.Decimal(10, 2)
+  categoria        String?
+  referenceType    String?
+  referenceId      String?
+  idempotencyKey   String?  @unique
+  dataMovimentacao DateTime @default(now())
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("movimentacoes")
+}
+
+model Notificacao {
+  id        String   @id @default(cuid())
+  userId    String
+  titulo    String
+  mensagem  String
+  tipo      String
+  isLida    Boolean  @default(false)
+  dataEnvio DateTime @default(now())
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notificacoes")
+}
+
+model TransacaoPix {
+  id                 String   @id @default(cuid())
+  userId             String
+  chavePix           String
+  valor              Decimal  @db.Decimal(10, 2)
+  descricao          String?
+  status             String   @default("pendente")
+  tipo               String
+  remetente          String?
+  destinatario       String?
+  idempotencyKey     String?  @unique
+  providerReference  String?
+  environment        String   @default("demo")
+  dataTransacao      DateTime @default(now())
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transacoes_pix")
+}
+
+model ChavePix {
+  id           String    @id @default(cuid())
+  userId       String
+  tipo         String
+  valor        String    @unique
+  status       String    @default("pendente")
+  dataCriacao  DateTime  @default(now())
+  dataAtivacao DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chaves_pix")
+}
+
+model Boleto {
+  id             String    @id @default(cuid())
+  userId         String
+  codigoBarras   String    @unique
+  valor          Decimal   @db.Decimal(10, 2)
+  dataVencimento DateTime
+  descricao      String
+  beneficiario   String
+  status         String    @default("pendente")
+  dataPagamento  DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("boletos")
+}
+
+model Pagamento {
+  id                 String    @id @default(cuid())
+  userId             String
+  valor              Decimal   @db.Decimal(10, 2)
+  tipo               String
+  status             String    @default("pendente")
+  chavePix           String?
+  codigoBarras       String?
+  idempotencyKey     String?   @unique
+  providerReference  String?
+  environment        String    @default("demo")
+  dataPagamento      DateTime?
+  createdAt          DateTime  @default(now())
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pagamentos")
+}
+
+model Token {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  tipo       String
+  expiraEm   DateTime
+  isAtivo    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tokens")
+}
+
+model afiliacoes {
+  id         String    @id
+  userId     String
+  afiliadoId String
+  comissao   Decimal   @db.Decimal(5, 2)
+  status     String    @default("ativa")
+  dataInicio DateTime  @default(now())
+  dataFim    DateTime?
+  createdAt  DateTime  @default(now())
+  usuarios   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model campanhas {
+  id         String    @id
+  userId     String
+  nome       String
+  descricao  String
+  orcamento  Decimal   @db.Decimal(10, 2)
+  status     String    @default("ativa")
+  dataInicio DateTime  @default(now())
+  dataFim    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+  usuarios   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model gamificacao_usuario {
+  id        String   @id
+  userId    String   @unique
+  xp        Int      @default(0)
+  nivel     Int      @default(1)
+  streak    Int      @default(0)
+  badges    String[] @default([])
+  ranking   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  usuarios  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}

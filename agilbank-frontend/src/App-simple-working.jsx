@@ -1,0 +1,162 @@
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Terms from './pages/Terms';
+
+// Context para autenticação
+const AuthContext = createContext();
+
+// Provider de autenticação
+const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('agilbank_token');
+      const userData = localStorage.getItem('agilbank_user');
+      
+      if (token && userData && userData !== 'undefined' && userData !== 'null') {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser && typeof parsedUser === 'object') {
+          setIsAuthenticated(true);
+          setUser(parsedUser);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
+      localStorage.removeItem('agilbank_token');
+      localStorage.removeItem('agilbank_user');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const login = async (email, password) => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          senha: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('agilbank_token', data.token);
+        localStorage.setItem('agilbank_user', JSON.stringify(data.user));
+        setIsAuthenticated(true);
+        setUser(data.user);
+        setLoading(false);
+        return { success: true };
+      } else {
+        setLoading(false);
+        return { success: false, message: data.message || 'Email ou senha incorretos' };
+      }
+    } catch (error) {
+      console.error('Erro no login:', error);
+      setLoading(false);
+      return { success: false, message: 'Erro ao conectar com o servidor' };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('agilbank_token');
+    localStorage.removeItem('agilbank_user');
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Hook para usar o contexto
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de AuthProvider');
+  }
+  return context;
+};
+
+// Componente para rotas protegidas
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+// Componente para rotas públicas (redirecionar se logado)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+};
+
+// Componente principal da aplicação
+const App = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Rotas públicas */}
+          <Route path="/" element={
+            <PublicRoute>
+              <Home />
+            </PublicRoute>
+          } />
+          
+          <Route path="/terms" element={<Terms />} />
+
+          {/* Rota de login */}
+          <Route path="/login" element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } />
+
+          {/* Rotas protegidas */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Rota 404 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+};
+
+export default App;

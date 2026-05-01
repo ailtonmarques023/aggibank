@@ -1,0 +1,9 @@
+@echo off
+echo 🛑 Parando processos Node.js existentes...
+taskkill /f /im node.exe >nul 2>&1
+
+echo ⏳ Aguardando liberação da porta...
+timeout /t 2 /nobreak >nul
+
+echo 🚀 Iniciando servidor AgilBank...
+npm run dev
