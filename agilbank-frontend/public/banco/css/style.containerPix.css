@@ -1,0 +1,405 @@
+   /* botao animado */
+        .botao-animado {
+            transition: transform 0.2s ease;
+        }
+        /* botao animado selecionado */
+        .botao-animado.selecionado {
+            transform: scale(1.1);
+        }
+        /* barra superior */
+        .headerPix {
+            background: #0066b3;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            width: 100%;
+            height: 50px;
+            position: absolute;
+            top: 0;
+            left: 0;
+
+        }
+        /* icone esquerdo */
+        .header-leftPix {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* icone esquerdo hover */
+        .header-leftPix i {
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        /* icone esquerdo hover */
+        .header-leftPix i:hover {
+            animation: moveLeft 0.5s ease;
+        }
+        /* titulo da barra superior */
+        .header-titlePix {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        /* icone direito */
+        .header-rightPix i {
+            color: white;
+            font-size: 20px;
+        }
+
+        /* data-hora-container */
+        .data-hora-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 10px;
+            color: #808080;
+            font-size: 10px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        .data-hora {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .data {
+            display: inline;
+        }
+
+        /* action-button-icon */
+        .action-button-icon {
+            width: 50px;
+            height: 50px;
+            background-color: #e6f3ff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* action-button-icon i */
+        .action-button-icon i {
+            color: #0066b3;
+            font-size: 20px;
+        }
+        /* action-button span */
+        .action-button span {
+            font-size: 12px;
+            color: #333;
+        }
+          /* inicio do Container do Pix */
+        .pix-container {
+            width: 100%;
+            background-color: #fff;
+            max-width: 480px;
+            padding: 40px;
+            min-height: 100vh;
+            padding-bottom: 60px;
+            position: relative;
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+        /* container */
+        .container {
+            visibility: visible; /* Visível por padrão */
+            display: block; /* Visível por padrão */
+            padding-bottom: 60px;
+        }
+        /* pix-container h2 */
+        .pix-container h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #0066b3;
+        }
+        /* pix-container pix-option */
+        .pix-container .pix-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        /* pix-container pix-option last-child */
+        .pix-container .pix-option:last-child {
+            border-bottom: none;
+        }
+        /* pix-container pix-option i */
+        .pix-container .pix-option i {
+            font-size: 24px;
+            color: #0066b3;
+        }
+
+          /* pix-container pix-option h3 */
+          .pix-container .pix-option h3 {
+            font-size: 14px;
+            color: #333;
+        }
+      
+        /* pix-container pix-option p */
+        .pix-container .pix-option p {
+            font-size: 14px;
+            color: #777;
+        }
+        /* Pix Options */
+        .pix-options {
+            background-color: rgba(243, 238, 238, 0.538);
+            margin: 15px;
+            border-radius: 12px;
+            width: auto;
+            right: auto;
+
+        }
+        /* pix-option */
+        .pix-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #cfcccc;
+        }
+        /* pix-option last-child */
+        .pix-option:last-child {
+            border-bottom: none;
+        }
+        /* pix-option-left */
+        .pix-option-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* Animação da setinha do pix */
+        .fas.fa-chevron-right {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .fas.fa-chevron-right:active {
+            transform: translateX(-5px) scale(0.95);
+        }
+
+        .fas.fa-chevron-right:hover {
+            transform: scale(1.2);
+            color: #0066b3;
+        }
+        /* pix-option-icon */
+        .pix-option-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #e6f3ff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* pix-option-icon i */
+        .pix-option-icon i {
+            color: #0066b3;
+            font-size: 20px;
+        }
+        /* pix-option-text h3 */
+        .pix-option-text h3 {
+            font-size: 16px;
+            color: #333;
+        }
+        /* pix-option-right */
+        .pix-option-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* new-badge */
+        .new-badge {
+            background-color: #32d74b;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        /* pix-option-right i */
+        .pix-option-right i {
+            color: #666;
+        } 
+        /* Animação dos elementos pix-option */
+        .pix-option {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .pix-option:hover {
+            background: #f8f9fa;
+            transform: scale(1.02);
+        }
+
+        .pix-option:active {
+            transform: scale(0.98);
+            background: #e6f3ff;
+        } 
+      
+
+        /* qr-code-container */
+        .qr-code-container {
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0, 102, 179, 0.2);
+            border-radius: 12px;
+            margin: 20px auto 0;
+            width: 200px;
+            display: block;
+            position: relative;
+        }
+
+                           
+        /* Animação do ícone de voltar */
+        @keyframes moveLeft {
+            0% {
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(-5px);
+            }
+            100% {
+                transform: translateX(0);
+            }
+        }
+       
+        /* pix-container */
+        .pix-container {
+            display: none;
+        }
+
+         /* Barra Superior */
+         .header {
+            background: #0066b3;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            height: 50px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            align-items: center;
+            left: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-left i {
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .header-left i:hover {
+            animation: moveLeft 0.5s ease;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .header-right i {
+            color: white;
+            font-size: 20px;
+        }
+        /*botao cadastre sua chave pix*/
+        .phone-number {
+            margin: 20px;
+            color: #fff;
+            background-color: #0066b3;
+            padding: 8px 8px;
+            font-size: 12px;
+            display: block;
+            text-align: center;
+            border-radius: 10px;
+            width: 90%;
+            margin: 20px;
+            cursor: pointer;
+            border: none;
+
+        }
+            /* Animação do botão cadastre sua chave pix */
+            .phone-number {
+                transition: all 0.3s ease;
+                cursor: pointer;
+            }
+            .phone-number:hover {
+                background: #0080e0;
+                transform: scale(1.02);
+            }
+            .phone-number:active {
+                transform: scale(0.98);
+                background: #0066b3;
+            }
+
+        
+        /* Action Buttons */
+        .action-buttonsPix {
+            display: flex;
+            border-radius: 5%;
+            justify-content: space-around;
+            background-color: rgba(242, 239, 239, 0.508);
+            padding: 15px 15px;
+            margin-top: 15px;
+            gap: 10px;   
+        }
+
+        .action-buttonPix {
+            width: 120px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            border-radius: 10px;
+            padding: 10px 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-buttonPix-icon {
+            width: 30px;
+            height: 30px;
+            background-color: #e6f3ff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .action-buttonPix-icon i {
+            color: #0066b3;
+            font-size: 20px;
+        }
+
+        .action-buttonPix span {
+            font-size: 10px;
+            color: #333;
+            text-align: center;
+        }
+        /*aniação do botão pix */
+        .action-buttonPix {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .action-buttonPix:hover {
+            background: #e2eaff39;
+            transform: scale(1.05);
+        }
+        .action-buttonPix:active {
+            transform: scale(1.5);
+            background: #edeeee;
+        }
+

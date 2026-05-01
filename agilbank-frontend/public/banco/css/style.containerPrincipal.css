@@ -1,0 +1,652 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+                
+        }
+        /* Fundo */
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* animação do botão */
+        .botao-animado {
+            transition: transform 0.2s ease;
+        }
+        /* animação do botão */
+        .botao-animado.selecionado {
+            transform: scale(1.1); /* Ajuste a escala conforme necessário */
+        }
+        /* Barra Superior */
+        .top-bar {
+            background: #0066b3;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            height: 50px;
+            position: relative;
+        }
+        /* logo */
+        .top-bar .logo {
+            display: flex;
+            align-items: center;
+            z-index: 1;
+        }
+        /* logo */
+        .top-bar .logo img {
+            height: 28px;
+        }
+
+        /* icones */
+        .top-bar .icons {
+            display: flex;
+            gap: 15px;
+            cursor: pointer;
+            align-items: center;
+        }
+        /* icones */
+        .top-bar .icons i {
+            font-size: 20px;
+        }
+        /* Estilo do ponto laranja */
+        .notification-badge {
+            display: none; /* Inicialmente oculto */
+            width: 8px; /* Tamanho do ponto */
+            height: 8px; /* Tamanho do ponto */
+            background-color: orange; /* Cor do ponto */
+            border-radius: 50%; /* Deixa o ponto redondo */
+            position: absolute; /* Posiciona o ponto em relação ao ícone */
+            top: 0; /* Ajuste a posição vertical */
+            right: 0; /* Ajuste a posição horizontal */
+            transform: translate(50%, -50%); /* Centraliza o ponto */
+        }
+        /* Ajuste no ícone de notificação para permitir o posicionamento do ponto */
+        .fa-bell {
+            position: relative; /* Permite que o ponto seja posicionado em relação ao ícone */
+        }
+        /* Área do Usuário */
+        .user-info {
+            background: linear-gradient(to right, #0066b3, #007fd4);
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+        }
+        /* avatar */
+        .user-info .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ccc;
+            margin-right: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            font-size: 20px;
+        }
+        /* detalhes */
+        .user-info .details {
+            flex: 1;
+        }
+        /* nome */
+        .user-info .details h2 {
+            font-size: 18px;
+            font-weight: normal;
+            margin-bottom: 5px;
+        }
+        /* email */
+        .user-info .details p {
+            font-size: 14px;
+            color: #fff;
+        }
+        /* botão compartilhar */
+.user-info .share-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* botão sair na área do usuário */
+.btn-logout-user {
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-logout-user:hover {
+    background: rgba(220, 53, 69, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-logout-user:active {
+    transform: translateY(0);
+}
+
+.btn-logout-user i {
+    font-size: 14px;
+}
+
+.btn-logout-user span {
+    font-size: 11px;
+}
+        /* Saldo */
+        .saldo {
+            background: linear-gradient(to right, #0066b3, #007fd4);
+            padding: 10px 15px 20px;
+            color: white;
+        }
+        /* saldo-container */
+        .saldo .saldo-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 5px;
+            position: relative;
+        }
+        /* saldo-container span */
+        .saldo .saldo-container span {
+            font-size: 16px;
+        }
+        /* saldo-value */
+        .saldo .saldo-value {
+            background: rgba(255, 255, 255, 0.1);
+            min-width: 320px;
+            border-radius: 5px;
+            padding: 10px 8px;
+            flex: 1;
+            font-size: 18px;
+            z-index: 15;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* status */
+        .status{
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+        
+        /* valor-saldo */
+        .valor-saldo {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        /* Responsividade para o status em telas menores */
+        @media (max-width: 480px) {
+            .status {
+                font-size: 11px;
+            }
+            .valor-saldo {
+                font-size: 16px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .status {
+                font-size: 10px;
+            }
+            .valor-saldo {
+                font-size: 15px;
+            }
+        }
+        .saldo .eye-btn {
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Barra de Pesquisa */
+        .search-bar {
+            background: white;
+            margin: 15px;
+            margin-bottom: 5px;
+            padding: 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        /* barra de pesquisa*/
+        .search-bar i {
+            color: #999;
+            font-size: 18px;
+        }
+        /* barra de pesquisa input */
+        .search-bar input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 16px;
+            background: transparent;
+        }
+        .top-search-container {
+            position: relative;
+        }
+        /* barra de pesquisa */
+        .top-search-bar {
+            position: fixed;
+            top: 10px; /* Ajuste a distância do topo */
+            left: 50%; /* Centraliza horizontalmente */
+            transform: translateX(-50%); /* Ajuste fino do centro */
+            width: 90%; /* Ajuste a largura */
+            max-width: 600px; /* Largura máxima para telas grandes */
+            background-color: rgba(255, 255, 255, 0.9); /* Fundo com transparência */
+            border-radius: 20px; /* Bordas arredondadas */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+            border: 1px solid rgba(200, 200, 200, 0.5); /* Borda suave */
+            padding: 10px 20px; /* Preenchimento interno */
+            box-sizing: border-box;
+            z-index: 1000;
+        }
+        /* barra de pesquisa input */
+        .top-search-bar input[type="text"] {
+            width: 100%;
+            border: none;
+            background-color: transparent; /* Campo de entrada transparente */
+            outline: none; /* Remove a borda de foco padrão */
+            font-size: 16px;
+        }
+        /* barra de pesquisa hidden */
+        .top-search-bar.hidden {
+    display: none;
+}
+
+/* Menu do Usuário */
+.user-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.user-menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: white;
+    font-size: 14px;
+}
+
+.user-menu-trigger:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.user-menu-name {
+    font-weight: 500;
+    display: none; /* Oculta o nome do usuário */
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    min-width: 250px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s;
+    margin-top: 8px;
+}
+
+.user-menu-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.user-menu-header i {
+    font-size: 24px;
+    color: #0066b3;
+}
+
+.user-menu-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-menu-fullname {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.user-menu-email {
+    color: #666;
+    font-size: 12px;
+}
+
+.user-menu-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 8px 0;
+}
+
+.user-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    color: #333;
+    font-size: 14px;
+}
+
+.user-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.user-menu-item i {
+    width: 16px;
+    color: #666;
+}
+
+.logout-item {
+    color: #dc3545;
+}
+
+.logout-item i {
+    color: #dc3545;
+}
+
+.logout-item:hover {
+    background: #fff5f5;
+}
+
+/* Responsividade do menu */
+@media (max-width: 768px) {
+    .user-menu-name {
+        display: none;
+    }
+    
+    .user-menu-dropdown {
+        right: -10px;
+        min-width: 200px;
+    }
+}
+
+
+        /* barra de pesquisa icon */
+        .top-search-icon {
+            cursor: pointer;
+        }
+        /* Movimente sua conta */
+        .movimente {
+            background: #f0f2f5;
+            padding: 15px;
+        }
+
+        /* Animação para os ícones */
+        .movimente .icon-container {
+            transition: transform 0.2s ease;
+        }
+
+        .movimente .icon-container:hover,
+        .movimente .icon-container:active,
+        .movimente .icon-container:focus {
+            transform: scale(1.1);
+        }
+
+        .movimente .icon-container:active {
+            transform: scale(0.95);
+        }
+
+        .movimente h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+            margin-top: 0%;
+            color: #333;
+        }
+        /* banner-divulgação */
+        .banner-divulgação {
+            position: relative;
+            overflow: hidden;
+            height: 250px;
+            border-radius: 12px;
+            margin: 15px;
+        }
+
+        .bannerimg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .banner-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 50%, rgba(0,0,0,0.7) 100%);
+        }
+
+        .banner-content {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 40%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 20px;
+        }
+
+        .bannerp {
+            color: white;
+            font-size: 12px;
+            text-align: right;
+        }
+
+        .bannerh {
+            color: white;
+            font-size: 16px;
+            text-align: right;
+            margin-top: 8px;
+        }
+        /* Animação do banner ao tocar/scroll */
+        .banner-divulgação {
+            transition: all 0.2s ease-out;
+            transform-origin: center;
+            will-change: transform;
+            touch-action: pan-y;
+        }
+
+        @keyframes pulsar {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.0005);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+ 
+        .banner-divulgação {
+            animation: pulsar 3s ease-in-out infinite;
+        }
+
+        .banner-divulgação:hover,
+        .banner-divulgação:active {
+            animation-play-state: paused;
+            transform: scale(1.005);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        /* Menu de atalhos */
+        .menu {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.258);
+        }
+        /* menu-item */
+        .menu .menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+        }
+        /* icon-container */
+        .menu .menu-item .icon-container {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #0066b3;
+            background-color: #e6f3ff;
+            
+            
+        }
+        /* icon-container i */
+        .menu .menu-item i {
+            font-size: 22px;
+        }
+        /* menu-item span */
+        .menu .menu-item span {
+            font-size: 12px;
+            color: #333;
+            line-height: 1.2;
+            
+        }
+        /* Serviços e Produtos */
+        .services-header {
+            padding: 20px 15px 5px;
+            font-size: 16px;
+            color: #333;
+        }
+        /* serviços e produtos */
+        .services {
+            width: calc(100% - 30px);
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 15px;
+        }
+        /* service-item */
+        .service-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        /* service-item hover */
+        .service-item:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        /* service-item icon-container */
+        .service-item .icon-container {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #e6f3ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        /* service-item icon-container i */
+        .service-item .icon-container i {
+            color: #0066b3;
+            font-size: 20px;
+        }
+        /* service-item h3 */
+        .service-item h3 {
+            font-size: 12px;
+            color: #333;
+            text-align: center;
+            margin: 0;
+        }
+        /* service-item p */
+        .service-item p {
+            color: #777;
+            font-size: 13px;
+        }
+        /* service-item time */
+        .service-item .time {
+            color: #999;
+            font-size: 12px;
+        }
+         /* Código de Barras */
+        .barcode {
+            text-align: center;
+            margin: 15px;
+        }
+        /* imagem do codigo de barras */
+        .barcode img {
+            width: 100%;
+            max-width: 300px;
+        }

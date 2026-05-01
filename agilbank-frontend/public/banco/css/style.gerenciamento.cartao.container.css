@@ -1,0 +1,216 @@
+/* Estilos para o container de gerenciamento do cartão */
+        .cartao-gerenciamento-container {
+            display: none;
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            background-color: white;
+            color: #333;
+            padding-bottom: 60px;
+            flex: 1;
+            flex-direction: column;
+        }
+        /* cartao-header */
+        .cartao-header {
+            background-color: #0066b3;
+            padding: 20px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* limite-title */
+        .limite-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        /* cartoes-title */
+        .cartoes-title {
+            font-size: 20px;
+            margin-top: 15px;
+            margin-left: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        /* mais-title */
+        .mais-title {
+            font-size: 20px;
+            margin: 0;
+            margin-bottom: 15px;
+            margin-left: 20px;
+            color: #333;
+        }
+        /* mais-text */
+        .mais-text {
+            color: #333;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        /* cartoes-grid */
+        .cartoes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 0 15px;
+        }
+        
+        /* cartao-item */
+        .cartao-item {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 160px;
+            border: 2px solid #0066b3;
+            box-shadow: 0 4px 8px rgba(0, 102, 179, 0.2);
+            transition: all 0.3s ease;
+        }
+        /* cartao-item hover */
+        .cartao-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 102, 179, 0.3);
+        }
+        /* cartao-item .cartao-nome */
+        .cartao-item .cartao-nome {
+            font-size: 16px;
+            color: #0066b3;
+            margin-bottom: 10px;
+        }
+        /* cartao-item .cartao-numero */
+        .cartao-item .cartao-numero {
+            color: #0066b3;
+            font-size: 14px;
+        }
+        /* cartao-item .cartao-action */
+        .cartao-item .cartao-action {
+            background: rgba(0, 102, 179, 0.1);
+            border: 1px solid #0066b3;
+            padding: 10px;
+            border-radius: 8px;
+            color: #0066b3;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        /* cartao-item.virtual */
+        .cartao-item.virtual {
+            background: #0066b3;
+        }
+        /* action-button */
+        .action-button {
+            background: #ffffff;
+            border: 1px solid #0066b3;
+            padding: 12px;
+            border-radius: 8px;
+            color: #0066b3;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 102, 179, 0.1);
+        }
+
+        .action-button:hover {
+            background: #0066b3;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 102, 179, 0.2);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 102, 179, 0.1);
+        }
+        /* cartao-item.virtual .cartao-nome */
+        .cartao-item.virtual .cartao-nome {
+            font-size: 16px;
+            color: white;
+            margin-bottom: 10px;
+        }
+        /* cartao-item.virtual .cartao-numero */
+        .cartao-item.virtual .cartao-numero {
+            color: white;
+            font-size: 14px;
+        }
+        /* cartao-item.virtual .cartao-action */
+        .cartao-item.virtual .cartao-action {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid white;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        /* cartao-actions */
+        .cartao-nome {
+            font-size: 16px;
+            color: white;
+            margin-bottom: 10px;
+        }
+        /* cartao-numero */
+        .cartao-numero {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+        /* cartao-action */
+        .cartao-action {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        /* cartao-actions */
+        .cartao-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 0 15px;
+        }
+       
+        /* mais-grid */
+        .mais-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        /* mais-item */
+        .mais-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        /* mais-icon */
+        .mais-icon {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        /* mais-icon i */
+        .mais-icon i {
+            color: #0066b3;
+            font-size: 20px;
+        }
+        /* mais-text */
+        .mais-text {
+            color: #333;
+            font-size: 12px;
+            line-height: 1.2;
+        }

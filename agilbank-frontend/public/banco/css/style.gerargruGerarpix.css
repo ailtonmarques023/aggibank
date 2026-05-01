@@ -1,0 +1,178 @@
+/* container para gerar boleto, gerar pix para pagamento */
+    .container-gerar-boleto-pix {
+        display: none;
+        background-color: #fff;
+        padding: 10px;
+        min-height: 100vh;
+        margin-top: 100px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;  
+    }
+    
+    .content-gerar-boleto-pix {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 15px;
+        max-width: 800px;
+        margin-top: 20px;
+        margin-bottom: 50px;
+
+    }
+
+    .content-gerar-boleto-pix h2 {
+        color: #003366;
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .info-pagamento {
+        margin-bottom: 20px;
+    }
+
+    .detalhe-pagamento {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detalhe-pagamento .label {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .detalhe-pagamento .valor {
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .acoes-pagamento {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 20px 0;
+    }
+
+    .btn-gerar-boleto,
+    .btn-gerar-pix {
+        background-color: #003366;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-gerar-boleto:hover,
+    .btn-gerar-pix:hover {
+        background-color: #002244;
+    }
+
+    .observacao {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 15px;
+    }
+
+    .observacao p {
+        color: #666;
+        font-size: 12px;
+        margin: 3px 0;
+    }
+    /*cabeçario do container de gerar boleto e pix*/
+      /* cabeçario*/
+      .header-gru {
+        background-color: #fff;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin: 0;
+        width: 100%;
+        height: 100px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 100;
+    }
+
+
+    .logo-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .logo-text h1 {
+        color: #003366;
+        font-size: 30px;
+        margin-left: 0px;
+    }
+
+    .logo-text span {
+        color: #666;
+        font-size: 12px;
+    }
+
+    .welcome-text {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        margin-top: 8px;
+        gap: 50px;
+        text-align: center;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .welcome-text span {
+        color: #666;
+        font-size: 14px;
+        display: inline;
+        margin-top: 15px;
+        text-align: center;
+    }
+
+    .welcome-text .username {
+        color: #003366;
+        font-weight: bold;
+    }
+
+    .nav-buttons {
+        display: flex;
+        gap: 5px;
+        justify-content: flex-end;
+        margin-right: 5px;
+        position: absolute;
+        top: 20px;
+        right: 2px;
+    }
+
+    .nav-btn {
+        background-color: #003366;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .nav-btn:hover {
+        background-color: #002244;
+    }

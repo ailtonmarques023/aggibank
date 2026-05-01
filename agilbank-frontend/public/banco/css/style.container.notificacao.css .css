@@ -1,0 +1,163 @@
+
+/* ESTILO NOTIFICATION */
+.notificação {
+    display: none;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 15px;
+    align-items: center;
+    margin-bottom: 100px;
+}
+/* notificationContainer */
+.notificationContainer {
+    background-color: #fff;
+    border-radius: 10px;
+    width: 95%;
+    right: auto;
+    padding: 15px;
+    justify-content: center;
+    margin-left: 10px;
+    margin-right: 10px;
+    align-items: center;
+    margin-bottom: 100px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);    
+}
+/* status-bar */
+.status-bar {
+    background-color: #1a8733;
+    color: white;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+}
+/* menu-button */
+.menu-button {
+    font-size: 24px;
+    cursor: pointer;
+}
+/* tabs */
+.tabs {
+    display: flex;
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
+    margin-top: 60px;
+    width: 95%;
+    border-radius: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+/* tab */
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 15px;
+    font-size: 16px;
+    color: #666;
+    cursor: pointer;
+}
+/* tab active */
+.tab.active {
+    color: #065cbe;
+    border-bottom: 3px solid #065cbe;
+    font-weight: bold;
+}
+/* notification-title */
+.notification-title {
+    font-size: 14px;
+    margin-bottom: 5px;
+    margin-left: 15px;
+}
+/* justify-text */
+.justify-text {
+    text-align: justify;
+    text-indent: 8px;
+}
+/* notification-action */
+.notification-action {
+    color: #086eda;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 10px; 
+    padding-top: 0px;
+}
+/* full-notification */
+.full-notification {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.full-notification-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 90%;
+    width: 400px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+/* full-notification-title */
+.full-notification-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+/* full-notification-description */
+.full-notification-description {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.6;
+}
+/* close-button */
+.close-button {
+    display: block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #0066b3;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+}
+/* close-button hover */
+.close-button:hover {
+    background-color: #0066b3
+}
+/* no-notifications */
+.no-notifications {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-size: 16px;
+}
+/* notification-list */
+.notification-list{
+    padding-top: 15px;
+}
+/* notification-description */
+.notification-description {
+    color: #666;
+    margin-left: 15px;
+    margin-right: 15px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limita o texto a 2 linhas */
+    -webkit-box-orient: vertical;
+}
+/* notification-description expanded */
+.notification-description.expanded {
+    -webkit-line-clamp: unset; /* Remove o limite de linhas */
+}

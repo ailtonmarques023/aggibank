@@ -1,0 +1,359 @@
+/* Container principal do crédito pessoal */
+.creditoPessoalContainer {
+    display: none;
+    width: 100%;
+    height: 100vh;
+    max-width: 480px;
+    background-color: #fff;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    overflow-y: auto;
+}
+
+/* Header */
+.header {
+    width: 100%;
+    padding: 1rem;
+    background-color: #0066b3;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    top: 0;
+    z-index: 100;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-left i {
+    font-size: 1.5rem;
+    color: #fcfafa;
+    cursor: pointer;
+}
+
+.title {
+    font-size: 16px;
+    color: #fffefe;
+    margin: 0;
+}
+
+/* Slider */
+.credito-slider-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    display: block;
+}
+
+.credito-slider {
+    display: flex;
+    transition: transform 0.5s ease;
+    width: 100%;
+}
+
+.credito-slide {
+    min-width: 100%;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.credito-slide.active {
+    display: block;
+}
+
+.credito-slide img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Dots do slider */
+.slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ddd;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.dot.active {
+    background-color: #0066b3;
+}
+
+/* Container de vantagens */
+.vantagens-container {
+    padding: 2rem 1rem;
+}
+
+.vantagens-titulo {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.vantagens-descricao {
+    color: #666;
+    text-align: center;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.vantagens-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    max-width: 600px;
+    margin: 0 0 30px 0;
+}
+
+/* Items de vantagem */
+.vantagem-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+}
+
+.vantagem-icone {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.vantagem-icone img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.vantagem-texto h3 {
+    font-size: 1rem;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+}
+
+.vantagem-texto p {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Botão de simulação */
+.simulacao-credito {
+    width: 100%;
+    padding: 1rem;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 2rem;
+    transition: background-color 0.3s;
+}
+
+.simulacao-credito:hover {
+    background-color: #0056b3;
+}
+
+.chat-simulacao {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    height: 80vh;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.chat-screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    transition: transform 0.3s ease-in-out;
+}
+
+.chat-header {
+    background: #1a73e8;
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.chat-content {
+    padding: 20px;
+    height: calc(100% - 70px);
+    overflow-y: auto;
+}
+
+.chat-image {
+    width: 100%;
+    max-width: 300px;
+    margin: 20px auto;
+    display: block;
+    border-radius: 10px;
+}
+
+.chat-text {
+    margin: 20px 0;
+    line-height: 1.5;
+    color: #333;
+}
+
+.chat-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.option-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.option-container:hover {
+    background: #f5f5f5;
+    border-color: #1a73e8;
+}
+
+.option-container input[type="radio"] {
+    margin-top: 3px;
+}
+
+.option-text {
+    flex: 1;
+    font-size: 0.9em;
+    color: #444;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 20px 0;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: #1a73e8;
+    color: white;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    background: #1557b0;
+}
+
+.btn-secondary {
+    background: #f1f3f4;
+    color: #1a73e8;
+}
+
+.btn-secondary:hover {
+    background: #e8eaed;
+}
+
+/* Animações */
+.slide-in {
+    animation: slideIn 0.3s forwards;
+}
+
+.slide-out {
+    animation: slideOut 0.3s forwards;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .chat-simulacao {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .chat-header {
+        padding: 15px;
+    }
+
+    .chat-content {
+        padding: 15px;
+    }
+
+    .button-group {
+        padding: 15px 0;
+    }
+} 

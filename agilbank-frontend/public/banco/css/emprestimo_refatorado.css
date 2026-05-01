@@ -1,0 +1,662 @@
+/* FORMULÁRIO DE EMPRÉSTIMO ORIGINAL - CSS */
+/* Baseado no index.agilbank.html */
+
+/* Container principal */
+.emprestimo-container {
+    display: none;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.emprestimo-container.active {
+    display: block;
+}
+
+/* Header do empréstimo */
+.emprestimo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    position: relative;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-left i {
+    font-size: 20px;
+    color: #0066b3;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.header-left i:hover {
+    color: #004d8c;
+}
+
+.header-title-emprestimo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0066b3;
+}
+
+/* Informações do empréstimo */
+.emprestimo-info {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.emprestimo-info h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.emprestimo-info p {
+    font-size: 1rem;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* Formulário */
+.emprestimo-form {
+    margin-bottom: 30px;
+}
+
+.form-group-emprestimo {
+    margin-bottom: 20px;
+}
+
+.form-group-emprestimo label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.input-emprestimo,
+.select-emprestimo {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.input-emprestimo:focus,
+.select-emprestimo:focus {
+    outline: none;
+    border-color: #0066b3;
+    box-shadow: 0 0 0 3px rgba(0, 102, 179, 0.1);
+}
+
+.input-emprestimo.error,
+.select-emprestimo.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+/* Caixas de informação */
+.emprestimo-info-boxes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.info-box {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #0066b3;
+}
+
+.info-label {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.info-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0066b3;
+}
+
+/* Botão principal */
+.emprestimo-button {
+    width: 100%;
+    padding: 15px 30px;
+    background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.emprestimo-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 102, 179, 0.3);
+}
+
+.emprestimo-button:active {
+    transform: translateY(0);
+}
+
+/* Footer */
+.emprestimo-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.emprestimo-footer small {
+    display: block;
+    color: #666;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+/* Container Crédito Pessoal */
+.creditoPessoalContainer {
+    display: none;
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.creditoPessoalContainer.active {
+    display: block;
+}
+
+/* Header do crédito pessoal */
+.header {
+    background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+    padding: 20px;
+    color: white;
+    position: relative;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-left i {
+    font-size: 20px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.header-left i:hover {
+    color: #ccc;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Slider de imagens */
+.credito-slider-container {
+    position: relative;
+    height: 300px;
+    overflow: hidden;
+}
+
+.credito-slider {
+    display: flex;
+    transition: transform 0.3s ease;
+}
+
+.credito-slide {
+    min-width: 100%;
+    height: 300px;
+}
+
+.credito-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Dots do slider */
+.slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ccc;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.dot.active {
+    background: #0066b3;
+}
+
+/* Conteúdo das vantagens */
+.vantagens-container {
+    padding: 30px 20px;
+}
+
+.vantagens-titulo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.vantagens-descricao {
+    color: #666;
+    line-height: 1.6;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.vantagens-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.vantagem-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #0066b3;
+}
+
+.vantagem-icone {
+    flex-shrink: 0;
+}
+
+.vantagem-icone img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.vantagem-texto h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.vantagem-texto p {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Botão de simulação */
+.simulacao-credito {
+    width: 100%;
+    padding: 15px 30px;
+    background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 20px;
+}
+
+.simulacao-credito:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 102, 179, 0.3);
+}
+
+/* Container de chat */
+.chat-container {
+    display: none;
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.chat-container.active {
+    display: block;
+}
+
+/* Telas do chat */
+.screen {
+    display: none;
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.screen.active {
+    display: block;
+}
+
+.welcome-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.welcome-img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+}
+
+.welcome-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+}
+
+.welcome-content p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.start-button {
+    padding: 15px 40px;
+    background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.start-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 102, 179, 0.3);
+}
+
+/* Opções */
+.option {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.option:hover {
+    background: #e9ecef;
+    border-color: #0066b3;
+}
+
+.option.selected {
+    background: #e7f3ff;
+    border-color: #0066b3;
+}
+
+.radio {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.option.selected .radio {
+    border-color: #0066b3;
+    background: #0066b3;
+}
+
+.option.selected .radio::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.option-text {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Dropdown */
+.dropdown {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dropdown:focus {
+    outline: none;
+    border-color: #0066b3;
+    box-shadow: 0 0 0 3px rgba(0, 102, 179, 0.1);
+}
+
+/* Input group */
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.input-prefix {
+    position: absolute;
+    left: 16px;
+    color: #666;
+    font-weight: 600;
+    z-index: 2;
+}
+
+.input-group .form-input {
+    padding-left: 40px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #0066b3;
+    box-shadow: 0 0 0 3px rgba(0, 102, 179, 0.1);
+}
+
+/* Resultado */
+.resultado-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin: 30px 0;
+}
+
+.resultado-item {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #0066b3;
+}
+
+.resultado-item h3 {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.valor-aprovado,
+.parcelas,
+.valor-parcela {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0066b3;
+    margin: 0;
+}
+
+/* Botões */
+.buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.button-back {
+    background: #6c757d;
+    color: white;
+}
+
+.button-back:hover {
+    background: #545b62;
+}
+
+.button-next {
+    background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+    color: white;
+}
+
+.button-next:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 102, 179, 0.3);
+}
+
+.button-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+}
+
+.button-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .emprestimo-container,
+    .creditoPessoalContainer,
+    .chat-container {
+        margin: 10px;
+        padding: 0;
+    }
+    
+    .emprestimo-info-boxes {
+        grid-template-columns: 1fr;
+    }
+    
+    .resultado-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .buttons {
+        flex-direction: column;
+    }
+    
+    .button {
+        width: 100%;
+    }
+    
+    .vantagem-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .welcome-img {
+        width: 150px;
+        height: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-title-emprestimo,
+    .title {
+        font-size: 1.2rem;
+    }
+    
+    .emprestimo-info h2 {
+        font-size: 1.5rem;
+    }
+    
+    .vantagens-titulo {
+        font-size: 1.3rem;
+    }
+}

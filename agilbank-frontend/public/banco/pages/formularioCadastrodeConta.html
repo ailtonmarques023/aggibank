@@ -1,0 +1,3927 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <title>AgilBank - Abertura de Conta</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/formulario-fix.css?v=20241220-013">
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <style>
+        /* Aplicar a mesma fonte do app AgilBank */
+        * {
+            font-family: Arial, sans-serif;
+        }
+    </style>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .conta-container {
+            max-width: 480px;
+            width: 100%;
+            margin: 0;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.04);
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+            /* display: none; */ /* Comentado para permitir exibição */
+        }
+
+        .conta-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(90deg, #0066b3, #28a745, #ffc107, #dc3545);
+            z-index: 1;
+        }
+
+        .conta-content {
+            padding: 40px 32px !important;
+        }
+
+        .conta-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .conta-logo {
+            width: 72px;
+            margin-bottom: 8px;
+        }
+
+        .conta-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a237e;
+            margin: 0 0 4px 0;
+        }
+
+        .conta-subtitle {
+            color: #616161;
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .conta-back-btn {
+            background: none;
+            border: none;
+            color: #1976d2;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: color 0.2s;
+        }
+        .conta-back-btn:hover {
+            color: #0d47a1;
+            text-decoration: underline;
+        }
+
+        .conta-progress {
+            margin-bottom: 40px;
+        }
+        .conta-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e3e7ef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .conta-progress-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #1976d2 60%, #00c853 100%);
+            border-radius: 4px;
+            transition: width 0.4s cubic-bezier(.4,0,.2,1);
+        }
+        .conta-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0;
+        }
+        .conta-step {
+            text-align: center;
+            flex: 1;
+            color: #b0bec5;
+        }
+        .conta-step.active {
+            color: #1976d2;
+        }
+        .conta-step-number {
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            border-radius: 50%;
+            background: #e3e7ef;
+            display: inline-block;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 2px;
+        }
+        .conta-step.active .conta-step-number {
+            background: #1976d2;
+            color: #fff;
+        }
+        .conta-step-label {
+            font-size: 0.85rem;
+        }
+
+        /* Form Sections */
+        .conta-form-sections {
+            margin-top: 12px;
+        }
+        .conta-form-section {
+            display: none;
+            animation: fadeIn 0.4s;
+        }
+        .conta-form-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        .conta-section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a237e;
+            margin-bottom: 18px;
+        }
+
+        .conta-form-group {
+            margin-bottom: 12px;
+        }
+        .conta-label {
+            display: block;
+            font-size: 1rem;
+            color: #263238;
+            margin-bottom: 1px;
+            font-weight: 500;
+        }
+        .conta-input, .conta-select {
+            width: 100%;
+            padding: 6px 12px;
+            margin-bottom: 0px;
+            border: 1.5px solid #cfd8dc;
+            border-radius: 6px;
+            font-size: 1rem;
+            background: #fafbfc;
+            transition: border 0.2s;
+            outline: none;
+        }
+        .conta-input:focus, .conta-select:focus {
+            border-color: #1976d2;
+            background: #fff;
+        }
+        .conta-error {
+            color: #d32f2f;
+            font-size: 0.92rem;
+            margin-top: 2px;
+            min-height: 18px;
+        }
+
+        .conta-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 2px;
+        }
+        .conta-row > .conta-form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        /* Botões */
+        .conta-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 22px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .conta-btn-primary {
+            background: linear-gradient(90deg, #1976d2 60%, #00c853 100%);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(25,118,210,0.08);
+        }
+        .conta-btn-primary:disabled {
+            background: #b0bec5;
+            color: #fff;
+            cursor: not-allowed;
+        }
+        .conta-btn-secondary {
+            background: #fff;
+            color: #1976d2;
+            border: 1.5px solid #1976d2;
+        }
+        .conta-btn-secondary:hover {
+            background: #e3e7ef;
+        }
+
+        /* Centralizar botões */
+        .conta-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        /* Loading */
+        .conta-loading {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.96);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .conta-loading-content {
+            text-align: center;
+        }
+        .conta-loading-spinner {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .conta-spinner-ring {
+            width: 18px;
+            height: 18px;
+            border: 3px solid #1976d2;
+            border-top: 3px solid #00c853;
+            border-radius: 50%;
+            margin: 0 4px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg);}
+        }
+        .conta-loading-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #b0bec5;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .conta-loading-step.active {
+            color: #1976d2;
+            font-weight: 600;
+        }
+        .conta-loading-progress-bar {
+            width: 100%;
+            height: 7px;
+            background: #e3e7ef;
+            border-radius: 4px;
+            margin: 10px 0 2px 0;
+        }
+        .conta-loading-progress-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #1976d2 60%, #00c853 100%);
+            border-radius: 4px;
+            transition: width 0.4s cubic-bezier(.4,0,.2,1);
+        }
+        .conta-loading-percentage {
+            font-size: 0.95rem;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        /* Sucesso */
+        .conta-success {
+            text-align: center;
+            padding: 32px 0 16px 0;
+        }
+        .conta-success-icon {
+            font-size: 3.2rem;
+            color: #00c853;
+            margin-bottom: 12px;
+        }
+        .conta-success-message {
+            margin: 18px 0 10px 0;
+            color: #263238;
+        }
+        .conta-success-actions {
+            margin-top: 18px;
+        }
+        .conta-account-info {
+            background: #f1f8e9;
+            border-radius: 8px;
+            padding: 12px 0;
+            margin: 0 0 10px 0;
+            color: #388e3c;
+            font-size: 1.05rem;
+        }
+
+        /* Modal Upload */
+        .conta-upload-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(33,33,33,0.18);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .conta-upload-modal-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(33,33,33,0.18);
+        }
+        .conta-upload-modal-content {
+            position: relative;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+            width: 400px;
+            max-width: 95vw;
+            padding: 20px;
+            z-index: 10000;
+        }
+        .conta-upload-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .conta-upload-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #757575;
+            cursor: pointer;
+        }
+        .conta-upload-modal-body {
+            text-align: center;
+        }
+        .conta-upload-modal-preview {
+            margin-bottom: 12px;
+        }
+        .conta-upload-modal-preview-placeholder {
+            background: #f5f6fa;
+            border: 1.5px dashed #b0bec5;
+            border-radius: 8px;
+            padding: 18px 0;
+            color: #b0bec5;
+            cursor: pointer;
+            transition: border 0.2s;
+        }
+        .conta-upload-modal-preview-placeholder:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+        }
+        .conta-upload-modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .conta-upload-modal-actions-compact {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .conta-upload-modal-btn {
+            background: #e3e7ef;
+            color: #1976d2;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 80px;
+            justify-content: center;
+        }
+        .conta-upload-modal-btn:hover {
+            background: #1976d2;
+            color: #fff;
+        }
+        .conta-upload-modal-btn-cancel {
+            background: #fff;
+            color: #d32f2f;
+            border: 1.5px solid #d32f2f;
+        }
+        .conta-upload-modal-btn-cancel:hover {
+            background: #d32f2f;
+            color: #fff;
+        }
+        .conta-upload-modal-btn-confirm {
+            background: #4caf50;
+            color: #fff;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .conta-upload-modal-btn-confirm:hover:not(:disabled) {
+            background: #388e3c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .conta-upload-modal-btn-confirm:disabled {
+            background: #b0bec5;
+            color: #fff;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+            box-shadow: none;
+        }
+        .conta-upload-modal-btn-confirm:not(:disabled) {
+            background: #4caf50;
+            opacity: 1;
+            cursor: pointer;
+            animation: pulse-confirm 2s infinite;
+        }
+        
+        @keyframes pulse-confirm {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+
+        /* Garantir que os botões sejam clicáveis */
+        .conta-upload-modal-btn {
+            pointer-events: auto !important;
+            z-index: 10 !important;
+            position: relative !important;
+        }
+
+        .conta-upload-modal-btn:hover {
+            pointer-events: auto !important;
+        }
+        .conta-upload-modal-info {
+            font-size: 0.92rem;
+            color: #757575;
+            margin-bottom: 4px;
+        }
+
+        /* Novos Estilos para Uploads Organizados */
+        .conta-uploads-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .conta-upload-card {
+            background: #fff;
+            border: 1px solid #e3f2fd;
+            border-radius: 12px;
+            padding: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .conta-upload-card:hover {
+            border-color: #1976d2;
+            box-shadow: 0 4px 15px rgba(25, 118, 210, 0.1);
+        }
+
+        .conta-upload-card.uploaded {
+            border-color: #4caf50;
+            background: #f8fff8;
+        }
+
+        .conta-upload-card.uploading {
+            border-color: #ff9800;
+            background: #fff8f0;
+        }
+
+        .conta-upload-card.error {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        .conta-upload-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .conta-upload-icon-wrapper {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .conta-upload-card.uploaded .conta-upload-icon-wrapper {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+        }
+
+        .conta-upload-card.uploading .conta-upload-icon-wrapper {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+
+        .conta-upload-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .conta-upload-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 2px 0;
+            line-height: 1.2;
+        }
+
+        .conta-upload-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .conta-upload-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .conta-upload-status-text {
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .conta-upload-card.uploaded .conta-upload-status-text {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .conta-upload-card.uploading .conta-upload-status-text {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .conta-upload-card.error .conta-upload-status-text {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .conta-upload-actions {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .conta-upload-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 8px;
+            border: 1px solid #e3f2fd;
+            border-radius: 6px;
+            background: #fff;
+            color: #42a5f5;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            flex: 1;
+            min-width: 0;
+            justify-content: center;
+        }
+
+        .conta-upload-btn:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+            background: #f3f8ff;
+        }
+
+        .conta-upload-btn-primary {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            border-color: #1976d2;
+        }
+
+        .conta-upload-btn-primary:hover {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color: white;
+        }
+
+        /* Sombra sutil para todos os botões */
+        .conta-upload-btn {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .conta-upload-btn:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .conta-upload-btn i {
+            font-size: 12px;
+        }
+
+        .conta-upload-preview {
+            margin-bottom: 15px;
+            min-height: 60px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f8f9fa;
+            border: 2px dashed #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .conta-upload-preview.has-files {
+            border: 2px solid #4caf50;
+            background: #f8fff8;
+        }
+
+        .conta-upload-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .conta-upload-requirements {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #1976d2;
+        }
+
+        .conta-upload-requirements p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .conta-upload-requirements i {
+            color: #1976d2;
+        }
+
+        /* Responsividade para modal compacto */
+        @media (max-width: 480px) {
+            .conta-upload-modal-content {
+                width: 95vw;
+                padding: 15px;
+            }
+            
+            .conta-upload-modal-actions-compact {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .conta-upload-modal-btn {
+                min-width: auto;
+                width: 100%;
+            }
+        }
+
+        /* Responsividade para Uploads - Mobile First */
+        @media (max-width: 768px) {
+            .conta-upload-card {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .conta-upload-header {
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+
+            .conta-upload-icon-wrapper {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
+
+            .conta-upload-title {
+                font-size: 0.9rem;
+            }
+
+            .conta-upload-description {
+                font-size: 0.75rem;
+            }
+
+            .conta-upload-actions {
+                gap: 4px;
+                margin-bottom: 6px;
+            }
+
+            .conta-upload-btn {
+                padding: 5px 6px;
+                font-size: 0.7rem;
+                gap: 3px;
+            }
+
+            .conta-upload-btn i {
+                font-size: 11px;
+            }
+
+            .conta-upload-status-text {
+                font-size: 0.65rem;
+                padding: 1px 6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .conta-upload-card {
+                padding: 8px;
+                margin-bottom: 8px;
+            }
+
+            .conta-upload-header {
+                gap: 6px;
+                margin-bottom: 8px;
+            }
+
+            .conta-upload-icon-wrapper {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+
+            .conta-upload-title {
+                font-size: 0.85rem;
+            }
+
+            .conta-upload-description {
+                font-size: 0.7rem;
+            }
+
+            .conta-upload-actions {
+                gap: 3px;
+                margin-bottom: 4px;
+            }
+
+            .conta-upload-btn {
+                padding: 4px 5px;
+                font-size: 0.65rem;
+                gap: 2px;
+            }
+
+            .conta-upload-btn i {
+                font-size: 10px;
+            }
+        }
+
+        /* Modal Termos e Política */
+        .modal-termos, .modal-politica {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(33,33,33,0.18);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-termos-content, .modal-politica-content {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+            width: 98vw;
+            max-width: 540px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px 18px 18px 18px;
+            position: relative;
+        }
+        .modal-termos-header, .modal-politica-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .modal-termos-close, .modal-politica-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #757575;
+            cursor: pointer;
+        }
+        .modal-termos-body, .modal-politica-body {
+            font-size: 1rem;
+            color: #263238;
+        }
+        .termos-texto {
+            font-size: 0.98rem;
+            color: #263238;
+        }
+        .modal-termos-footer, .modal-politica-footer {
+            text-align: right;
+            margin-top: 18px;
+        }
+
+        /* Transição */
+        .conta-transition {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.92);
+            z-index: 120;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .conta-transition-overlay {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .conta-transition-content {
+            text-align: center;
+        }
+        .conta-transition-spinner {
+            margin-bottom: 12px;
+        }
+        .conta-transition-circle {
+            width: 32px;
+            height: 32px;
+            border: 4px solid #1976d2;
+            border-top: 4px solid #00c853;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        .conta-transition-text {
+            color: #1976d2;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Responsivo para smartphones */
+        @media (max-width: 600px) {
+            body {
+                align-items: center;
+                padding: 15px;
+                box-sizing: border-box;
+            }
+            .conta-container {
+                max-width: 100%;
+                width: calc(100% - 30px);
+                margin: 0;
+                border-radius: 18px;
+                box-shadow: 0 4px 32px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.04);
+                box-sizing: border-box;
+            }
+            .conta-content {
+                padding: 24px 30px !important;
+            }
+            .conta-row {
+                gap: 12px !important;
+            }
+            .conta-row > .conta-form-group {
+                margin-bottom: 0;
+            }
+            .modal-termos-content, .modal-politica-content {
+                max-width: 98vw;
+                padding: 12px 4vw 12px 4vw;
+            }
+        }
+        @media (max-width: 400px) {
+            body {
+                padding: 10px;
+            }
+            .conta-container {
+                width: calc(100% - 20px);
+                margin: 0;
+            }
+            .conta-content {
+                padding: 20px 25px !important;
+                box-sizing: border-box;
+            }
+            .conta-row {
+                flex-direction: column !important;
+                gap: 0 !important;
+            }
+            .conta-row > .conta-form-group {
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+        
+       
+    </style>
+</head>
+<body>
+    <!-- Container Principal do Formulário -->
+    <div class="conta-container" id="contaContainer">
+        <div class="conta-content">
+            <!-- Header do Formulário -->
+            <div class="conta-header">
+                <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="AgilBank" class="conta-logo">
+                <h1 class="conta-title">Abertura de Conta</h1>
+                <p class="conta-subtitle">Preencha os dados para criar sua conta</p>
+                <button class="conta-back-btn" onclick="window.location.href='../index.agilbank.html'">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Login
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="conta-progress">
+                <div class="conta-progress-bar">
+                    <div class="conta-progress-fill" id="contaProgressFill"></div>
+                </div>
+                <div class="conta-steps">
+                    <div class="conta-step active" data-step="1">
+                        <div class="conta-step-number">1</div>
+                        <div class="conta-step-label">Dados Pessoais</div>
+                    </div>
+                    <div class="conta-step" data-step="2">
+                        <div class="conta-step-number">2</div>
+                        <div class="conta-step-label">Endereço</div>
+                    </div>
+                    <div class="conta-step" data-step="3">
+                        <div class="conta-step-number">3</div>
+                        <div class="conta-step-label">Profissional</div>
+                    </div>
+                    <div class="conta-step" data-step="4">
+                        <div class="conta-step-number">4</div>
+                        <div class="conta-step-label">Confirmação</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="conta-loading" id="contaLoading" style="display: none;">
+                <div class="conta-loading-content">
+                    <div class="conta-loading-spinner">
+                        <div class="conta-spinner-ring"></div>
+                        <div class="conta-spinner-ring"></div>
+                        <div class="conta-spinner-ring"></div>
+                    </div>
+                    <h3>Processando sua solicitação...</h3>
+                    <div class="conta-loading-steps">
+                        <div class="conta-loading-step active" id="step1">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Validando dados</span>
+                        </div>
+                        <div class="conta-loading-step" id="step2">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Analisando perfil</span>
+                        </div>
+                        <div class="conta-loading-step" id="step3">
+                            <i class="fas fa-clock"></i>
+                            <span>Verificando documentos</span>
+                        </div>
+                        <div class="conta-loading-step" id="step4">
+                            <i class="fas fa-clock"></i>
+                            <span>Criando conta</span>
+                        </div>
+                    </div>
+                    <div class="conta-loading-progress">
+                        <div class="conta-loading-progress-bar">
+                            <div class="conta-loading-progress-fill" id="contaLoadingProgress"></div>
+                        </div>
+                        <span class="conta-loading-percentage" id="contaLoadingPercentage">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transição entre telas -->
+            <div class="conta-transition" id="contaTransition" style="display: none;">
+                <div class="conta-transition-overlay">
+                    <div class="conta-transition-content">
+                        <div class="conta-transition-spinner">
+                            <div class="conta-transition-circle"></div>
+                        </div>
+                        <span class="conta-transition-text" id="contaTransitionText">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tela de Sucesso -->
+            <div class="conta-success" style="display: none;">
+                <div class="conta-success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2>Conta Aprovada com Sucesso!</h2>
+                <div class="conta-account-info">
+                    <p><strong>Número da Conta:</strong> <span id="contaAccountNumber"></span></p>
+                    <p><strong>Bem-vindo(a),</strong> <span id="contaUserName"></span>!</p>
+                    <p><strong>Status:</strong> <span style="color: #28a745; font-weight: 600;">✓ Aprovada</span></p>
+                </div>
+                <div class="conta-success-message">
+                    <p>📧 Um email de confirmação foi enviado para <strong id="contaUserEmail"></strong></p>
+                    <p>🔄 Redirecionando para o login em <span id="contaCountdown">3</span> segundos...</p>
+                </div>
+                <div class="conta-success-actions">
+                    <button class="conta-btn conta-btn-primary" onclick="fazerLoginAposConta()">
+                        Fazer Login Agora
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal de Upload de Documentos - Documento -->
+            <div class="conta-upload-modal" id="contaUploadModalDocumento" style="display: none;">
+                <div class="conta-upload-modal-overlay"></div>
+                <div class="conta-upload-modal-content">
+                    <div class="conta-upload-modal-header">
+                        <h3 id="contaUploadModalTitleDocumento">Upload de Documento</h3>
+                        <button class="conta-upload-modal-close" id="contaUploadModalCloseDocumento">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="conta-upload-modal-body">
+                        <div class="conta-upload-modal-preview" id="contaUploadModalPreviewDocumento">
+                            <div class="conta-upload-modal-preview-placeholder">
+                                <i class="fas fa-camera" id="contaUploadModalIconDocumento"></i>
+                                <p id="contaUploadModalTextDocumento">Toque para tirar foto ou selecionar arquivo</p>
+                            </div>
+                        </div>
+                        
+                        <div class="conta-upload-modal-actions-compact">
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-camera" id="contaUploadModalCameraDocumento">
+                                <i class="fas fa-camera"></i>
+                                <span>Câmera</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-gallery" id="contaUploadModalGalleryDocumento">
+                                <i class="fas fa-images"></i>
+                                <span>Galeria</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-confirm" id="contaUploadModalConfirmDocumento" disabled>
+                                <i class="fas fa-check"></i>
+                                <span>Confirmar</span>
+                            </button>
+                        </div>
+                        
+                        <div class="conta-upload-modal-requirements">
+                            <p><i class="fas fa-info-circle"></i> Formatos: PNG, JPG, PDF • Máximo: 5MB cada</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Upload de Documentos - Comprovante -->
+            <div class="conta-upload-modal" id="contaUploadModalComprovante" style="display: none;">
+                <div class="conta-upload-modal-overlay"></div>
+                <div class="conta-upload-modal-content">
+                    <div class="conta-upload-modal-header">
+                        <h3 id="contaUploadModalTitleComprovante">Upload de Documento</h3>
+                        <button class="conta-upload-modal-close" id="contaUploadModalCloseComprovante">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="conta-upload-modal-body">
+                        <div class="conta-upload-modal-preview" id="contaUploadModalPreviewComprovante">
+                            <div class="conta-upload-modal-preview-placeholder">
+                                <i class="fas fa-camera" id="contaUploadModalIconComprovante"></i>
+                                <p id="contaUploadModalTextComprovante">Toque para tirar foto ou selecionar arquivo</p>
+                            </div>
+                        </div>
+                        
+                        <div class="conta-upload-modal-actions-compact">
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-camera" id="contaUploadModalCameraComprovante">
+                                <i class="fas fa-camera"></i>
+                                <span>Câmera</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-gallery" id="contaUploadModalGalleryComprovante">
+                                <i class="fas fa-images"></i>
+                                <span>Galeria</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-confirm" id="contaUploadModalConfirmComprovante" disabled>
+                                <i class="fas fa-check"></i>
+                                <span>Confirmar</span>
+                            </button>
+                        </div>
+                        
+                        <div class="conta-upload-modal-requirements">
+                            <p><i class="fas fa-info-circle"></i> Formatos: PNG, JPG, PDF • Máximo: 5MB cada</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Upload de Documentos - Rosto -->
+            <div class="conta-upload-modal" id="contaUploadModalRosto" style="display: none;">
+                <div class="conta-upload-modal-overlay"></div>
+                <div class="conta-upload-modal-content">
+                    <div class="conta-upload-modal-header">
+                        <h3 id="contaUploadModalTitleRosto">Upload de Documento</h3>
+                        <button class="conta-upload-modal-close" id="contaUploadModalCloseRosto">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="conta-upload-modal-body">
+                        <div class="conta-upload-modal-preview" id="contaUploadModalPreviewRosto">
+                            <div class="conta-upload-modal-preview-placeholder">
+                                <i class="fas fa-camera" id="contaUploadModalIconRosto"></i>
+                                <p id="contaUploadModalTextRosto">Toque para tirar foto ou selecionar arquivo</p>
+                            </div>
+                        </div>
+                        
+                        <div class="conta-upload-modal-actions-compact">
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-camera" id="contaUploadModalCameraRosto">
+                                <i class="fas fa-camera"></i>
+                                <span>Câmera</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-gallery" id="contaUploadModalGalleryRosto">
+                                <i class="fas fa-images"></i>
+                                <span>Galeria</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-confirm" id="contaUploadModalConfirmRosto" disabled>
+                                <i class="fas fa-check"></i>
+                                <span>Confirmar</span>
+                            </button>
+                        </div>
+                        
+                        <div class="conta-upload-modal-requirements">
+                            <p><i class="fas fa-info-circle"></i> Formatos: PNG, JPG, PDF • Máximo: 5MB cada</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Upload de Documentos -->
+            <div class="conta-upload-modal" id="contaUploadModal" style="display: none;">
+                <div class="conta-upload-modal-overlay"></div>
+                <div class="conta-upload-modal-content">
+                    <div class="conta-upload-modal-header">
+                        <h3 id="contaUploadModalTitle">Upload de Documento</h3>
+                        <button class="conta-upload-modal-close" id="contaUploadModalClose">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="conta-upload-modal-body">
+                        <div class="conta-upload-modal-preview" id="contaUploadModalPreview">
+                            <div class="conta-upload-modal-preview-placeholder">
+                                <i class="fas fa-camera" id="contaUploadModalIcon"></i>
+                                <p id="contaUploadModalText">Toque para tirar foto ou selecionar arquivo</p>
+                            </div>
+                        </div>
+                        
+                        <div class="conta-upload-modal-actions-compact">
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-camera" id="contaUploadModalCamera">
+                                <i class="fas fa-camera"></i>
+                                <span>Câmera</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-gallery" id="contaUploadModalGallery">
+                                <i class="fas fa-images"></i>
+                                <span>Galeria</span>
+                            </button>
+                            <button class="conta-upload-modal-btn conta-upload-modal-btn-confirm" id="contaUploadModalConfirm" disabled>
+                                <i class="fas fa-check"></i>
+                                <span>Confirmar</span>
+                            </button>
+                        </div>
+                        
+                        <div class="conta-upload-modal-info">
+                            <p><strong>Formatos aceitos:</strong> JPG, PNG, PDF • <strong>Tamanho máximo:</strong> 5MB</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seções do Formulário -->
+            <div class="conta-form-sections">
+                <!-- Passo 1: Dados Pessoais -->
+                <div class="conta-form-section active" id="contaStep1">
+                    <h2 class="conta-section-title">Dados Pessoais</h2>
+                    
+                    <div class="conta-form-group">
+                        <label class="conta-label" for="contaNome">Nome Completo *</label>
+                        <input type="text" id="contaNome" class="conta-input" placeholder="João Silva Santos" required>
+                        <div class="conta-error"></div>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaCpf">CPF *</label>
+                            <input type="text" id="contaCpf" class="conta-input" placeholder="123.456.789-00" required>
+                            <div class="conta-error"></div>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaRg">RG</label>
+                            <input type="text" id="contaRg" class="conta-input" placeholder="12.345.678-9">
+                        </div>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaDataNasc">Data de Nascimento *</label>
+                            <input type="date" id="contaDataNasc" class="conta-input" required>
+                            <div class="conta-error"></div>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaSexo">Sexo *</label>
+                            <select id="contaSexo" class="conta-select" required>
+                                <option value="">Selecione seu sexo</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="O">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaEmail">E-mail *</label>
+                            <input type="email" id="contaEmail" class="conta-input" placeholder="joao.silva@email.com" required>
+                            <div class="conta-error"></div>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaTelefone">Telefone *</label>
+                            <input type="tel" id="contaTelefone" class="conta-input" placeholder="(11) 99999-9999" required>
+                            <div class="conta-error"></div>
+                        </div>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaSenha">Senha *</label>
+                            <div class="conta-password-container">
+                                <input type="password" id="contaSenha" class="conta-input conta-password-input" placeholder="123456" maxlength="6" required>
+                                <button type="button" class="conta-password-toggle" id="toggleSenha">
+                                    <i class="fas fa-eye" id="eyeIconSenha"></i>
+                                </button>
+                            </div>
+                            <div class="conta-error"></div>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaConfirmarSenha">Confirmar Senha *</label>
+                            <div class="conta-password-container">
+                                <input type="password" id="contaConfirmarSenha" class="conta-input conta-password-input" placeholder="123456" maxlength="6" required>
+                                <button type="button" class="conta-password-toggle" id="toggleConfirmarSenha">
+                                    <i class="fas fa-eye" id="eyeIconConfirmarSenha"></i>
+                                </button>
+                            </div>
+                            <div class="conta-error"></div>
+                        </div>
+                    </div>
+                    <small class="conta-password-info">Senha deve ter exatamente 6 dígitos numéricos</small>
+                    
+                </div>
+
+                <!-- Passo 2: Endereço -->
+                <div class="conta-form-section" id="contaStep2">
+                    <h2 class="conta-section-title">Endereço</h2>
+                    
+                    <!-- CEP e Número -->
+                    <div class="conta-row">
+                        <div class="conta-form-group" style="flex: 2;">
+                        <label class="conta-label" for="contaCep">CEP *</label>
+                            <input type="text" id="contaCep" class="conta-input" placeholder="01234-567" required oninput="validarCEPCampo(this)" onblur="validarCEPCampo(this)">
+                        <div class="conta-error"></div>
+                        </div>
+                        <div class="conta-form-group" style="flex: 1;">
+                            <label class="conta-label" for="contaNumero">Número *</label>
+                            <input type="text" id="contaNumero" class="conta-input" placeholder="123" required>
+                        </div>
+                    </div>
+
+                    <!-- Tipo de Endereço -->
+                    <div class="conta-form-group">
+                        <label class="conta-label">Tipo de Endereço *</label>
+                        <div class="conta-radio-group">
+                            <label class="conta-radio-label">
+                                <input type="radio" name="contaTipoEndereco" value="residencial" required>
+                                <span class="conta-radio-text">Residencial</span>
+                            </label>
+                            <label class="conta-radio-label">
+                                <input type="radio" name="contaTipoEndereco" value="trabalho" required>
+                                <span class="conta-radio-text">Trabalho</span>
+                            </label>
+                        </div>
+                    </div>
+
+                        <div class="conta-form-group">
+                        <label class="conta-label" for="contaEndereco">Endereço *</label>
+                        <input type="text" id="contaEndereco" class="conta-input" placeholder="Rua das Flores" required>
+                        </div>
+
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaComplemento">Complemento</label>
+                            <input type="text" id="contaComplemento" class="conta-input" placeholder="Apto 45, Bloco B">
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaBairro">Bairro *</label>
+                            <input type="text" id="contaBairro" class="conta-input" placeholder="Centro" required>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaCidade">Cidade *</label>
+                            <input type="text" id="contaCidade" class="conta-input" placeholder="São Paulo" required>
+                        </div>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaEstado">Estado *</label>
+                            <select id="contaEstado" class="conta-select" required>
+                                <option value="">Selecione seu estado</option>
+                                <option value="AC">Acre</option>
+                                <option value="AL">Alagoas</option>
+                                <option value="AP">Amapá</option>
+                                <option value="AM">Amazonas</option>
+                                <option value="BA">Bahia</option>
+                                <option value="CE">Ceará</option>
+                                <option value="DF">Distrito Federal</option>
+                                <option value="ES">Espírito Santo</option>
+                                <option value="GO">Goiás</option>
+                                <option value="MA">Maranhão</option>
+                                <option value="MT">Mato Grosso</option>
+                                <option value="MS">Mato Grosso do Sul</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="PA">Pará</option>
+                                <option value="PB">Paraíba</option>
+                                <option value="PR">Paraná</option>
+                                <option value="PE">Pernambuco</option>
+                                <option value="PI">Piauí</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="RN">Rio Grande do Norte</option>
+                                <option value="RS">Rio Grande do Sul</option>
+                                <option value="RO">Rondônia</option>
+                                <option value="RR">Roraima</option>
+                                <option value="SC">Santa Catarina</option>
+                                <option value="SP">São Paulo</option>
+                                <option value="SE">Sergipe</option>
+                                <option value="TO">Tocantins</option>
+                            </select>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaTempoResidencia">Tempo de Residência *</label>
+                            <select id="contaTempoResidencia" class="conta-select" required>
+                                <option value="">Selecione o tempo de residência</option>
+                                <option value="menos1">Menos de 1 ano</option>
+                                <option value="1a2">1 a 2 anos</option>
+                                <option value="2a5">2 a 5 anos</option>
+                                <option value="mais5">Mais de 5 anos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Opção de Correspondência -->
+                    <div class="conta-form-group">
+                        <label class="conta-checkbox-label">
+                            <input type="checkbox" id="contaReceberCorrespondencia" name="contaReceberCorrespondencia">
+                            <span class="conta-checkbox-text">Gostaria de receber minhas correspondências neste endereço</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Passo 3: Informações Profissionais -->
+                <div class="conta-form-section" id="contaStep3">
+                    <h2 class="conta-section-title">Informações Profissionais</h2>
+                    
+                    <div class="conta-form-group">
+                        <label class="conta-label" for="contaProfissao">Profissão/Ocupação *</label>
+                        <input type="text" id="contaProfissao" class="conta-input" placeholder="Analista de Sistemas" required>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaEmpresa">Empresa *</label>
+                            <input type="text" id="contaEmpresa" class="conta-input" placeholder="Tech Solutions Ltda" required>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaCargo">Cargo *</label>
+                            <input type="text" id="contaCargo" class="conta-input" placeholder="Desenvolvedor Sênior" required>
+                        </div>
+                    </div>
+
+                    <div class="conta-row">
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaRenda">Renda Mensal *</label>
+                            <select id="contaRenda" class="conta-select" required>
+                                <option value="">Selecione sua renda mensal</option>
+                                <option value="ate1000">Até R$ 1.000</option>
+                                <option value="1000a3000">R$ 1.000 a R$ 3.000</option>
+                                <option value="3000a5000">R$ 3.000 a R$ 5.000</option>
+                                <option value="5000a10000">R$ 5.000 a R$ 10.000</option>
+                                <option value="mais10000">Mais de R$ 10.000</option>
+                            </select>
+                        </div>
+                        <div class="conta-form-group">
+                            <label class="conta-label" for="contaTempoEmprego">Tempo no Emprego *</label>
+                            <select id="contaTempoEmprego" class="conta-select" required>
+                                <option value="">Selecione o tempo no emprego</option>
+                                <option value="menos6m">Menos de 6 meses</option>
+                                <option value="6ma1a">6 meses a 1 ano</option>
+                                <option value="1a2a">1 a 2 anos</option>
+                                <option value="mais2a">Mais de 2 anos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="conta-form-group">
+                        <label class="conta-label" for="contaFinalidade">Finalidade da Conta *</label>
+                        <select id="contaFinalidade" class="conta-select" required>
+                            <option value="">Selecione a finalidade da conta</option>
+                            <option value="pessoal">Uso Pessoal</option>
+                            <option value="trabalho">Recebimento de Salário</option>
+                            <option value="negocio">Uso Empresarial</option>
+                            <option value="investimento">Investimentos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Passo 4: Upload de Documentos -->
+                <div class="conta-form-section" id="contaStep4">
+                    <h2 class="conta-section-title">📋 Confirmação e Documentos</h2>
+                    <p class="conta-section-subtitle">Envie os documentos necessários para finalizar sua conta</p>
+                    
+                    <!-- Container de Uploads Organizados -->
+                    <div class="conta-uploads-container">
+                        
+                        <!-- Upload de Documento de Identidade -->
+                        <div class="conta-upload-card">
+                            <div class="conta-upload-header">
+                                <div class="conta-upload-icon-wrapper">
+                                    <i class="fas fa-id-card"></i>
+                                </div>
+                                <div class="conta-upload-info">
+                                    <h3 class="conta-upload-title">Documento de Identidade</h3>
+                                    <p class="conta-upload-description">RG, CNH ou Passaporte (frente e verso)</p>
+                                </div>
+                                <div class="conta-upload-status" id="statusDocumento">
+                                    <span class="conta-upload-status-text">Pendente</span>
+                                </div>
+                            </div>
+                            
+                            <div class="conta-upload-actions">
+                                <button class="conta-upload-btn conta-upload-btn-camera" onclick="abrirModalUploadEspecifico('contaDocumento', 'Documento de Identidade', 'camera', 'Documento')">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Câmera</span>
+                                </button>
+                                <button class="conta-upload-btn conta-upload-btn-gallery" onclick="abrirModalUploadEspecifico('contaDocumento', 'Documento de Identidade', 'gallery', 'Documento')">
+                                    <i class="fas fa-images"></i>
+                                    <span>Galeria</span>
+                                </button>
+                                <button class="conta-upload-btn conta-upload-btn-file" onclick="abrirModalUploadEspecifico('contaDocumento', 'Documento de Identidade', 'file', 'Documento')">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>Arquivo</span>
+                                </button>
+                            </div>
+                            
+                            <div class="conta-upload-preview" id="previewDocumento"></div>
+                            <div class="conta-upload-requirements">
+                                <p><i class="fas fa-info-circle"></i> Formatos: PNG, JPG, PDF • Máximo: 5MB cada</p>
+                            </div>
+                            <input type="file" id="contaDocumento" class="conta-upload-input" accept="image/*,.pdf" required style="display: none;">
+                        </div>
+
+                        <!-- Upload de Comprovante de Residência -->
+                        <div class="conta-upload-card">
+                            <div class="conta-upload-header">
+                                <div class="conta-upload-icon-wrapper">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="conta-upload-info">
+                                    <h3 class="conta-upload-title">Comprovante de Residência</h3>
+                                    <p class="conta-upload-description">Conta de energia, água, telefone ou internet (últimos 3 meses)</p>
+                                </div>
+                                <div class="conta-upload-status" id="statusComprovante">
+                                    <span class="conta-upload-status-text">Pendente</span>
+                                </div>
+                            </div>
+                            
+                            <div class="conta-upload-actions">
+                                <button class="conta-upload-btn conta-upload-btn-camera" onclick="abrirModalUploadEspecifico('contaComprovante', 'Comprovante de Residência', 'camera', 'Comprovante')">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Câmera</span>
+                                </button>
+                                <button class="conta-upload-btn conta-upload-btn-gallery" onclick="abrirModalUploadEspecifico('contaComprovante', 'Comprovante de Residência', 'gallery', 'Comprovante')">
+                                    <i class="fas fa-images"></i>
+                                    <span>Galeria</span>
+                                </button>
+                                <button class="conta-upload-btn conta-upload-btn-file" onclick="abrirModalUploadEspecifico('contaComprovante', 'Comprovante de Residência', 'file', 'Comprovante')">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>Arquivo</span>
+                                </button>
+                            </div>
+                            
+                            <div class="conta-upload-preview" id="previewComprovante"></div>
+                            <div class="conta-upload-requirements">
+                                <p><i class="fas fa-info-circle"></i> Formatos: PNG, JPG, PDF • Máximo: 5MB cada</p>
+                            </div>
+                            <input type="file" id="contaComprovante" class="conta-upload-input" accept="image/*,.pdf" required style="display: none;">
+                        </div>
+
+                        <!-- Upload de Foto do Rosto -->
+                        <div class="conta-upload-card">
+                            <div class="conta-upload-header">
+                                <div class="conta-upload-icon-wrapper">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <div class="conta-upload-info">
+                                    <h3 class="conta-upload-title">Foto do Rosto</h3>
+                                    <p class="conta-upload-description">Selfie com boa iluminação e rosto visível</p>
+                                </div>
+                                <div class="conta-upload-status" id="statusRosto">
+                                    <span class="conta-upload-status-text">Pendente</span>
+                                </div>
+                            </div>
+                            
+                            <div class="conta-upload-actions">
+                                <button class="conta-upload-btn conta-upload-btn-camera" onclick="abrirModalUploadEspecifico('contaRosto', 'Foto do Rosto', 'camera', 'Rosto')">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Câmera</span>
+                                </button>
+                                <button class="conta-upload-btn conta-upload-btn-gallery" onclick="abrirModalUploadEspecifico('contaRosto', 'Foto do Rosto', 'gallery', 'Rosto')">
+                                    <i class="fas fa-images"></i>
+                                    <span>Galeria</span>
+                                </button>
+                                <button class="conta-upload-btn conta-upload-btn-file" onclick="abrirModalUploadEspecifico('contaRosto', 'Foto do Rosto', 'file', 'Rosto')">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>Arquivo</span>
+                                </button>
+                            </div>
+                            
+                            <div class="conta-upload-preview" id="previewRosto"></div>
+                            <div class="conta-upload-requirements">
+                                <p><i class="fas fa-info-circle"></i> Formatos: PNG, JPG, PDF • Máximo: 5MB cada</p>
+                            </div>
+                            <input type="file" id="contaRosto" class="conta-upload-input" accept="image/*,.pdf" required style="display: none;">
+                        </div>
+                    </div>
+
+                    <!-- Termos e Condições -->
+                    <div class="conta-checkboxes-container">
+                        <div class="conta-checkbox-item">
+                            <input type="checkbox" id="contaTermos" class="conta-checkbox" required>
+                            <label for="contaTermos" class="conta-checkbox-label">
+                                Li e aceito os <a href="#" onclick="abrirModalTermos(); return false;" style="color: #0066b3; cursor: pointer;">termos e condições</a> para abertura de conta
+                            </label>
+                        </div>
+
+                        <div class="conta-checkbox-item">
+                            <input type="checkbox" id="contaComunicacoes" class="conta-checkbox">
+                            <label for="contaComunicacoes" class="conta-checkbox-label">
+                                Aceito receber comunicações sobre produtos e serviços
+                            </label>
+                        </div>
+
+                        <div class="conta-checkbox-item">
+                            <input type="checkbox" id="contaPolitica" class="conta-checkbox" required>
+                            <label for="contaPolitica" class="conta-checkbox-label">
+                                Li e aceito a <a href="#" onclick="abrirModalPolitica(); return false;" style="color: #0066b3; cursor: pointer;">política de privacidade</a>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões de Navegação -->
+            <div class="conta-buttons">
+                <button class="conta-btn conta-btn-secondary" id="contaPrevBtn" style="display: none;">
+                    <i class="fas fa-arrow-left"></i>
+                    Anterior
+                </button>
+                <button class="conta-btn conta-btn-primary" id="contaNextBtn">
+                    Próximo
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <button class="conta-btn conta-btn-primary" id="contaSubmitBtn" style="display: none;">
+                    <i class="fas fa-check"></i>
+                    Criar Conta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal dos Termos e Condições -->
+    <div id="modalTermos" class="modal-termos" style="display: none;">
+        <div class="modal-termos-content">
+            <div class="modal-termos-header">
+                <h2>Termos e Condições de Uso</h2>
+                <span class="modal-termos-close" onclick="fecharModalTermos()">&times;</span>
+            </div>
+            <div class="modal-termos-body">
+                <div class="termos-texto">
+                    <h3>1. Disposições Gerais</h3>
+                    <p><strong>1.1.</strong> Estes Termos e Condições de Uso ("Termos") regulam a utilização de todos os produtos e serviços disponibilizados pelo Banco [Nome do Banco], pessoa jurídica de direito privado, inscrita no CNPJ sob o nº [●], doravante denominado simplesmente Banco, aplicando-se a todos os clientes que venham a contratar ou utilizar seus serviços.</p>
+                    <p><strong>1.2.</strong> O aceite eletrônico destes Termos é condição indispensável para utilização de qualquer produto oferecido, implicando plena ciência e concordância do cliente.</p>
+                    <p><strong>1.3.</strong> O Banco reserva-se o direito de alterar, complementar ou atualizar estes Termos a qualquer tempo, mediante aviso prévio de 30 (trinta) dias ao cliente, que poderá manifestar discordância por meio do encerramento da conta, respeitadas eventuais obrigações financeiras pendentes.</p>
+                    <p><strong>1.4.</strong> O Banco poderá criar Termos Específicos para determinados produtos ou serviços, que prevalecerão sobre este documento em caso de conflito.</p>
+
+                    <h3>2. Abertura de Conta</h3>
+                    <p><strong>2.1.</strong> A abertura de conta está condicionada ao fornecimento de informações cadastrais verídicas, completas e atualizadas, além da apresentação de documentos exigidos pela legislação vigente e políticas internas de prevenção à lavagem de dinheiro.</p>
+                    <p><strong>2.2.</strong> O cliente declara estar ciente de que a aprovação da abertura de conta depende de análise cadastral, de crédito, de risco e de conformidade regulatória.</p>
+                    <p><strong>2.3.</strong> O Banco poderá, a qualquer tempo, solicitar informações adicionais para fins de atualização cadastral, sendo o não atendimento pelo cliente causa de bloqueio ou encerramento da conta.</p>
+                    <p><strong>2.4.</strong> É vedada a abertura de contas para fins ilícitos, fraudulentos ou que não observem as normas do Banco Central do Brasil.</p>
+
+                    <h3>3. Serviços Disponíveis</h3>
+                    <p><strong>3.1.</strong> O Banco disponibiliza, direta ou indiretamente, os seguintes serviços:</p>
+                    <ul>
+                        <li>a) Conta corrente e conta de pagamento;</li>
+                        <li>b) Emissão de cartões de débito e crédito;</li>
+                        <li>c) Concessão de empréstimos, financiamentos e linhas de crédito;</li>
+                        <li>d) Serviços de investimentos em CDB, CDI, fundos, títulos públicos, previdência e outros;</li>
+                        <li>e) Pagamentos de contas, transferências (TED, PIX, DOC), recebimentos e depósitos;</li>
+                        <li>f) Serviços de câmbio, quando autorizados;</li>
+                        <li>g) Internet Banking, aplicativo móvel e atendimento via canais digitais.</li>
+                    </ul>
+                    <p><strong>3.2.</strong> O acesso a determinados serviços dependerá de análise de perfil, avaliação de risco e limite de crédito individual.</p>
+                    <p><strong>3.3.</strong> O Banco poderá, a qualquer tempo, modificar, suspender ou descontinuar serviços, desde que comunique previamente os clientes.</p>
+
+                    <h3>4. Cartões</h3>
+                    <p><strong>4.1.</strong> O cartão fornecido é pessoal, intransferível e de propriedade do Banco, devendo ser devolvido em caso de encerramento da conta ou solicitação expressa.</p>
+                    <p><strong>4.2.</strong> O cliente é responsável pela guarda e sigilo da senha, não podendo compartilhá-la com terceiros.</p>
+                    <p><strong>4.3.</strong> O Banco não se responsabiliza por transações realizadas com uso correto de cartão e senha, ainda que sem consentimento do cliente.</p>
+                    <p><strong>4.4.</strong> Em caso de perda, roubo, furto ou extravio, o cliente deve comunicar imediatamente ao Banco, sendo responsável pelas operações realizadas até o bloqueio efetivo.</p>
+                    <p><strong>4.5.</strong> O Banco poderá estabelecer limites de utilização e suspender cartões em situações de risco ou suspeita de fraude.</p>
+
+                    <h3>5. Empréstimos, Financiamentos e Crédito</h3>
+                    <p><strong>5.1.</strong> A concessão de crédito está sujeita à análise individual e aprovação pelo Banco.</p>
+                    <p><strong>5.2.</strong> Os valores, taxas de juros, encargos, tributos e demais condições financeiras serão sempre informados previamente e aceitos pelo cliente antes da contratação.</p>
+                    <p><strong>5.3.</strong> O não pagamento das parcelas na data de vencimento sujeitará o cliente à cobrança de juros de mora, multa, atualização monetária e inclusão em cadastros de inadimplentes.</p>
+                    <p><strong>5.4.</strong> O Banco poderá ceder, transferir ou negociar direitos creditórios decorrentes de operações inadimplidas.</p>
+                    <p><strong>5.5.</strong> O cliente declara estar ciente de que o crédito concedido poderá impactar seu histórico junto a bureaus de crédito.</p>
+
+                    <h3>6. Investimentos</h3>
+                    <p><strong>6.1.</strong> O cliente reconhece que toda aplicação financeira envolve riscos, podendo acarretar perdas parciais ou totais do capital investido.</p>
+                    <p><strong>6.2.</strong> Rentabilidades passadas não representam garantia de resultados futuros.</p>
+                    <p><strong>6.3.</strong> O Banco atuará como intermediário, observando a regulamentação do Banco Central do Brasil e da Comissão de Valores Mobiliários (CVM), mas não se responsabiliza por resultados financeiros.</p>
+                    <p><strong>6.4.</strong> O cliente declara que compreende os riscos de liquidez, crédito, mercado e outros associados a cada produto contratado.</p>
+                    <p><strong>6.5.</strong> O Banco poderá, de acordo com o perfil de investidor do cliente, recomendar produtos mais adequados, mas a decisão final de investimento é de inteira responsabilidade do cliente.</p>
+
+                    <h3>7. Uso da Conta e Proibições</h3>
+                    <p><strong>7.1.</strong> O cliente compromete-se a utilizar a conta exclusivamente para fins lícitos.</p>
+                    <p><strong>7.2.</strong> É expressamente proibida a utilização para:</p>
+                    <ul>
+                        <li>a) Lavagem de dinheiro ou ocultação de bens;</li>
+                        <li>b) Financiamento ao terrorismo;</li>
+                        <li>c) Operações fraudulentas;</li>
+                        <li>d) Atividades que violem a legislação vigente.</li>
+                    </ul>
+                    <p><strong>7.3.</strong> O Banco poderá bloquear valores, suspender ou encerrar contas em caso de indícios de irregularidade, comunicando às autoridades competentes.</p>
+
+                    <h3>8. Sigilo Bancário e Proteção de Dados</h3>
+                    <p><strong>8.1.</strong> O Banco compromete-se a observar o dever de sigilo bancário, exceto nos casos previstos em lei.</p>
+                    <p><strong>8.2.</strong> O tratamento de dados pessoais observará a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 – LGPD).</p>
+                    <p><strong>8.3.</strong> O cliente autoriza o Banco a coletar, processar e compartilhar dados com parceiros e prestadores de serviço, exclusivamente para fins de execução contratual, prevenção a fraudes e cumprimento regulatório.</p>
+                    <p><strong>8.4.</strong> O cliente poderá, a qualquer tempo, solicitar a exclusão de seus dados pessoais, observadas as hipóteses legais de retenção.</p>
+
+                    <h3>9. Segurança</h3>
+                    <p><strong>9.1.</strong> O Banco adota medidas de segurança cibernética e criptografia de dados para proteger as informações dos clientes.</p>
+                    <p><strong>9.2.</strong> O cliente é responsável por manter seu dispositivo seguro, atualizado e protegido contra softwares maliciosos.</p>
+                    <p><strong>9.3.</strong> O Banco não se responsabiliza por danos causados por negligência do cliente, incluindo compartilhamento de senha, uso de redes inseguras ou instalação de aplicativos não oficiais.</p>
+
+                    <h3>10. Tarifas e Encargos</h3>
+                    <p><strong>10.1.</strong> O Banco poderá cobrar tarifas pelos serviços utilizados, conforme tabela divulgada em seus canais oficiais.</p>
+                    <p><strong>10.2.</strong> O cliente será previamente informado sobre alterações de tarifas, podendo aceitar ou solicitar o encerramento da conta.</p>
+                    <p><strong>10.3.</strong> Isenções poderão ser concedidas em situações específicas, a critério exclusivo do Banco.</p>
+
+                    <h3>11. Limites de Responsabilidade</h3>
+                    <p><strong>11.1.</strong> O Banco não se responsabiliza por:</p>
+                    <ul>
+                        <li>a) Oscilações de mercado em investimentos;</li>
+                        <li>b) Ações de terceiros em posse de senha do cliente;</li>
+                        <li>c) Interrupções temporárias por manutenção, caso fortuito ou força maior.</li>
+                    </ul>
+                    <p><strong>11.2.</strong> O cliente é responsável por todas as operações realizadas em sua conta, salvo comprovada fraude de responsabilidade do Banco.</p>
+                    <p><strong>11.3.</strong> O Banco não garante acesso ininterrupto ou livre de falhas ao aplicativo ou Internet Banking.</p>
+
+                    <h3>12. Alterações Contratuais</h3>
+                    <p><strong>12.1.</strong> O Banco poderá alterar estes Termos mediante comunicação prévia de 30 dias.</p>
+                    <p><strong>12.2.</strong> A continuidade da utilização dos serviços após este prazo implicará aceitação tácita.</p>
+                    <p><strong>12.3.</strong> Caso o cliente não concorde, poderá encerrar sua conta sem ônus, respeitadas as obrigações pendentes.</p>
+
+                    <h3>13. Encerramento de Conta</h3>
+                    <p><strong>13.1.</strong> O cliente poderá solicitar o encerramento da conta a qualquer tempo, desde que não existam pendências financeiras.</p>
+                    <p><strong>13.2.</strong> O Banco poderá encerrar unilateralmente a conta em casos de:</p>
+                    <ul>
+                        <li>a) Inatividade superior a 12 meses;</li>
+                        <li>b) Uso indevido ou suspeita de fraude;</li>
+                        <li>c) Determinação judicial;</li>
+                        <li>d) Descumprimento destes Termos.</li>
+                    </ul>
+                    <p><strong>13.3.</strong> O saldo positivo existente será devolvido ao cliente em até 10 dias úteis após o encerramento, descontadas eventuais obrigações.</p>
+
+                    <h3>14. Comunicações</h3>
+                    <p><strong>14.1.</strong> Todas as comunicações entre o Banco e o cliente ocorrerão prioritariamente por meios eletrônicos, incluindo aplicativo, Internet Banking, SMS e e-mail.</p>
+                    <p><strong>14.2.</strong> O cliente declara estar ciente de que mensagens enviadas pelo Banco poderão conter informações de caráter sigiloso.</p>
+                    <p><strong>14.3.</strong> O cliente é responsável por manter seus contatos atualizados.</p>
+
+                    <h3>15. Foro e Legislação Aplicável</h3>
+                    <p><strong>15.1.</strong> Este contrato é regido pelas leis da República Federativa do Brasil.</p>
+                    <p><strong>15.2.</strong> Fica eleito o foro da comarca do domicílio do cliente para dirimir eventuais litígios decorrentes destes Termos, com renúncia a qualquer outro, por mais privilegiado que seja.</p>
+
+                    <h3>16. Declaração de Aceite</h3>
+                    <p><strong>16.1.</strong> O cliente declara que leu atentamente, compreendeu e aceita todas as cláusulas destes Termos e Condições.</p>
+                    <p><strong>16.2.</strong> O aceite eletrônico tem plena validade jurídica, equivalendo à assinatura física.</p>
+                </div>
+            </div>
+            <div class="modal-termos-footer">
+                <button class="conta-btn conta-btn-primary" onclick="fecharModalTermos()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal da Política de Privacidade -->
+    <div id="modalPolitica" class="modal-politica" style="display: none;">
+        <div class="modal-politica-content">
+            <div class="modal-politica-header">
+                <h2>Política de Privacidade</h2>
+                <span class="modal-politica-close" onclick="fecharModalPolitica()">&times;</span>
+            </div>
+            <div class="modal-politica-body">
+                <div class="termos-texto">
+                    <p>A presente Política de Privacidade estabelece as diretrizes para o tratamento de informações pessoais coletadas, utilizadas, armazenadas, compartilhadas e protegidas, em conformidade com a legislação aplicável sobre proteção de dados e privacidade. O objetivo deste documento é garantir transparência, segurança e clareza na forma como os dados são tratados, assegurando os direitos dos titulares das informações.</p>
+
+                    <h3>1. Coleta de Informações</h3>
+                    <p><strong>1.1.</strong> Serão coletadas informações fornecidas voluntariamente pelo usuário no momento do cadastro, abertura de conta, preenchimento de formulários, adesão a produtos ou serviços e interação com plataformas digitais.</p>
+                    <p><strong>1.2.</strong> Informações financeiras, como dados bancários, histórico de transações, limites de crédito e perfil de investimentos, poderão ser coletadas para viabilizar a oferta de serviços.</p>
+                    <p><strong>1.3.</strong> Informações técnicas, como endereço IP, cookies, identificadores de dispositivos, geolocalização, tipo de navegador, sistema operacional e padrões de uso, poderão ser armazenadas para fins de segurança e personalização da experiência.</p>
+                    <p><strong>1.4.</strong> Informações adicionais poderão ser obtidas por meio de fontes públicas, parceiros comerciais, bureaus de crédito, órgãos de proteção ao crédito e registros oficiais, sempre respeitando a legislação aplicável.</p>
+
+                    <h3>2. Finalidades do Tratamento</h3>
+                    <p><strong>2.1.</strong> O tratamento dos dados pessoais será realizado para:</p>
+                    <ul>
+                        <li>Execução de contratos e oferta de serviços financeiros.</li>
+                        <li>Cumprimento de obrigações legais e regulatórias.</li>
+                        <li>Prevenção de fraudes, crimes financeiros e lavagem de dinheiro.</li>
+                        <li>Análise de perfil de crédito, risco e capacidade de pagamento.</li>
+                        <li>Oferta de produtos personalizados, investimentos e linhas de crédito.</li>
+                        <li>Envio de comunicações, notificações e materiais promocionais, quando autorizado.</li>
+                        <li>Aprimoramento de sistemas internos, algoritmos de recomendação e análise estatística.</li>
+                        <li>Atendimento a solicitações, reclamações e suporte ao cliente.</li>
+                    </ul>
+
+                    <h3>3. Compartilhamento de Dados</h3>
+                    <p><strong>3.1.</strong> Os dados pessoais poderão ser compartilhados com:</p>
+                    <ul>
+                        <li>Autoridades regulatórias, fiscais e judiciárias, quando exigido por lei.</li>
+                        <li>Instituições financeiras, correspondentes e parceiros de negócios, quando necessário à execução de serviços.</li>
+                        <li>Empresas de tecnologia, hospedagem de dados, segurança digital e análise de risco.</li>
+                        <li>Prestadores de serviços de cobrança, assessoria jurídica e auditoria.</li>
+                        <li>Parceiros de marketing e publicidade, respeitando as bases legais aplicáveis.</li>
+                    </ul>
+                    <p><strong>3.2.</strong> O compartilhamento será sempre limitado ao mínimo necessário para o cumprimento das finalidades previstas.</p>
+
+                    <h3>4. Retenção e Armazenamento</h3>
+                    <p><strong>4.1.</strong> Os dados pessoais serão armazenados apenas pelo tempo necessário para o cumprimento das finalidades previstas nesta Política, observados os prazos legais e regulatórios.</p>
+                    <p><strong>4.2.</strong> Informações relacionadas a obrigações legais poderão ser mantidas por períodos superiores, conforme determinação normativa.</p>
+                    <p><strong>4.3.</strong> Decorrido o prazo de retenção, os dados serão eliminados de forma segura, salvo quando for necessária sua conservação para fins de auditoria, processos judiciais ou cumprimento de obrigações regulatórias.</p>
+
+                    <h3>5. Direitos dos Titulares</h3>
+                    <p><strong>5.1.</strong> Os titulares dos dados poderão exercer os seguintes direitos:</p>
+                    <ul>
+                        <li>Confirmação da existência de tratamento.</li>
+                        <li>Acesso às informações armazenadas.</li>
+                        <li>Correção de dados incompletos, inexatos ou desatualizados.</li>
+                        <li>Anonimização, bloqueio ou eliminação de dados desnecessários ou excessivos.</li>
+                        <li>Portabilidade dos dados para outro fornecedor de serviço, mediante requisição expressa.</li>
+                        <li>Eliminação de dados tratados com consentimento, quando aplicável.</li>
+                        <li>Informação sobre entidades públicas ou privadas com as quais os dados foram compartilhados.</li>
+                        <li>Revogação do consentimento, quando este for a base legal para o tratamento.</li>
+                    </ul>
+                    <p><strong>5.2.</strong> O exercício dos direitos poderá ser solicitado por meio dos canais de atendimento disponibilizados.</p>
+
+                    <h3>6. Segurança da Informação</h3>
+                    <p><strong>6.1.</strong> Serão adotadas medidas técnicas, administrativas e organizacionais aptas a proteger os dados pessoais contra acessos não autorizados, destruição, perda, alteração, comunicação ou difusão indevida.</p>
+                    <p><strong>6.2.</strong> Serão utilizados recursos de criptografia, monitoramento, controle de acessos, anonimização, firewalls e protocolos de segurança da informação.</p>
+                    <p><strong>6.3.</strong> Apesar das medidas implementadas, não é possível garantir segurança absoluta contra todos os riscos cibernéticos existentes, cabendo ao usuário adotar boas práticas de segurança digital.</p>
+
+                    <h3>7. Cookies e Tecnologias de Rastreamento</h3>
+                    <p><strong>7.1.</strong> O uso de cookies e tecnologias similares tem por objetivo:</p>
+                    <ul>
+                        <li>Melhorar a navegação e experiência do usuário.</li>
+                        <li>Coletar estatísticas de uso e desempenho da plataforma.</li>
+                        <li>Personalizar ofertas e recomendações de serviços.</li>
+                        <li>Realizar campanhas de marketing direcionado.</li>
+                    </ul>
+                    <p><strong>7.2.</strong> O usuário poderá configurar seu navegador para recusar cookies, porém certas funcionalidades poderão ser limitadas.</p>
+
+                    <h3>8. Bases Legais para o Tratamento</h3>
+                    <p><strong>8.1.</strong> O tratamento de dados será fundamentado em bases legais, tais como:</p>
+                    <ul>
+                        <li>Execução de contrato ou de procedimentos preliminares.</li>
+                        <li>Cumprimento de obrigação legal ou regulatória.</li>
+                        <li>Exercício regular de direitos em processo judicial, administrativo ou arbitral.</li>
+                        <li>Proteção do crédito.</li>
+                        <li>Interesse legítimo do controlador, desde que respeitados os direitos e liberdades fundamentais do titular.</li>
+                        <li>Consentimento do titular, quando necessário.</li>
+                    </ul>
+
+                    <h3>9. Transferência Internacional de Dados</h3>
+                    <p><strong>9.1.</strong> Caso seja necessária a transferência internacional de dados pessoais, esta será realizada apenas para países que proporcionem grau de proteção de dados pessoais adequado ou quando houver garantias contratuais de segurança.</p>
+                    <p><strong>9.2.</strong> O usuário será informado sempre que a transferência ocorrer de forma sistemática.</p>
+
+                    <h3>10. Alterações da Política de Privacidade</h3>
+                    <p><strong>10.1.</strong> Esta Política poderá ser alterada a qualquer tempo, visando sua atualização frente a mudanças legais, tecnológicas ou de negócios.</p>
+                    <p><strong>10.2.</strong> Sempre que houver alterações relevantes, os usuários serão comunicados por meios adequados.</p>
+                    <p><strong>10.3.</strong> A continuidade do uso dos serviços após a divulgação de alterações será considerada como concordância com os novos termos.</p>
+
+                    <h3>11. Disposições Gerais</h3>
+                    <p><strong>11.1.</strong> Esta Política deve ser interpretada em conformidade com a legislação vigente sobre proteção de dados.</p>
+                    <p><strong>11.2.</strong> Caso qualquer disposição desta Política seja considerada inválida ou inexequível, as demais disposições permanecerão em pleno vigor.</p>
+                    <p><strong>11.3.</strong> Em caso de conflito entre esta Política e normas legais específicas, prevalecerá a legislação aplicável.</p>
+                </div>
+            </div>
+            <div class="modal-politica-footer">
+                <button class="conta-btn conta-btn-primary" onclick="fecharModalPolitica()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/formulario-conta.js"></script>
+    <script>
+        // Função simples para voltar ao login
+        function voltarParaLogin() {
+            window.location.href = '../index.agilbank.html';
+        }
+
+
+
+
+        // Função para validar CEP e autocomplete
+        function validarCEPCampo(input) {
+            console.log('🔍 Validando CEP');
+            
+            // Remover caracteres não numéricos
+            let valor = input.value.replace(/[^\d]/g, '');
+            
+            // Limitar a 8 dígitos
+            if (valor.length > 8) {
+                valor = valor.substring(0, 8);
+            }
+            
+            // Formatar CEP
+            if (valor.length > 0) {
+                valor = valor.replace(/(\d{5})(\d)/, '$1-$2');
+            }
+            input.value = valor;
+            
+            // Remover mensagem anterior
+            const msgAnterior = input.parentNode.querySelector('.cep-msg');
+            if (msgAnterior) msgAnterior.remove();
+            
+            const cepLimpo = valor.replace(/[^\d]/g, '');
+            console.log('🔢 CEP normalizado para validação');
+            
+            if (cepLimpo.length === 8) {
+                console.log('🔍 CEP completo; buscando endereço');
+                // Chamar a função de busca com timeout
+                setTimeout(() => {
+                    buscarCEP(cepLimpo, input);
+                }, 100);
+            } else if (cepLimpo.length > 0) {
+                input.style.border = '2px solid #ffc107';
+                console.log('⚠️ CEP incompleto - aguardando completar');
+            } else {
+                input.style.border = '';
+                console.log('🔄 Campo vazio');
+            }
+        }
+
+        // Função para buscar CEP na API
+        async function buscarCEP(cep, input) {
+            console.log('🚀 FUNÇÃO buscarCEP EXECUTADA!');
+            console.log('🔢 CEP recebido para consulta');
+            console.log('📡 Fazendo requisição para ViaCEP');
+            
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                console.log('📡 Resposta recebida:', response.status);
+                
+                const data = await response.json();
+                console.log('📋 Dados da API recebidos');
+                
+                if (data.erro) {
+                    input.style.border = '2px solid #dc3545';
+                    console.log('❌ CEP não encontrado na API');
+                } else {
+                    input.style.border = '2px solid #28a745';
+                    
+                    // Preencher campos automaticamente
+                    const endereco = document.getElementById('contaEndereco');
+                    const bairro = document.getElementById('contaBairro');
+                    const cidade = document.getElementById('contaCidade');
+                    const estado = document.getElementById('contaEstado');
+                    
+                    console.log('🔍 Campos encontrados:');
+                    console.log('📍 Endereço:', endereco ? 'SIM' : 'NÃO');
+                    console.log('🏘️ Bairro:', bairro ? 'SIM' : 'NÃO');
+                    console.log('🏙️ Cidade:', cidade ? 'SIM' : 'NÃO');
+                    console.log('🗺️ Estado:', estado ? 'SIM' : 'NÃO');
+                    
+                    if (endereco) {
+                        endereco.value = data.logradouro || '';
+                        console.log('📍 Endereço preenchido:', endereco.value);
+                    }
+                    if (bairro) {
+                        bairro.value = data.bairro || '';
+                        console.log('🏘️ Bairro preenchido:', bairro.value);
+                    }
+                    if (cidade) {
+                        cidade.value = data.localidade || '';
+                        console.log('🏙️ Cidade preenchida:', cidade.value);
+                    }
+                    if (estado) {
+                        // Para select, precisa encontrar a opção correta
+                        const opcaoEstado = estado.querySelector(`option[value="${data.uf}"]`);
+                        if (opcaoEstado) {
+                            estado.value = data.uf;
+                            console.log('🗺️ Estado preenchido:', estado.value);
+                        } else {
+                            console.log('❌ Estado não encontrado nas opções:', data.uf);
+                        }
+                    }
+                    
+                    console.log('✅ CEP encontrado e campos preenchidos!');
+                }
+            } catch (error) {
+                console.error('❌ Erro na requisição:', error);
+                input.style.border = '2px solid #dc3545';
+            }
+        }
+
+        // Função para validar CPF diretamente
+        function validarCPFCampo(input) {
+            console.log('🔍 Validando CPF');
+            
+            // Remover caracteres não numéricos
+            let valor = input.value.replace(/[^\d]/g, '');
+            console.log('🔢 Valor normalizado para CPF');
+            
+            // Limitar a 11 dígitos
+            if (valor.length > 11) {
+                valor = valor.substring(0, 11);
+                console.log('✂️ CPF limitado a 11 dígitos');
+            }
+            
+            // Formatar
+            if (valor.length > 0) {
+                valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            }
+            input.value = valor;
+            console.log('📝 CPF formatado');
+            
+            // Remover mensagem anterior
+            const msgAnterior = input.parentNode.querySelector('.cpf-msg');
+            if (msgAnterior) {
+                msgAnterior.remove();
+                console.log('🗑️ Mensagem anterior removida');
+            }
+            
+            const cpfLimpo = valor.replace(/[^\d]/g, '');
+            console.log('🧹 CPF normalizado para validação');
+            
+            if (cpfLimpo.length === 11) {
+                console.log('🔍 Validando CPF...');
+                const isValid = validarCPF(cpfLimpo);
+                console.log('✅ CPF válido?', isValid);
+                
+                if (isValid) {
+                    input.style.border = '3px solid #28a745';
+                    input.style.backgroundColor = '#f8fff8';
+                    const msg = document.createElement('div');
+                    msg.className = 'cpf-msg';
+                    msg.style.cssText = 'color: #28a745 !important; font-size: 0.6rem !important; margin-top: 4px !important; text-align: left !important; font-weight: normal !important; display: block !important;';
+                    msg.textContent = '✅ cpf válido';
+                    input.parentNode.appendChild(msg);
+                    console.log('✅ CPF válido - borda verde aplicada');
+                } else {
+                    input.style.border = '3px solid #dc3545';
+                    input.style.backgroundColor = '#fff8f8';
+                    const msg = document.createElement('div');
+                    msg.className = 'cpf-msg';
+                    msg.style.cssText = 'color: #dc3545 !important; font-size: 0.6rem !important; margin-top: 4px !important; text-align: left !important; font-weight: normal !important; display: block !important;';
+                    msg.textContent = '❌ cpf inválido';
+                    input.parentNode.appendChild(msg);
+                    console.log('❌ CPF inválido - borda vermelha aplicada');
+                    console.log('📝 Mensagem criada:', msg);
+                    console.log('📝 Texto da mensagem:', msg.textContent);
+                    console.log('📝 Estilos aplicados:', msg.style.cssText);
+                }
+            } else if (cpfLimpo.length > 0) {
+                input.style.border = '3px solid #ffc107';
+                input.style.backgroundColor = '#fffef8';
+                console.log('⚠️ CPF incompleto - borda amarela aplicada');
+            } else {
+                input.style.border = '';
+                input.style.backgroundColor = '';
+                console.log('🔄 Campo vazio - estilos removidos');
+            }
+        }
+        
+        // Função para fazer login após criar conta
+        function fazerLoginAposConta() {
+            window.location.href = '../index.agilbank.html';
+        }
+        
+        // Funções para controlar o modal dos termos
+        function abrirModalTermos() {
+            document.getElementById('modalTermos').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Previne scroll da página
+        }
+        
+        function fecharModalTermos() {
+            document.getElementById('modalTermos').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restaura scroll da página
+        }
+        
+        // Funções para controlar o modal da política de privacidade
+        function abrirModalPolitica() {
+            document.getElementById('modalPolitica').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Previne scroll da página
+        }
+        
+        function fecharModalPolitica() {
+            document.getElementById('modalPolitica').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restaura scroll da página
+        }
+        
+        // Fechar modal clicando fora dele
+        window.onclick = function(event) {
+            const modalTermos = document.getElementById('modalTermos');
+            const modalPolitica = document.getElementById('modalPolitica');
+            
+            if (event.target === modalTermos) {
+                fecharModalTermos();
+            }
+            if (event.target === modalPolitica) {
+                fecharModalPolitica();
+            }
+        }
+        
+        // Função para validar CPF usando o algoritmo oficial
+        function validarCPF(cpf) {
+            // Remove caracteres não numéricos
+            cpf = cpf.replace(/[^\d]/g, '');
+            
+            // Verifica se tem 11 dígitos
+            if (cpf.length !== 11) return false;
+            
+            // Verifica se todos os dígitos são iguais
+            if (/^(\d)\1{10}$/.test(cpf)) return false;
+            
+            // Validação do primeiro dígito verificador
+            let soma = 0;
+            for (let i = 0; i < 9; i++) {
+                soma += parseInt(cpf.charAt(i)) * (10 - i);
+            }
+            let resto = 11 - (soma % 11);
+            if (resto === 10 || resto === 11) resto = 0;
+            if (resto !== parseInt(cpf.charAt(9))) return false;
+            
+            // Validação do segundo dígito verificador
+            soma = 0;
+            for (let i = 0; i < 10; i++) {
+                soma += parseInt(cpf.charAt(i)) * (11 - i);
+            }
+            resto = 11 - (soma % 11);
+            if (resto === 10 || resto === 11) resto = 0;
+            if (resto !== parseInt(cpf.charAt(10))) return false;
+            
+            return true;
+        }
+        
+        // Função para formatar CPF
+        function formatarCPF(cpf) {
+            cpf = cpf.replace(/[^\d]/g, '');
+            if (cpf.length === 11) {
+                return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            } else if (cpf.length > 0) {
+                // Formatação parcial conforme vai digitando
+                if (cpf.length <= 3) {
+                    return cpf;
+                } else if (cpf.length <= 6) {
+                    return cpf.replace(/(\d{3})(\d+)/, '$1.$2');
+                } else if (cpf.length <= 9) {
+                    return cpf.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+                } else {
+                    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, '$1.$2.$3-$4');
+                }
+            }
+            return cpf;
+        }
+        
+        // Função para mostrar aviso visual de CPF correto
+        function mostrarAvisoCPFCorreto(input) {
+            // Remove aviso anterior se existir
+            const avisoAnterior = input.parentNode.querySelector('.cpf-mensagem-aviso');
+            if (avisoAnterior) {
+                avisoAnterior.remove();
+            }
+            
+            // Cria o aviso
+            const aviso = document.createElement('div');
+            aviso.className = 'cpf-mensagem-aviso';
+            aviso.textContent = '✓ CPF válido!';
+            
+            // Adiciona o aviso ao container do input
+            input.parentNode.appendChild(aviso);
+            
+            // Adiciona classe ao input para estilização
+            input.classList.add('cpf-valido-com-aviso');
+            
+            // Remove o aviso após 3 segundos
+            setTimeout(() => {
+                if (aviso && aviso.parentNode) {
+                    aviso.style.animation = 'slideDown 0.3s ease-out reverse';
+                    setTimeout(() => {
+                        if (aviso && aviso.parentNode) {
+                            aviso.remove();
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+        
+        // Função para validar idade mínima (16 anos)
+        function validarIdadeMinima(dataNascimento) {
+            if (!dataNascimento) return false;
+            
+            const hoje = new Date();
+            const nascimento = new Date(dataNascimento);
+            
+            // Calcula a idade
+            let idade = hoje.getFullYear() - nascimento.getFullYear();
+            const mesAtual = hoje.getMonth();
+            const mesNascimento = nascimento.getMonth();
+            
+            if (mesAtual < mesNascimento || (mesAtual === mesNascimento && hoje.getDate() < nascimento.getDate())) {
+                idade--;
+            }
+            
+            return idade >= 16;
+        }
+        
+        // Função para formatar telefone
+        function formatarTelefone(telefone) {
+            telefone = telefone.replace(/[^\d]/g, '');
+            
+            if (telefone.length <= 2) {
+                return telefone;
+            } else if (telefone.length <= 6) {
+                return telefone.replace(/(\d{2})(\d+)/, '($1) $2');
+            } else if (telefone.length === 10) {
+                // Telefone fixo: (11) 1234-5678
+                return telefone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+            } else if (telefone.length === 11) {
+                // Telefone celular: (11) 91234-5678
+                return telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            } else if (telefone.length > 11) {
+                // Limita a 11 dígitos
+                telefone = telefone.substring(0, 11);
+                return telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            }
+            
+            return telefone;
+        }
+        
+        // Função para validar telefone
+        function validarTelefone(telefone) {
+            const telefoneLimpo = telefone.replace(/[^\d]/g, '');
+            // Telefone válido: 11 dígitos (celular) ou 10 dígitos (fixo)
+            return telefoneLimpo.length === 11 || telefoneLimpo.length === 10;
+        }
+        
+        // Função para formatar CEP
+        function formatarCEP(cep) {
+            cep = cep.replace(/[^\d]/g, '');
+            if (cep.length <= 5) {
+                return cep;
+            } else {
+                return cep.replace(/(\d{5})(\d+)/, '$1-$2');
+            }
+        }
+        
+        // Aplicar validação e busca de CEP
+        function aplicarValidacaoCEP() {
+            const inputCEP = document.getElementById('contaCep');
+            const inputEndereco = document.getElementById('contaEndereco');
+            const inputCidade = document.getElementById('contaCidade');
+            const inputEstado = document.getElementById('contaEstado');
+            
+            if (!inputCEP) return;
+            
+            inputCEP.addEventListener('input', function(e) {
+                let valor = e.target.value;
+                
+                // Remove caracteres não numéricos
+                valor = valor.replace(/[^\d]/g, '');
+                
+                // Limita a 8 dígitos
+                if (valor.length > 8) {
+                    valor = valor.substring(0, 8);
+                }
+                
+                // Aplica formatação
+                e.target.value = formatarCEP(valor);
+                
+                // Remove classes anteriores
+                e.target.classList.remove('cep-valido', 'cep-invalido', 'cep-carregando');
+                
+                // Remove mensagem de erro se existir
+                const erroElement = e.target.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                if (valor.length === 8) {
+                    // Adiciona classe de carregamento
+                    e.target.classList.add('cep-carregando');
+                    e.target.style.borderColor = '#ffc107';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(255, 193, 7, 0.2)';
+                    
+                    // Busca o CEP
+                    buscarCEP(valor).then(dados => {
+                        e.target.classList.remove('cep-carregando');
+                        
+                        if (dados) {
+                            // CEP encontrado
+                            e.target.classList.add('cep-valido');
+                            e.target.style.borderColor = '#28a745';
+                            e.target.style.boxShadow = '0 0 0 2px rgba(40, 167, 69, 0.2)';
+                            
+                            // Preenche os campos automaticamente
+                            if (inputEndereco) inputEndereco.value = dados.logradouro;
+                            if (inputCidade) inputCidade.value = dados.cidade;
+                            if (inputEstado) inputEstado.value = dados.estado;
+                            
+                            // Adiciona classe de sucesso aos campos preenchidos
+                            if (inputCidade) inputCidade.classList.add('cep-preenchido');
+                            if (inputEstado) inputEstado.classList.add('cep-preenchido');
+                            
+                        } else {
+                            // CEP não encontrado
+                            e.target.classList.add('cep-invalido');
+                            e.target.style.borderColor = '#dc3545';
+                            e.target.style.boxShadow = '0 0 0 2px rgba(220, 53, 69, 0.2)';
+                            
+                            // Mostrar mensagem de erro
+                            if (erroElement) {
+                                erroElement.style.display = 'block';
+                                erroElement.textContent = '❌ CEP não encontrado';
+                                erroElement.style.color = '#dc3545';
+                            }
+                        }
+                    });
+                } else if (valor.length > 0) {
+                    e.target.style.borderColor = '#ffc107';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(255, 193, 7, 0.2)';
+                } else {
+                    e.target.style.borderColor = '';
+                    e.target.style.boxShadow = '';
+                }
+            });
+        }
+        
+        // Função para gerenciar upload de documentos
+        function configurarUploads() {
+            const uploads = [
+                { input: 'contaDocumento', preview: 'previewDocumento' },
+                { input: 'contaComprovante', preview: 'previewComprovante' },
+                { input: 'contaRosto', preview: 'previewRosto' }
+            ];
+
+            uploads.forEach(upload => {
+                const input = document.getElementById(upload.input);
+                const preview = document.getElementById(upload.preview);
+
+                if (!input || !preview) return;
+
+                // Mudança no input
+                input.addEventListener('change', (e) => {
+                    handleFiles(e.target.files, preview);
+                });
+            });
+        }
+
+        function handleFiles(files, preview) {
+            preview.innerHTML = '';
+            preview.classList.remove('show');
+
+            if (files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Arquivo muito grande! Máximo 5MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'conta-upload-preview-item';
+                    
+                    if (file.type.startsWith('image/')) {
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" class="conta-upload-preview-image" alt="${file.name}">
+                            <div class="conta-upload-preview-name">${file.name}</div>
+                            <button class="conta-upload-remove" onclick="this.parentElement.remove()">×</button>
+                        `;
+                    } else {
+                        previewItem.innerHTML = `
+                            <div style="width: 120px; height: 120px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                                <i class="fas fa-file-pdf" style="font-size: 24px; color: #dc3545;"></i>
+                                <div class="conta-upload-preview-name">${file.name}</div>
+                            </div>
+                            <button class="conta-upload-remove" onclick="this.parentElement.remove()">×</button>
+                        `;
+                    }
+                    
+                    preview.appendChild(previewItem);
+                    preview.classList.add('show');
+                    area.parentElement.classList.add('uploaded');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Aplicar validação de telefone
+        function aplicarValidacaoTelefone() {
+            const input = document.getElementById('contaTelefone');
+            if (!input) return;
+            
+            input.addEventListener('input', function(e) {
+                let valor = e.target.value;
+                
+                // Remove caracteres não numéricos
+                valor = valor.replace(/[^\d]/g, '');
+                
+                // Limita a 11 dígitos
+                if (valor.length > 11) {
+                    valor = valor.substring(0, 11);
+                }
+                
+                // Aplica formatação
+                e.target.value = formatarTelefone(valor);
+                
+                // Remove classes anteriores
+                e.target.classList.remove('telefone-valido', 'telefone-invalido');
+                
+                // Remove mensagem de erro se existir
+                const erroElement = e.target.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                // Valida o telefone
+                const telefoneLimpo = valor.replace(/[^\d]/g, '');
+                const isValid = validarTelefone(telefoneLimpo);
+                
+                if (telefoneLimpo.length === 10 || telefoneLimpo.length === 11) {
+                    if (isValid) {
+                        e.target.classList.add('telefone-valido');
+                        e.target.style.borderColor = '#28a745';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(40, 167, 69, 0.2)';
+                    } else {
+                        e.target.classList.add('telefone-invalido');
+                        e.target.style.borderColor = '#dc3545';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(220, 53, 69, 0.2)';
+                        
+                        // Mostrar mensagem de erro
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '❌ Telefone inválido - deve ter 10 ou 11 dígitos';
+                            erroElement.style.color = '#dc3545';
+                        }
+                    }
+                } else if (telefoneLimpo.length > 0) {
+                    e.target.style.borderColor = '#ffc107';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(255, 193, 7, 0.2)';
+                } else {
+                    e.target.style.borderColor = '';
+                    e.target.style.boxShadow = '';
+                }
+            });
+        }
+        
+        // Aplicar validação de CPF em tempo real
+        function aplicarValidacaoCPF() {
+            const input = document.getElementById('contaCpf');
+            if (!input) {
+                console.log('❌ Campo CPF não encontrado');
+                return;
+            }
+            console.log('✅ Validação CPF aplicada');
+            
+            input.addEventListener('input', function(e) {
+                let valor = e.target.value.replace(/[^\d]/g, ''); // Apenas números
+                
+                // Formatar CPF
+                if (valor.length > 0) {
+                    valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                    valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                    valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                }
+                
+                e.target.value = valor;
+                
+                // Remove classes anteriores
+                e.target.classList.remove('valida', 'invalida');
+                
+                // Remove mensagem de erro
+                const erroElement = e.target.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                const cpfLimpo = valor.replace(/[^\d]/g, '');
+                
+                if (cpfLimpo.length === 11) {
+                    if (validarCPF(cpfLimpo)) {
+                        e.target.classList.add('valida');
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '✅ CPF válido';
+                            erroElement.style.color = '#28a745';
+                        }
+                    } else {
+                        e.target.classList.add('invalida');
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '❌ CPF inválido';
+                            erroElement.style.color = '#dc3545';
+                        }
+                    }
+                } else if (cpfLimpo.length > 0) {
+                    e.target.classList.add('invalida');
+                    if (erroElement) {
+                        erroElement.style.display = 'block';
+                        erroElement.textContent = '❌ CPF deve ter 11 dígitos';
+                        erroElement.style.color = '#dc3545';
+                    }
+                }
+            });
+        }
+
+        // Aplicar validação de campos obrigatórios
+        function aplicarValidacaoCamposObrigatorios() {
+            console.log('✅ Aplicando validação de campos obrigatórios');
+            const camposObrigatorios = [
+                { id: 'contaNome', nome: 'Nome' },
+                { id: 'contaCpf', nome: 'CPF' },
+                { id: 'contaDataNasc', nome: 'Data de Nascimento' },
+                { id: 'contaSexo', nome: 'Sexo' },
+                { id: 'contaEmail', nome: 'Email' },
+                { id: 'contaTelefone', nome: 'Telefone' },
+                { id: 'contaCep', nome: 'CEP' },
+                { id: 'contaEndereco', nome: 'Endereço' },
+                { id: 'contaCidade', nome: 'Cidade' },
+                { id: 'contaFinalidade', nome: 'Finalidade da Conta' }
+            ];
+            
+            camposObrigatorios.forEach(campo => {
+                const input = document.getElementById(campo.id);
+                if (!input) return;
+                
+                input.addEventListener('blur', function(e) {
+                    const valor = e.target.value.trim();
+                    
+                    // Remove classes anteriores
+                    e.target.classList.remove('valida', 'invalida');
+                    
+                    // Remove mensagem de erro
+                    const erroElement = e.target.parentNode.querySelector('.conta-error');
+                    if (erroElement) {
+                        erroElement.style.display = 'none';
+                        erroElement.textContent = '';
+                    }
+                    
+                    if (valor === '') {
+                        e.target.classList.add('invalida');
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = `❌ ${campo.nome} é obrigatório`;
+                            erroElement.style.color = '#dc3545';
+                        }
+                    }
+                });
+            });
+        }
+
+        // Aplicar validação de email em tempo real
+        function aplicarValidacaoEmail() {
+            const input = document.getElementById('contaEmail');
+            if (!input) {
+                console.log('❌ Campo Email não encontrado');
+                return;
+            }
+            console.log('✅ Validação Email aplicada');
+            
+            input.addEventListener('input', function(e) {
+                const email = e.target.value;
+                
+                // Remove classes anteriores
+                e.target.classList.remove('valida', 'invalida');
+                
+                // Remove mensagem de erro
+                const erroElement = e.target.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                if (email.length > 0) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (emailRegex.test(email)) {
+                        e.target.classList.add('valida');
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '✅ Email válido';
+                            erroElement.style.color = '#28a745';
+                        }
+                    } else {
+                        e.target.classList.add('invalida');
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '❌ Email inválido';
+                            erroElement.style.color = '#dc3545';
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Aplicar validação de data de nascimento
+        function aplicarValidacaoDataNascimento() {
+            const input = document.getElementById('contaDataNasc');
+            if (!input) return;
+            
+            input.addEventListener('change', function(e) {
+                const dataNascimento = e.target.value;
+                
+                // Remove classes anteriores
+                e.target.classList.remove('data-valida', 'data-invalida');
+                
+                // Remove mensagem de erro se existir
+                const erroElement = e.target.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                if (dataNascimento) {
+                    if (validarIdadeMinima(dataNascimento)) {
+                        e.target.classList.add('data-valida');
+                        e.target.style.borderColor = '#28a745';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(40, 167, 69, 0.2)';
+                    } else {
+                        e.target.classList.add('data-invalida');
+                        e.target.style.borderColor = '#dc3545';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(220, 53, 69, 0.2)';
+                        
+                        // Mostrar mensagem de erro
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '❌ Menores de 16 anos não podem ter conta';
+                            erroElement.style.color = '#dc3545';
+                        }
+                    }
+                } else {
+                    e.target.style.borderColor = '';
+                    e.target.style.boxShadow = '';
+                }
+            });
+        }
+        
+
+        // Função para validação simples
+        function configurarValidacaoSimples() {
+            console.log('🔍 Configurando validação simples...');
+            
+            // CPF
+            const cpfInput = document.getElementById('contaCpf');
+            console.log('🔍 Campo CPF encontrado:', cpfInput);
+            if (cpfInput) {
+                console.log('✅ Adicionando validação ao CPF...');
+                cpfInput.addEventListener('input', function(e) {
+                    console.log('📝 CPF digitado');
+                    let valor = e.target.value.replace(/[^\d]/g, '');
+                    
+                    // Limitar a 11 dígitos
+                if (valor.length > 11) {
+                    valor = valor.substring(0, 11);
+                }
+                
+                    // Aplicar formatação
+                    if (valor.length > 0) {
+                        valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                        valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                        valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                    }
+                    e.target.value = valor;
+                    
+                    // Remover mensagem anterior
+                    const mensagemAnterior = e.target.parentNode.querySelector('.cpf-mensagem');
+                    if (mensagemAnterior) {
+                        mensagemAnterior.remove();
+                    }
+                    
+                const cpfLimpo = valor.replace(/[^\d]/g, '');
+                
+                if (cpfLimpo.length === 11) {
+                        if (validarCPF(cpfLimpo)) {
+                            e.target.style.setProperty('border-color', '#28a745', 'important');
+                            e.target.style.setProperty('box-shadow', '0 0 0 2px rgba(40, 167, 69, 0.2)', 'important');
+                            
+                            const mensagem = document.createElement('div');
+                            mensagem.className = 'cpf-mensagem';
+                            mensagem.style.cssText = 'color: #28a745; font-size: 0.8rem; margin-top: 4px; text-align: center;';
+                            mensagem.textContent = '✅ CPF válido';
+                            e.target.parentNode.appendChild(mensagem);
+                    } else {
+                            e.target.style.setProperty('border-color', '#dc3545', 'important');
+                            e.target.style.setProperty('box-shadow', '0 0 0 2px rgba(220, 53, 69, 0.2)', 'important');
+                            
+                            const mensagem = document.createElement('div');
+                            mensagem.className = 'cpf-mensagem';
+                            mensagem.style.cssText = 'color: #dc3545; font-size: 0.8rem; margin-top: 4px; text-align: center;';
+                            mensagem.textContent = '❌ Digite um CPF válido';
+                            e.target.parentNode.appendChild(mensagem);
+                    }
+                } else if (cpfLimpo.length > 0) {
+                        e.target.style.setProperty('border-color', '#ffc107', 'important');
+                        e.target.style.setProperty('box-shadow', '0 0 0 2px rgba(255, 193, 7, 0.2)', 'important');
+                } else {
+                        e.target.style.removeProperty('border-color');
+                        e.target.style.removeProperty('box-shadow');
+                    }
+                });
+            }
+            
+            // Email
+            const emailInput = document.getElementById('contaEmail');
+            if (emailInput) {
+                emailInput.addEventListener('blur', function(e) {
+                    const email = e.target.value;
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (email && !emailRegex.test(email)) {
+                        e.target.style.borderColor = '#dc3545';
+                    } else {
+                        e.target.style.borderColor = '';
+                    }
+                });
+            }
+            
+            console.log('✅ Validação simples configurada');
+        }
+        
+        // Função para configurar campos de senha
+        function configurarCamposSenha() {
+            console.log('🔍 Configurando campos de senha...');
+            const senhaInput = document.getElementById('contaSenha');
+            const confirmarSenhaInput = document.getElementById('contaConfirmarSenha');
+            const toggleSenha = document.getElementById('toggleSenha');
+            const toggleConfirmarSenha = document.getElementById('toggleConfirmarSenha');
+            const eyeIconSenha = document.getElementById('eyeIconSenha');
+            const eyeIconConfirmarSenha = document.getElementById('eyeIconConfirmarSenha');
+
+            console.log('Senha Input encontrado:', !!senhaInput);
+            console.log('Toggle Senha encontrado:', !!toggleSenha);
+            console.log('Eye Icon Senha encontrado:', !!eyeIconSenha);
+
+            // Toggle para mostrar/ocultar senha
+            if (toggleSenha) {
+            toggleSenha.addEventListener('click', () => {
+                    console.log('👁️ Clicou no olho da senha');
+                if (senhaInput.type === 'password') {
+                    senhaInput.type = 'text';
+                    eyeIconSenha.classList.remove('fa-eye');
+                    eyeIconSenha.classList.add('fa-eye-slash');
+                        console.log('👁️ Senha mostrada');
+                } else {
+                    senhaInput.type = 'password';
+                    eyeIconSenha.classList.remove('fa-eye-slash');
+                    eyeIconSenha.classList.add('fa-eye');
+                        console.log('👁️ Senha ocultada');
+                }
+            });
+                console.log('✅ Event listener do olho da senha adicionado');
+            } else {
+                console.log('❌ Toggle senha não encontrado');
+            }
+
+            // Toggle para mostrar/ocultar confirmação de senha
+            if (toggleConfirmarSenha) {
+            toggleConfirmarSenha.addEventListener('click', () => {
+                    console.log('👁️ Clicou no olho da confirmação de senha');
+                if (confirmarSenhaInput.type === 'password') {
+                    confirmarSenhaInput.type = 'text';
+                    eyeIconConfirmarSenha.classList.remove('fa-eye');
+                    eyeIconConfirmarSenha.classList.add('fa-eye-slash');
+                        console.log('👁️ Confirmação de senha mostrada');
+                } else {
+                    confirmarSenhaInput.type = 'password';
+                    eyeIconConfirmarSenha.classList.remove('fa-eye-slash');
+                    eyeIconConfirmarSenha.classList.add('fa-eye');
+                        console.log('👁️ Confirmação de senha ocultada');
+                }
+            });
+                console.log('✅ Event listener do olho da confirmação adicionado');
+            } else {
+                console.log('❌ Toggle confirmação não encontrado');
+            }
+
+            // Validação da senha
+            senhaInput.addEventListener('input', function(e) {
+                const valorOriginal = e.target.value;
+                const valor = valorOriginal.replace(/[^\d]/g, ''); // Apenas números
+                
+                // Verificar se foi digitada uma letra
+                if (valorOriginal !== valor) {
+                    // Mostrar aviso de letra digitada
+                    const erroElement = e.target.parentNode.querySelector('.conta-error');
+                    if (erroElement) {
+                        erroElement.style.display = 'block';
+                        erroElement.textContent = '⚠️ Digite apenas números';
+                        erroElement.style.color = '#ff9800';
+                    }
+                    
+                    // Adicionar classe de aviso
+                    e.target.classList.remove('valida', 'invalida');
+                    e.target.classList.add('aviso');
+                    
+                    // Limpar após 2 segundos
+                    setTimeout(() => {
+                        if (erroElement) {
+                            erroElement.style.display = 'none';
+                            erroElement.textContent = '';
+                        }
+                        e.target.classList.remove('aviso');
+                    }, 2000);
+                }
+                
+                e.target.value = valor;
+                
+                // Remove classes anteriores
+                e.target.classList.remove('valida', 'invalida');
+                
+                // Remove mensagem de erro
+                const erroElement = e.target.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                if (valor.length === 6) {
+                    e.target.classList.add('valida');
+                    // Mostrar mensagem de sucesso
+                    if (erroElement) {
+                        erroElement.style.display = 'block';
+                        erroElement.textContent = '✅ Senha válida';
+                        erroElement.style.color = '#28a745';
+                    }
+                } else if (valor.length > 0) {
+                    e.target.classList.add('invalida');
+                    if (erroElement) {
+                        erroElement.style.display = 'block';
+                        erroElement.textContent = '❌ Senha deve ter exatamente 6 dígitos';
+                        erroElement.style.color = '#dc3545';
+                    }
+                } else {
+                    // Campo vazio - limpar mensagem
+                    if (erroElement) {
+                        erroElement.style.display = 'none';
+                        erroElement.textContent = '';
+                    }
+                }
+                
+                // Validar confirmação se já foi preenchida
+                if (confirmarSenhaInput.value) {
+                    validarConfirmacaoSenha();
+                }
+            });
+
+            // Validação da confirmação de senha
+            confirmarSenhaInput.addEventListener('input', function(e) {
+                const valorOriginal = e.target.value;
+                const valor = valorOriginal.replace(/[^\d]/g, ''); // Apenas números
+                
+                // Verificar se foi digitada uma letra
+                if (valorOriginal !== valor) {
+                    // Mostrar aviso de letra digitada
+                    const erroElement = e.target.parentNode.querySelector('.conta-error');
+                    if (erroElement) {
+                        erroElement.style.display = 'block';
+                        erroElement.textContent = '⚠️ Digite apenas números';
+                        erroElement.style.color = '#ff9800';
+                    }
+                    
+                    // Adicionar classe de aviso
+                    e.target.classList.remove('valida', 'invalida');
+                    e.target.classList.add('aviso');
+                    
+                    // Limpar após 2 segundos
+                    setTimeout(() => {
+                        if (erroElement) {
+                            erroElement.style.display = 'none';
+                            erroElement.textContent = '';
+                        }
+                        e.target.classList.remove('aviso');
+                    }, 2000);
+                }
+                
+                e.target.value = valor;
+                
+                validarConfirmacaoSenha();
+            });
+
+            function validarConfirmacaoSenha() {
+                const senha = senhaInput.value;
+                const confirmar = confirmarSenhaInput.value;
+                
+                // Remove classes anteriores
+                confirmarSenhaInput.classList.remove('valida', 'invalida');
+                
+                // Remove mensagem de erro
+                const erroElement = confirmarSenhaInput.parentNode.querySelector('.conta-error');
+                if (erroElement) {
+                    erroElement.style.display = 'none';
+                    erroElement.textContent = '';
+                }
+                
+                if (confirmar.length === 6) {
+                    if (senha === confirmar) {
+                        confirmarSenhaInput.classList.add('valida');
+                        // Mostrar mensagem de sucesso
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '✅ Senhas coincidem';
+                            erroElement.style.color = '#28a745';
+                        }
+                    } else {
+                        confirmarSenhaInput.classList.add('invalida');
+                        if (erroElement) {
+                            erroElement.style.display = 'block';
+                            erroElement.textContent = '❌ Senhas não coincidem';
+                            erroElement.style.color = '#dc3545';
+                        }
+                    }
+                } else if (confirmar.length > 0) {
+                    confirmarSenhaInput.classList.add('invalida');
+                    if (erroElement) {
+                        erroElement.style.display = 'block';
+                        erroElement.textContent = '❌ Senha deve ter exatamente 6 dígitos';
+                        erroElement.style.color = '#dc3545';
+                    }
+                } else {
+                    // Campo vazio - limpar mensagem
+                    if (erroElement) {
+                        erroElement.style.display = 'none';
+                        erroElement.textContent = '';
+                    }
+                }
+            }
+        }
+
+        // Função para forçar abertura do seletor de arquivos
+        function forcarAberturaSeletor(inputId, tipo = 'gallery') {
+            console.log('🚀 Forçando abertura do seletor:', { inputId, tipo });
+            
+            const input = document.getElementById(inputId);
+            if (!input) {
+                console.error('❌ Input não encontrado:', inputId);
+                return;
+            }
+            
+            // Criar um novo input temporário se necessário
+            const tempInput = document.createElement('input');
+            tempInput.type = 'file';
+            tempInput.accept = 'image/*';
+            
+            if (tipo === 'camera') {
+                tempInput.setAttribute('capture', 'camera');
+            }
+            
+            // Adicionar ao DOM temporariamente
+            tempInput.style.position = 'absolute';
+            tempInput.style.left = '-9999px';
+            tempInput.style.opacity = '0';
+            document.body.appendChild(tempInput);
+            
+            // Configurar event listener
+            tempInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    // Transferir arquivo para o input original
+                    input.files = e.target.files;
+                    
+                    // Disparar evento change no input original
+                    const changeEvent = new Event('change', { bubbles: true });
+                    input.dispatchEvent(changeEvent);
+                    
+                    console.log('✅ Arquivo transferido para input original');
+                }
+                
+                // Remover input temporário
+                document.body.removeChild(tempInput);
+            });
+            
+            // Abrir seletor
+            tempInput.click();
+            console.log('✅ Seletor de arquivos aberto');
+        }
+
+        // Função para abrir modal de upload específico
+        function abrirModalUploadEspecifico(inputId, titulo, tipo = 'camera', modalSufixo) {
+            console.log('🚀 Abrindo modal específico:', { inputId, titulo, tipo, modalSufixo });
+            
+            // Verificar se o input existe
+            const inputCheck = document.getElementById(inputId);
+            if (!inputCheck) {
+                console.error('❌ Input não encontrado:', inputId);
+                alert('Erro: Campo de upload não encontrado. Tente recarregar a página.');
+                return;
+            }
+            console.log('✅ Input encontrado:', inputId);
+            
+            // Usar modal específico
+            const modal = document.getElementById(`contaUploadModal${modalSufixo}`);
+            const modalTitle = document.getElementById(`contaUploadModalTitle${modalSufixo}`);
+            const modalPreview = document.getElementById(`contaUploadModalPreview${modalSufixo}`);
+            const modalIcon = document.getElementById(`contaUploadModalIcon${modalSufixo}`);
+            const modalText = document.getElementById(`contaUploadModalText${modalSufixo}`);
+            const confirmBtn = document.getElementById(`contaUploadModalConfirm${modalSufixo}`);
+            
+            // Verificar se todos os elementos foram encontrados
+            if (!modal || !modalTitle || !modalPreview || !modalIcon || !modalText || !confirmBtn) {
+                console.error('❌ Elementos do modal específico não encontrados:', {
+                    modal: !!modal,
+                    modalTitle: !!modalTitle,
+                    modalPreview: !!modalPreview,
+                    modalIcon: !!modalIcon,
+                    modalText: !!modalText,
+                    confirmBtn: !!confirmBtn
+                });
+                return;
+            }
+            
+            console.log('✅ Modal específico encontrado:', modalSufixo);
+            
+            // Configurar modal baseado no tipo
+            modalTitle.textContent = `Upload de ${titulo}`;
+            
+            if (tipo === 'camera') {
+                modalIcon.className = 'fas fa-camera';
+                modalText.textContent = 'Toque para tirar foto ou selecionar arquivo';
+            } else if (tipo === 'gallery') {
+                modalIcon.className = 'fas fa-images';
+                modalText.textContent = 'Selecione uma imagem da galeria';
+            } else if (tipo === 'file') {
+                modalIcon.className = 'fas fa-file-pdf';
+                modalText.textContent = 'Selecione um arquivo PDF';
+            }
+            
+            // Limpar preview anterior
+            modalPreview.innerHTML = '';
+            
+            // Configurar input do modal
+            modal.dataset.inputId = inputId;
+            
+            // Verificar se já existe arquivo selecionado
+            const input = document.getElementById(inputId);
+            if (input && input.files && input.files.length > 0) {
+                confirmBtn.disabled = false;
+                console.log('✅ Botão habilitado - arquivo já selecionado');
+            }
+            
+            // Mostrar modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Configurar botões do modal específico
+            configurarBotoesModalEspecifico(modal, modalSufixo);
+            
+            // Configurar event listener para o input
+            const inputElement = document.getElementById(inputId);
+            if (inputElement) {
+                // Remover listeners anteriores
+                inputElement.removeEventListener('change', handleInputChange);
+                // Adicionar novo listener
+                inputElement.addEventListener('change', handleInputChange);
+                
+                function handleInputChange(e) {
+                    console.log('📁 Arquivo selecionado no input:', e.target.files[0]?.name);
+                    
+                    if (e.target.files && e.target.files.length > 0) {
+                        // Mostrar preview no modal IMEDIATAMENTE
+                        const modalPreview = document.getElementById(`contaUploadModalPreview${modalSufixo}`);
+                        if (modalPreview) {
+                            modalPreview.innerHTML = '';
+                            const img = document.createElement('img');
+                            img.src = URL.createObjectURL(e.target.files[0]);
+                            img.style.cssText = 'width: 100%; height: 200px; object-fit: cover; border-radius: 10px; border: 2px solid #4caf50;';
+                            modalPreview.appendChild(img);
+                            console.log('✅ Preview no modal criado!');
+                        }
+                        
+                        // HABILITAR BOTÃO DE CONFIRMAÇÃO
+                        const confirmBtn = document.getElementById(`contaUploadModalConfirm${modalSufixo}`);
+                        if (confirmBtn) {
+                            confirmBtn.disabled = false;
+                            console.log('✅ Botão de confirmação habilitado!');
+                        }
+                    } else {
+                        // Se não há arquivo, desabilitar botão
+                        const confirmBtn = document.getElementById(`contaUploadModalConfirm${modalSufixo}`);
+                        if (confirmBtn) {
+                            confirmBtn.disabled = true;
+                            console.log('⚠️ Botão de confirmação desabilitado (sem arquivo)');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Função para abrir modal de upload
+        function abrirModalUpload(inputId, titulo, tipo = 'camera') {
+            console.log('🚀 Abrindo modal de upload:', { inputId, titulo, tipo });
+            console.log('🔍 Verificando se input existe:', document.getElementById(inputId));
+            
+            // Verificar se o input existe
+            const inputElement = document.getElementById(inputId);
+            if (!inputElement) {
+                console.error('❌ Input não encontrado:', inputId);
+                alert('Erro: Campo de upload não encontrado. Tente recarregar a página.');
+                return;
+            }
+            console.log('✅ Input encontrado:', inputId);
+            
+            const modal = document.getElementById('contaUploadModal');
+            const modalTitle = document.getElementById('contaUploadModalTitle');
+            const modalPreview = document.getElementById('contaUploadModalPreview');
+            const modalIcon = document.getElementById('contaUploadModalIcon');
+            const modalText = document.getElementById('contaUploadModalText');
+            const confirmBtn = document.getElementById('contaUploadModalConfirm');
+            
+            // Verificar se todos os elementos foram encontrados
+            if (!modal || !modalTitle || !modalPreview || !modalIcon || !modalText || !confirmBtn) {
+                console.error('❌ Elementos do modal não encontrados:', {
+                    modal: !!modal,
+                    modalTitle: !!modalTitle,
+                    modalPreview: !!modalPreview,
+                    modalIcon: !!modalIcon,
+                    modalText: !!modalText,
+                    confirmBtn: !!confirmBtn
+                });
+                return;
+            }
+            
+            console.log('🔍 Elementos do modal encontrados:', {
+                modal: !!modal,
+                modalTitle: !!modalTitle,
+                modalPreview: !!modalPreview,
+                modalIcon: !!modalIcon,
+                modalText: !!modalText,
+                confirmBtn: !!confirmBtn
+            });
+            
+            // Log adicional para debug
+            if (!modalIcon) {
+                console.error('❌ modalIcon não encontrado! Verificando DOM...');
+                const allIcons = document.querySelectorAll('[id*="contaUploadModal"]');
+                console.log('Elementos com contaUploadModal:', allIcons);
+            }
+            
+            // Configurar modal baseado no tipo
+            modalTitle.textContent = `Upload de ${titulo}`;
+            
+            if (tipo === 'camera') {
+                modalIcon.className = 'fas fa-camera';
+                modalText.textContent = 'Toque para tirar foto ou selecionar arquivo';
+            } else if (tipo === 'gallery') {
+                modalIcon.className = 'fas fa-images';
+                modalText.textContent = 'Selecione uma imagem da galeria';
+            } else if (tipo === 'file') {
+                modalIcon.className = 'fas fa-file-pdf';
+                modalText.textContent = 'Selecione um arquivo PDF';
+            }
+            modalText.textContent = `Toque para enviar ${titulo.toLowerCase()}`;
+            
+            // Limpar preview anterior
+            const existingImg = modalPreview.querySelector('img');
+            if (existingImg) {
+                existingImg.remove();
+            }
+            
+            // Mostrar placeholder
+            const placeholder = modalPreview.querySelector('.conta-upload-modal-preview-placeholder');
+            if (placeholder) {
+                placeholder.style.display = 'flex';
+            }
+            
+            // Armazenar ID do input e tipo para uso posterior PRIMEIRO
+            modal.dataset.inputId = inputId;
+            modal.dataset.tipo = tipo;
+            
+            // Verificar se já há arquivo selecionado
+            const input = inputElement;
+            
+            // Desabilitar botão confirmar inicialmente
+            confirmBtn.disabled = true;
+            
+            // Se já há arquivo selecionado, habilitar botão
+            if (input && input.files && input.files.length > 0) {
+                confirmBtn.disabled = false;
+                console.log('✅ Botão habilitado - arquivo já selecionado');
+            }
+            
+            // Mostrar modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Configurar botões do modal se não estiverem configurados
+            configurarBotoesModal(modal);
+        }
+
+
+        // Event listener global para inputs de arquivo
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('conta-upload-input')) {
+                const inputId = e.target.id;
+                const input = document.getElementById(inputId);
+                
+                if (input && input.files && input.files.length > 0) {
+                    console.log('📁 Arquivo selecionado no input:', input.files[0].name);
+                    
+                    // Mostrar preview no modal IMEDIATAMENTE
+                    const modalPreview = document.getElementById('contaUploadModalPreview');
+                    if (modalPreview) {
+                        modalPreview.innerHTML = '';
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(input.files[0]);
+                        img.style.cssText = 'width: 100%; height: 200px; object-fit: cover; border-radius: 10px; border: 2px solid #4caf50;';
+                        modalPreview.appendChild(img);
+                        console.log('✅ Preview criado!');
+                    }
+                    
+                    // HABILITAR BOTÃO DE CONFIRMAÇÃO
+                    const confirmBtn = document.getElementById('contaUploadModalConfirm');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        console.log('✅ Botão de confirmação habilitado!');
+                    }
+                } else {
+                    // Se não há arquivo, desabilitar botão
+                    const confirmBtn = document.getElementById('contaUploadModalConfirm');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = true;
+                        console.log('⚠️ Botão de confirmação desabilitado (sem arquivo)');
+                    }
+                }
+            }
+        });
+
+        // Função para configurar botões do modal específico
+        function configurarBotoesModalEspecifico(modal, modalSufixo) {
+            console.log('🔧 Configurando botões do modal específico:', modalSufixo);
+            
+            const cameraBtn = modal.querySelector(`#contaUploadModalCamera${modalSufixo}`);
+            const galleryBtn = modal.querySelector(`#contaUploadModalGallery${modalSufixo}`);
+            const confirmBtn = modal.querySelector(`#contaUploadModalConfirm${modalSufixo}`);
+            const closeBtn = modal.querySelector(`#contaUploadModalClose${modalSufixo}`);
+            const overlay = modal.querySelector('.conta-upload-modal-overlay');
+            
+            console.log('🔍 Botões específicos encontrados:', {
+                cameraBtn: !!cameraBtn,
+                galleryBtn: !!galleryBtn,
+                confirmBtn: !!confirmBtn,
+                closeBtn: !!closeBtn,
+                overlay: !!overlay
+            });
+            
+            // Configurar botão câmera
+            if (cameraBtn) {
+                cameraBtn.onclick = (e) => {
+                    e.preventDefault();
+                    const inputId = modal.dataset.inputId;
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.click();
+                    }
+                };
+            }
+            
+            // Configurar botão galeria
+            if (galleryBtn) {
+                galleryBtn.onclick = (e) => {
+                    e.preventDefault();
+                    const inputId = modal.dataset.inputId;
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.click();
+                    }
+                };
+            }
+            
+            // Configurar botão confirmar
+            if (confirmBtn) {
+                confirmBtn.onclick = (e) => {
+                    e.preventDefault();
+                    console.log('✅ Botão confirmar clicado');
+                    
+                    const inputId = modal.dataset.inputId;
+                    const input = document.getElementById(inputId);
+                    
+                    if (input && input.files && input.files.length > 0) {
+                        console.log('📁 Arquivo selecionado:', input.files[0].name);
+                        
+                        // Atualizar status para uploading
+                        atualizarStatusUpload(inputId, 'uploading');
+                        
+                        // Processar upload imediatamente
+                        console.log('🚀 Processando upload...');
+                        
+                        // Simular delay de upload
+                        setTimeout(() => {
+                            // Atualizar preview na área original
+                            atualizarPreviewOriginal(inputId, input.files[0]);
+                            
+                            // Atualizar status para uploaded
+                            atualizarStatusUpload(inputId, 'uploaded');
+                            
+                            // Fechar modal
+                            fecharModalEspecifico(modalSufixo);
+                            
+                            // Verificar se pode habilitar botão de submit
+                            if (typeof verificarStatusUpload === 'function') {
+                                verificarStatusUpload();
+                            }
+                            
+                            console.log('✅ Upload processado com sucesso!');
+                        }, 1000);
+                    } else {
+                        console.log('⚠️ Nenhum arquivo selecionado');
+                    }
+                };
+            }
+            
+            // Configurar botão fechar
+            if (closeBtn) {
+                closeBtn.onclick = () => fecharModalEspecifico(modalSufixo);
+            }
+            
+            // Configurar overlay
+            if (overlay) {
+                overlay.onclick = () => fecharModalEspecifico(modalSufixo);
+            }
+        }
+
+        // Função para fechar modal específico
+        function fecharModalEspecifico(modalSufixo) {
+            const modal = document.getElementById(`contaUploadModal${modalSufixo}`);
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Função para configurar botões do modal
+        function configurarBotoesModal(modal) {
+            console.log('🔧 Configurando botões do modal...', modal.dataset.inputId);
+            
+            const cameraBtn = modal.querySelector('#contaUploadModalCamera');
+            const galleryBtn = modal.querySelector('#contaUploadModalGallery');
+            const confirmBtn = modal.querySelector('#contaUploadModalConfirm');
+            const closeBtn = modal.querySelector('#contaUploadModalClose');
+            const overlay = modal.querySelector('.conta-upload-modal-overlay');
+            
+            console.log('🔍 Botões encontrados:', {
+                cameraBtn: !!cameraBtn,
+                galleryBtn: !!galleryBtn,
+                confirmBtn: !!confirmBtn,
+                closeBtn: !!closeBtn,
+                overlay: !!overlay
+            });
+            
+            // Função para fechar modal
+            function fecharModal() {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            
+            // Configurar botão câmera
+            if (cameraBtn && !cameraBtn.hasAttribute('data-configured')) {
+                cameraBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('📷 Botão câmera clicado');
+                    const cameraInputId = modal.dataset.inputId;
+                    const input = document.getElementById(cameraInputId);
+                    
+                    console.log('🔍 Tentando abrir câmera:', {
+                        inputId: cameraInputId,
+                        input: !!input,
+                        inputType: input?.type,
+                        inputAccept: input?.accept
+                    });
+                    
+                    if (input) {
+                        // Tentar abrir diretamente primeiro
+                        try {
+                            input.click();
+                            console.log('✅ Input clicado diretamente');
+                        } catch (error) {
+                            console.log('⚠️ Erro ao clicar diretamente, usando função alternativa:', error);
+                            // Usar função alternativa se falhar
+                            forcarAberturaSeletor(cameraInputId, 'camera');
+                        }
+                    } else {
+                        console.error('❌ Input não encontrado:', cameraInputId);
+                    }
+                });
+                cameraBtn.setAttribute('data-configured', 'true');
+            }
+            
+            // Configurar botão galeria
+            if (galleryBtn && !galleryBtn.hasAttribute('data-configured')) {
+                galleryBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖼️ Botão galeria clicado');
+                    const galleryInputId = modal.dataset.inputId;
+                    const input = document.getElementById(galleryInputId);
+                    
+                    console.log('🔍 Tentando abrir galeria:', {
+                        inputId: galleryInputId,
+                        input: !!input,
+                        inputType: input?.type,
+                        inputAccept: input?.accept
+                    });
+                    
+                    if (input) {
+                        // Tentar abrir diretamente primeiro
+                        try {
+                            input.click();
+                            console.log('✅ Input clicado diretamente');
+                        } catch (error) {
+                            console.log('⚠️ Erro ao clicar diretamente, usando função alternativa:', error);
+                            // Usar função alternativa se falhar
+                            forcarAberturaSeletor(galleryInputId, 'gallery');
+                        }
+                    } else {
+                        console.error('❌ Input não encontrado:', galleryInputId);
+                    }
+                });
+                galleryBtn.setAttribute('data-configured', 'true');
+            }
+            
+            // Configurar botão confirmar
+            if (confirmBtn && !confirmBtn.hasAttribute('data-configured')) {
+                console.log('🔧 Configurando botão confirmar...');
+                
+                confirmBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('✅ Botão confirmar clicado');
+                    
+                    const confirmInputId = modal.dataset.inputId;
+                    const input = document.getElementById(confirmInputId);
+                    
+                    if (input && input.files && input.files.length > 0) {
+                        console.log('📁 Arquivo selecionado:', input.files[0].name);
+                        
+                        // Mostrar preview no modal imediatamente
+                        console.log('📸 Chamando mostrarPreviewModal no confirmar...');
+                        mostrarPreviewModal(input.files[0]);
+                        
+                        // Atualizar status para uploading
+                        atualizarStatusUpload(confirmInputId, 'uploading');
+                        
+                        // Processar upload imediatamente
+                        console.log('🚀 Processando upload...');
+                        
+                        // Simular delay de upload
+                        setTimeout(() => {
+                            // Atualizar preview na área original
+                            atualizarPreviewOriginal(confirmInputId, input.files[0]);
+                            
+                            // Mostrar preview com nova função
+                            mostrarPreviewUpload(confirmInputId, input.files[0]);
+                            
+                            // Atualizar status para concluído
+                            atualizarStatusUpload(confirmInputId, 'uploaded');
+                            
+                            // Fechar modal
+                            fecharModal();
+                            
+                            // Verificar se pode habilitar botão de submit
+                            if (typeof verificarStatusUpload === 'function') {
+                                verificarStatusUpload();
+                            }
+                            
+                            // Mostrar confirmação visual
+                            alert('✅ Arquivo enviado com sucesso!');
+                            
+                            console.log('✅ Upload processado com sucesso!');
+                        }, 1000);
+                    } else {
+                        console.warn('⚠️ Nenhum arquivo selecionado');
+                        alert('Por favor, selecione um arquivo antes de confirmar.');
+                    }
+                });
+                
+                confirmBtn.setAttribute('data-configured', 'true');
+                console.log('✅ Botão confirmar configurado com sucesso');
+            } else if (confirmBtn) {
+                console.log('⚠️ Botão confirmar já estava configurado');
+            } else {
+                console.error('❌ Botão confirmar não encontrado!');
+            }
+            
+            // Configurar botão fechar
+            if (closeBtn && !closeBtn.hasAttribute('data-configured')) {
+                closeBtn.addEventListener('click', fecharModal);
+                closeBtn.setAttribute('data-configured', 'true');
+            }
+            
+            // Configurar overlay
+            if (overlay && !overlay.hasAttribute('data-configured')) {
+                overlay.addEventListener('click', fecharModal);
+                overlay.setAttribute('data-configured', 'true');
+            }
+        }
+
+        // Função para atualizar status do upload
+        function atualizarStatusUpload(inputId, status) {
+            console.log('🔍 Atualizando status:', { inputId, status });
+            
+            try {
+                // Mapear inputId para o ID correto do status
+                let statusId;
+                if (inputId === 'contaDocumento') {
+                    statusId = 'statusDocumento';
+                } else if (inputId === 'contaComprovante') {
+                    statusId = 'statusComprovante';
+                } else if (inputId === 'contaRosto') {
+                    statusId = 'statusRosto';
+                } else {
+                    statusId = `status${inputId.charAt(0).toUpperCase() + inputId.slice(1)}`;
+                }
+                
+                const statusElement = document.getElementById(statusId);
+                console.log('Status element encontrado:', !!statusElement, 'ID:', statusId);
+                
+                if (!statusElement) {
+                    console.error('❌ Status element não encontrado para:', statusId);
+                    // Tentar encontrar de outra forma
+                    const inputElement = document.getElementById(inputId);
+                    if (inputElement) {
+                        const card = inputElement.closest('.conta-upload-card');
+                        if (card) {
+                            const statusDiv = card.querySelector('.conta-upload-status');
+                            if (statusDiv) {
+                                console.log('✅ Status element encontrado via card!');
+                                return atualizarStatusUpload(inputId, status); // Recursão com elemento encontrado
+                            }
+                        }
+                    }
+                    return;
+                }
+                
+                // Verificar se o elemento existe antes de usar closest
+                if (!statusElement) {
+                    console.error('❌ Status element não encontrado');
+                    return;
+                }
+                
+                const cardElement = statusElement.closest('.conta-upload-card');
+                const statusText = statusElement.querySelector('.conta-upload-status-text');
+                
+                if (!cardElement) {
+                    console.error('❌ Card não encontrado');
+                    return;
+                }
+                
+                if (!statusText) {
+                    console.error('❌ StatusText não encontrado');
+                    return;
+                }
+                
+                // Remover classes anteriores
+                cardElement.classList.remove('uploaded', 'uploading', 'error');
+                
+                switch (status) {
+                    case 'uploading':
+                        cardElement.classList.add('uploading');
+                        statusText.textContent = 'Enviando...';
+                        break;
+                    case 'uploaded':
+                        cardElement.classList.add('uploaded');
+                        statusText.textContent = 'Enviado ✓';
+                        break;
+                    case 'error':
+                        cardElement.classList.add('error');
+                        statusText.textContent = 'Erro';
+                        break;
+                    default:
+                        statusText.textContent = 'Pendente';
+                }
+                
+                console.log('✅ Status atualizado com sucesso');
+            } catch (error) {
+                console.error('❌ Erro ao atualizar status:', error);
+            }
+        }
+
+        // Função para mostrar preview do arquivo
+        function mostrarPreviewUpload(inputId, file) {
+            const previewId = inputId.replace('conta', 'preview');
+            const previewElement = document.getElementById(previewId);
+            
+            console.log('🔍 Mostrando preview:', {
+                inputId: inputId,
+                previewId: previewId,
+                previewElement: !!previewElement,
+                file: file?.name
+            });
+            
+            if (previewElement && file) {
+                // Limpar preview anterior
+                previewElement.innerHTML = '';
+                previewElement.classList.add('has-files');
+                
+                // Criar container principal
+                const container = document.createElement('div');
+                container.style.cssText = `
+                    width: 100%;
+                    height: 200px;
+                    border: 2px solid #4caf50;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    position: relative;
+                    background: #f8fff8;
+                `;
+                
+                // Criar imagem
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.cssText = `
+                    width: 100%;
+                    height: 150px;
+                    object-fit: cover;
+                    display: block;
+                `;
+                
+                // Criar texto de sucesso
+                const successText = document.createElement('div');
+                successText.style.cssText = `
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: #4caf50;
+                    color: white;
+                    padding: 8px;
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 14px;
+                `;
+                successText.innerHTML = '✅ Arquivo enviado com sucesso!';
+                
+                // Montar preview
+                container.appendChild(img);
+                container.appendChild(successText);
+                previewElement.appendChild(container);
+                
+                console.log('✅ Preview criado com sucesso!');
+            } else {
+                console.error('❌ Erro ao criar preview:', {
+                    previewElement: !!previewElement,
+                    file: !!file
+                });
+            }
+        }
+
+
+        // Função para configurar modal de upload (REMOVIDA - usando configurarBotoesModal)
+
+        // Função para mostrar preview no modal
+        function mostrarPreviewModal(file) {
+            console.log('🔍 Mostrando preview no modal:', {
+                file: file?.name,
+                fileType: file?.type
+            });
+            
+            const modalPreview = document.getElementById('contaUploadModalPreview');
+            
+            if (!modalPreview) {
+                console.error('❌ Modal preview não encontrado!');
+                return;
+            }
+            
+            console.log('✅ Modal preview encontrado!');
+            
+            // Limpar preview anterior
+            modalPreview.innerHTML = '';
+            
+            // Criar container principal
+            const container = document.createElement('div');
+            container.style.cssText = `
+                width: 100%;
+                height: 200px;
+                border: 2px solid #4caf50;
+                border-radius: 10px;
+                overflow: hidden;
+                position: relative;
+                background: #f8fff8;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            // Criar elemento de imagem
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style.cssText = `
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                display: block;
+            `;
+            
+            // Adicionar texto de preview
+            const previewText = document.createElement('div');
+            previewText.style.cssText = `
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(76, 175, 80, 0.9);
+                color: white;
+                padding: 8px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 14px;
+            `;
+            previewText.innerHTML = '📷 Preview da imagem';
+            
+            // Montar preview
+            container.appendChild(img);
+            container.appendChild(previewText);
+            modalPreview.appendChild(container);
+            
+            console.log('✅ Preview no modal criado com sucesso!');
+        }
+
+        // Função para atualizar preview na área original
+        function atualizarPreviewOriginal(inputId, file) {
+            // Mapear corretamente os IDs
+            let previewId;
+            if (inputId === 'contaDocumento') {
+                previewId = 'previewDocumento';
+            } else if (inputId === 'contaComprovante') {
+                previewId = 'previewComprovante';
+            } else if (inputId === 'contaRosto') {
+                previewId = 'previewRosto';
+            } else {
+                previewId = inputId.replace('conta', 'preview');
+            }
+            
+            const preview = document.getElementById(previewId);
+            
+            console.log('🔍 Atualizando preview:', {
+                inputId: inputId,
+                previewId: previewId,
+                preview: !!preview,
+                file: file?.name
+            });
+            
+            if (preview) {
+                preview.innerHTML = '';
+                
+                const previewItem = document.createElement('div');
+                previewItem.className = 'conta-upload-preview-item';
+                
+                // Adicionar classe baseada no tipo de arquivo
+                if (file.type.startsWith('image/')) {
+                    previewItem.classList.add('image');
+                } else if (file.type === 'application/pdf') {
+                    previewItem.classList.add('pdf');
+                }
+                
+                // Criar container da imagem
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'conta-upload-preview-image';
+                
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '6px';
+                    imageContainer.appendChild(img);
+                } else {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-file-pdf';
+                    imageContainer.appendChild(icon);
+                }
+                
+                previewItem.appendChild(imageContainer);
+                
+                // Criar container de informações
+                const infoContainer = document.createElement('div');
+                infoContainer.className = 'conta-upload-preview-info';
+                
+                const name = document.createElement('div');
+                name.className = 'conta-upload-preview-name';
+                name.textContent = file.name;
+                infoContainer.appendChild(name);
+                
+                const size = document.createElement('div');
+                size.className = 'conta-upload-preview-size';
+                size.textContent = formatFileSize(file.size);
+                infoContainer.appendChild(size);
+                
+                const status = document.createElement('div');
+                status.className = 'conta-upload-preview-status';
+                status.innerHTML = '<i class="fas fa-check-circle"></i> Arquivo enviado com sucesso';
+                infoContainer.appendChild(status);
+                
+                previewItem.appendChild(infoContainer);
+                
+                // Botão de remover
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'conta-upload-remove';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.onclick = () => {
+                    preview.innerHTML = '';
+                    document.getElementById(inputId).value = '';
+                };
+                previewItem.appendChild(removeBtn);
+                
+                preview.appendChild(previewItem);
+                preview.classList.add('show');
+            }
+        }
+
+        // Função para formatar tamanho do arquivo
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+
+
+        // Função para mostrar o formulário
+        function mostrarFormularioConta() {
+            console.log('🔍 Tentando mostrar formulário...');
+            const contaContainer = document.getElementById('contaContainer');
+            if (contaContainer) {
+                console.log('✅ Container encontrado, exibindo...');
+                contaContainer.style.display = 'block';
+                contaContainer.style.visibility = 'visible';
+                contaContainer.style.opacity = '1';
+                console.log('✅ Formulário de conta exibido');
+            } else {
+                console.log('❌ Container não encontrado!');
+            }
+        }
+
+        // Inicializar formulário quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM carregado - aplicando validações...');
+            
+            // Mostrar o formulário automaticamente se acessado diretamente
+            mostrarFormularioConta();
+            
+            window.formularioConta = new FormularioConta();
+            
+            // Modal será configurado dinamicamente quando aberto
+            
+            // Aplicar validações simples
+            setTimeout(() => {
+                console.log('⏰ Aplicando validações...');
+                configurarCamposSenha();
+                
+                // Validação CPF direta
+                const cpfInput = document.getElementById('contaCpf');
+                if (cpfInput) {
+                    console.log('✅ Campo CPF encontrado!');
+                    cpfInput.addEventListener('input', function(e) {
+                        console.log('📝 Digitando CPF');
+                        
+                        let valor = e.target.value.replace(/[^\d]/g, '');
+                        if (valor.length > 11) valor = valor.substring(0, 11);
+                        
+                        // Formatar
+                        if (valor.length > 0) {
+                            valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                            valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+                            valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                        }
+                        e.target.value = valor;
+                        
+                        // Remover mensagem anterior
+                        const msgAnterior = e.target.parentNode.querySelector('.cpf-msg');
+                        if (msgAnterior) msgAnterior.remove();
+                        
+                        const cpfLimpo = valor.replace(/[^\d]/g, '');
+                        
+                        if (cpfLimpo.length === 11) {
+                            if (validarCPF(cpfLimpo)) {
+                                e.target.style.border = '3px solid #28a745';
+                                e.target.style.backgroundColor = '#f8fff8';
+                                const msg = document.createElement('div');
+                                msg.className = 'cpf-msg';
+                                msg.style.cssText = 'color: #28a745; font-size: 0.9rem; margin-top: 6px; text-align: center; font-weight: bold;';
+                                msg.textContent = '✅ CPF VÁLIDO';
+                                e.target.parentNode.appendChild(msg);
+                                console.log('✅ CPF válido!');
+                            } else {
+                                e.target.style.border = '3px solid #dc3545';
+                                e.target.style.backgroundColor = '#fff8f8';
+                                const msg = document.createElement('div');
+                                msg.className = 'cpf-msg';
+                                msg.style.cssText = 'color: #dc3545; font-size: 0.9rem; margin-top: 6px; text-align: center; font-weight: bold;';
+                                msg.textContent = '❌ CPF INVÁLIDO';
+                                e.target.parentNode.appendChild(msg);
+                                console.log('❌ CPF inválido!');
+                            }
+                        } else if (cpfLimpo.length > 0) {
+                            e.target.style.border = '3px solid #ffc107';
+                            e.target.style.backgroundColor = '#fffef8';
+                            console.log('⚠️ CPF incompleto');
+                        } else {
+                            e.target.style.border = '';
+                            e.target.style.backgroundColor = '';
+                            console.log('🔄 Campo vazio');
+                        }
+                    });
+                } else {
+                    console.log('❌ Campo CPF não encontrado!');
+                }
+                
+                // Adicionar event listeners para checkboxes de termos
+                const termosCheckbox = document.getElementById('contaTermos');
+                const politicaCheckbox = document.getElementById('contaPolitica');
+                
+                if (termosCheckbox) {
+                    termosCheckbox.addEventListener('change', () => {
+                        if (typeof verificarStatusUpload === 'function') {
+                            verificarStatusUpload();
+                        }
+                    });
+                }
+                
+                if (politicaCheckbox) {
+                    politicaCheckbox.addEventListener('change', () => {
+                        if (typeof verificarStatusUpload === 'function') {
+                            verificarStatusUpload();
+                        }
+                    });
+                }
+                
+                console.log('✅ Validações aplicadas!');
+            }, 1000);
+        });
+    </script>
+    
+    <!-- Cache buster - versão atualizada -->
+    <script>
+        console.log('🔄 Arquivo recarregado em:', new Date().toISOString());
+    </script>
+</body>
+</html>

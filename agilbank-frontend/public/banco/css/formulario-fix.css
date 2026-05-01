@@ -1,0 +1,481 @@
+/* CSS FORÇADO PARA CORRIGIR FORMULÁRIO */
+
+/* Reset e base */
+* {
+    box-sizing: border-box !important;
+}
+
+body {
+    background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.conta-container {
+    max-width: 480px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    background: #fff !important;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.04) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+.conta-container::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 4px !important;
+    background: linear-gradient(90deg, #0066b3, #28a745, #ffc107, #dc3545) !important;
+    z-index: 1 !important;
+}
+
+.conta-content {
+    padding: 40px 10px !important;
+}
+
+.conta-row {
+    display: flex !important;
+    gap: 12px !important;
+    margin-bottom: 10px !important;
+}
+
+.conta-row > .conta-form-group {
+    flex: 1 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Container de senha com ícone */
+.conta-password-container {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.conta-password-input {
+    width: 100% !important;
+    padding-right: 35px !important;
+}
+
+.conta-password-toggle {
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    color: #666 !important;
+    font-size: 14px !important;
+    padding: 2px !important;
+    transition: color 0.2s !important;
+}
+
+.conta-password-toggle:hover {
+    color: #1976d2 !important;
+}
+
+.conta-password-toggle:focus {
+    outline: none !important;
+    color: #1976d2 !important;
+}
+
+/* Informação da senha */
+.conta-password-info {
+    display: block !important;
+    color: #666 !important;
+    font-size: 0.85rem !important;
+    margin-top: 4px !important;
+    margin-bottom: 12px !important;
+    text-align: center !important;
+    font-style: italic !important;
+}
+
+/* Estados de validação dos campos */
+.conta-input.valida {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2) !important;
+}
+
+.conta-input.invalida {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+}
+
+.conta-input.aviso {
+    border-color: #ff9800 !important;
+    box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2) !important;
+}
+
+/* Mensagens de erro */
+.conta-error {
+    display: none !important;
+    font-size: 0.8rem !important;
+    margin-top: 4px !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+}
+
+.conta-error.show {
+    display: block !important;
+}
+
+/* RESPONSIVO - TELAS MÉDIAS */
+@media (max-width: 600px) {
+    body {
+        align-items: center !important;
+        padding: 15px !important;
+    }
+    
+    .conta-container {
+        max-width: 100% !important;
+        width: calc(100% - 30px) !important;
+        margin: 0 !important;
+        border-radius: 18px !important;
+        box-sizing: border-box !important;
+    }
+    
+    .conta-content {
+        padding: 24px 30px !important;
+    }
+    
+    .conta-row {
+        gap: 32px !important;
+    }
+    
+    .conta-row > .conta-form-group {
+        margin-bottom: 0 !important;
+    }
+}
+
+/* RESPONSIVO - SMARTPHONES PEQUENOS */
+@media (max-width: 400px) {
+    body {
+        padding: 10px !important;
+    }
+    
+    .conta-container {
+        width: calc(100% - 20px) !important;
+        margin: 0 !important;
+    }
+    
+    .conta-content {
+        padding: 20px 25px !important;
+    }
+    
+    .conta-row {
+        flex-direction: column !important;
+        gap: 0 !important;
+    }
+    
+    .conta-row > .conta-form-group {
+        margin-bottom: 2px !important;
+    }
+}
+
+/* Estilos para mensagem de CPF */
+.cpf-msg {
+    font-size: 0.6rem !important;
+    margin-top: 4px !important;
+    text-align: left !important;
+    font-weight: normal !important;
+    display: block !important;
+}
+
+/* Mensagem de CPF válido */
+.cpf-msg:contains("válido") {
+    color: #28a745 !important;
+}
+
+/* Mensagem de CPF inválido */
+.cpf-msg:contains("inválido") {
+    color: #dc3545 !important;
+}
+
+/* Estilos para radio buttons */
+.conta-radio-group {
+    display: flex !important;
+    gap: 20px !important;
+    margin-top: 8px !important;
+}
+
+.conta-radio-label {
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    font-size: 0.9rem !important;
+}
+
+.conta-radio-label input[type="radio"] {
+    margin-right: 8px !important;
+    transform: scale(1.2) !important;
+}
+
+.conta-radio-text {
+    color: #333 !important;
+    font-weight: 500 !important;
+}
+
+/* Estilos para checkbox */
+/* Container dos checkboxes em linha */
+.conta-checkboxes-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin-top: 16px !important;
+}
+
+.conta-checkbox-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.conta-checkbox-label {
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    font-size: 0.85rem !important;
+    margin: 0 !important;
+    flex: 1 !important;
+}
+
+.conta-checkbox-item input[type="checkbox"] {
+    margin: 0 !important;
+    transform: scale(1.1) !important;
+    flex-shrink: 0 !important;
+}
+
+.conta-checkbox-text {
+    color: #333 !important;
+    font-weight: 500 !important;
+}
+
+/* Tela de carregamento */
+.conta-loading-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    backdrop-filter: blur(5px) !important;
+}
+
+.conta-loading-container {
+    background: white !important;
+    border-radius: 20px !important;
+    padding: 50px 40px !important;
+    text-align: center !important;
+    max-width: 400px !important;
+    width: 90% !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    animation: slideUp 0.6s ease-out !important;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.conta-loading-spinner {
+    width: 60px !important;
+    height: 60px !important;
+    border: 4px solid #f3f3f3 !important;
+    border-top: 4px solid #0066b3 !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+    margin: 0 auto 30px !important;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.conta-loading-title {
+    color: #0066b3 !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    margin-bottom: 15px !important;
+}
+
+.conta-loading-message {
+    color: #666 !important;
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+    margin-bottom: 20px !important;
+}
+
+.conta-loading-steps {
+    text-align: left !important;
+    margin: 20px 0 !important;
+}
+
+.conta-loading-step {
+    display: flex !important;
+    align-items: center !important;
+    margin: 10px 0 !important;
+    font-size: 14px !important;
+    color: #666 !important;
+}
+
+.conta-loading-step i {
+    margin-right: 10px !important;
+    width: 20px !important;
+}
+
+.conta-loading-step.active {
+    color: #0066b3 !important;
+    font-weight: 600 !important;
+}
+
+.conta-loading-step.completed {
+    color: #4caf50 !important;
+}
+
+/* Mensagem de sucesso com email */
+.conta-success-message {
+    text-align: center !important;
+    padding: 40px 20px !important;
+    background: white !important;
+    border-radius: 15px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+    margin: 20px 0 !important;
+}
+
+.conta-success-icon {
+    font-size: 4rem !important;
+    color: #4caf50 !important;
+    margin-bottom: 20px !important;
+}
+
+.conta-success-message h2 {
+    color: #2e7d32 !important;
+    font-size: 2rem !important;
+    margin-bottom: 20px !important;
+    font-weight: 600 !important;
+}
+
+.conta-success-text {
+    color: #666 !important;
+    font-size: 1rem !important;
+    margin-bottom: 15px !important;
+    line-height: 1.6 !important;
+}
+
+.conta-success-instructions {
+    color: #666 !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 30px !important;
+    line-height: 1.6 !important;
+}
+
+.conta-email-highlight {
+    background: #e3f2fd !important;
+    color: #0066b3 !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    border: 1px solid #42a5f5 !important;
+    display: inline-block !important;
+    margin: 15px 0 !important;
+}
+
+.conta-success-actions {
+    margin: 30px 0 !important;
+}
+
+.conta-login-btn {
+    background: #0066b3 !important;
+    color: white !important;
+    padding: 12px 24px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    transition: all 0.3s !important;
+    width: 100% !important;
+    max-width: 200px !important;
+}
+
+.conta-login-btn:hover {
+    background: #0056a3 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 102, 179, 0.3) !important;
+}
+
+.conta-spam-warning {
+    background: #fff3cd !important;
+    border: 1px solid #ffeaa7 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    margin: 20px 0 !important;
+    color: #856404 !important;
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+}
+
+.conta-spam-warning i {
+    color: #f39c12 !important;
+    margin-right: 8px !important;
+}
+
+.conta-redirect-countdown {
+    background: #e3f2fd !important;
+    border: 1px solid #42a5f5 !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    margin-top: 20px !important;
+    text-align: center !important;
+    animation: pulse-countdown 2s infinite !important;
+}
+
+@keyframes pulse-countdown {
+    0% {
+        box-shadow: 0 0 0 0 rgba(66, 165, 245, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(66, 165, 245, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(66, 165, 245, 0);
+    }
+}
+
+#redirectTimer {
+    font-weight: 600 !important;
+    color: #0066b3 !important;
+    font-size: 16px !important;
+}
+
+/* Estilos para mensagem de CEP */
+.cep-msg {
+    font-size: 0.6rem !important;
+    margin-top: 4px !important;
+    text-align: left !important;
+    font-weight: normal !important;
+    display: block !important;
+}

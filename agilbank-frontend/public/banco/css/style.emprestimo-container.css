@@ -1,0 +1,1154 @@
+/* Container principal para simulação de empréstimo - Controla a exibição e posicionamento do modal */
+.emprestimo-container {
+    display: none;
+    max-width: 480px;
+    background-color: #f5f5f5;
+    height: 100vh;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+/* Conteúdo interno do container de empréstimo - Define o layout e estilo do conteúdo */
+.emprestimoContent {
+    display: none;
+    background-color: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+/* Cabeçalho do empréstimo - Estiliza a barra superior */
+.emprestimo-header {
+    background-color: #0066b3;
+    color: white;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    position: absolute;
+    width: 100%;
+    left: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Ícone de voltar no cabeçalho */
+.emprestimo-header .header-left i {
+    font-size: 19px;
+    cursor: pointer;
+    margin-right: 16px;
+}
+
+/* Título do cabeçalho - Removida classe duplicada .emprestimo-header */
+.header-title-emprestimo {
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Informações gerais do empréstimo */
+.emprestimo-info {
+    text-align: center;
+    margin-bottom: 32px;
+    margin-top: 100px;
+}
+
+.emprestimo-info h2 {
+    color: #0066b3;
+    margin-bottom: 8px;
+}
+
+.emprestimo-info p {
+    color: #666;
+}
+
+/* Grupos de formulário */
+.form-group-emprestimo {
+    margin-bottom: 24px;
+}
+
+.form-group-emprestimo label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Campos de entrada e seleção */
+.input-emprestimo,
+.select-emprestimo {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+/* Container de caixas de informação */
+.emprestimo-info-boxes {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+/* Caixa de informação individual - Unificada com outras definições de .info-box */
+.info-box {
+    flex: 3;
+    background-color: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Labels e valores das caixas de informação */
+.info-label {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.info-value {
+    display: block;
+    color: #0066b3;
+    font-size: 19px;
+    font-weight: 500;
+}
+
+/* Botão principal de empréstimo */
+.emprestimo-button {
+    width: 100%;
+    padding: 16px;
+    background-color: #0066b3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 16px;
+}
+
+.emprestimo-button:hover {
+    background-color: #005294;
+}
+
+/* Rodapé do empréstimo */
+.emprestimo-footer {
+    text-align: center;
+}
+
+.emprestimo-footer small {
+    display: block;
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+/* botaõ de levar para o chat  <achar o lugar dele>*/
+.simulacao-credito {
+    background-color: #0066b3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 50px;
+}
+
+/* Modal de Termos e Condições */
+.termos-modal-emprestimo {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.termos-content-emprestimo {
+    background-color: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.termos-header-emprestimo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.termos-header-emprestimo h3 {
+    color: #0066b3;
+    font-size: 20px;
+    margin: 0;
+}
+
+.close-termos {
+    background: #0066b3;
+    border: none;
+    font-size: 24px;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 0;
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}
+
+.termos-body-emprestimo {
+    margin-bottom: 24px;
+    padding: 0 15px;
+}
+
+.termos-body-emprestimo h4 {
+    color: #333;
+    font-size: 16px;
+    margin: 16px 0 8px;
+    font-weight: 600;
+}
+
+.termos-body-emprestimo p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.termos-aviso {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.termos-aviso strong {
+    color: #856404;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.termos-aviso p {
+    color: #856404;
+    margin: 0;
+}
+
+.termos-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 24px;
+    padding: 15px;
+    border-top: 1px solid #eee;
+}
+
+.btn-aceitar-termos,
+.btn-recusar-termos {
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-aceitar-termos {
+    background-color: #0066b3;
+    color: white;
+    border: none;
+}
+
+.btn-aceitar-termos:hover {
+    background-color: #005294;
+}
+
+.btn-recusar-termos {
+    background-color: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.btn-recusar-termos:hover {
+    background-color: #eee;
+}
+
+/* Formulário de empréstimo - Container principal do formulário */
+.emprestimo-formulario {
+    padding: 20px;
+    background-color: #f5f5f5;
+    display: none;
+    overflow-y: auto;
+    max-height: 100vh;
+    margin-bottom: 100px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Grupos de dados do formulário */
+.formGroup-Dados {
+    margin-bottom: 20px;
+}
+
+.formGroup-Dados label {
+    display: block;
+    color: #333;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.formGroup-Dados input,
+.formGroup-Dados select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.formGroup-Dados input:read-only {
+    background-color: #f8f8f8;
+    color: #666;
+}
+
+.formGroup-Dados select {
+    cursor: pointer;
+}
+
+/* Caixas de informação de dados */
+.infoBox-Dados {
+    background-color: white;
+    padding: 16px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.infoLabel-Dados {
+    display: block;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.infoValue-Dados {
+    display: block;
+    color: #0066b3;
+    font-size: 19px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.infoBox-Dados small {
+    display: block;
+    color: #999;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Classes específicas para renda e crédito */
+.renda-simulada {
+    margin-bottom: 16px;
+}
+
+.credito-disponivel {
+    margin-bottom: 24px;
+}
+
+.infoBoxs-Dados {
+    display: none;
+}
+
+/* Container de simulação de score */
+.simulacao-score {
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-top: 10px;
+}
+
+.simulacao-score-header {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.simulacao-score-header h3 {
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.simulacao-score-header p {
+    color: #666;
+    font-size: 10px;
+}
+
+/* Container do score */
+.score-container {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.score-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.score-value {
+    font-size: 30px;
+    font-weight: bold;
+    color: #0066b3;
+    margin-bottom: 4px;
+}
+
+.score-status {
+    font-size: 14px;
+    color: #f5a623;
+    margin-bottom: 16px;
+}
+
+/* Barra de progresso do score */
+.score-bar {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.score-progress {
+    background-color: #e0e0e0;
+    height: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.progress-bar {
+    background-color: #0066b3;
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.score-range {
+    display: flex;
+    justify-content: space-between;
+    color: #999;
+    font-size: 11px;
+}
+
+/* Informações do score */
+.score-info {
+    margin-top: 14px;
+}
+
+/* Nota: .info-item1 parece ser uma classe não utilizada, pode ser removida */
+.info-item1 {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.info-item i {
+    color: #0066b3;
+    font-size: 16px;
+    margin-right: 16px;
+    margin-top: 10px;
+}
+
+.info-text strong {
+    display: block;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.info-text p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Campo de comprovação de renda */
+.campo-comprovacao-emprestimo {
+    background-color: #f8f8f8;
+    padding: 16px;
+    border-radius: 4px;
+    margin-top: 12px;
+    display: none;
+}
+
+.campo-comprovacao-emprestimo label {
+    display: block;
+    color: #333;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.campo-comprovacao-emprestimo input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.campo-comprovacao-emprestimo small {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Campo de comprovação de garantias */
+.campo-comprovacao-garantia {
+    background-color: #f8f8f8;
+    padding: 16px;
+    border-radius: 4px;
+    margin-top: 12px;
+}
+
+.campo-comprovacao-garantia label {
+    display: block;
+    color: #333;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.campo-comprovacao-garantia input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.campo-comprovacao-garantia small {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.campo-comprovacao-garantia input[readonly] {
+    background-color: #eee;
+    cursor: not-allowed;
+}
+
+/* Termos e condições */
+.termos-containeremprestimo {
+    background-color: #f8f8f8;
+    padding: 16px;
+    border-radius: 4px;
+    margin-top: 12px;
+}
+
+.checkbox-containeremprestimo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* Nota: Seletor incorreto [type="checkboxemprestimo"], corrigido para [type="checkbox"] */
+.checkbox-containeremprestimo input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-containeremprestimo label {
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.termos-containeremprestimo small {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Botão de envio da proposta */
+.btn-enviar-proposta {
+    width: 100%;
+    padding: 16px;
+    background-color: #0066b3;  
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 50px;
+}   
+
+.btn-enviar-proposta:hover {
+    background-color: #032da9;
+}
+
+.btn-enviar-proposta:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+    background-color: #0055a4;
+}
+
+/* Data e hora da proposta */
+.data-proposta-container {
+    background-color: #f8f8f8;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.data-proposta-label {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 4px;
+    margin-right: 8px;
+}
+
+.data-proposta-display {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 4px;
+    display: inline;
+}
+
+/* Animação de liberação de empréstimo */
+.liberacao-emprestimo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: #fff;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.barra-progresso {
+    width: 80%;
+    height: 8px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    margin-top: 0;
+}
+
+.progresso {
+    width: 0%;
+    height: 100%;
+    background: #0066b3;
+    border-radius: 4px;
+}
+
+.mensagens {
+    text-align: center;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+    margin-top: 5px;
+}
+
+.mensagem {
+    margin: 4px 0;
+    color: #666;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+/* Animação de liberação de empréstimo */
+@keyframes encher {
+    0% { width: 0; }
+    100% { width: 100%; }
+}
+
+@keyframes mostrarMensagem {
+    0% { opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Estilos para o container de liberação */
+.liberacao-emprestimo {
+    width: 95%;
+    max-width: 480px;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.barra-progresso {
+    width: 100%;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    margin-top: 0;
+}
+
+.progresso {
+    height: 100%;
+    background-color: #0066b3;
+    border-radius: 10px;
+    transition: width 0.1s linear;
+}
+
+.mensagens {
+    height: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+    margin-top: 5px;
+}
+
+.mensagem {
+    position: relative;
+    margin: 4px 0;
+    color: #333;
+    width: 100%;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+/* Removidas as animações CSS para usar JavaScript */
+
+/* Container de Empréstimo Liberado */
+.emprestimo-liberado {
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: #fff;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.emprestimo-liberado-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.emprestimo-liberado-header h2 {
+    color: #0066b3;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.emprestimo-liberado-header p {
+    color: #666;
+    font-size: 16px;
+}
+
+.emprestimo-liberado-content {
+    width: 100%;
+    max-width: 800px;
+    background: #f8f8f8;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+/* Botões de ação */
+.emprestimo-liberado-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 30px;
+}
+
+.btn-confirmar {
+    flex: 1;
+    padding: 16px;
+    background-color: #0066b3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-confirmar:hover {
+    background-color: #005294;
+}
+
+.btn-voltar {
+    flex: 1;
+    padding: 16px;
+    background-color: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-voltar:hover {
+    background-color: #eee;
+}
+
+/* Timer */
+.timer-container1 {
+    text-align: right;
+    margin-top: 8px;
+}
+
+.timer-container1 span {    
+    font-size: 10px;
+    color: #666;
+}
+
+/* Box de informações do empréstimo */
+.info-box-emprestimo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.info-item-emprestimo {
+    padding: 12px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+}
+
+.info-label-emprestimo {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.info-value-emprestimo {
+    display: block;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/*seguro prestamista*/
+/* Seguro Prestamista Box */
+.seguro-info-box {
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 20px 0;
+}
+
+.seguro-titulo {
+    color: #0066b3;
+    font-size: 18px;
+    margin: 0 0 16px 0;
+}
+
+.seguro-item {
+    margin-bottom: 16px;
+}
+
+.seguro-label {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.seguro-valor {
+    color: #333;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.seguro-lista-valor {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin-left: 10px;
+    list-style: none;
+    padding-left: 0;
+}
+
+.seguro-lista-valor li {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.seguro-lista-valor .valor-item {
+    text-align: center;
+}
+
+.seguro-lista-valor .valor-label {
+    display: block;
+    color: #666;
+    font-size: 10px;
+    margin-bottom: 4px;
+}
+
+.seguro-lista-valor .valor-numero {
+    color: #333;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.seguro-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.seguro-lista li {
+    color: #333;
+    font-size: 14px;
+    margin-bottom: 8px;
+    padding-left: 24px;
+    position: relative;
+}
+
+.seguro-texto {
+    color: #333;
+    font-size: 14px;
+}
+
+.seguro-aviso {
+    margin-top: 16px;
+    padding: 12px;
+    background-color: #fff3cd;
+    border-radius: 4px;
+}
+
+.seguro-aviso small {
+    color: #856404;
+    font-size: 12px;
+    line-height: 1.4;
+    display: block;
+}
+
+/* container informando que o imprestimo foi concedido*/
+
+.emprestimo-concedido-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.emprestimo-concedido-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.emprestimo-concedido-header h2 {
+    color: #0066b3;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.emprestimo-concedido-header p {
+    color: #666;
+    font-size: 16px;
+}
+
+.emprestimo-concedido-info {
+    background-color: #f8f8f8;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    color: #666;
+    font-size: 14px;
+}
+
+.info-value {
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.emprestimo-status-container {
+    margin-bottom: 30px;
+}
+
+.emprestimo-status-container h3 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.status-label {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.status-value {
+    color: #333;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.status-message {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+}
+
+.emprestimo-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.btn-renegociar,
+.btn-segunda-via,
+.btn-extrato {
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-renegociar {
+    background-color: #0066b3;
+    color: white;
+}
+
+.btn-renegociar:hover {
+    background-color: #005294;
+}
+
+.btn-segunda-via,
+.btn-extrato {
+    background-color: #f8f8f8;
+    color: #333;
+}
+
+.btn-segunda-via:hover,
+.btn-extrato:hover {
+    background-color: #eee;
+}
+
+.proxima-parcela-container {
+    background-color: #f8f8f8;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.proxima-parcela-container h3 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.parcela-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.parcela-valor {
+    color: #0066b3;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.parcela-vencimento {
+    color: #666;
+    font-size: 14px;
+}

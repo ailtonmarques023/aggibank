@@ -472,4 +472,65 @@ router.put('/settings', async (req, res) => {
   }
 });
 
+router.get('/user-complete-data', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        endereco: true,
+        dadosProfissionais: true,
+        configuracoes: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário não encontrado',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    const toNumber = (value) => value == null ? 0 : Number(value);
+    const usuario = {
+      id: user.id,
+      nome_completo: user.nomeCompleto,
+      nomeCompleto: user.nomeCompleto,
+      email: user.email,
+      cpf: user.cpf,
+      telefone: user.telefone,
+      data_nascimento: user.dataNascimento,
+      saldo_atual: toNumber(user.saldoAtual),
+      saldoAtual: toNumber(user.saldoAtual),
+      limite_cartao: toNumber(user.limiteCartao) || 4300,
+      limiteCartao: toNumber(user.limiteCartao) || 4300,
+      limite_pix_diario: toNumber(user.limitePixDiario),
+      limite_pix_mensal: toNumber(user.limitePixMensal),
+      score_credito: user.scoreCredito,
+      numero_conta: user.numeroConta,
+      digito_conta: user.digitoConta,
+      agencia: user.agencia,
+      is_ativo: user.isAtivo,
+      is_verificado: user.isVerificado,
+      endereco: user.endereco,
+      dados_profissionais: user.dadosProfissionais,
+      configuracoes: user.configuracoes,
+    };
+
+    res.json({
+      success: true,
+      message: 'Dados completos obtidos com sucesso',
+      user_data: { usuario },
+      data: { user: usuario, user_data: { usuario } },
+    });
+  } catch (error) {
+    logger.error('Erro ao obter dados completos do usuário:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
 module.exports = router;
