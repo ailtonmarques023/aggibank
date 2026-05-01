@@ -1,3 +1,5 @@
+export const classNames = (...classes) => classes.filter(Boolean).join(' ');
+
 // Função para verificar se o usuário aceitou os termos
 export const hasAcceptedTerms = () => {
   const accepted = localStorage.getItem('agilbank_terms_accepted');

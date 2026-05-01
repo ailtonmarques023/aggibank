@@ -84,8 +84,8 @@ const validateUserRegistration = [
   
   body('telefone')
     .optional()
-    .matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/)
-    .withMessage('Telefone deve estar no formato (XX) XXXXX-XXXX'),
+    .matches(/^(\d{10,11}|\(\d{2}\)\s\d{4,5}-\d{4})$/)
+    .withMessage('Telefone deve conter 10 ou 11 dígitos'),
   
   body('dataNascimento')
     .isISO8601()
@@ -218,8 +218,8 @@ const validateProfileUpdate = [
   
   body('telefone')
     .optional()
-    .matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/)
-    .withMessage('Telefone deve estar no formato (XX) XXXXX-XXXX'),
+    .matches(/^(\d{10,11}|\(\d{2}\)\s\d{4,5}-\d{4})$/)
+    .withMessage('Telefone deve conter 10 ou 11 dígitos'),
   
   handleValidationErrors
 ];

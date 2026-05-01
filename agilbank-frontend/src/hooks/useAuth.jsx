@@ -46,6 +46,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/register', userData);
+      setLoading(false);
+      return {
+        success: true,
+        ...(response.data || {}),
+        data: response.data?.data || response.data,
+      };
+    } catch (error) {
+      setLoading(false);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.response?.data?.errors?.[0]?.message || 'Erro ao criar conta',
+      };
+    }
+  };
   const logout = () => {
     localStorage.removeItem('agilbank_token');
     localStorage.removeItem('agilbank_user');
@@ -56,7 +75,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout, setIsAuthenticated, setUser }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, register, logout, setIsAuthenticated, setUser }}>
       {children}
     </AuthContext.Provider>
   );

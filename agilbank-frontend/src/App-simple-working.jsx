@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Terms from './pages/Terms';
+import Register from './pages/Register/index.jsx';
+import { AuthProvider as RegisterAuthProvider } from './hooks/useAuth.jsx';
 import { authService } from './services/authService';
 
 const LOGIN_ERROR_MESSAGES = {
@@ -171,6 +173,15 @@ const App = () => {
           <Route path="/login" element={
             <PublicRoute>
               <Login />
+            </PublicRoute>
+          } />
+
+          {/* Rota de cadastro */}
+          <Route path="/register" element={
+            <PublicRoute>
+              <RegisterAuthProvider>
+                <Register />
+              </RegisterAuthProvider>
             </PublicRoute>
           } />
 

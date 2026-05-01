@@ -222,9 +222,8 @@ const Register = () => {
       
       if (result.success) {
         setSuccess(true);
-        // Redirecionar após 3 segundos
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/login');
         }, 3000);
       } else {
         setError(result.error);
