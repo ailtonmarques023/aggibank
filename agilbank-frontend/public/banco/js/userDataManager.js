@@ -6,7 +6,7 @@
 class UserDataManager {
     constructor() {
         this.userData = null;
-        this.apiBase = 'https://aggibank-production.up.railway.app/api';
+        this.apiBase = 'http://127.0.0.1:5000/api';
         this.init();
     }
 
@@ -17,14 +17,14 @@ class UserDataManager {
     }
 
     /**
-     * Carrega dados do usuário do localStorage
+     * Carrega dados do usuário do armazenamento da sessão atual
      */
     loadUserDataFromStorage() {
         try {
-            const storedUser = localStorage.getItem('agilbank_user');
+            const storedUser = sessionStorage.getItem('govbr_user') || localStorage.getItem('govbr_user');
             if (storedUser) {
                 this.userData = JSON.parse(storedUser);
-                console.log('✅ Dados do usuário carregados do localStorage');
+                console.log('✅ Dados do usuário carregados da sessão:', this.userData);
                 this.updateAllUserData();
             } else {
                 console.log('⚠️ Nenhum usuário logado encontrado');
@@ -39,14 +39,14 @@ class UserDataManager {
      */
     async loadUserDataFromAPI() {
         try {
-            const token = localStorage.getItem('agilbank_token');
+            const token = sessionStorage.getItem('govbr_token') || localStorage.getItem('govbr_token');
             if (!token) {
                 console.log('⚠️ Token não encontrado');
                 return null;
             }
 
             console.log('🔄 Carregando dados do usuário da API...');
-            const response = await fetch(`${this.apiBase}/user/profile`, {
+            const response = await fetch(`${this.apiBase}/auth/me`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -56,12 +56,14 @@ class UserDataManager {
 
             if (response.ok) {
                 const data = await response.json();
-                this.userData = (data.user || data.data?.user);
+                this.userData = data.user;
                 
-                // Salvar dados atualizados no localStorage
-                localStorage.setItem('agilbank_user', JSON.stringify(this.userData));
+                // Salvar dados atualizados na sessão atual
+                const userData = JSON.stringify(this.userData);
+                sessionStorage.setItem('govbr_user', userData);
+                localStorage.setItem('govbr_user', userData);
                 
-                console.log('✅ Dados do usuário atualizados da API');
+                console.log('✅ Dados do usuário atualizados da API:', this.userData);
                 this.updateAllUserData();
                 return this.userData;
             } else {
@@ -244,7 +246,9 @@ class UserDataManager {
     updateUserData(updatedData) {
         if (this.userData) {
             this.userData = { ...this.userData, ...updatedData };
-            localStorage.setItem('agilbank_user', JSON.stringify(this.userData));
+            const userData = JSON.stringify(this.userData);
+            sessionStorage.setItem('govbr_user', userData);
+            localStorage.setItem('govbr_user', userData);
             this.updateAllUserData();
         }
     }

@@ -127,14 +127,14 @@ function mostrarFormularioEmprestimo() {
     const nomeCompleto = document.getElementById('nomeCompleto');
     if (nomeCompleto) {
         // Carregar dados reais do localStorage ou API
-        const userData = JSON.parse(localStorage.getItem('agilbank_user') || '{}');
+        const userData = JSON.parse(localStorage.getItem('govbr_user') || '{}');
         nomeCompleto.value = userData.nome_completo || 'Nome não disponível';
     }
     
     const cpfUsuario = document.getElementById('cpfUsuario');
     if (cpfUsuario) {
         // Carregar CPF real do usuário (mascarado)
-        const userData = JSON.parse(localStorage.getItem('agilbank_user') || '{}');
+        const userData = JSON.parse(localStorage.getItem('govbr_user') || '{}');
         const cpf = userData.cpf || '';
         cpfUsuario.value = cpf ? cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : 'CPF não disponível';
     }

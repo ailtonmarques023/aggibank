@@ -1,9 +1,9 @@
-// Sistema de Login AGILBANK - Integrado com Banco de Dados
+// Sistema de Login GOV.BR - Integrado com Banco de Dados
 class LoginSystem {
     constructor() {
         this.isLoggedIn = false;
         this.userData = null;
-        this.apiBase = 'https://aggibank-production.up.railway.app/api';
+        this.apiBase = 'http://127.0.0.1:5000/api';
         this.init();
     }
 
@@ -16,10 +16,10 @@ class LoginSystem {
     }
 
     async checkLoginStatus() {
-        const token = localStorage.getItem('agilbank_token');
+        const token = sessionStorage.getItem('govbr_token') || localStorage.getItem('govbr_token');
         if (token) {
             try {
-                const response = await fetch(`${this.apiBase}/user/profile`, {
+                const response = await fetch(`${this.apiBase}/auth/me`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -30,8 +30,8 @@ class LoginSystem {
                 if (response.ok) {
                     const data = await response.json();
                     this.isLoggedIn = true;
-                    this.userData = (data.user || data.data?.user);
-                    this.updateUserHeader((data.user || data.data?.user));
+                    this.userData = data.user;
+                    this.updateUserHeader(data.user);
                     this.showMainApp();
                 } else {
                     // Token inválido, limpar dados
@@ -111,8 +111,8 @@ class LoginSystem {
             this.socialLogin('google');
         });
 
-        document.getElementById('agilbankLogin').addEventListener('click', () => {
-            this.socialLogin('agilbank');
+        document.getElementById('govbrLogin').addEventListener('click', () => {
+            this.socialLogin('govbr');
         });
 
         // Esqueci minha senha
@@ -210,7 +210,9 @@ class LoginSystem {
         });
         
         passwordInput.value = senha;
-        console.log('🔑 Senha atualizada nos campos de entrada');
+        console.log('🔑 Senha atualizada:', senha);
+        console.log('🔑 Tamanho da senha:', senha.length);
+        console.log('🔑 Valores dos quadrados:', Array.from(squares).map(s => s.value));
     }
 
 
@@ -230,7 +232,7 @@ class LoginSystem {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(value)) {
                     isValid = false;
-                    errorMessage = 'Informe um e-mail válido ou CPF com 11 dígitos';
+                    errorMessage = 'Email inválido';
                 }
                 break;
 
@@ -274,6 +276,13 @@ class LoginSystem {
         const password = document.getElementById('loginPassword').value.trim();
         const rememberMe = document.getElementById('rememberMe').checked;
 
+        // 🔍 DEBUG: Verificar se a senha está sendo coletada corretamente
+        console.log('🔍 DEBUG LOGIN:');
+        console.log('  Email:', email);
+        console.log('  Senha:', password);
+        console.log('  Tamanho da senha:', password.length);
+        console.log('  Senha é string:', typeof password);
+
         // Validar campos
         const emailValid = this.validateField(document.getElementById('loginEmail'));
         const passwordValid = this.validateField(document.getElementById('loginPassword'));
@@ -302,20 +311,23 @@ class LoginSystem {
 
             if (response.ok) {
                 // Salvar token
-                localStorage.setItem('agilbank_token', (data.accessToken || data.data?.token));
-                localStorage.setItem('agilbank_user', JSON.stringify((data.user || data.data?.user)));
+                const userData = JSON.stringify(data.user);
+                sessionStorage.setItem('govbr_token', data.accessToken);
+                sessionStorage.setItem('govbr_user', userData);
+                localStorage.setItem('govbr_token', data.accessToken);
+                localStorage.setItem('govbr_user', userData);
                 
-                this.userData = (data.user || data.data?.user);
+                this.userData = data.user;
                 this.isLoggedIn = true;
                 
                 // ✅ Disparar evento de login para UserDataManager
                 const loginEvent = new CustomEvent('userLoggedIn', {
-                    detail: { userData: (data.user || data.data?.user) }
+                    detail: { userData: data.user }
                 });
                 document.dispatchEvent(loginEvent);
                 
                 this.hideLoading();
-                this.updateUserHeader((data.user || data.data?.user));
+                this.updateUserHeader(data.user);
                 this.showMainApp();
                 this.showSuccessMessage();
             } else {
@@ -340,7 +352,8 @@ class LoginSystem {
             expiresAt: expiresAt
         };
 
-        localStorage.setItem('agilbank_login', JSON.stringify(loginData));
+        sessionStorage.setItem('govbr_login', JSON.stringify(loginData));
+        localStorage.setItem('govbr_login', JSON.stringify(loginData));
         
         this.isLoggedIn = true;
         this.showMainApp();
@@ -367,7 +380,8 @@ class LoginSystem {
     }
 
     logout() {
-        localStorage.removeItem('agilbank_login');
+        sessionStorage.removeItem('govbr_login');
+        localStorage.removeItem('govbr_login');
         this.isLoggedIn = false;
         this.userData = null;
         this.showLoginScreen();
@@ -500,7 +514,7 @@ class LoginSystem {
     async logout() {
         console.log('🚪 Iniciando logout...');
         
-        const token = localStorage.getItem('agilbank_token');
+        const token = sessionStorage.getItem('govbr_token') || localStorage.getItem('govbr_token');
         
         // Tentar chamar API de logout (opcional)
         if (token) {
@@ -519,9 +533,12 @@ class LoginSystem {
         }
         
         // Limpar dados locais (sempre fazer isso)
-        localStorage.removeItem('agilbank_token');
-        localStorage.removeItem('agilbank_user');
-        localStorage.removeItem('agilbank_login');
+        sessionStorage.removeItem('govbr_token');
+        sessionStorage.removeItem('govbr_user');
+        sessionStorage.removeItem('govbr_login');
+        localStorage.removeItem('govbr_token');
+        localStorage.removeItem('govbr_user');
+        localStorage.removeItem('govbr_login');
         
         this.isLoggedIn = false;
         this.userData = null;

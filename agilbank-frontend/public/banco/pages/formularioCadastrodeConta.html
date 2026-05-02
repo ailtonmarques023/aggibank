@@ -958,7 +958,7 @@
                 <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="AgilBank" class="conta-logo">
                 <h1 class="conta-title">Abertura de Conta</h1>
                 <p class="conta-subtitle">Preencha os dados para criar sua conta</p>
-                <button class="conta-back-btn" onclick="window.location.href='../index.agilbank.html'">
+                <button class="conta-back-btn" onclick="window.location.href='../index.bancogov.html'">
                     <i class="fas fa-arrow-left"></i> Voltar ao Login
                 </button>
             </div>
@@ -1867,7 +1867,7 @@
     <script>
         // Função simples para voltar ao login
         function voltarParaLogin() {
-            window.location.href = '../index.agilbank.html';
+            window.location.href = '../index.bancogov.html';
         }
 
 
@@ -1875,7 +1875,7 @@
 
         // Função para validar CEP e autocomplete
         function validarCEPCampo(input) {
-            console.log('🔍 Validando CEP');
+            console.log('🔍 Validando CEP:', input.value);
             
             // Remover caracteres não numéricos
             let valor = input.value.replace(/[^\d]/g, '');
@@ -1896,10 +1896,10 @@
             if (msgAnterior) msgAnterior.remove();
             
             const cepLimpo = valor.replace(/[^\d]/g, '');
-            console.log('🔢 CEP normalizado para validação');
+            console.log('🔢 CEP limpo:', cepLimpo, 'Tamanho:', cepLimpo.length);
             
             if (cepLimpo.length === 8) {
-                console.log('🔍 CEP completo; buscando endereço');
+                console.log('🔍 CEP completo! Buscando:', cepLimpo);
                 // Chamar a função de busca com timeout
                 setTimeout(() => {
                     buscarCEP(cepLimpo, input);
@@ -1916,15 +1916,15 @@
         // Função para buscar CEP na API
         async function buscarCEP(cep, input) {
             console.log('🚀 FUNÇÃO buscarCEP EXECUTADA!');
-            console.log('🔢 CEP recebido para consulta');
-            console.log('📡 Fazendo requisição para ViaCEP');
+            console.log('🔢 CEP recebido:', cep);
+            console.log('📡 Fazendo requisição para:', `https://viacep.com.br/ws/${cep}/json/`);
             
             try {
                 const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                 console.log('📡 Resposta recebida:', response.status);
                 
                 const data = await response.json();
-                console.log('📋 Dados da API recebidos');
+                console.log('📋 Dados da API:', data);
                 
                 if (data.erro) {
                     input.style.border = '2px solid #dc3545';
@@ -1977,16 +1977,16 @@
 
         // Função para validar CPF diretamente
         function validarCPFCampo(input) {
-            console.log('🔍 Validando CPF');
+            console.log('🔍 Validando CPF:', input.value);
             
             // Remover caracteres não numéricos
             let valor = input.value.replace(/[^\d]/g, '');
-            console.log('🔢 Valor normalizado para CPF');
+            console.log('🔢 Apenas números:', valor);
             
             // Limitar a 11 dígitos
             if (valor.length > 11) {
                 valor = valor.substring(0, 11);
-                console.log('✂️ CPF limitado a 11 dígitos');
+                console.log('✂️ Limitado a 11 dígitos:', valor);
             }
             
             // Formatar
@@ -1996,7 +1996,7 @@
                 valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
             }
             input.value = valor;
-            console.log('📝 CPF formatado');
+            console.log('📝 Valor formatado:', valor);
             
             // Remover mensagem anterior
             const msgAnterior = input.parentNode.querySelector('.cpf-msg');
@@ -2006,7 +2006,7 @@
             }
             
             const cpfLimpo = valor.replace(/[^\d]/g, '');
-            console.log('🧹 CPF normalizado para validação');
+            console.log('🧹 CPF limpo:', cpfLimpo);
             
             if (cpfLimpo.length === 11) {
                 console.log('🔍 Validando CPF...');
@@ -2048,7 +2048,7 @@
         
         // Função para fazer login após criar conta
         function fazerLoginAposConta() {
-            window.location.href = '../index.agilbank.html';
+            window.location.href = '../index.bancogov.html';
         }
         
         // Funções para controlar o modal dos termos
@@ -2634,7 +2634,7 @@
             if (cpfInput) {
                 console.log('✅ Adicionando validação ao CPF...');
                 cpfInput.addEventListener('input', function(e) {
-                    console.log('📝 CPF digitado');
+                    console.log('📝 CPF digitado:', e.target.value);
                     let valor = e.target.value.replace(/[^\d]/g, '');
                     
                     // Limitar a 11 dígitos
@@ -2715,9 +2715,9 @@
             const eyeIconSenha = document.getElementById('eyeIconSenha');
             const eyeIconConfirmarSenha = document.getElementById('eyeIconConfirmarSenha');
 
-            console.log('Senha Input encontrado:', !!senhaInput);
-            console.log('Toggle Senha encontrado:', !!toggleSenha);
-            console.log('Eye Icon Senha encontrado:', !!eyeIconSenha);
+            console.log('Senha Input:', senhaInput);
+            console.log('Toggle Senha:', toggleSenha);
+            console.log('Eye Icon Senha:', eyeIconSenha);
 
             // Toggle para mostrar/ocultar senha
             if (toggleSenha) {
@@ -3841,7 +3841,7 @@
                 if (cpfInput) {
                     console.log('✅ Campo CPF encontrado!');
                     cpfInput.addEventListener('input', function(e) {
-                        console.log('📝 Digitando CPF');
+                        console.log('📝 Digitando CPF:', e.target.value);
                         
                         let valor = e.target.value.replace(/[^\d]/g, '');
                         if (valor.length > 11) valor = valor.substring(0, 11);

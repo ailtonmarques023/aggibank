@@ -369,7 +369,7 @@ class EmprestimoForm {
         await new Promise(resolve => setTimeout(resolve, 3000));
         
         // Aqui você faria a requisição real para a API
-        console.log('Dados da proposta preparados para envio');
+        console.log('Dados enviados:', data);
         
         // Simular resposta de sucesso
         return { success: true, message: 'Proposta enviada com sucesso!' };

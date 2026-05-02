@@ -361,19 +361,19 @@ class FormularioConta {
             
             this.updateLoadingStep(1, 'completed');
             this.updateLoadingStep(2, 'active');
-            console.log('📊 Dados do formulário coletados para cadastro');
+            console.log('📊 Dados coletados:', formData);
             
             // Passo 2: Criar usuário no banco de dados
             const userResult = await this.createUserInDatabase(formData);
-            console.log('✅ Usuário criado no banco');
+            console.log('✅ Usuário criado no banco:', userResult);
             
             this.updateLoadingStep(2, 'completed');
             this.updateLoadingStep(3, 'active');
             
             // Passo 3: Enviar email de confirmação
             try {
-                await this.sendConfirmationEmail(formData.email, userResult.userId);
-                console.log('📧 Email de confirmação enviado');
+                const emailResult = await this.sendConfirmationEmail(formData.email, userResult.userId);
+                console.log('📧 Email de confirmação enviado:', emailResult);
             } catch (emailError) {
                 console.warn('⚠️ Erro ao enviar email (continuando):', emailError);
                 // Continua mesmo se o email falhar
@@ -401,21 +401,26 @@ class FormularioConta {
     }
     
     collectFormData() {
+        // Debug da senha
         const senhaElement = document.getElementById('contaSenha');
         const senhaValue = senhaElement?.value || '';
+        console.log('🔍 DEBUG SENHA:');
+        console.log('  Elemento:', senhaElement);
+        console.log('  Valor:', senhaValue);
+        console.log('  Tamanho:', senhaValue.length);
         
         return {
             // Dados pessoais
-            nome: (document.getElementById('contaNome') || document.getElementById('contaNomeCompleto'))?.value || '',
+            nome: document.getElementById('contaNome')?.value || '',
             cpf: document.getElementById('contaCpf')?.value || '',
             email: document.getElementById('contaEmail')?.value || '',
             telefone: document.getElementById('contaTelefone')?.value || '',
-            dataNascimento: (document.getElementById('contaDataNasc') || document.getElementById('contaDataNascimento'))?.value || '',
+            dataNascimento: document.getElementById('contaDataNasc')?.value || '',
             senha: senhaValue,
             
             // Endereço
             cep: document.getElementById('contaCep')?.value || '',
-            endereco: (document.getElementById('contaEndereco') || document.getElementById('contaRua'))?.value || '',
+            endereco: document.getElementById('contaEndereco')?.value || '',
             numero: document.getElementById('contaNumero')?.value || '',
             complemento: document.getElementById('contaComplemento')?.value || '',
             bairro: document.getElementById('contaBairro')?.value || '',
@@ -456,12 +461,14 @@ class FormularioConta {
     }
     
     validateFormData(data) {
-        console.log('🔍 Validando dados do formulário');
+        console.log('🔍 Validando dados do formulário:', data);
         
         const required = ['nome', 'cpf', 'email', 'telefone', 'dataNascimento', 'senha', 'cep', 'endereco', 'numero', 'bairro', 'cidade', 'estado', 'profissao', 'renda'];
         
         for (const field of required) {
             const value = data[field];
+            console.log(`🔍 Campo ${field}:`, value);
+            
             if (!value || (typeof value === 'string' && value.trim() === '')) {
                 console.error(`❌ Campo obrigatório vazio: ${field}`);
                 return false;
@@ -486,20 +493,17 @@ class FormularioConta {
         try {
             console.log('💾 Enviando dados para o banco de dados...');
             
-            const onlyDigits = (value) => String(value || '').replace(/\D/g, '');
-            const rendaMensal = String(formData.renda || '').replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
-
-            // Preparar dados para o contrato de /api/auth/register
+            // Preparar dados para envio
             const userData = {
-                nomeCompleto: formData.nome,
+                nome: formData.nome,
+                cpf: formData.cpf,
                 email: formData.email,
-                cpf: onlyDigits(formData.cpf),
-                telefone: onlyDigits(formData.telefone),
+                telefone: formData.telefone,
                 dataNascimento: formData.dataNascimento,
-                senha: formData.senha,
+                senha: formData.senha, // ✅ ADICIONADO: Campo senha
                 endereco: {
                     cep: formData.cep,
-                    logradouro: formData.endereco,
+                    endereco: formData.endereco,
                     numero: formData.numero,
                     complemento: formData.complemento,
                     bairro: formData.bairro,
@@ -508,17 +512,24 @@ class FormularioConta {
                 },
                 dadosProfissionais: {
                     profissao: formData.profissao,
+                    renda: formData.renda,
                     empresa: formData.empresa,
-                    cargo: formData.cargo,
-                    rendaMensal
-                }
+                    cargo: formData.cargo
+                },
+                documentos: formData.documentos,
+                aceitaTermos: formData.aceitaTermos,
+                aceitaComunicacoes: formData.aceitaComunicacoes,
+                aceitaPolitica: formData.aceitaPolitica,
+                dataCriacao: new Date().toISOString(),
+                status: 'pendente_confirmacao'
             };
 
             // Fazer chamada real para a API
-            const response = await fetch('https://aggibank-production.up.railway.app/api/auth/register', {
+            const response = await fetch('http://127.0.0.1:5000/api/usuarios/criar', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.getAuthToken()}`
                 },
                 body: JSON.stringify(userData)
             });
@@ -529,10 +540,10 @@ class FormularioConta {
             }
 
             const result = await response.json();
-            console.log('✅ Usuário criado no banco');
+            console.log('✅ Usuário criado no banco:', result);
             
             return {
-                userId: result.userId || result.data?.user?.id,
+                userId: result.userId,
                 status: 'created',
                 message: 'Usuário criado com sucesso no banco de dados',
                 data: result
@@ -549,7 +560,7 @@ class FormularioConta {
             console.log('📧 Enviando email de confirmação...');
             
             // Fazer chamada real para o serviço de email
-            const response = await fetch('https://aggibank-production.up.railway.app/api/email/confirmacao', {
+            const response = await fetch('http://127.0.0.1:5000/api/email/confirmacao', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -568,7 +579,7 @@ class FormularioConta {
             }
 
             const result = await response.json();
-            console.log('✅ Email enviado');
+            console.log('✅ Email enviado:', result);
             
             return {
                 status: 'sent',
@@ -589,7 +600,7 @@ class FormularioConta {
     }
     
     showEmailConfirmationMessage(email) {
-        console.log('📧 showEmailConfirmationMessage chamada');
+        console.log('📧 showEmailConfirmationMessage chamada com email:', email);
         
         // Mostrar mensagem de sucesso com instruções sobre o email
         const successMessage = `
@@ -616,7 +627,7 @@ class FormularioConta {
                         </p>
                         
                         <div class="conta-success-actions">
-                            <button class="conta-login-btn" onclick="window.location.href='../index.agilbank.html'">
+                            <button class="conta-login-btn" onclick="window.location.href='../index.bancogov.html'">
                                 Entrar
                             </button>
                         </div>
@@ -664,7 +675,7 @@ class FormularioConta {
                 clearInterval(countdownInterval);
                 console.log('🚀 Redirecionando para login...');
                // Redirecionar para a tela de login
-               window.location.href = '../index.agilbank.html';
+               window.location.href = '../index.bancogov.html';
             }
         }, 1000);
     }

@@ -152,7 +152,7 @@ function calcularLimite(renda) {
  */
 async function enviarSolicitacao() {
     // Verificar se o usuário está logado
-    const token = localStorage.getItem('agilbank_token');
+    const token = localStorage.getItem('govbr_token');
     if (!token) {
         showErrorModal('Erro de Autenticação', 'Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
         return;
@@ -187,10 +187,10 @@ async function enviarSolicitacao() {
             tempo_emprego: dadosCartao.tempoEmprego
         };
 
-        console.log('🔄 Enviando solicitação de cartão para API...');
+        console.log('🔄 Enviando solicitação de cartão para API...', cardData);
 
         // Enviar para a API real
-        const response = await fetch('https://aggibank-production.up.railway.app/api/cards', {
+        const response = await fetch('http://127.0.0.1:5000/api/cards', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -294,7 +294,7 @@ function showErrorModal(title, message) {
  * Incrementa o progresso até 100% e então mostra o container de vencimento
  */
 function iniciarBarraProgresso() {
-    mostrarAnimacaoAgilBank(() => {
+    mostrarAnimacaoGovBr(() => {
     let progress = 0;
     const progressFill = document.getElementById('progressFill');
     const progressInterval = setInterval(() => {
@@ -331,12 +331,12 @@ async function selecionarVencimento(dia) {
         }
 
         const cartaoData = JSON.parse(cartaoSolicitado);
-        console.log('📋 Dados do cartão carregados');
+        console.log('📋 Dados do cartão:', cartaoData);
 
         // Sequência de exibição dos containers com delays
-        mostrarAnimacaoAgilBank(() => {
-            mostrarAnimacaoAgilBank(() => {
-                mostrarAnimacaoAgilBank(() => {
+        mostrarAnimacaoGovBr(() => {
+            mostrarAnimacaoGovBr(() => {
+                mostrarAnimacaoGovBr(() => {
                     document.getElementById('vencimentoContainer').style.display = 'none';
                     document.getElementById('aprovacaoContainer').style.display = 'block';
                     
@@ -413,14 +413,14 @@ function atualizarInformacoesCartao(cartaoData, diaVencimento) {
  * Verifica se o usuário já solicitou um cartão e redireciona adequadamente
  */
 async function verificarCartaoSolicitado() {
-    const token = localStorage.getItem('agilbank_token');
+    const token = localStorage.getItem('govbr_token');
     if (!token) {
         return false; // Usuário não logado
     }
 
     try {
         // Buscar cartões do usuário na API
-        const response = await fetch('https://aggibank-production.up.railway.app/api/cards', {
+        const response = await fetch('http://127.0.0.1:5000/api/cards', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

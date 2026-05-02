@@ -86,7 +86,7 @@ const Login = () => {
 
       if (data.success) {
         storeAuthSession(data.token, data.user);
-        navigate('/conta', { replace: true });
+        window.location.replace('/banco/index.html');
       } else {
         setError(getLoginErrorMessage(data));
       }
