@@ -3,6 +3,12 @@ const AUTH_USER_KEY = 'agilbank_user';
 
 const hasStorage = () => typeof window !== 'undefined';
 
+const notifyAuthChanged = () => {
+  if (hasStorage()) {
+    window.dispatchEvent(new Event('agilbank-auth-changed'));
+  }
+};
+
 export const clearStoredAuth = () => {
   if (!hasStorage()) {
     return;
@@ -12,6 +18,7 @@ export const clearStoredAuth = () => {
   sessionStorage.removeItem(AUTH_USER_KEY);
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
+  notifyAuthChanged();
 };
 
 export const getStoredAuth = () => {
@@ -37,4 +44,5 @@ export const storeAuthSession = (token, user) => {
   localStorage.removeItem(AUTH_USER_KEY);
   sessionStorage.setItem(AUTH_TOKEN_KEY, token);
   sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  notifyAuthChanged();
 };

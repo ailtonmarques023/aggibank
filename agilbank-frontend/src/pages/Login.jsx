@@ -86,7 +86,7 @@ const Login = () => {
 
       if (data.success) {
         storeAuthSession(data.token, data.user);
-        navigate('/');
+        navigate('/conta', { replace: true });
       } else {
         setError(getLoginErrorMessage(data));
       }
