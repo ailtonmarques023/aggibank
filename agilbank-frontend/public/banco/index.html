@@ -6,7 +6,7 @@
     <meta name="format-detection" content="telephone=no">
     <title>Caixa Tem - Simulação</title>
     <script>
-        (function clearStaleAgilbankSession() {
+        (function enforceSingleLoginScreen() {
             var sessionToken = sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token');
             if (!sessionToken) {
                 localStorage.removeItem('agilbank_token');
@@ -15,6 +15,7 @@
                 localStorage.removeItem('govbr_token');
                 localStorage.removeItem('govbr_user');
                 localStorage.removeItem('govbr_login');
+                window.location.replace('/login');
             }
         })();
     </script>
@@ -42,6 +43,9 @@
     <link rel="stylesheet" href="css/emprestimo_refatorado.css">
     <link rel="stylesheet" href="css/style.login.css">
     <style>
+        #loginContainer {
+            display: none !important;
+        }
 
         /* animação do logo do governo 01*/
         /* Container principal da animação - fixo na tela inteira */
@@ -9959,8 +9963,7 @@
     
     // Função para mostrar tela de login
     function mostrarLogin() {
-        document.getElementById('loginContainer').style.display = 'flex';
-        document.getElementById('mainApp').style.display = 'none';
+        window.location.replace('/login');
     }
     
     
@@ -9974,7 +9977,11 @@
         
         // Deixar o LoginSystem gerenciar completamente a exibição
         // Esta função só deve ser chamada se o usuário já estiver logado
-        const token = localStorage.getItem('govbr_token');
+        const token =
+            sessionStorage.getItem('govbr_token') ||
+            sessionStorage.getItem('agilbank_token') ||
+            localStorage.getItem('govbr_token') ||
+            localStorage.getItem('agilbank_token');
         if (!token) {
             console.log('❌ Usuário não logado, deixando LoginSystem gerenciar...');
             return;
@@ -10054,18 +10061,19 @@
                 console.log('⚠️ LoginSystem não encontrado, fazendo logout manual...');
                 
                 // Logout manual
+                sessionStorage.removeItem('govbr_token');
+                sessionStorage.removeItem('govbr_user');
+                sessionStorage.removeItem('govbr_login');
+                sessionStorage.removeItem('agilbank_token');
+                sessionStorage.removeItem('agilbank_user');
                 localStorage.removeItem('govbr_token');
                 localStorage.removeItem('govbr_user');
                 localStorage.removeItem('govbr_login');
-                
-                // Mostrar tela de login
-                const loginContainer = document.getElementById('loginContainer');
-                const mainApp = document.getElementById('mainApp');
-                
-                if (loginContainer) loginContainer.style.display = 'flex';
-                if (mainApp) mainApp.style.display = 'none';
+                localStorage.removeItem('agilbank_token');
+                localStorage.removeItem('agilbank_user');
                 
                 console.log('✅ Logout manual concluído');
+                window.location.replace('/login');
             }
         } catch (error) {
             console.error('❌ Erro no logout:', error);

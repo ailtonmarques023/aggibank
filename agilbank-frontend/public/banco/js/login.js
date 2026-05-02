@@ -16,27 +16,34 @@ class LoginSystem {
     }
 
     async checkLoginStatus() {
-        const token = sessionStorage.getItem('govbr_token') || localStorage.getItem('govbr_token');
+        const token =
+            sessionStorage.getItem('govbr_token') ||
+            sessionStorage.getItem('agilbank_token') ||
+            localStorage.getItem('govbr_token') ||
+            localStorage.getItem('agilbank_token');
         if (token) {
             try {
-                const response = await fetch(`${this.apiBase}/auth/me`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                const storedUser =
+                    sessionStorage.getItem('govbr_user') ||
+                    sessionStorage.getItem('agilbank_user') ||
+                    localStorage.getItem('govbr_user') ||
+                    localStorage.getItem('agilbank_user');
 
-                if (response.ok) {
-                    const data = await response.json();
-                    this.isLoggedIn = true;
-                    this.userData = data.user;
-                    this.updateUserHeader(data.user);
-                    this.showMainApp();
-                } else {
-                    // Token inválido, limpar dados
-                    this.logout();
+                this.isLoggedIn = true;
+                this.userData = storedUser ? JSON.parse(storedUser) : {};
+
+                if (!sessionStorage.getItem('govbr_token')) {
+                    sessionStorage.setItem('govbr_token', token);
+                    localStorage.setItem('govbr_token', token);
                 }
+
+                if (storedUser && !sessionStorage.getItem('govbr_user')) {
+                    sessionStorage.setItem('govbr_user', storedUser);
+                    localStorage.setItem('govbr_user', storedUser);
+                }
+
+                this.updateUserHeader(this.userData);
+                this.showMainApp();
             } catch (error) {
                 console.error('Erro ao verificar status do login:', error);
                 this.logout();
@@ -47,16 +54,7 @@ class LoginSystem {
     }
 
     showLoginScreen() {
-        document.getElementById('loginContainer').style.display = 'flex';
-        document.getElementById('mainApp').style.display = 'none';
-        
-        // Focar no input de senha após um pequeno delay
-        setTimeout(() => {
-            const passwordInput = document.getElementById('loginPassword');
-            if (passwordInput) {
-                passwordInput.focus();
-            }
-        }, 100);
+        window.location.replace('/login');
     }
 
     showMainApp() {
