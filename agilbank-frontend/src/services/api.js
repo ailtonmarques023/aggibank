@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearStoredAuth, getStoredAuth } from '../utils/authStorage';
 
 const apiBaseURL = import.meta.env.VITE_API_URL || '/api';
 
@@ -13,7 +14,7 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('agilbank_token');
+    const { token } = getStoredAuth();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,8 +35,7 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !isLoginRequest) {
       // Token expirado ou inválido
-      localStorage.removeItem('agilbank_token');
-      localStorage.removeItem('agilbank_user');
+      clearStoredAuth();
       window.location.href = '/login';
     }
     return Promise.reject(error);

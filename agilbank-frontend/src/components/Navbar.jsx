@@ -48,12 +48,6 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/dashboard"
-                  className="text-gray-600 hover:text-agilbank-primary transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <Link
                   to="/transactions"
                   className="text-gray-600 hover:text-agilbank-primary transition-colors"
                 >
@@ -174,13 +168,6 @@ const Navbar = () => {
             <div className="space-y-2">
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/dashboard"
-                    className="block px-4 py-2 text-gray-600 hover:text-agilbank-primary hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
                   <Link
                     to="/transactions"
                     className="block px-4 py-2 text-gray-600 hover:text-agilbank-primary hover:bg-gray-50 rounded-lg transition-colors"

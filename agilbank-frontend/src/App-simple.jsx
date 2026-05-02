@@ -28,7 +28,6 @@ function App() {
       <Routes>
         <Route path="/" element={<TestComponent />} />
         <Route path="/login" element={<TestComponent />} />
-        <Route path="/dashboard" element={<TestComponent />} />
         <Route path="*" element={<TestComponent />} />
       </Routes>
     </Router>

@@ -7,7 +7,6 @@ import AuthLayout from './layouts/AuthLayout';
 import TermsModal from './components/TermsModal';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Terms from './pages/Terms';
 import { hasAcceptedTerms } from './utils/helpers';
@@ -66,7 +65,6 @@ const App = () => {
             <Route path="/terms" element={<DefaultLayout><Terms /></DefaultLayout>} />
 
             {/* Rotas Protegidas */}
-            <Route path="/dashboard" element={<PrivateRoute><DefaultLayout><Dashboard /></DefaultLayout></PrivateRoute>} />
             <Route path="/transactions" element={<PrivateRoute><DefaultLayout><Transactions /></DefaultLayout></PrivateRoute>} />
 
             {/* Catch-all para rotas não encontradas */}
@@ -79,5 +77,4 @@ const App = () => {
 };
 
 export default App;
-
 

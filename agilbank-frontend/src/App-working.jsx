@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { authService } from './services/authService';
+import { storeAuthSession } from './utils/authStorage';
 
 // Componente Home simples
 const Home = () => {
@@ -55,11 +56,9 @@ const Home = () => {
 
       if (data.success) {
         // Salvar token e dados do usuário
-        localStorage.setItem('agilbank_token', data.token);
-        localStorage.setItem('agilbank_user', JSON.stringify(data.user));
+        storeAuthSession(data.token, data.user);
         
-        // Redirecionar para dashboard
-        window.location.href = '/dashboard';
+        window.location.href = '/';
       } else {
         setError(data.message || 'Email ou senha incorretos');
       }
@@ -257,89 +256,12 @@ const Home = () => {
   );
 };
 
-// Componente Dashboard simples
-const Dashboard = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="bg-blue-600 text-white rounded-lg p-2 mr-3">
-                <span className="text-xl font-bold">AB</span>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">AgilBank</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Bem-vindo, Usuário</span>
-              <button className="btn btn-secondary">Sair</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Saldo Atual</h3>
-            <p className="text-3xl font-bold text-green-600">R$ 2.500,00</p>
-          </div>
-          
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Última Transação</h3>
-            <p className="text-sm text-gray-600">Transferência recebida</p>
-            <p className="text-lg font-semibold text-green-600">+ R$ 150,00</p>
-          </div>
-          
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Ações Rápidas</h3>
-            <div className="space-y-2">
-              <button className="btn btn-primary w-full">Transferir</button>
-              <button className="btn btn-secondary w-full">Ver Extrato</button>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Últimas Transações</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                <div>
-                  <p className="font-medium text-gray-900">Transferência recebida</p>
-                  <p className="text-sm text-gray-600">João Silva</p>
-                </div>
-                <span className="text-green-600 font-semibold">+ R$ 150,00</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                <div>
-                  <p className="font-medium text-gray-900">Pagamento PIX</p>
-                  <p className="text-sm text-gray-600">Supermercado ABC</p>
-                </div>
-                <span className="text-red-600 font-semibold">- R$ 89,50</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <div>
-                  <p className="font-medium text-gray-900">Depósito</p>
-                  <p className="text-sm text-gray-600">Salário</p>
-                </div>
-                <span className="text-green-600 font-semibold">+ R$ 3.200,00</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Home />} />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<Home />} />
       </Routes>
     </Router>

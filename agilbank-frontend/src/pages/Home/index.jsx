@@ -5,8 +5,7 @@ import {
   ClockIcon, 
   CurrencyDollarIcon,
   DevicePhoneMobileIcon,
-  CheckCircleIcon,
-  ArrowRightIcon
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import Button from '../../components/Button';
 import { useAuth } from '../../hooks/useAuth.jsx';
@@ -61,14 +60,7 @@ const Home = () => {
               Gerencie seu dinheiro de forma inteligente.
             </p>
             
-            {isAuthenticated ? (
-              <Link to="/dashboard">
-                <Button variant="secondary" size="lg" className="text-agilbank-primary">
-                  Acessar Dashboard
-                  <ArrowRightIcon className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            ) : (
+            {!isAuthenticated && (
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/register">
                   <Button variant="secondary" size="lg" className="text-agilbank-primary">

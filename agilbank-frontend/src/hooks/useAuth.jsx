@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { clearStoredAuth, getStoredAuth, storeAuthSession } from '../utils/authStorage';
 
 const AuthContext = createContext(null);
 
@@ -9,8 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('agilbank_token');
-    const userData = localStorage.getItem('agilbank_user');
+    const { token, userData } = getStoredAuth();
 
     if (token && userData) {
       try {
@@ -33,8 +33,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { email, senha: password });
       const { token, user } = response.data.data || response.data;
 
-      localStorage.setItem('agilbank_token', token);
-      localStorage.setItem('agilbank_user', JSON.stringify(user));
+      storeAuthSession(token, user);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setIsAuthenticated(true);
       setUser(user);
@@ -66,8 +65,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
   const logout = () => {
-    localStorage.removeItem('agilbank_token');
-    localStorage.removeItem('agilbank_user');
+    clearStoredAuth();
     delete api.defaults.headers.common['Authorization'];
     setIsAuthenticated(false);
     setUser(null);

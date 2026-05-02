@@ -27,7 +27,7 @@ const Login = () => {
   // Redirecionar se já estiver logado
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard';
+      const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
@@ -38,7 +38,7 @@ const Login = () => {
     const result = await login(data);
     
     if (result.success) {
-      const from = location.state?.from?.pathname || '/dashboard';
+      const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     } else {
       setError(result.error);

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 import Terms from './pages/Terms';
+import { clearStoredAuth, getStoredAuth, storeAuthSession } from './utils/authStorage';
 
 // Hook simples para autenticação
 const useAuth = () => {
@@ -13,8 +13,7 @@ const useAuth = () => {
 
   useEffect(() => {
     try {
-      const token = localStorage.getItem('agilbank_token');
-      const userData = localStorage.getItem('agilbank_user');
+      const { token, userData } = getStoredAuth();
       
       if (token && userData && userData !== 'undefined' && userData !== 'null') {
         const parsedUser = JSON.parse(userData);
@@ -26,8 +25,7 @@ const useAuth = () => {
     } catch (error) {
       console.error('Erro ao carregar dados do usuário:', error);
       // Limpar dados corrompidos
-      localStorage.removeItem('agilbank_token');
-      localStorage.removeItem('agilbank_user');
+      clearStoredAuth();
     } finally {
       setLoading(false);
     }
@@ -35,8 +33,7 @@ const useAuth = () => {
 
   const login = (token, userData) => {
     try {
-      localStorage.setItem('agilbank_token', token);
-      localStorage.setItem('agilbank_user', JSON.stringify(userData));
+      storeAuthSession(token, userData);
       setIsAuthenticated(true);
       setUser(userData);
     } catch (error) {
@@ -45,8 +42,7 @@ const useAuth = () => {
   };
 
   const logout = () => {
-    localStorage.removeItem('agilbank_token');
-    localStorage.removeItem('agilbank_user');
+    clearStoredAuth();
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -81,7 +77,7 @@ const PublicRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+  return children;
 };
 
 // Componente principal da aplicação
@@ -103,13 +99,6 @@ const App = () => {
           <PublicRoute>
             <Login />
           </PublicRoute>
-        } />
-
-        {/* Rotas protegidas */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
         } />
 
         {/* Rota 404 */}

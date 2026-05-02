@@ -7,7 +7,6 @@ import AuthLayout from './layouts/AuthLayout';
 import TermsModal from './components/TermsModal';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Terms from './pages/Terms';
 import Register from './pages/Register/index.jsx';
@@ -77,10 +76,6 @@ const PublicRoute = ({ children }) => {
     );
   }
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return children;
 };
 
@@ -112,14 +107,6 @@ const AppContent = () => {
         } />
 
         {/* Rotas protegidas */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <DefaultLayout>
-              <Dashboard />
-            </DefaultLayout>
-          </ProtectedRoute>
-        } />
-
         <Route path="/transactions" element={
           <ProtectedRoute>
             <DefaultLayout>

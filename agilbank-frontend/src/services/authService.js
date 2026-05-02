@@ -1,4 +1,5 @@
 import api from './api';
+import { clearStoredAuth } from '../utils/authStorage';
 
 export const authService = {
   async login(email, senha) {
@@ -32,8 +33,7 @@ export const authService = {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     } finally {
-      localStorage.removeItem('agilbank_token');
-      localStorage.removeItem('agilbank_user');
+      clearStoredAuth();
     }
   },
 

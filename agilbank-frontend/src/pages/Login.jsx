@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { authService } from '../services/authService';
+import { storeAuthSession } from '../utils/authStorage';
 
 const LOGIN_ERROR_MESSAGES = {
   ACCOUNT_NOT_FOUND: 'Conta não encontrada. Abra sua conta AgilBank.',
@@ -84,9 +85,8 @@ const Login = () => {
       const data = await authService.login(identifier, passwordString);
 
       if (data.success) {
-        localStorage.setItem('agilbank_token', data.token);
-        localStorage.setItem('agilbank_user', JSON.stringify(data.user));
-        navigate('/dashboard');
+        storeAuthSession(data.token, data.user);
+        navigate('/');
       } else {
         setError(getLoginErrorMessage(data));
       }

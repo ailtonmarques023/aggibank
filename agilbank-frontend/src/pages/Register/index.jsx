@@ -642,7 +642,7 @@ const Register = () => {
         Enviamos um email de confirmação para <strong>{watchedValues.email}</strong>
       </p>
       <p className="text-sm text-gray-500">
-        Você será redirecionado para o dashboard em alguns segundos...
+        Você será redirecionado para o login em alguns segundos...
       </p>
     </div>
   );
