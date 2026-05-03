@@ -2120,9 +2120,9 @@
                 <i class="fa-solid fa-user"></i>
             </div>
             <div class="details">
-                <h2 class="user-name" id="user-name">Olá, Usuário</h2>
-                <p class="user-email" id="user-email" style="-webkit-text-fill-color: var(--cor-texto-principal); text-decoration: none !important;">email@exemplo.com</p>
-                <p class="user-account" id="user-account" style="-webkit-text-fill-color: var(--cor-texto-principal); text-decoration: none !important;">Conta: Não disponível</p>
+                <h2 class="user-name" id="user-name">—</h2>
+                <p class="user-email" id="user-email" style="-webkit-text-fill-color: var(--cor-texto-principal); text-decoration: none !important;">—</p>
+                <p class="user-account" id="user-account" style="-webkit-text-fill-color: var(--cor-texto-principal); text-decoration: none !important;">—</p>
             </div>
             <div class="share-btn">
                 <i class="fa-solid fa-share-nodes"></i>
@@ -2131,7 +2131,7 @@
        
         <div class="saldo">
             <div class="saldo-container">
-              <div class="saldo-value" id="saldoValue">R$ 0,00</div>
+              <div class="saldo-value" id="saldoValue">—</div>
               <button class="eye-btn" id="toggleSaldo">
                 <i class="fa-solid fa-eye" id="eyeIcon"></i>
               </button>
@@ -2144,7 +2144,7 @@
         <div class="limite-cartao-container" id="limiteCartaoContainer" style="display: none; background: #f8f9fa; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="limite-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="color: #0066b3; font-size: 16px; font-weight: 600; margin: 0;">Limite Cartão Disponível</h3>
-                <span class="limite-valor" id="limiteValorHeader" style="font-weight: bold; color: #333; font-size: 18px;">R$ 0,00</span>
+                <span class="limite-valor" id="limiteValorHeader" style="font-weight: bold; color: #333; font-size: 18px;">—</span>
             </div>
             
             <!-- Barra de progresso -->
@@ -5804,9 +5804,173 @@
         const fullNotificationTitle = document.getElementById('fullNotificationTitle');
         const fullNotificationDescription = document.getElementById('fullNotificationDescription');
 
+        window.normalizarDadosUsuarioBruto = function normalizarDadosUsuarioBruto(raw) {
+            if (!raw || typeof raw !== 'object') return null;
+            var saldoSrc = raw.saldo_atual != null ? raw.saldo_atual : raw.saldoAtual;
+            var saldoNum = saldoSrc === null || saldoSrc === undefined ? 0 : Number(saldoSrc);
+            if (isNaN(saldoNum)) saldoNum = 0;
+            var limRaw = raw.limite_cartao !== undefined ? raw.limite_cartao : raw.limiteCartao;
+            var limite = null;
+            if (limRaw !== null && limRaw !== undefined && limRaw !== '') {
+                var ln = Number(limRaw);
+                if (!isNaN(ln)) limite = ln;
+            }
+            return {
+                nomeCompleto: String(raw.nome_completo || raw.nomeCompleto || '').trim(),
+                email: String(raw.email || '').trim(),
+                cpf: String(raw.cpf || '').trim(),
+                saldoAtual: saldoNum,
+                limiteCartao: limite,
+                numeroConta: raw.numero_conta != null ? raw.numero_conta : raw.numeroConta,
+                digitoConta: raw.digito_conta != null ? raw.digito_conta : raw.digitoConta,
+                agencia: raw.agencia != null ? raw.agencia : null,
+                telefone: raw.telefone || null,
+                dataNascimento: raw.data_nascimento || raw.dataNascimento,
+                endereco: raw.endereco || null,
+                dados_profissionais: raw.dados_profissionais || raw.dadosProfissionais || null,
+                id: raw.id || null
+            };
+        };
+
+        function formatarLinhaContaUsuario(n) {
+            if (!n) return 'Dados da conta indisponíveis';
+            var ag = n.agencia ? ('Ag ' + n.agencia) : '';
+            var nc = n.numeroConta;
+            var dig = n.digitoConta;
+            if (nc != null && String(nc) !== '' && dig != null && String(dig) !== '')
+                return (ag ? ag + ' · ' : '') + 'Conta ' + nc + '-' + dig;
+            if (nc != null && String(nc) !== '')
+                return (ag ? ag + ' · ' : '') + 'Conta ' + nc;
+            return ag || 'Conta em processamento';
+        }
+
+        function textoSaldoExtratoOuMensagem() {
+            if (typeof saldoReal === 'number' && !isNaN(saldoReal)) {
+                return 'R$ ' + saldoReal.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+            return 'Saldo indisponível (extrato sem movimentações conectadas)';
+        }
+
+        window.aplicarDadosUsuarioReais = function aplicarDadosUsuarioReais(dados, opcoes) {
+            opcoes = opcoes || {};
+            var modo = opcoes.modo || 'autenticado';
+            var estadoInd = opcoes.estado === 'indisponivel';
+
+            if (dados && typeof dados === 'object' && dados.user_data && dados.user_data.usuario) {
+                dados = dados.user_data.usuario;
+            } else if (dados && dados.data && dados.data.user) {
+                dados = dados.data.user;
+            }
+
+            if (modo === 'publico') {
+                saldoReal = null;
+                var pn = document.getElementById('user-name');
+                var pe = document.getElementById('user-email');
+                var pa = document.getElementById('user-account');
+                var ps = document.getElementById('saldoValue');
+                var pl = document.getElementById('limiteValorHeader');
+                if (pn) pn.textContent = 'Olá!';
+                if (pe) pe.textContent = '—';
+                if (pa) pa.textContent = '—';
+                if (ps) ps.textContent = '—';
+                if (pl) pl.textContent = '—';
+                var plc = document.getElementById('limiteCartaoContainer');
+                if (plc) plc.style.display = 'none';
+                var pmf = document.getElementById('user-menu-fullname');
+                var pme = document.getElementById('user-menu-email');
+                var pma = document.getElementById('user-menu-account');
+                if (pmf) pmf.textContent = '—';
+                if (pme) pme.textContent = '—';
+                if (pma) pma.textContent = '—';
+                return;
+            }
+
+            if (estadoInd || !dados) {
+                saldoReal = null;
+                var msgNome = 'Dados indisponíveis';
+                var msgMail = 'Não foi possível carregar. Tente atualizar a página.';
+                var i1 = document.getElementById('user-name');
+                var i2 = document.getElementById('user-email');
+                var i3 = document.getElementById('user-account');
+                var i4 = document.getElementById('saldoValue');
+                var i5 = document.getElementById('limiteValorHeader');
+                if (i1) i1.textContent = msgNome;
+                if (i2) i2.textContent = msgMail;
+                if (i3) i3.textContent = '—';
+                if (i4) i4.textContent = '—';
+                if (i5) i5.textContent = '—';
+                var ilc = document.getElementById('limiteCartaoContainer');
+                if (ilc) ilc.style.display = 'none';
+                var iuc = document.getElementById('userCardLimit');
+                if (iuc) iuc.style.display = 'none';
+                var imf = document.getElementById('user-menu-fullname');
+                var ime = document.getElementById('user-menu-email');
+                var ima = document.getElementById('user-menu-account');
+                if (imf) imf.textContent = msgNome;
+                if (ime) ime.textContent = msgMail;
+                if (ima) ima.textContent = '—';
+                return;
+            }
+
+            var n = window.normalizarDadosUsuarioBruto(dados);
+            if (!n || (!n.email && !n.nomeCompleto)) {
+                return window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: opcoes.fonte || 'normalizar' });
+            }
+
+            saldoReal = n.saldoAtual;
+
+            var nomeExibir = n.nomeCompleto || '—';
+            var emailExibir = n.email || '—';
+            var linhaConta = formatarLinhaContaUsuario(n);
+
+            var nomeEl = document.getElementById('user-name');
+            var emailEl = document.getElementById('user-email');
+            var accountEl = document.getElementById('user-account');
+            var saldoEl = document.getElementById('saldoValue');
+            var limiteHdr = document.getElementById('limiteValorHeader');
+
+            if (nomeEl) nomeEl.textContent = nomeExibir;
+            if (emailEl) emailEl.textContent = emailExibir;
+            if (accountEl) accountEl.textContent = linhaConta;
+            if (saldoEl) {
+                saldoEl.textContent = 'R$ ' + n.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            var mff = document.getElementById('user-menu-fullname');
+            var mee = document.getElementById('user-menu-email');
+            var maa = document.getElementById('user-menu-account');
+            if (mff) mff.textContent = nomeExibir;
+            if (mee) mee.textContent = emailExibir;
+            if (maa) maa.textContent = linhaConta;
+
+            var limiteC = n.limiteCartao;
+            var limitePanel = document.getElementById('limiteCartaoContainer');
+            if (limiteC != null && limiteC > 0) {
+                if (limiteHdr) limiteHdr.textContent = 'R$ ' + limiteC.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (limitePanel) limitePanel.style.display = 'block';
+                if (typeof aplicarLimiteCartaoNosSeisElementos === 'function') {
+                    aplicarLimiteCartaoNosSeisElementos('R$ ' + limiteC.toFixed(2).replace('.', ','));
+                }
+                var cardLP = document.getElementById('userCardLimit');
+                var cardLV = document.getElementById('cardLimitValue');
+                if (cardLP && cardLV) {
+                    cardLV.textContent = 'R$ ' + limiteC.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    cardLP.style.display = 'block';
+                }
+            } else {
+                if (limiteHdr) limiteHdr.textContent = '—';
+                if (limitePanel) limitePanel.style.display = 'none';
+                var cardLPh = document.getElementById('userCardLimit');
+                if (cardLPh) cardLPh.style.display = 'none';
+            }
+        };
+
         // Variáveis de estado
         let saldoVisivel = true;
-        let saldoReal = 1500.50;
+        let saldoReal = null;
 
         // Função para abrir o formulário dinâmico de cartão
         function openDynamicCardForm() {
@@ -5938,31 +6102,6 @@
             }
         }
 
-        function showExtratoContainer() {
-            ocultarTodosContainers();
-            mostrarAnimacaoGovBr(() => {
-            extratoContainer.style.display = 'block';
-            extratoContainer.style.opacity = '1';
-            extratoContainer.style.transform = 'translateX(0)';
-            window.scrollTo(0, 0);
-
-            // Mostrar movimentações automaticamente
-            const movimentacoesEntrada = document.querySelector('.movimentacoes-entrada');
-            const semMovimentacoes = document.querySelector('.sem-movimentacoes');
-            const valorCredito = document.getElementById('valorCredito');
-            
-            movimentacoesEntrada.style.display = 'block';
-            semMovimentacoes.style.display = 'none';
-            
-            // Atualizar o valor do crédito
-            const valorFormatado = saldoReal.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-            valorCredito.textContent = `R$ ${valorFormatado}`;
-        });
-        }
-
         function showCartaoContainer() {
             // Redirecionar diretamente para o formulário dinâmico
             openDynamicCardForm();
@@ -6084,17 +6223,12 @@
         // Função para carregar dados do perfil automaticamente
         function carregarDadosPerfilAutomaticamente() {
             console.log('🔄 Tentando carregar dados do perfil automaticamente...');
-            
-            // Verificar se o usuário está logado
-            const userMenu = document.getElementById('userMenuDropdown');
-            const loginContainer = document.getElementById('loginContainer');
-            
-            // Se o login container estiver oculto, significa que o usuário está logado
-            if (loginContainer && loginContainer.style.display === 'none') {
-                console.log('✅ Usuário parece estar logado, carregando dados...');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+            if (token) {
+                console.log('✅ Token presente, carregando perfil pela API...');
                 carregarPerfilUsuario();
             } else {
-                console.log('⚠️ Usuário não está logado, usando dados padrão');
+                console.log('⚠️ Sem token — estado público (sem mocks de usuário)');
                 usarDadosPadrao();
             }
         }
@@ -6483,7 +6617,7 @@
             // Verificar se há token de autenticação
             const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
-                console.log('⚠️ Token não encontrado, usando dados padrão');
+                console.log('⚠️ Token não encontrado — estado público');
                 usarDadosPadrao();
                 return;
             }
@@ -6515,237 +6649,117 @@
                     atualizarInterfacePerfil(profile);
                     
                 } else if (response.status === 401) {
-                    console.log('🔒 Usuário não autenticado');
-                    // Usar dados padrão se não estiver logado
-                    usarDadosPadrao();
+                    console.log('🔒 Sessão inválida ou expirada');
+                    if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                        window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'carregarPerfilUsuario-401' });
+                    }
                 } else {
                     console.error('❌ Erro ao carregar perfil:', response.status, response.statusText);
-                    // Usar dados padrão em caso de erro
-                    usarDadosPadrao();
+                    if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                        window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'carregarPerfilUsuario-erro' });
+                    }
                 }
             } catch (error) {
                 console.error('❌ Erro ao carregar perfil:', error);
-                // Usar dados padrão em caso de erro
-                usarDadosPadrao();
+                if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                    window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'carregarPerfilUsuario-catch' });
+                }
             }
         }
 
-        // Função para usar dados padrão quando não conseguir carregar do banco
         function usarDadosPadrao() {
-            console.log('🔄 Usando dados padrão...');
-            
-            const dadosPadrao = {
-                nome: 'Usuário',
-                email: 'usuario@exemplo.com',
-                telefone: '(11) 99999-9999',
-                cpf: '000.000.000-00',
-                saldo: 0.00,
-                endereco: {
-                    endereco: 'Endereço não informado',
-                    complemento: '',
-                    bairro: 'Bairro não informado',
-                    cidade: 'Cidade não informada',
-                    estado: 'SP',
-                    cep: '00000-000'
+            var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+            if (token) {
+                console.log('⚠️ Token presente — não aplicar placeholders fictícios');
+                if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                    window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'usarDadosPadrao' });
                 }
-            };
-            
-            atualizarInterfacePerfil(dadosPadrao);
+                return;
+            }
+            console.log('🔄 Estado público (deslogado): placeholders neutros');
+            if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                window.aplicarDadosUsuarioReais(null, { modo: 'publico', fonte: 'usarDadosPadrao' });
+            }
         }
 
-        // Função para atualizar a interface com dados do perfil
         function atualizarInterfacePerfil(profile) {
             console.log('🔄 Atualizando interface com dados reais:', profile);
-            
-            // Extrair dados do usuário da estrutura da API
-            const userData = profile.user_data?.usuario || {};
-            const nome = userData.nome_completo || 'Usuário';
-            const email = userData.email || 'email@exemplo.com';
-            const cpf = userData.cpf || '000.000.000-00';
-            const saldo = userData.saldo_atual || 0;
-            const limite_cartao = userData.limite_cartao || 0;
-            
-            console.log('📊 Dados extraídos:', { nome, email, cpf, saldo, limite_cartao });
-            
-            // Atualizar elementos do dropdown do usuário
-            const userMenuFullname = document.getElementById('user-menu-fullname');
-            const userMenuEmail = document.getElementById('user-menu-email');
-            const userMenuAccount = document.getElementById('user-menu-account');
-            
-            if (userMenuFullname) {
-                userMenuFullname.textContent = nome;
-                console.log('✅ Dropdown nome atualizado:', nome);
+            if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                window.aplicarDadosUsuarioReais(profile, { modo: 'autenticado', fonte: 'atualizarInterfacePerfil' });
             }
-            if (userMenuEmail) {
-                userMenuEmail.textContent = email;
-                console.log('✅ Dropdown email atualizado:', email);
+
+            var u = profile && profile.user_data && profile.user_data.usuario ? profile.user_data.usuario : null;
+            if (!u && profile && (profile.email || profile.nome_completo || profile.nomeCompleto || profile.cpf)) {
+                u = profile;
             }
-            if (userMenuAccount) {
-                userMenuAccount.textContent = `Conta: ${userData.numero_conta || 'Não disponível'}`;
-                console.log('✅ Dropdown conta atualizado');
+            var n = u ? window.normalizarDadosUsuarioBruto(u) : null;
+
+            var perfilNome = document.getElementById('perfil-nome');
+            var perfilCpf = document.getElementById('perfil-cpf');
+            if (perfilNome) perfilNome.textContent = (n && n.nomeCompleto) ? n.nomeCompleto : '—';
+            if (perfilCpf) {
+                var rawCpfDigits = n && n.cpf ? String(n.cpf).replace(/\D/g, '') : '';
+                perfilCpf.textContent = rawCpfDigits.length === 11
+                    ? ('CPF: ' + rawCpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'))
+                    : 'CPF: —';
             }
-            
-            // Atualizar informações básicas do header
-            const nomeElement = document.getElementById('user-name');
-            const emailElement = document.getElementById('user-email');
-            const accountElement = document.getElementById('user-account');
-            
-            if (nomeElement) {
-                nomeElement.textContent = nome;
-                console.log('✅ Nome atualizado:', nome);
+
+            var emailValor = document.getElementById('emailValor');
+            if (emailValor) emailValor.textContent = (n && n.email) ? n.email : '—';
+
+            var celularValor = document.getElementById('celularValor');
+            if (celularValor) {
+                celularValor.textContent = u && u.telefone ? formatarTelefone(u.telefone) : '—';
             }
-            if (emailElement) {
-                emailElement.textContent = email;
-                console.log('✅ Email atualizado:', email);
-            }
-            if (accountElement) {
-                accountElement.textContent = `Conta: ${cpf}`;
-                console.log('✅ Conta atualizada:', cpf);
-            }
-            
-            // Atualizar saldo
-            const saldoElement = document.getElementById('saldoValue');
-            if (saldoElement) {
-                saldoElement.textContent = `R$ ${saldo.toFixed(2).replace('.', ',')}`;
-                console.log('✅ Saldo atualizado:', saldo);
-            }
-            
-            // Atualizar limite do cartão automaticamente (somente telas de cartão/limite; não empréstimo)
-            if (limite_cartao && limite_cartao > 0) {
-            aplicarLimiteCartaoNosSeisElementos(`R$ ${limite_cartao.toFixed(2).replace('.', ',')}`);
-            
-                // Mostrar painel do cartão se tiver limite
-                const cardLimitPanel = document.getElementById('userCardLimit');
-                if (cardLimitPanel) {
-                    cardLimitPanel.style.display = 'block';
+
+            var end = u && u.endereco ? u.endereco : null;
+            if (end) {
+                var ruaElement = document.querySelector('.rua');
+                var complementoElement = document.querySelector('.complemento');
+                var bairroElement = document.querySelector('.bairro');
+                var cidadeEstadoElement = document.querySelector('.cidade-estado');
+                var cepElement = document.querySelector('.cep');
+                if (ruaElement && end.endereco) ruaElement.textContent = end.endereco;
+                if (complementoElement && end.complemento) complementoElement.textContent = end.complemento;
+                if (bairroElement && end.bairro) bairroElement.textContent = end.bairro;
+                if (cidadeEstadoElement && end.cidade && end.estado) {
+                    cidadeEstadoElement.textContent = end.cidade + ' - ' + end.estado;
                 }
-                
-                console.log('✅ Limite do cartão atualizado automaticamente:', limite_cartao);
-            } else {
-                console.log('⚠️ Usuário não tem limite de cartão aprovado');
+                if (cepElement && end.cep) cepElement.textContent = 'CEP: ' + formatarCEP(end.cep);
             }
-            
-            // Atualizar painel de perfil específico
-            const perfilNome = document.getElementById('perfil-nome');
-            const perfilCpf = document.getElementById('perfil-cpf');
-            
-            if (perfilNome) perfilNome.textContent = profile.nome || 'Usuário';
-            if (perfilCpf) perfilCpf.textContent = `CPF: ${profile.cpf || '000.000.000-00'}`;
-            
-            // Atualizar dados de contato (E-MAIL)
-            const emailValor = document.getElementById('emailValor');
-            if (emailValor) {
-                emailValor.textContent = profile.email || 'email@exemplo.com';
-                console.log('✅ Email atualizado:', profile.email);
-            }
-            
-            // Atualizar dados de contato (CELULAR)
-            const celularValor = document.getElementById('celularValor');
-            if (celularValor && profile.telefone) {
-                // Formatar telefone se necessário
-                const telefoneFormatado = formatarTelefone(profile.telefone);
-                celularValor.textContent = telefoneFormatado;
-                console.log('✅ Telefone atualizado:', telefoneFormatado);
-            }
-            
-            // Atualizar dados de endereço
-            if (profile.endereco) {
-                const ruaElement = document.querySelector('.rua');
-                const complementoElement = document.querySelector('.complemento');
-                const bairroElement = document.querySelector('.bairro');
-                const cidadeEstadoElement = document.querySelector('.cidade-estado');
-                const cepElement = document.querySelector('.cep');
-                
-                if (ruaElement && profile.endereco.endereco) {
-                    ruaElement.textContent = profile.endereco.endereco;
-                }
-                if (complementoElement && profile.endereco.complemento) {
-                    complementoElement.textContent = profile.endereco.complemento;
-                }
-                if (bairroElement && profile.endereco.bairro) {
-                    bairroElement.textContent = profile.endereco.bairro;
-                }
-                if (cidadeEstadoElement && profile.endereco.cidade && profile.endereco.estado) {
-                    cidadeEstadoElement.textContent = `${profile.endereco.cidade} - ${profile.endereco.estado}`;
-                }
-                if (cepElement && profile.endereco.cep) {
-                    cepElement.textContent = `CEP: ${formatarCEP(profile.endereco.cep)}`;
-                }
-                
-                console.log('✅ Endereço atualizado:', profile.endereco);
-            }
-            
-            // Atualizar dados pessoais no painel
-            const dadosPessoais = document.querySelector('.dados-content');
-            if (dadosPessoais && profile) {
-                // Atualizar campos de dados pessoais se existirem
-                const campos = {
-                    'nome': profile.nome,
-                    'email': profile.email,
-                    'telefone': profile.telefone,
-                    'cpf': profile.cpf,
-                    'data_nascimento': profile.data_nascimento
+
+            if (u) {
+                var campos = {
+                    'nome': n ? n.nomeCompleto : '',
+                    'email': n ? n.email : '',
+                    'telefone': u.telefone || '',
+                    'cpf': n ? n.cpf : '',
+                    'data_nascimento': u.data_nascimento || u.dataNascimento || ''
                 };
-                
-                Object.keys(campos).forEach(campo => {
-                    const elemento = document.querySelector(`[data-field="${campo}"]`);
-                    if (elemento && campos[campo]) {
-                        elemento.textContent = campos[campo];
-                    }
+                Object.keys(campos).forEach(function (campo) {
+                    var elemento = document.querySelector('[data-field="' + campo + '"]');
+                    if (elemento && campos[campo]) elemento.textContent = campos[campo];
                 });
             }
-            
-             // ✅ NOVO: Atualizar dados profissionais
-             if (profile.dados_profissionais) {
-                 const prof = profile.dados_profissionais;
-                 
-                 // Atualizar elementos específicos dos dados profissionais usando IDs
-                 const empresaElement = document.getElementById('userCompany');
-                 const cargoElement = document.getElementById('userPosition');
-                 const salarioElement = document.getElementById('userSalary');
-                 const tempoElement = document.getElementById('userTimeCompany');
-                 
-                 if (empresaElement) empresaElement.textContent = prof.empresa || 'Não informado';
-                 if (cargoElement) cargoElement.textContent = prof.cargo || 'Não informado';
-                 if (salarioElement) {
-                     salarioElement.textContent = prof.salario ? 
-                         `R$ ${prof.salario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Não informado';
-                 }
-                 if (tempoElement) {
-                     tempoElement.textContent = prof.tempo_empresa ? 
-                         `${prof.tempo_empresa} meses` : 'Não informado';
-                 }
-                 
-                 console.log('✅ Dados profissionais atualizados:', prof);
-             } else {
-                 console.log('⚠️ Dados profissionais não encontrados no perfil');
-             }
-             
-             // ✅ ATUALIZAR LIMITE DO CARTÃO AUTOMATICAMENTE
-             if (profile.limite_cartao && profile.limite_cartao > 0) {
-                 // 1. Atualizar painel principal do cartão
-                 const limiteElement = document.getElementById('userCardLimit');
-                 const limiteValueElement = document.getElementById('cardLimitValue');
-                 
-                 if (limiteElement && limiteValueElement) {
-                     limiteValueElement.textContent = `R$ ${profile.limite_cartao.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                     limiteElement.style.display = 'block';
-                     console.log('✅ Painel do cartão atualizado:', profile.limite_cartao);
-                 }
-                 
-                 // 2. Atualizar elementos dedicados de limite de cartão (não inclui empréstimo)
-                 aplicarLimiteCartaoNosSeisElementos(`R$ ${profile.limite_cartao.toFixed(2).replace('.', ',')}`);
-                 
-                 console.log('✅ Limite atualizado em todos os lugares:', profile.limite_cartao);
-             } else {
-                 // Esconder limite se cartão não foi aprovado
-                 const limiteElement = document.getElementById('userCardLimit');
-                 if (limiteElement) {
-                     limiteElement.style.display = 'none';
-                 }
-                 console.log('⚠️ Usuário não tem cartão aprovado');
-             }
-            
+
+            var prof = u && (u.dados_profissionais || u.dadosProfissionais) ? (u.dados_profissionais || u.dadosProfissionais) : null;
+            if (prof) {
+                var empresaElement = document.getElementById('userCompany');
+                var cargoElement = document.getElementById('userPosition');
+                var salarioElement = document.getElementById('userSalary');
+                var tempoElement = document.getElementById('userTimeCompany');
+                if (empresaElement) empresaElement.textContent = prof.empresa || 'Não informado';
+                if (cargoElement) cargoElement.textContent = prof.cargo || 'Não informado';
+                if (salarioElement) {
+                    salarioElement.textContent = prof.salario
+                        ? ('R$ ' + prof.salario.toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
+                        : 'Não informado';
+                }
+                if (tempoElement) {
+                    tempoElement.textContent = prof.tempo_empresa ? (prof.tempo_empresa + ' meses') : 'Não informado';
+                }
+            }
+
             console.log('✅ Interface do perfil atualizada com dados reais do banco');
         }
 
@@ -6894,7 +6908,14 @@
             saldoVisivel = !saldoVisivel;
 
             if (saldoVisivel) {
-                saldoValue.textContent = "R$ 0,00";
+                if (typeof saldoReal === 'number' && !isNaN(saldoReal)) {
+                    saldoValue.textContent = 'R$ ' + saldoReal.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                } else {
+                    saldoValue.textContent = '—';
+                }
                 eyeIcon.className = "fa-solid fa-eye-slash";
             } else {
                 saldoValue.textContent = "********";
@@ -6956,8 +6977,8 @@
             fullNotification.style.display = 'none';
         });
 
-        // Inicialização
-        saldoValue.textContent = "0,00";
+        // Inicialização (saldo real preenchido após API / login)
+        saldoValue.textContent = "—";
         eyeIcon.className = "fa-solid fa-eye-slash";
         mostrarNotificacao();
 
@@ -6981,12 +7002,7 @@
             movimentacoesEntrada.style.display = 'block';
             semMovimentacoes.style.display = 'none';
             
-            // Atualizar o valor do crédito
-            const valorFormatado = saldoReal.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-            valorCredito.textContent = `R$ ${valorFormatado}`;
+            if (valorCredito) valorCredito.textContent = textoSaldoExtratoOuMensagem();
         });
         }
 
@@ -7010,13 +7026,8 @@
                 } else if (tipo === 'entradas' || tipo === 'todos') {
                     semMovimentacoes.style.display = 'none';
                     movimentacoesEntrada.style.display = 'block';
-                    // Atualiza o valor do crédito com o valor do saldo
                     const valorCredito = document.getElementById('valorCredito');
-                    const valorFormatado = saldoReal.toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    });
-                    valorCredito.textContent = `R$ ${valorFormatado}`;
+                    if (valorCredito) valorCredito.textContent = textoSaldoExtratoOuMensagem();
                 }
             });
         });
@@ -10695,74 +10706,38 @@
         // Função para forçar atualização dos dados do header
         function forceUpdateHeaderData() {
             console.log('🔧 FORÇANDO ATUALIZAÇÃO DOS DADOS DO HEADER...');
-            
-            // Buscar dados reais do localStorage ou do banco
-            const storedUserData = localStorage.getItem('user_data');
-            let userData;
-            
+            var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+            if (!token) {
+                if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                    window.aplicarDadosUsuarioReais(null, { modo: 'publico', fonte: 'forceUpdateHeaderData' });
+                }
+                console.log('⚠️ Sem token — header em modo público');
+                return;
+            }
+            var storedUserData = localStorage.getItem('user_data');
             if (storedUserData) {
                 try {
-                    const parsedData = JSON.parse(storedUserData);
-                    userData = {
-                        nome: parsedData.user_data?.usuario?.nome_completo || 'Usuário',
-                        email: parsedData.user_data?.usuario?.email || 'email@exemplo.com',
-                        cpf: parsedData.user_data?.usuario?.cpf || '000.000.000-00',
-                        saldo: parsedData.user_data?.usuario?.saldo_atual || 0.00,
-                        limite_cartao: parsedData.user_data?.usuario?.limite_cartao || 0.00
-                    };
-                    console.log('📊 Usando dados do localStorage:', userData);
-                } catch (error) {
-                    console.error('❌ Erro ao parsear dados do localStorage:', error);
-                    userData = {
-                        nome: 'Usuário',
-                        email: 'email@exemplo.com',
-                        cpf: '000.000.000-00',
-                        saldo: 0.00,
-                        limite_cartao: 0.00
-                    };
+                    var parsedData = JSON.parse(storedUserData);
+                    var u = parsedData.user_data && parsedData.user_data.usuario ? parsedData.user_data.usuario : null;
+                    var norm = u && typeof window.normalizarDadosUsuarioBruto === 'function'
+                        ? window.normalizarDadosUsuarioBruto(u)
+                        : null;
+                    if (norm && (norm.email || norm.nomeCompleto)) {
+                        if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                            window.aplicarDadosUsuarioReais(u, { modo: 'autenticado', fonte: 'forceUpdateHeaderData-storage' });
+                        }
+                        console.log('✅ Header atualizado a partir de user_data no storage');
+                        return;
+                    }
+                } catch (err) {
+                    console.error('❌ Erro ao parsear user_data:', err);
                 }
-            } else {
-                // Se não há dados no localStorage, usar dados padrão
-                userData = {
-                    nome: 'Usuário',
-                    email: 'email@exemplo.com',
-                    cpf: '000.000.000-00',
-                    saldo: 0.00,
-                    limite_cartao: 0.00
-                };
-                console.log('⚠️ Nenhum dado encontrado no localStorage, usando dados padrão');
             }
-            
-            // Atualizar elementos do header
-            const nomeElement = document.getElementById('user-name');
-            const emailElement = document.getElementById('user-email');
-            const accountElement = document.getElementById('user-account');
-            const saldoElement = document.getElementById('saldoValue');
-            
-            if (nomeElement) {
-                nomeElement.textContent = userData.nome;
-                console.log('✅ Nome atualizado no header:', userData.nome);
+            if (typeof carregarPerfilUsuario === 'function') {
+                carregarPerfilUsuario();
+            } else if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'forceUpdateHeaderData' });
             }
-            
-            if (emailElement) {
-                emailElement.textContent = userData.email;
-                console.log('✅ Email atualizado no header:', userData.email);
-            }
-            
-            if (accountElement) {
-                accountElement.textContent = `Conta: ${userData.cpf}`;
-                console.log('✅ Conta atualizada no header:', userData.cpf);
-            }
-            
-            if (saldoElement) {
-                saldoElement.textContent = `R$ ${userData.saldo.toFixed(2).replace('.', ',')}`;
-                console.log('✅ Saldo atualizado no header:', userData.saldo);
-            }
-            
-            // Atualizar limite também
-            updateCardLimitEverywhere(userData.limite_cartao);
-            
-            console.log('✅ Dados do header atualizados com dados dinâmicos');
         }
 
         // Função para atualizar limite mantendo o formato visual

@@ -144,9 +144,13 @@ class UserDataManager {
      * Atualiza todos os elementos da interface com dados do usuário
      */
     updateAllUserData() {
-        // DESABILITADO - Manter dados estáticos
-        console.log('🚫 Atualização automática de dados desabilitada');
-        return;
+        if (!this.userData) return;
+        if (typeof window.aplicarDadosUsuarioReais === 'function') {
+            window.aplicarDadosUsuarioReais(this.userData, {
+                modo: 'autenticado',
+                fonte: 'UserDataManager.updateAllUserData'
+            });
+        }
     }
 
     /**
@@ -171,9 +175,7 @@ class UserDataManager {
      * Atualiza as informações principais do usuário
      */
     updateMainUserInfo() {
-        // DESABILITADO - Manter dados estáticos
-        console.log('🚫 Atualização de informações principais desabilitada');
-        return;
+        this.updateAllUserData();
     }
 
     /**

@@ -512,15 +512,16 @@ class LoginSystem {
     }
 
     updateUserHeader(userData) {
-        if (userData) {
-            // ✅ AGORA: Usar UserDataManager para atualizar dados
-            if (window.userDataManager) {
-                window.userDataManager.userData = userData;
-                window.userDataManager.updateAllUserData();
-            } else {
-                // Fallback para atualização manual se UserDataManager não estiver disponível
-                this.updateUserHeaderFallback(userData);
-            }
+        if (!userData) return;
+        if (typeof window.aplicarDadosUsuarioReais === 'function') {
+            window.aplicarDadosUsuarioReais(userData, { modo: 'autenticado', fonte: 'login' });
+            return;
+        }
+        if (window.userDataManager) {
+            window.userDataManager.userData = userData;
+            window.userDataManager.updateAllUserData();
+        } else {
+            this.updateUserHeaderFallback(userData);
         }
     }
 

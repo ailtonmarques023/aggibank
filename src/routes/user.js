@@ -492,6 +492,12 @@ router.get('/user-complete-data', async (req, res) => {
     }
 
     const toNumber = (value) => value == null ? 0 : Number(value);
+    const limiteCartaoNum =
+      user.limiteCartao == null ? null : toNumber(user.limiteCartao);
+    const limiteCartaoRaw =
+      limiteCartaoNum != null && !Number.isNaN(limiteCartaoNum)
+        ? limiteCartaoNum
+        : null;
     const usuario = {
       id: user.id,
       nome_completo: user.nomeCompleto,
@@ -502,8 +508,8 @@ router.get('/user-complete-data', async (req, res) => {
       data_nascimento: user.dataNascimento,
       saldo_atual: toNumber(user.saldoAtual),
       saldoAtual: toNumber(user.saldoAtual),
-      limite_cartao: toNumber(user.limiteCartao) || 4300,
-      limiteCartao: toNumber(user.limiteCartao) || 4300,
+      limite_cartao: limiteCartaoRaw,
+      limiteCartao: limiteCartaoRaw,
       limite_pix_diario: toNumber(user.limitePixDiario),
       limite_pix_mensal: toNumber(user.limitePixMensal),
       score_credito: user.scoreCredito,
