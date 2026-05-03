@@ -2743,3 +2743,1269 @@ Escopo: revisão estática + comandos; **nenhuma alteração de código** nesta 
 ### Parecer Ivar (planejamento)
 
 A fase está **bem definida** e **deve** ser executada antes de tratar outros bloqueantes dependentes de conta verificada. **Bloqueio atual:** R-03 + R-04 + possível mismatch **FRONTEND_URL ↔ ficheiros** permanecem **abertos** até a implementação; o plano acima é **aprovado para próxima execução** (commit de código), com revisão RULE-8 nos links de e-mail se o contrato da URL mudar.
+
+---
+
+## Execução — R-03 / R-04 — confirmação de e-mail e reset de senha — 2026-05-03
+
+### Alterações
+
+- **`agilbank-frontend/public/banco/confirmar-email.html`:** painéis loading / erro / sucesso; `POST` para `{API_BASE}/auth/verify-email` com body `{ token }` apenas; helper `getAgilbankApiBase()` (`window.AGILBANK_API_BASE`, `localhost:3001/api` em dev, senão `origin/api`); sem sucesso antes da resposta; mensagens de erro/sucesso alinhadas ao contrato (`message` / `code` / fallback).
+- **`agilbank-frontend/public/banco/reset-password.html`:** mesma base para `verify-reset-token` e `reset-password`; removido host externo; `formatApiError` (`message`, `code`, `errors[0].message`); proteção se `strengthFill` / `strengthText` / `confirmPasswordSuccess` não existirem.
+- **`src/utils/email.js`:** `frontendBancoPagesBase()`, `confirmarEmailPageUrl()`, `resetPasswordPageUrl()` — links `…/banco/confirmar-email.html?token=` e `…/banco/reset-password.html?token=` sem duplicar `/banco` quando `FRONTEND_URL` já termina em `/banco`.
+
+### Fora de escopo (confirmado)
+
+- **`src/routes/auth.js`:** não alterado.  
+- **Pix, cartão, `login.js`, `userDataManager.js`, `index.html` (banco):** não alterados nesta entrega.
+
+### Validações
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| `npm test` (raiz) | **OK** (21 testes) |
+| `aggibank-production` / `railway.app` nos 3 ficheiros | **Zero** |
+| `confirm-email` como rota em `confirmar-email.html` | **Zero** |
+| Rotas usadas | `auth/verify-email`, `auth/verify-reset-token`, `auth/reset-password` |
+
+### Ivar — parecer pós-execução
+
+- **R-03:** a página chama **`/api/auth/verify-email`** com **`{ token }`**; não há rota `confirm-email` nem Railway.  
+- **R-04:** reset usa **uma única** `getAgilbankApiBase()` para os dois `POST`.  
+- **E-mail:** templates apontam para **`confirmar-email.html`** e **`reset-password.html`** sob `/banco` (com regra anti-duplicação de path).  
+- **Backend de rotas:** intocado; apenas **`email.js`** (templates de envio).  
+- **Fluxos Pix/cartão/login:** não mexidos nos ficheiros permitidos.
+
+**Aprovado** para commit desta fatia, com **smoke manual** recomendado: abrir links do e-mail (ou simular query `?token=`) com API 3001 e front servindo `/banco/*`. Definir **`FRONTEND_URL`** no deploy para origem que sirva a pasta `public` (ex. sem path duplicado se já for `…/banco`).
+
+---
+
+## Ajuste pós-R-03/R-04 — redirect e `FRONTEND_URL` vazio — 2026-05-03
+
+### Alterações
+
+- **`confirmar-email.html`:** `goLogin()` e `redirectToLogin()` passam a usar **`index.html`** (ficheiro real em `/banco/`, em vez de `index.agilbank.html` inexistente).
+- **`src/utils/email.js`:** `frontendBancoPagesBase()` com **`FRONTEND_URL` vazio** retorna **`/banco`**, garantindo links **`/banco/confirmar-email.html?token=...`** e **`/banco/reset-password.html?token=...`** (sem path `/confirmar-email.html` na raiz).
+
+### Validações
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| `grep` `index.agilbank.html` em `confirmar-email.html` | **Zero** |
+| `grep` `railway.app` \| `aggibank-production` em `confirmar-email.html` e `email.js` | **Zero** |
+
+### Ivar — parecer
+
+Redirect alinhado ao **`/banco/index.html`** via caminho relativo; templates de e-mail mantêm **`/banco/...`** mesmo sem `FRONTEND_URL`. **Rotas de auth** e restantes ficheiros fora do escopo **intocados**. **Fase R-03/R-04 considerada fechada** para estes pontos, salvo smoke manual de clique em link absoluto vs path-only quando `FRONTEND_URL` estiver vazio (alguns clientes de e-mail resolvem path contra o domínio do remetente — preferir `FRONTEND_URL` preenchido em produção).
+
+---
+
+## Plano — Fase Pix (R-01, R-02, R-05, R-06, R-07, R-08) — 2026-05-03
+
+**Tipo:** planeamento apenas (sem edição de código nesta entrega). Fontes: `AGILBANK-AUDITORIA-PROFUNDA-SISTEMA.md`, `src/routes/pix.js`, `src/middleware/validation.js` (`validatePixTransaction`), `agilbank-frontend/public/banco/index.html` (~7843–8148), `prisma/schema.prisma` (`ChavePix`, `TransacaoPix`).
+
+### Ragnar — rotas reais `src/routes/pix.js`
+
+Todas sob **`/api/pix`**, com **`authenticateToken`** + **`requireVerification`** em **todas** as rotas do router.
+
+| Método | Path | Validação / notas | Resposta de sucesso (formato) |
+|--------|------|-------------------|--------------------------------|
+| `GET` | `/keys` | — | `{ success, message, data: { chavesPix: [...] } }` |
+| `POST` | `/keys` | Body `{ tipo, valor }`; `telefone` exige regex **`(XX) XXXXX-XXXX`**; CPF 11 dígitos; e-mail válido | `201` `{ success, message, data: { chavePix } }` |
+| `POST` | `/send` | `validatePixTransaction`: `chavePix` (e-mail, telefone nacional, CPF 11d, ou chave aleatória UUID); `valor` float 0.01–100000; `descricao` opcional ≤140 | `200` `{ success, message, data: { transacao } }` — **sem** `transaction.novoSaldo` |
+| `GET` | `/transactions` | query `page`, `limit` | `{ success, data: { transacoes, pagination } }` |
+| `GET` | `/limits` | — | `{ success, data: { limiteDiario, limiteMensal, usadoHoje, usadoMes, restanteHoje, restanteMes } }` — **sem** `saldoDisponivel` neste endpoint |
+
+**Inexistentes no backend:** `POST /pix/validate`, `POST /pix/qr-code`.
+
+**Modelo Prisma:** `ChavePix` (tipo, valor, status, userId) e `TransacaoPix` (chavePix, valor, descricao, status, tipo, etc.) — suficiente para cadastro de chaves e envio persistido; **não** há tabela de “validação externa de chave” nem armazenamento de payload QR no plano atual.
+
+**Recomendação técnica (criar vs adaptar UI):**
+
+| Opção | Prós | Contras |
+|-------|------|---------|
+| **A — Adaptar só o frontend** | Sem novos contratos; menos superfície de ataque; alinhamento RULE-8 simples. | “Validar chave” e “QR” deixam de ser chamadas de rede ou passam a UX local (ex.: desativar botões, mensagem “em breve”, validação só no cliente antes de `send`). |
+| **B — Criar `validate` e `qr-code` no backend** | Paridade com copy da UI; pode simular DICT depois. | Novo contrato, testes, decisão de negócio (o que significa “válida” sem PSP real); risco de **falsa sensação** de validação se for só heurística. |
+
+**Recomendação clara:** **Fatiar em (1)** corrigir **contratos já existentes** (`limits`, `keys`, `send`, erros) **no front**; **(2)** para **R-01/R-02**, **preferir adaptar a UI** (remover ou stub honesto) **salvo** produto exigir validação/QR com persistência — aí **B** com RFC explícito.
+
+### Lagertha — `index.html` (legado banco)
+
+| Função / área | Linhas (~) | Chamada | Problema vs backend |
+|---------------|------------|---------|---------------------|
+| `carregarDadosPix` | 7844–7873 | `GET .../pix/limits` | Usa `data.saldoDisponivel`, `data.limiteDiario` no **raiz**; API devolve **`data.data`** (aninhado) e **não** inclui `saldoDisponivel` em `/limits`. |
+| `carregarChavesPix` | 7877–7922 | `GET .../pix/keys` | Espera `data.chaves`; API devolve **`data.data.chavesPix`**. |
+| `carregarLimitesPix` | 7926–7963 | `GET .../pix/limits` | Usa `data.limiteDiario` direto; deveria ser **`data.data`** (ou normalizar no cliente). |
+| `validarChavePix` | 7967–8004 | `POST .../pix/validate` | **404**; espera `data.valida`, `data.nome`, `data.banco`. |
+| `gerarQRCodePix` | 8008–8038 | `POST .../pix/qr-code` | **404**; espera `data.qrCode` em `img.src`. |
+| `cadastrarChavePix` | 8042–8097 | `POST .../pix/keys` | UI telefone **`+55...`**; backend **`(XX) XXXXX-XXXX`**. Erro: `error.error` vs **`message`/`code`**. |
+| `enviarPix` | 8101–8148 | `POST .../pix/keys` | Sucesso: `data.transaction.novoSaldo` — **inexistente**; API `data.data.transacao`. Erro: `error.error`. |
+
+**Modais / IDs:** `modalChavePix`, `modalEnviarPix`, `modalReceberPix`, `modalLimitesPix`; `showPixContainer()` e estilos inline — alterações mínimas devem ser **só JS de parse e payloads**, sem mexer em CSS de layout.
+
+**Scripts externos:** não há ficheiro `pix.js` separado no front legado para estas funções; tudo no **inline** do `index.html`.
+
+### Ivar — risco bancário e classificação
+
+| Tema | Risco | Classificação |
+|------|--------|---------------|
+| R-01/R-02 (404) | Utilizador clica “validar”/“QR” e falha ou interpreta mal → **frustração**, não cria transação fantasma por si. | **BLOQUEANTE** para “fluxo Pix completo como desenhado na UI”; **não** bloqueia `send` se o utilizador não usar esses botões. |
+| R-05 (`novoSaldo`) | Após **send OK**, alert pode mostrar **`undefined`** ou falhar lógica futura → utilizador **acha** que falhou ou ignora saldo real. | **BLOQUEANTE** para honestidade pós-transação (não é “transação falsa”, mas **UX falsa**). |
+| R-06 (`error.error`) | Mensagens genéricas; **403 ACCOUNT_NOT_VERIFIED** mal explicado. | **ALTO** |
+| R-07 (telefone) | Chave telefone **rejeitada** no servidor com formato UI. | **ALTO** |
+| R-08 (`requireVerification`) | Sem e-mail verificado, **todas** as rotas Pix retornam **403**. | **ALTO** até verificação (agora **mitigado** após R-03/R-04); manter mensagem clara na UI. |
+| `validatePixTransaction` (chave destino `send`) | Destino com formato que o **middleware** não aceita → **400** antes do handler. | **ALTO** (alinhar formato da chave no campo “enviar” com o mesmo conjunto que o backend valida). |
+| Saldo em `/limits` | UI mostra saldo errado/placeholder se não corrigir parse. | **ALTO** (não inventar saldo; opcional segundo `GET user`/`user-complete-data` se produto quiser saldo no mesmo modal). |
+
+**Risco de “transação falsa”:** o **`send`** persiste em BD e decrementa saldo — **não** há sucesso sem persistência **no backend**; o risco é **só na UI** (R-05) a sugerir estado incorreto após sucesso.
+
+### Plano por fatias (execução futura)
+
+1. **Fatia 1 — Contrato e erros (sem novas rotas)**  
+   - Normalizar respostas: `payload = (await res.json()).data ?? body` onde aplicável; `chaves` ← `chavesPix`; limites a partir de `data`.  
+   - Substituir `error.error` por helper `readApiMessage(body)` (`message`, `code`, `errors[0].message`).  
+   - `enviarPix`: mensagem de sucesso com `data.transacao` e, se necessário, novo saldo via **segunda leitura** (ex. refresh perfil) ou omitir número até ter fonte única.  
+   - **Testes:** manual `send` + inspeção Prisma; opcional e2e mock API.
+
+2. **Fatia 2 — Telefone e chave (R-07 + consistência `send`)**  
+   - Na UI: normalizar `+55...` → `(DD) NNNNN-NNNN` antes de `POST /keys` e ao enviar PIX se tipo telefone; ou documentar input mask igual ao backend.  
+   - Garantir que a chave no campo “destino” do **send** passa no **mesmo** regex do `validatePixTransaction`.
+
+3. **Fatia 3 — R-01 / R-02**  
+   - **Default:** desativar ou substituir por mensagem “função não disponível nesta versão” **sem** `fetch` para URL inexistente.  
+   - **Alternativa produto:** implementar rotas com contrato fechado + testes `jest` + documentação Swagger.
+
+4. **Fatia 4 — R-08 UX**  
+   - Interceptar **403** `ACCOUNT_NOT_VERIFIED` nos fluxos Pix e mostrar texto que remete à verificação de e-mail (já corrigida).
+
+### Arquivos afetados (previsão)
+
+- **`agilbank-frontend/public/banco/index.html`** — blocos `carregarDadosPix`, `carregarChavesPix`, `carregarLimitesPix`, `validarChavePix`, `gerarQRCodePix`, `cadastrarChavePix`, `enviarPix` (e eventualmente `AgilBank.api` se migrar `fetch`).  
+- **Se opção B:** `src/routes/pix.js`, `src/middleware/validation.js`, testes em `tests/`, Swagger.
+
+### Testes necessários
+
+- `npm test` existente + novos testes se criar rotas.  
+- Manual: utilizador **verificado**; cadastro chave telefone; envio com valor baixo; limite diário; **403** com conta não verificada.  
+- Grep: ausência de chamadas mortas a `/pix/validate` e `/pix/qr-code` **ou** presença de rotas reais após implementação B.
+
+### Parecer Ivar (planeamento)
+
+**Prioridade:** fechar **R-05, R-06, R-07** e parsing de **`limits`/`keys`** no front (**RULE-8**, sem mudar payload de `send`). **R-01/R-02:** **adaptar UI** por defeito; criar endpoints só com **decisão de produto** e testes de contrato. **R-08:** reforçar mensagens; dependência de verificação mantém-se **correta** do ponto de vista de risco, agora **operacional** após correção de e-mail.
+
+---
+
+## Execução — Pix Fatia 1 — contratos e erros no `index.html` — 2026-05-03
+
+### Alterações (`agilbank-frontend/public/banco/index.html`)
+
+- Helpers **`pixBody`**, **`pixApiMessage`** (inclui `ACCOUNT_NOT_VERIFIED` → *“Verifique seu e-mail para usar o Pix.”*; depois `message`, `code`, `errors[0].message`, fallback).
+- **`carregarDadosPix`:** lê limites de `pixBody` (`data` aninhado); **não** usa `saldoDisponivel` de `/pix/limits`; texto de saldo no modal espelha **`#saldoValue`** do dashboard ou mensagem honesta.
+- **`carregarChavesPix`:** usa **`chavesPix`** da resposta.
+- **`carregarLimitesPix`:** campos a partir de **`pixBody`**; percentuais com proteção contra divisão por zero.
+- **`cadastrarChavePix`:** erros via **`pixApiMessage`** (sem `error.error`).
+- **`enviarPix`:** sucesso com **`body.message`** e detalhes reais de **`data.transacao`**; **`carregarPerfilUsuario()`** após sucesso para atualizar saldo global; erros via **`pixApiMessage`**. Removido **`data.transaction.novoSaldo`**.
+
+### Fora desta fatia (inalterado)
+
+- **`/pix/validate`** e **`/pix/qr-code`:** chamadas mantidas como estavam (fora do recorte).
+- **Backend, CSS, IDs, telefone (R-07):** sem mudança de regra de formato nesta fatia.
+
+### Validações
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| `grep` `data.transaction.novoSaldo` em `index.html` | **Zero** |
+| `grep` `error.error` no bloco Pix (`cadastrarChavePix` / `enviarPix` / loaders) | **Zero** (resta `error.error` noutros fluxos, ex. login, fora do escopo Pix) |
+| `GET/POST` `.../pix/limits`, `.../pix/keys`, `.../pix/send` | **Presentes** |
+| `.../pix/validate`, `.../pix/qr-code` | **Inalterados** (ainda chamados; não removidos nesta fatia) |
+
+### Ivar — parecer
+
+- **Sem** sucesso falso com “novo saldo” inventado; **sem** rotas novas; **sem** alteração de payload de `send`/`keys`.
+- Erros Pix alinhados a **`message` / `code` / `errors`**.
+- Conta não verificada: mensagem **explícita** para Pix.
+- **R-05/R-06** endereçados nesta fatia; **R-07** (telefone) e **R-01/R-02** ficam para fatias seguintes conforme plano.
+
+---
+
+## Auditoria — Comunicação Pix → BD → saldo → extrato (somente leitura) — 2026-05-03
+
+**Objetivo:** verificar cadeia end-to-end **sem alterar código**. Fontes: `src/routes/pix.js`, `src/config/database.js` (`transaction`), `prisma/schema.prisma`, `prisma/migrations/20260501152812_init/migration.sql`, `src/routes/user.js` (ausência de extrato), `agilbank-frontend/public/banco/index.html`.
+
+### Ragnar — `POST /api/pix/send`
+
+| Passo | Confirmado |
+|-------|------------|
+| Persistir `TransacaoPix` | **Sim** — `prisma.transacaoPix.create` com `tipo: 'envio'`, `status: 'processada'`, `@@map("transacoes_pix")`. |
+| Persistir `Movimentacao` | **Sim** — `prisma.movimentacao.create` com `tipo: 'pix'`, `valor` negativo, `saldoAnterior` / `saldoAtual` derivados de `req.user.saldoAtual` e `valor`, `@@map("movimentacoes")`. |
+| Atualizar saldo do utilizador | **Sim** — `prisma.user.update` com `saldoAtual: { decrement: valor }` (`User.saldoAtual` / coluna `usuarios`). |
+| Atomicidade | **Sim** — todo o bloco corre dentro de `transaction(async (prisma) => { ... })` = **`prisma.$transaction`** em `database.js`; falha a meio faz rollback do callback. |
+| `GET` transações Pix | **Sim** — `GET /api/pix/transactions` em `pix.js` (paginação, lista `TransacaoPix`). |
+| `GET` movimentações / “extrato geral” | **Não** — **não existe** rota em `user.js` nem noutro ficheiro pesquisado em `src/routes` que exponha `Movimentacao` como extrato unificado. |
+
+**Migrations / modelo:** `migration.sql` cria `transacoes_pix`, `movimentacoes`, FK para `usuarios`; alinhado ao Prisma.
+
+**Nota de consistência:** `Movimentacao` não recebe `referenceType` / `referenceId` ligados ao `TransacaoPix.id` no `send` atual — correlação é só por texto/descrição e temporalidade (risco **médio** de auditoria, não de dupla contabilização imediata).
+
+### Lagertha — frontend legado
+
+| Aspeto | Estado |
+|--------|--------|
+| Após `enviarPix()` | Chama **`carregarPerfilUsuario()`** (Fatia 1) → atualiza header/saldo global via **`user-complete-data`**. |
+| `showExtratoContainer()` | **Não** chama API; mostra blocos estáticos `.movimentacoes-entrada` / `.sem-movimentacoes`; **`valorCredito`** = `textoSaldoExtratoOuMensagem()` (saldo em memória / mensagem honesta). |
+| Lista de linhas de extrato | **HTML fixo** — não consome `TransacaoPix` nem `Movimentacao`. |
+| `GET /api/pix/transactions` | **Não referenciado** no `index.html` (grep zero). |
+
+### Ivar — riscos
+
+| Risco | Grau | Comentário |
+|-------|------|------------|
+| Pix persiste mas extrato não mostra | **ALTO / bloqueante para “extrato real”** | Dados existem no BD; UI **nunca** os lê. |
+| Saldo UI após Pix | **Mitigado** | Refresh de perfil após envio; ainda depende de `user-complete-data` e de token válido. |
+| Sucesso sem comprovante estruturado | **Médio** | Alert com mensagem + campos de `transacao`; não há PDF/comprovante dedicado. |
+| “Extrato mock” | **Médio** | Não é valor fixo 1500; é **conteúdo estático** + saldo derivado — utilizador pode **inferir** movimentações reais que não aparecem. |
+| `TransacaoPix` vs `Movimentacao` divergentes | **Baixo** na mesma transação | Mesma `$transaction`; se rollback, nenhum dos dois fica órfão nesse send. |
+| Falta endpoint extrato geral | **Alto para produto completo** | Só `GET /pix/transactions` cobre Pix; movimentações mistas exigiriam novo contrato ou reutilização com filtro. |
+| Testes de consistência | **Médio** | `auth.test.js` não cobre fluxo Pix + BD; recomendado teste de integração ou manual. |
+
+### O que já funciona vs quebrado
+
+- **Funciona:** persistência **atómica** (`TransacaoPix` + `User.saldoAtual` + `Movimentacao`); listagem **API** de Pix (`GET /transactions`); dashboard saldo após **`carregarPerfilUsuario`**.  
+- **Quebrado / ausente:** **ligação UI ↔ extrato real**; UI **não** usa `GET /pix/transactions`; **não** há GET movimentações no backend mapeado.
+
+### Recomendação antes da Fatia 2 (telefone/chave)
+
+**Fatia 2 (R-07)** pode seguir **em paralelo** com correção de extrato — não há dependência técnica direta. Para **honestidade do produto** e **R-01/R-02** futuros, convém **planejar fatia “extrato + saldo pós-Pix”**: consumir `GET /api/pix/transactions` (e/ou novo `GET` movimentações) e renderizar lista, **antes** ou **junto** de refinar UX de chave.
+
+### Parecer Ivar
+
+**Bloqueante** apenas para o **requisito “extrato mostra o Pix”** — não para **persistência** nem para **saldo no header** após refresh. Recomendação: **incluir fatia extrato/API** no roadmap Pix **antes** de considerar o módulo “fechado” para utilizador final; **Fatia 2** de formato de telefone **pode** avançar se a prioridade for cadastro de chave.
+
+---
+
+## Execução — Pix Fatia 2A — extrato real (`GET /api/pix/transactions`) — 2026-05-03
+
+Colaboração: **Lagertha** (front), **Ragnar** (contrato), **Ivar** (aprovação).
+
+### Ragnar — confirmação de contrato
+
+- **`GET /api/pix/transactions?page=1&limit=20`**: resposta `success`, `data.transacoes[]` e `data.pagination`; cada item com **`id`**, **`chavePix`**, **`valor`**, **`descricao`**, **`status`**, **`tipo`**, **`dataTransacao`** — **suficiente** para listar Pix enviado/recebido, valor, data e status.
+- **Backend:** **nenhuma alteração** nesta fatia (contrato mantido; **RULE-8** preservada).
+
+### Lagertha — `agilbank-frontend/public/banco/index.html`
+
+- Contêineres **`#extratoPixMensagem`** e **`#extratoPixListaReal`** (mensagens e lista dinâmica).
+- **`carregarExtratoPixReal()`**: `fetch` para `` `${AGILBANK_API_BASE}/pix/transactions?page=1&limit=20` `` com Bearer; parsing via **`pixBody`**; erros com **`pixApiMessage`** ou texto fixo pedido; **`ACCOUNT_NOT_VERIFIED`** → *“Verifique seu e-mail para consultar movimentações Pix.”*; falha rede/500 → *“Não foi possível carregar o extrato agora.”*; mensagens **no extrato**, não só `alert`.
+- **`renderExtratoPixDesdeCache()`**: itens com classes existentes **`movimentacao-item`** / **`movimentacao-info`** / **`movimentacao-valor`**; envio: **“Para:”** + chave; recebimento: **“Chave Pix:”** + chave; valor **-** / **+** conforme `tipo === 'envio'`; data e status a partir da API (sem mock).
+- **`showExtratoContainer()`** chama **`carregarExtratoPixReal()`**; bloco estático **`.movimentacoes-entrada`** deixa de ser exibido no fluxo principal do extrato (lista vem da API).
+- **`enviarPix()`** após sucesso: mantém **`carregarPerfilUsuario()`** e chama **`carregarExtratoPixReal()`** para atualizar cache/lista.
+- Filtros **`.filtro-opcao`** limitados a **`#extratoContainer`**; ao mudar filtro, re-render a partir do cache (saídas = `tipo === 'envio'`; entradas = `tipo !== 'envio'`).
+
+### Ivar — auditoria pós-implementação
+
+- **Contrato:** inalterado; front consome apenas **`GET /pix/transactions`** já existente.
+- **Risco “extrato falso”:** mitigado — lista alimentada por **`transacoes`** reais; sem destinatário inventado (usa **`chavePix`** do registo).
+- **`data.transaction.novoSaldo`:** continua **ausente** no ficheiro (grep zero).
+- **Bloqueios:** nenhum para esta fatia; **aprovação** para merge da **2A** no âmbito descrito (extrato Pix; não cobre movimentações não-Pix).
+
+### Validações executadas
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| `grep` `pix/transactions` em `index.html` | **Presente** (`carregarExtratoPixReal`) |
+| `grep` `showExtratoContainer` + `carregarExtratoPixReal` | **OK** (chamada dentro de `showExtratoContainer`) |
+| `grep` `data.transaction.novoSaldo` | **Zero** |
+| `npm test` (backend) | **Não executado** — backend **não** foi alterado |
+
+### Arquivos alterados
+
+- `agilbank-frontend/public/banco/index.html`
+- `docs/reports/AGILBANK-STATUS-MIGRACAO-LEGADO.md` (este registo)
+
+---
+
+## Execução — Ajuste fino pós Pix Fatia 2A — destinatário vazio — 2026-05-03
+
+### Ragnar
+
+- **`GET /api/pix/transactions`** continua a devolver **`chavePix`** no `select` de `pix.js`.
+- No modelo Prisma, **`chavePix`** é `String` (obrigatório na criação); na prática JSON pode vir **`""`** ou campo ausente em dados anómalos/legados — **não** exige alteração de backend para o front tratar vazio com texto honesto.
+
+### Lagertha
+
+- Em **`renderExtratoPixDesdeCache()`**: `rawChave` com `trim`; **`destinatario`** = chave não vazia ou literal exato **`Destinatário não informado`**.
+- Linhas **“Para:”** / **“Chave Pix:”** usam sempre **`destinatario`** — nunca **“Para:”** só com espaço ou vazio.
+- **Descrição:** se `descricao` preenchida, usa-se; senão, envio → **`PIX enviado para ` + destinatario**; recebimento → **`PIX recebido`**. Valor, data e status **inalterados** (API).
+
+### Ivar
+
+- **Aprovado:** nenhum item com **“Para:”** vazio; destinatário falso **não** é inventado (só chave real ou mensagem explícita de ausência); diff **só** em `index.html` + este relatório; **`npm run build`** **OK**; **`pix/transactions`** mantido; **`novoSaldo`** **ausente**; **backend** **não** alterado.
+
+### Riscos restantes
+
+- Extrato continua **apenas** transações Pix (`GET /pix/transactions`); outras movimentações da conta **não** aparecem.
+- Se no futuro existir **nome de contraparte** distinto da chave, seria preciso **novo campo** no contrato (fora deste ajuste).
+
+### Arquivos alterados (este ajuste)
+
+- `agilbank-frontend/public/banco/index.html`
+- `docs/reports/AGILBANK-STATUS-MIGRACAO-LEGADO.md`
+
+---
+
+## Auditoria — Migração `fazerLogin()` inline (`index.html`) — 2026-05-03
+
+**Escopo:** apenas o resultado da migração de **`fazerLogin()`**; sem edição de código nesta auditoria.
+
+### Lagertha — `fazerLogin()` em `agilbank-frontend/public/banco/index.html`
+
+- Usa **`window.AgilBank.api.request('auth/login', { auth: false, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) })`** — conforme esperado.
+- **`http://127.0.0.1:5000/api/auth/login`**: **zero** ocorrências no `index.html` (grep dedicado).
+- Após sucesso: **`localStorage.setItem('govbr_token', token)`**, **`agilbank_token`**, **`token`**; **`AgilBank.auth.setSession(token, user)`** quando disponível; **`carregarPerfilUsuario()`** para o dashboard legado.
+
+### Ragnar — `POST /api/auth/login` (backend `src/routes/auth.js`)
+
+- Corpo: **`getLoginIdentifier`** aceita **`email`** (ou `identificador`); **`senha`** obrigatória — alinha com o payload do front (**`email` + `senha`**).
+- Resposta **200**: **`{ success, message, data: { user, token, refreshToken } }`**. O front resolve token com **`data.accessToken || data.token || data.data?.accessToken || data.data?.token`** — **`data.data.token`** cobre o contrato atual; utilizador com **`data.data.user`**.
+
+### Fora do escopo desta migração (inalterados pelo recorte `fazerLogin`)
+
+- **`auth/register`**, **`auth/forgot-password`**, **`auth/verify-reset-token`**, **`auth/reset-password`** continuam noutros blocos do **`index.html`** (já via `AgilBank.api` onde grep encontrou) ou em **`reset-password.html`** com **`fetch`** + base — **não** fazem parte do diff de **`fazerLogin()`** em si.
+
+### Validações executadas
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| `grep` `http://127.0.0.1:5000/api/auth/login` em `index.html` | **Zero** |
+| Login manual / dashboard / storage | **Não automatizado** — validação manual recomendada |
+
+### Ivar — parecer
+
+- **Aprovada** a migração do **`fazerLogin()`** no critério: URL 5000 zerada; **`AgilBank.api`** + **`auth: false`**; gravação **`govbr_token` / `agilbank_token` / `token`**; contrato de resposta coberto; **sem** alteração de backend nesta auditoria; **Pix** e **reset/cadastro** não entram no recorte de **`fazerLogin()`**.
+- **Risco baixo:** ramo de erro ainda usa **`error.error`** em parte do alert — o backend expõe sobretudo **`message`** / **`code`**; melhoria pode ser fatia UX à parte (**RULE-8** de leitura de erros, não de login URL).
+
+### Próxima fatia executável sugerida
+
+1. **Reset de senha (HTML dedicado):** **`reset-password.html`** ainda usa **`fetch(base + '/auth/...')`** — candidato claro a alinhar com **`AgilBank.api`** e base única, sem tocar no **`fazerLogin()`** aprovado.  
+2. **Register:** fluxo **`auth/register`** já aparece no **`index.html`** com **`AgilBank.api`**; **`formulario-conta.js`** já migrado — próxima melhoria seria **consistência/duplicação** ou **confirmar-email**, conforme prioridade de produto.
+
+---
+
+## Auditoria sistémica — App conectado (somente leitura + validações) — 2026-05-03
+
+**Leitura:** `AGILBANK-STATUS-MIGRACAO-LEGADO.md`, `AGILBANK-RELATORIO-MIGRACAO-HTML-UNICO.md`, `src/routes/*.js` (rotas), `agilbank-frontend/public/banco/index.html`, `js/cartao.js`, `js/emprestimo_refatorado.js`, `js/ContainerConfiguraçoes.js`, `js/formulario-conta.js` (referência). **Sem edição de código de aplicação** nesta etapa.
+
+### Validações obrigatórias (executadas)
+
+| Validação | Resultado |
+|-----------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| `grep` `http://127.0.0.1:5000/api/auth/login` em `index.html` | **Zero** (já auditado na fatia login) |
+| Valores fixos tipo `R$ 1.500` no `index.html` | **Ainda presentes** no HTML estático (extrato legado / outros blocos) — **não** usados no fluxo Pix real pós-2A |
+| `onclick` sem função global | **Não** varrido automaticamente nesta sessão — relatório HTML único cita **196** `onclick`; recomenda-se script/grep dedicado em fatia futura |
+| `localStorage` como fonte de limite | **Risco:** `simulateWithCard` / `simulateNoCard` gravam **`limite_cartao`** fictício em **`user_data`** |
+
+---
+
+### 1. Mapa de comunicação do app
+
+| Tela / dado | Origem atual | Fonte correta (verdade) | Status | Risco |
+|-------------|--------------|-------------------------|--------|--------|
+| Login sessão | `AgilBank.api` → `POST auth/login`; tokens em `localStorage` | `POST /api/auth/login` + JWT | OK | Baixo |
+| Header nome/email/conta/saldo | `GET user/user-complete-data` → `aplicarDadosUsuarioReais` | `User` (Prisma) via `user-complete-data` | OK | Baixo se API OK |
+| Perfil detalhe | Mesmo perfil + campos no DOM | `user-complete-data` / `PUT user/profile` onde existir | Parcial | Médio |
+| Config notificações/tema | `salvarConfiguracoes` → `PUT user/settings`; **abrir painel não chama GET** | `GET` + `PUT /api/user/settings` | **Incompleto** | **Alto** |
+| Solicitação cartão (botão enviar) | **`cartao.js`** `enviarSolicitacao` → `POST cards` | `POST /api/cards` | OK **se** o `onclick` resolver para `cartao.js` | Médio (duplicata no `index.html`) |
+| Lista cartões no HTML “CAMILA/VIRTUAL” | Markup estático | `GET /api/cards` + render | **Decorativo / legado** | **Alto** (parece real) |
+| Empréstimo formulário refatorado | **`submitToAPI` simulado** (timeout, sem `fetch`) | `POST /api/loans` ou `simulate` conforme produto | **Quebrado / falso sucesso** | **Crítico** |
+| Pix envio | `POST pix/send` + transação BD | Mesma | OK | Baixo |
+| Extrato Pix | `GET pix/transactions` | `transacoes_pix` | OK pós-2A | Médio (só Pix) |
+| `user_data` limite (modal cartão) | `localStorage` + funções de simulação | `user-complete-data` | **Conflitante** se simulação usada | **Alto** |
+
+---
+
+### 2. Dados conflitantes encontrados
+
+| Dado | Aparece onde | Conflito | Causa provável | Correção mínima |
+|------|----------------|----------|----------------|-----------------|
+| Limite cartão | `checkUserCard…` / modais vs API | localStorage pode divergir do BD | `simulateWithCard` (5000) / `user_data` | Remover ou **isolar** helpers de teste; após ações reais chamar **`user-complete-data`** |
+| “Cartões” CAMILA/VIRTUAL | `cartaoGerenciamentoContainer` | Números fixos vs cartão real | HTML demo | Render a partir de **`GET cards`** ou rótulo “exemplo” |
+| Depósitos extrato | `.movimentacoes-entrada` HTML | R$ 1.500,50 estático | Legado | Já mitigado para **Pix** com lista API; bloco antigo ainda no DOM |
+| `enviarSolicitacao` | `index.html` vs `cartao.js` | Duas definições | Ordem de scripts: **`cartao.js` sobrescreve** | Apagar função morta no `index.html` (fatia pequena) |
+
+---
+
+### 3. Funções erradas ou ausentes
+
+| Função | Chamada por | Existe? | Faz backend? | Risco | Correção mínima |
+|--------|-------------|---------|----------------|-------|------------------|
+| `carregarConfiguracoes` | (nenhuma chamada ao abrir config) | Sim | GET implementado | Alto | Chamar ao abrir **`irParaConfiguracoes`** (hoje explicitamente **desabilitado** no comentário) |
+| `EmprestimoForm.submitToAPI` | submit formulário | Sim | **Não** (simulação) | Crítico | Implementar `AgilBank.api.request('loans', …)` alinhado a `src/routes/loans.js` (**bloqueado** até Ivar + Ragnar fecharem contrato) |
+| `simulateWithCard` / `simulateNoCard` | Dev/console | Sim | Escreve mock no storage | Alto | Guard `NODE_ENV`-style ou remover de build produtivo |
+| Tema toggles em `ContainerConfiguraçoes.js` | DOMContentLoaded | Sim | Só `console.log` | Médio | Delegar a **`salvarConfiguracoes`** ou remover duplicidade de listeners |
+
+---
+
+### 4. Fluxos incompletos
+
+| Fluxo | Etapa atual | Etapa faltando | Impacto | Próxima ação |
+|--------|-------------|----------------|---------|--------------|
+| Configurações | Painel abre; toggles locais | **GET** ao abrir para sincronizar com BD | Utilizador pensa que gravou / vê estado errado | Fatia: **chamar `carregarConfiguracoes()`** ao abrir |
+| Empréstimo | UI + validação | **POST** real + tratamento erro | “Aprovado” sem persistência | Fatia dedicada **loans** (contrato + testes) |
+| Cartão gestão | Cartões fictícios na grade | Lista real | Desconfiança / suporte | Fatia **GET cards** + render mínimo |
+| Cadastro conta | `formulario-conta.js` → register | Já API (registo anterior) | OK | Manter; alinhar cópia no `index.html` se duplicado |
+
+---
+
+### 5. Veredito dos agentes
+
+- **Ragnar:** Contratos **`auth`**, **`user`** (`profile`, `user-complete-data`, `settings`, `balance`), **`cards`**, **`loans`**, **`pix`** existem no Express/Prisma; fonte de verdade = **BD via essas rotas**. **`emprestimo_refatorado.js` não consome `loans`**. **`PUT user/settings`** coerente com `GET user/settings`.  
+- **Lagertha:** Vários fluxos **só UI** ou **duplicados** (`enviarSolicitacao`); config **abre sem hidratar**; empréstimo **submissão falsa**; cartão **HTML** ainda mostra nomes fictícios.  
+- **Ivar:** **Não aprovar** o módulo empréstimo/cartão como “produção honesta” até corrigir submissão real e/ou rótulos; **aprovar** continuidade de login/perfil/Pix já alinhados; **bloquear** fatia grande misturando loans+cartão+config num único PR.
+
+---
+
+### 6. Próxima fatia executável (Ivar)
+
+**Objetivo:** Ao abrir **Configurações**, sincronizar toggles/tema com **`GET /api/user/settings`** (já existe `carregarConfiguracoes` no `index.html`).
+
+**Arquivos permitidos:** `agilbank-frontend/public/banco/index.html` (e, se necessário, `js/ContainerConfiguraçoes.js` só para evitar listeners duplicados — preferir mínimo).
+
+**Arquivos proibidos:** `src/routes/pix.js`, migrações, `POST pix/send`, backend salvo alteração não planeado.
+
+**Mudança exata:** Em **`irParaConfiguracoes`**, após exibir o container, chamar **`await carregarConfiguracoes()`** (remover bloqueio “DESABILITADO” ou substituir por chamada real).
+
+**Validações:** `npm run build`; abrir config logado e verificar rede **GET user/settings**; alterar toggle e confirmar **PUT** + reabrir painel.
+
+**Risco:** Baixo (só leitura inicial + já existe PUT).
+
+**Critério de aprovação:** Toggles refletem BD após reload da página; sem regressão em `salvarConfiguracoes`.
+
+**Alternativa** (se prioridade for auth isolado): **`reset-password.html`** → `AgilBank.api` (já listada antes).
+
+---
+
+### Nota sobre validações pedidas e não automatizadas
+
+- **onclick sem função global**, **login manual**, **dashboard após login**: exigem execução no browser ou script dedicado — registar como **pendente** para o operador humano ou fatia “tooling”.
+
+---
+
+## Execução — Fatia Configurações: carregar ao abrir — 2026-05-03
+
+### Ragnar
+
+- **`GET /api/user/settings`** (`src/routes/user.js`): resposta **`{ success, data: { configuracoes } }`** com campos esperados pelo front — **contrato mantido**; **sem** alteração de backend nesta fatia.
+
+### Lagertha
+
+- **`irParaConfiguracoes()`** em `agilbank-frontend/public/banco/index.html`: após exibir `#configuracoesContainer`, chama **`carregarConfiguracoes()`** se a função existir; removido o bloqueio explícito que impedia o carregamento automático.
+- **`carregarConfiguracoes`** / **`salvarConfiguracoes`**: **inalterados** (mesmo `GET`/`PUT`, mesmo payload).
+
+### Ivar
+
+- **Aprovado:** mudança **só** no fluxo de abertura em **`index.html`**; não mexeu em **PUT**, **Pix**, **cartão**, **empréstimo**, **auth**; não inventa valores — continua a ler o que o **GET** devolve (com fallbacks já existentes no parser).
+- **Risco residual (baixo):** `carregarConfiguracoes` volta a registar **`addEventListener`** em tema/toggles em **cada** abertura — possível **duplicação** de handlers e **vários PUT** num único toggle após muitas visitas; **não** introduzido por contrato novo; pode ser fatia futura **“listeners idempotentes”**.
+
+### Validações
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `npm run build` (`agilbank-frontend`) | **OK** |
+| GET ao abrir / ciclo salvar reabrir | **Manual** no browser (não automatizado aqui) |
+
+### Arquivos alterados
+
+- `agilbank-frontend/public/banco/index.html`
+- `docs/reports/AGILBANK-STATUS-MIGRACAO-LEGADO.md` (este registo)
+
+### Próxima fatia recomendada (Ivar)
+
+- **Cartões fictícios “CAMILA / VIRTUAL”** no `cartaoGerenciamentoContainer`: substituir por dados de **`GET /api/cards`** ou rótulo claro de exemplo — alinha com a auditoria sistémica e reduz **“mentira visual”**.
+
+---
+
+## Auditoria — Cartões estáticos “CAMILA / VIRTUAL” (somente leitura) — 2026-05-03
+
+**Escopo:** `agilbank-frontend/public/banco/index.html`, `agilbank-frontend/public/banco/js/cartao.js`, `src/routes/cards.js` (contrato). **Sem edição de código** nesta etapa.
+
+### Perguntas obrigatórias (respostas)
+
+1. **Esses cartões vêm da API?** **Não.** Estão **fixos no HTML** dentro de `#cartaoGerenciamentoContainer` (`.cartao-nome` CAMILA / VIRTUAL, finais 9619 / 8656).
+2. **Existe `GET /api/cards` funcional?** **Sim.** `router.get('/', …)` em `src/routes/cards.js` → `prisma.cartao.findMany` → `res.json({ success, data: { cartoes } })` (com `authenticateToken` + `requireVerification`).
+3. **`cartao.js` já carrega cartões reais?** **Parcialmente.** `verificarCartaoSolicitado()` faz **`GET`** `cards` e, se `cartoes.length > 0`, **só abre** `#cartaoGerenciamentoContainer` — **não** substitui o conteúdo da grelha pelos dados da API. `extrairCartoesDaResposta` / `normalizarCartaoParaLegado` existem para **POST** e fluxos de detalhe, não para popular a grelha “Cartões”.
+4. **`index.html` sobrescreve `cartao.js`?** **Não** nesse ponto; o problema é **desconexão**: API diz “tem cartões” e a UI mostra **sempre** o mesmo mock estático.
+5. **Listar reais vs marcar exemplo?** **Ivar:** listar **reais** quando `GET` devolver cartões (tipo, `maskedNumber`/`last4`, status, limite); se **lista vazia**, estado **honesto** (“Nenhum cartão” / CTA solicitar); **só** manter bloco estático se estiver **explicitamente** rotulado como ilustração (não o caso hoje).
+6. **Menor correção segura?** **B)** esconder o bloco demo e mostrar mensagem honesta até haver render dinâmico, **ou** **C)** mínimo: após `GET`, preencher `.cartoes-grid` com uma linha por cartão usando **apenas** campos do contrato (sem inventar nome “CAMILA”). **A** puro (apagar HTML) pode partir botões que apontam para `showCartaoFisicoContainer` / virtual — exige remapear ações.
+
+### Ragnar — contrato `GET /api/cards`
+
+- **Endpoint:** `GET /` em router montado em `/api/cards` → **`GET /api/cards`**.
+- **Resposta:** `{ success, message, data: { cartoes: [...] } }`.
+- **Campos por cartão (select):** `id`, `maskedNumber`, `last4`, `validade`, `limite`, `saldoUtilizado`, `status`, `tipo`, `bandeira`, `dataSolicitacao`, `dataAprovacao`, `createdAt` — **não** existe campo **nome do portador** no modelo `Cartao`; nome na UI viria do **utilizador** (`user-complete-data`), não do cartão.
+
+### Lagertha — ocorrências no front
+
+| Padrão | Ficheiro / região |
+|--------|-------------------|
+| `CAMILA` / `•••• 9619` | `index.html` ~3914–3919 |
+| `VIRTUAL` / `•••• 8656` | `index.html` ~3923–3928 |
+| `R$ 1.500,50` | `index.html` ~3870, 3882 (**extrato** estático, não a grelha de cartões) |
+| `CAMILA MARIA DE OLIVEIRA…` | `index.html` ~4680, 4717 (outro bloco / comprovativo) |
+| Limite `5000` em storage | `index.html` funções de **teste** `simulateWithCard` (já conhecido) |
+
+### Validações (grep / leitura)
+
+| Verificação | Resultado |
+|-------------|-----------|
+| `CAMILA` em `public/banco` | **`index.html`** (cartão + comprovativo) |
+| `VIRTUAL` | **`index.html`** |
+| `1.500,50` | **`index.html`** (extrato legado) |
+| `GET /api/cards` no backend | **Existe** (`cards.js`) |
+| “Funciona” em runtime | **Não** testado HTTP nesta sessão; contrato e rota **presentes** |
+
+### Riscos
+
+- **Alto:** utilizador com cartões **reais** no BD vê **nomes/finais falsos** — perda de confiança e confusão em suporte.
+- **Médio:** `verificarCartaoSolicitado` abre o painel com mock mesmo quando a lista API está vazia em edge cases (lógica atual: só abre se `length > 0` — mock **só** quando há ≥1 cartão; ainda assim o **conteúdo** da grelha não bate com os cartões reais).
+
+### Veredito Ivar
+
+- **Bloqueado** apresentar **CAMILA/VIRTUAL** como se fossem dados da conta **sem** rótulo de exemplo ou **sem** ligação ao `GET`.
+- **Aprovar** para execução futura uma destas linhas (por ordem de preferência): **(C)** render mínimo a partir de **`GET /api/cards`** + labels derivados de `tipo`/`last4`/`status`; se esforço for alto na primeira fatia, **(B)** estado vazio honesto + ocultar demo até **(C)**; **(D)** só aceitável com texto **visível** tipo “Ilustração — não é o seu cartão”.
+
+### Próxima fatia executável (planeada, não executada aqui)
+
+- **Objetivo:** Ao mostrar `#cartaoGerenciamentoContainer` após `GET /api/cards`, **substituir** a grelha estática por linhas geradas a partir de `data.cartoes` (ou esconder demo e mostrar “Nenhum cartão” se vazio).
+- **Arquivos permitidos:** `agilbank-frontend/public/banco/js/cartao.js` (preferível: centralizar fetch + render), **e/ou** `index.html` (IDs da grelha: envolver `.cartoes-grid` com contentor alvo se necessário).
+- **Proibidos:** alterar `src/routes/cards.js` nesta fatia sem plano; Pix; empréstimo; config; inventar `nome` no cartão.
+- **Validações:** `npm run build`; utilizador com 0 / 1 / N cartões na BD; comparar `last4` com o mostrado; sem “CAMILA” a menos que seja `nomeCompleto` do user e produto peça (contrato atual **não** traz nome no cartão).
+
+---
+
+## Planeamento / auditoria — Fluxo solicitação de cartão (oferta → formulário → BD → UI) — somente leitura — 2026-05-03
+
+**Escopo:** `agilbank-frontend/public/banco/index.html`, `agilbank-frontend/public/banco/js/cartao.js`, `src/routes/cards.js`, `prisma/schema.prisma` (`Cartao`, `User`). **Sem edição de código** nesta etapa.
+
+### 1. Fluxo correto (alvo de produto)
+
+1. Dashboard com **oferta** só se ainda **não** houver pedido/cartão relevante (`GET /api/cards` vazio ou política de produto).  
+2. Qualquer CTA “solicitar cartão” abre o **mesmo** formulário oficial.  
+3. Utilizador preenche dados; **submit** envia ao backend; BD grava **solicitação/cartão** e estado; dados de análise persistidos onde o contrato permitir.  
+4. Após sucesso: oferta **some**; UI mostra **status real** (`pendente` / `aprovado` / …) a partir do **GET**; limite/perfil alimentados pelas fontes de verdade (`Cartao`, `User`, etc.).
+
+### 2. Mapa de botões / containers (entrada “cartão” no legado)
+
+| Entrada | Comportamento atual (código) |
+|---------|-------------------------------|
+| Modal `#agilModal` — **“Quero meu Cartão”** (`#agilActivate`) | `activateProposal()` → `openDynamicCardForm()` → **`showCartaoGerenciamento()`** (painel com mock CAMILA/VIRTUAL). |
+| Banner “divulgação” / `.cartao-container` no dashboard | `onclick="openDynamicCardForm()"` → idem (**gerenciamento**, não formulário). |
+| `.cartao-link` (se existir) | `openDynamicCardForm()` → idem. |
+| Menu / atalho “Cartão” (`service-item`) | **`showCartaoGerenciamento()`** direto. |
+| `showCartaoContainer()` | Chama `openDynamicCardForm()` → idem. |
+| `cartao.js` após delay | `showCartaoContainer` **substituído** por versão `async` que chama `verificarCartaoSolicitado()` — se **sem** cartões, chama `showCartaoContainer` original (que abre gerenciamento); se **com** cartões, abre **gerenciamento**. |
+
+**Conclusão Lagertha:** **Nenhuma** destas entradas abre hoje um **formulário HTML** visível mapeado no `index.html` para a recolha completa que `cartao.js` espera (ver ponto 3).
+
+### 3. Formulário “oficial” identificado (código vs DOM)
+
+- **Intenção no código:** `cartao.js` — `coletarDadosCartao()` + `enviarSolicitacao()` usam **`#termosCheck`**, **`#rendaInput`**, **`#progressContainer`**, `.formulario-cartao`, inputs com placeholders fixos (“Nome da empresa”, “Rua…”, etc.).  
+- **No repositório:** `grep` em `agilbank-frontend` **não** encontra markup com **`id="termosCheck"`**, **`id="rendaInput"`** nem classe **`.formulario-cartao`** no HTML — **apenas referências em JS** (`index.html` função `enviarSolicitacao` morta sobrescrita por `cartao.js` + `cartao.js`).  
+- **Implicação:** o fluxo “preencher formulário → enviar” está **desligado do DOM** nesta base — **bloqueador** para cumprir a regra de produto sem **restaurar/inserir** o markup do formulário ou **redirecionar** para página que o contenha.
+
+### 4. Dados coletados (o que o front *tenta* recolher)
+
+Em `cartao.js` / `coletarDadosCartao`: empresa, empresa atual, renda, tempo emprego, endereço (rua, bairro, cidade, estado, CEP), senha do cartão, termos — gravados em **`localStorage`** (`dadosCartao`) quando a função corre.
+
+### 5. Onde são / deveriam ser salvos
+
+| Dado | Hoje |
+|------|------|
+| `tipo`, `limite` | **`POST /api/cards`** — persistidos em **`Cartao`** (`prisma.cartao.create`), `status: 'pendente'`, números demo gerados no servidor (`generateDemoCardFields`). |
+| Empresa, morada, renda declarada no formulário | **Não** enviados no `body` do `POST` (validação aceita só `tipo` + `limite` opcional). Ficam **só** em `localStorage` se o formulário existir — **não** alimentam `User` nem tabela de análise via este endpoint. |
+| `User.limiteCartao` | **Não** atualizado em `cards.js` no `POST` analisado. |
+
+### 6. Status no backend (Ragnar)
+
+- **`POST /api/cards`:** cria registo `Cartao` com `status` inicial **`pendente`**; pode existir `aprovado` após `POST /api/cards/:id/approve` (e outras rotas: block, limit, …).  
+- **`GET /api/cards`:** lista cartões do `userId` autenticado — **sim**, indica se já existe solicitação/cartão.  
+- **Relação com `User`:** `Cartao.userId` → FK para `User`; payload de solicitação **não** grava campos profissionais/endereço no pedido de cartão atual.
+
+### 7. Respostas às 12 perguntas obrigatórias
+
+1. **Formulário oficial?** O definido em **`cartao.js`** (`coletarDadosCartao` / `enviarSolicitacao`); **DOM correspondente ausente** no HTML rastreado.  
+2. **Oferta inicial no dashboard?** Modal **`#agilModal`** (cartão + crédito), banners **`.banner-divulgação`**, **`.cartao-container`** “Tudo em um só cartão”.  
+3. **Para onde levam hoje?** **`showCartaoGerenciamento()`** — painel com mock, **não** o formulário.  
+4. **Todos os CTAs ao mesmo formulário?** **Não** — todos convergem para **gerenciamento** (ou fluxo `verificarCartaoSolicitado` → gerenciamento / `showCartaoContainer`), **não** para formulário com campos.  
+5. **Submit vai ao backend?** **`cartao.js` `enviarSolicitacao`** faz **`POST`** com `{ tipo: 'credito', limite }` — **sim** para esse par; **não** para o resto dos campos do “formulário”. O **`enviarSolicitacao`** no `index.html` (só progresso/UI) é **sobrescrito** por `cartao.js`.  
+6. **Dados coletados?** Ver secção 4.  
+7. **Salvos no BD?** Só **`Cartao`** com `tipo`/`limite`/demo; **não** os campos de análise do `coletarDadosCartao` via `POST` atual.  
+8. **Status de solicitação?** **Sim** — campo `status` em **`Cartao`**.  
+9. **Backend manda esconder oferta?** **Indiretamente** — `GET /api/cards` com `length > 0` informa que já há cartão; **não** há flag separada “oferta”; o front pode deduzir.  
+10. **`GET /api/cards` indica já pedido?** **Sim** (lista não vazia).  
+11. **Duplicação `index.html` / `cartao.js`?** **Sim** — duas `enviarSolicitacao`; prevalece **`cartao.js`**.  
+12. **Onde ainda há fixo / fictício?** Grelha **CAMILA/VIRTUAL**; textos de estado entrega; `selecionarVencimento` no `index.html` calcula limite **só na UI**; `simulateWithCard` em `user_data`.
+
+### 8. Problemas encontrados (síntese Ivar)
+
+- **Crítico:** Regra de produto **“oferta → mesmo formulário → BD”** **não** cumprida: entradas vão para **gerenciamento**; **DOM do formulário** referido por `cartao.js` **não** encontrado.  
+- **Crítico:** Dados de análise do formulário **não** seguem para **`POST /api/cards`** (contrato só `tipo`/`limite`).  
+- **Alto:** Oferta/modal **continua** possível mesmo com cartão na BD (depende de `tentarExibirModal` / lógica de modais — não auditado em profundidade aqui).  
+- **Alto:** UI gerenciamento **mock** vs **GET** real (já documentado).  
+- **Médio:** `localStorage` `dadosCartao` / `cartao_solicitado` como cache paralelo à verdade do servidor.
+
+### 9. Próxima fatia executável **pequena** (decisão Ivar)
+
+**Ordem recomendada (sem misturar tudo num PR):**
+
+| Ordem | Fatia | Objetivo | Ficheiros prováveis |
+|-------|--------|-----------|---------------------|
+| **1** | **Restaurar DOM mínimo do formulário** (`termosCheck`, `rendaInput`, `.formulario-cartao`, etapas `progressContainer` / `vencimentoContainer` se usados) **ou** apontar CTAs para página/HTML que já os tenha | Desbloquear `cartao.js` sem null | `index.html` (preferencial) |
+| **2** | **A** Unificar: `openDynamicCardForm` → se `GET cards` vazio, mostrar **só** o formulário oficial; se não vazio, gerenciamento + render real (fatia já planead antes) | Um único fluxo de entrada | `index.html`, `cartao.js` |
+| **3** | **B** Esconder oferta (modal/banners) quando `GET /api/cards` ≠ vazio | Evitar “vender” de novo | `index.html` + JS modal |
+| **4** | **C/E** Se produto exigir persistir empresa/endereço: **plano backend** (novo campo/tabela ou `PUT user/profile`) — **fora** de “só front” | Dados alimentam perfil/análise | `src/routes/*` + contrato |
+
+**Nesta rodada não se executa código** — apenas planeamento.
+
+### 10. Arquivos permitidos / proibidos (para futuras execuções)
+
+- **Permitidos (frente):** `index.html`, `cartao.js`; eventualmente `legacyNavigation.js` se rotas mudarem.  
+- **Proibidos até plano:** inventar campos no `POST` sem `validation.js`/Prisma; Pix; empréstimo; config; mudanças grandes misturadas.
+
+### 11. Decisão Ivar
+
+- **Bloqueado** declarar o fluxo de cartão “conforme regra de produto” até existir **formulário único no DOM** + **entrada unificada** + **oferta condicionada ao GET**.  
+- **Aprovado** planear em **fatias separadas** (tabela acima); **primeiro** desbloqueio: **DOM do formulário alinhado a `cartao.js`** ou CTAs para recurso que já o contenha.
+
+### 12. Resposta final (para o chat)
+
+Os cartões CAMILA/VIRTUAL são **mock estático**; **`GET /api/cards`** e **`POST /api/cards`** são **reais** no backend. O **gargalo** para o fluxo “oferta → formulário → BD → some oferta” é duplo: **(i)** as entradas hoje abrem **gerenciamento**, não o formulário; **(ii)** o **HTML do formulário** que `cartao.js` assume **não está presente** no `index.html` desta árvore. O **`POST` atual só persiste `tipo`/`limite`** em `Cartao` — não os dados extensos de `coletarDadosCartao`. **Próxima fatia segura:** **inserir/restaurar o markup mínimo do formulário oficial** e fazer **`openDynamicCardForm`** ramificar com **`GET /api/cards`** (vazio → formulário; senão → gerenciamento com lista real da fatia já planead).
+
+---
+
+## Auditoria — Fluxo visual “7 passos” Solicitar Cartão (textos pedidos) — somente leitura — 2026-05-03
+
+**Objetivo:** localizar no código o fluxo com **Passo 1 de 7**, **Seus Dados**, **Seu Endereço**, **Dados Profissionais**, **Limite Desejado**, **Cartão Aprovado**, **Lei LGPD**, notificações email/push, etc., e planear ligação ao backend **sem** criar formulário novo nem executar código.
+
+### 1. Localização exata do fluxo “7 passos” com esses rótulos
+
+**Resultado:** **Não encontrado** no repositório (`grep` em `agilbank-frontend`, incluindo `public/banco/index.html`, `js/*.css`, `pages/*.html`, `docs/`).
+
+- Strings literais **“Passo 1 de 7”**, **“Seus Dados”**, **“Seu Endereço”**, **“Defina o Limite Desejado”**, **“Cartão Aprovado”** (título desse fluxo), **“Solicitar Cartão”** (como título do wizard), **“Lei LGPD”** no contexto do pedido de cartão, **“Você receberá notificações por email e push”** — **ausentes** no código pesquisado.
+
+### 2. Fluxos visuais **próximos** ou **parciais** (para não confundir com o “7 passos”)
+
+| Fluxo | Onde | Relação com cartão |
+|--------|------|---------------------|
+| **Abertura de conta** `#contaContainer` | `index.html` ~5446+ | Passos **1–4**: Dados Pessoais, Endereço, Profissional, Confirmação — **abertura de conta**, não solicitação de cartão. |
+| **Wizard empréstimo** `#formEmprestimo` | `index.html` ~2851+ | Passos Dados Pessoais / Renda / Garantias / Confirmação — **empréstimo**. |
+| **Sequência em `cartao.js` + JS morto no `index.html`** | `cartao.js` | Espera `.formulario-cartao` → `#progressContainer` → `#vencimentoContainer` → `#aprovacaoContainer` → `#cartaoInfo` / `#statusContainer` — **HTML desses IDs não está no `index.html`** (só referências JS). |
+| **`#resultadoVerificacaoContainer`** | `index.html` ~4504+ | “Solicitação Recebida com Sucesso!”, tracker Enviado / Em análise / …, texto **“Você receberá uma notificação por e-mail…”** — fluxo **GRU/pagamento/verificação**, não o wizard de 7 passos de cartão. |
+| **`#statusEntregaContainer`** | `index.html` ~3995+ | Timeline com **“Pedido Aprovado”**, “Em Produção”, datas fixas — **conteúdo estático** de entrega, não ligado a `GET /api/cards`. |
+| **Perfil** | `index.html` ~5180+ | Secções “Dados”, “Endereço”, **“Dados Profissionais”** — **visualização** de perfil, não wizard de pedido de cartão. |
+
+### 3. Funções responsáveis (o que existe hoje para “cartão”)
+
+| Função | Ficheiro | Papel |
+|--------|----------|--------|
+| `openDynamicCardForm` | `index.html` | Chama **`showCartaoGerenciamento()`** — **não** abre wizard de 7 passos. |
+| `showCartaoGerenciamento` | `index.html` | Mostra `#cartaoGerenciamentoContainer`. |
+| `verificarCartaoSolicitado` / override `showCartaoContainer` | `cartao.js` | `GET` `cards`; abre gerenciamento se há cartões. |
+| `enviarSolicitacao` | **`cartao.js` (ativo)** | `POST` `cards` + `localStorage` `cartao_solicitado`; depois barra progresso / vencimento (IDs esperados no DOM). |
+| `enviarSolicitacao` | `index.html` (duplicata) | **Sobrescrita** por `cartao.js` após load. |
+| `selecionarVencimento`, `iniciarBarraProgresso`, `atualizarInformacoesCartao` | `cartao.js` | Avanço **pós-POST** na lógica JS; dependem de DOM. |
+| `voltarParaCartaoSolicitacao` | `index.html` | Navegação entre passos **se** existirem `.formulario-cartao` / `#progressContainer` / etc. |
+
+### 4. Dados coletados (intenção `coletarDadosCartao`)
+
+Empresa, empresa atual, renda (`#rendaInput`), tempo emprego (`.form-group select`), endereço (rua, bairro, cidade, estado, CEP), senha cartão (primeiro `input[type=password]`), termos (`#termosCheck`) → **`localStorage` `dadosCartao`** quando a colecção corre.
+
+### 5. Onde hoje salva ou não salva
+
+| Destino | Situação |
+|---------|----------|
+| **`POST /api/cards`** | Só **`tipo`** + **`limite`** (validação `validateCardRequest`) — **cria** `Cartao` com **`status: 'pendente'`** (ver `src/routes/cards.js`). |
+| **Campos de `coletarDadosCartao`** | **Não** vão no body do `POST` atual — **não** persistidos no cartão por este endpoint. |
+| **`localStorage`** | `dadosCartao`, `cartao_solicitado` — **cache**; não substitui BD. |
+
+### 6. Onde está “aprovação” / sucesso **visual ou enganoso**
+
+- **`#statusEntregaContainer`:** texto **“Pedido Aprovado”** / datas **fixas** — **mock**.  
+- **`cartao.js`** após `selecionarVencimento`: mostra `#aprovacaoContainer` e depois `#cartaoInfo` com limite — **encadeamento UI**; **não** exige resposta `aprovado` do servidor no momento do fluxo (usa `cartao_solicitado` do `localStorage`).  
+- **`#resultadoVerificacaoContainer`:** “Solicitação recebida” — outro fluxo (GRU).  
+- **Modal `#agilModal`:** subtítulo **“aprovado”** — **marketing**, não estado `Cartao`.
+
+### 7. Ragnar — contrato (resumo)
+
+- **`GET /api/cards`:** `{ data: { cartoes } }`, campos em `select` do Prisma (`status`, `tipo`, `limite`, `last4`, …).  
+- **`POST /api/cards`:** body **`tipo`** (`credito`|`debito`) + **`limite`** opcional; resposta **201** com `data.cartao`; registo **`pendente`**. Aprovação real via **`POST /api/cards/:id/approve`** (outro fluxo).  
+- **Campos do wizard de análise (empresa, morada, …):** **não** salvos por `POST /api/cards` atual — **fase futura** de backend/contrato se forem exigidos no pedido.
+
+### 8. Como ligar ao backend **sem** endpoint novo (plano)
+
+1. **Restaurar no DOM** o markup que **`cartao.js` já espera** (equivalente a “reutilizar” o desenho existente em JS/CSS, não inventar outro wizard).  
+2. No **sucesso** do `POST`, mostrar copy **`Solicitação enviada / Em análise`** quando `data.cartao.status === 'pendente'`; **só** mostrar “Cartão aprovado” se **`GET /api/cards`** (ou o próprio `POST` se devolver) tiver `status` **`aprovado`** (ou política de produto equivalente).  
+3. **`GET` antes de mostrar oferta:** se `cartoes.length > 0`, **não** exibir modal/banner de “quero cartão” **ou** redirecionar para gerenciamento com lista real.  
+4. **Status na UI:** mapear `cartao.status` do **GET** para labels (pendente / aprovado / …), em vez de timeline estática.
+
+### 9. O que fica pendente para fase futura de backend
+
+- Persistir **dados profissionais / endereço** recolhidos no pedido de cartão **ou** reutilizar **`PUT user/profile`** / modelo `User` já existente com regras claras.  
+- Qualquer **novo** campo em `POST /api/cards` exige **alteração** de `validation.js` + Prisma — **fora** do “só ligar ao existente”.
+
+### 10. Próxima fatia executável pequena (Ivar)
+
+1. **Confirmar no Git histórico** se existiu commit com markup **`.formulario-cartao`** + passos no `index.html` (recuperar em vez de redesenhar).  
+2. Se não houver histórico: **reinserir** o HTML mínimo **alinhado 1:1** aos IDs/classes que **`cartao.js`** já usa (é **restauro técnico**, não “formulário novo de produto”).  
+3. Em paralelo (outra fatia pequena): **condicionar** `#agilModal` / banners ao **`GET /api/cards` vazio**; texto final conforme **`status` real**.
+
+### 11. Arquivos permitidos / proibidos (execução futura)
+
+- **Permitidos:** `agilbank-frontend/public/banco/index.html`, `js/cartao.js`, CSS já ligados (`style.pedirCartao.container.css`, etc.).  
+- **Proibidos (sem plano):** alterar `src/routes/cards.js`/Prisma; Pix; empréstimo; config; mostrar “aprovado” falso.
+
+### 12. Decisão Ivar
+
+- **Bloqueado** afirmar que o fluxo de **7 passos com os textos pedidos** existe no projeto — **não** há prova no código.  
+- **Bloqueado** usar **“não criar formulário novo”** como bloqueio a **repor HTML** que o **`cartao.js` já define** — sem DOM, **não há** “fonte oficial” ligada ao `POST`.  
+- **Aprovado** plano: **(1)** recuperar ou repor markup legado alinhado a **`cartao.js`**; **(2)** ajustar copy ao **`status`** do backend; **(3)** esconder oferta quando **`GET`** indicar cartão; **(4)** backend extra só em fase separada.
+
+### 13. Resposta final (chat)
+
+O fluxo literal **“Passo 1 de 7” … “Cartão Aprovado”** com **LGPD** e **notificações push** no texto pedido **não está** no repositório. O que há é: **wizard de conta (4 passos)**, **empréstimo**, **cadeia JS+CSS de pedido de cartão em `cartao.js` sem HTML correspondente**, **telas estáticas** de entrega/status, e **container de verificação GRU** com texto parecido a “notificação por e-mail”. **Não está conectado** ao backend de forma íntegra: o **`POST`** corre, mas o **wizard completo** e os **textos “aprovado”** são em grande parte **UI/mock**. **Menor correção segura:** **repor o DOM** que `cartao.js` já espera + **alinhar mensagens finais** ao **`status`** de **`GET/POST`** + **ocultar oferta** quando já houver cartão.
+
+---
+
+## Execução — fluxo mínimo cartão (DOM + GET/POST) — 2026-05-03
+
+**Decisão Ivar:** sem Git; **repor DOM mínimo** alinhado a `cartao.js`; **não** reativar vencimento/aprovação fake após `POST`; oferta condicionada a **`GET /api/cards`**; **remover** cartões mock **CAMILA/VIRTUAL** da grelha do painel (lista só via API).
+
+### Alterações
+
+| Ficheiro | O que foi feito |
+|----------|-----------------|
+| `agilbank-frontend/public/banco/index.html` | Bloco `#cartaoSolicitacaoFlow` com `.formulario-cartao`, `#rendaInput`, `#termosCheck`, `enviarSolicitacao()`, `#progressContainer`/`#progressFill`, contentores `#vencimentoContainer` (sem uso no happy path), `#aprovacaoContainer`, `#cartaoInfo`, `#statusContainer`, `#cartaoSolicitacaoPendenteContainer` (fallback se GET falhar após POST), `#cartaoPainelMensagem`, grelha `#cartoesReaisGrid` (substitui mock). `showCartaoGerenciamento()` chama `agilbankRefreshPainelCartoes()`. `checkUserCardAndShowModal` consulta `agilbankFetchCartoes()` e esconde oferta no dashboard se houver cartões. Removidos duplicados locais de `enviarSolicitacao`/`selecionarVencimento` (fonte única: `cartao.js`). `voltarParaCartaoSolicitacao` trata `#cartaoSolicitacaoPendenteContainer`. |
+| `agilbank-frontend/public/banco/js/cartao.js` | `fetchCartoesFromApi`, `renderCartoesReaisGrid`, `agilbankAplicarEstadoPainelCartao`, `agilbankRefreshPainelCartoes`, `agilbankSetDashboardCardOffersVisible`, `window.agilbankFetchCartoes`. `enviarSolicitacao`: barra de progresso **sem** abrir vencimento; sucesso → `GET` + painel real + mensagem “Solicitação enviada…” para `pendente`; **não** encadeia “cartão aprovado” fake. `verificarCartaoSolicitado` chama `agilbankAplicarEstadoPainelCartao` quando há cartões. `selecionarVencimento(dia, ev)` + remoção de `remove()` do DOM do vencimento. |
+
+### Validação
+
+- **`npm run build`** (Vite) em `agilbank-frontend`: **OK** (exit 0).
+
+### Testes manuais (não automatizados nesta fatia)
+
+Recomendado: login → dashboard sem cartão na API → CTA/banner abre painel com formulário → sem termos bloqueia → com dados + termos → `POST /api/cards` → `GET` preenche grelha; banner/modal condicionados; sem CAMILA/VIRTUAL na grelha.
+
+### Riscos / próxima fatia
+
+- Dados extra do formulário continuam **só** em `localStorage` (`coletarDadosCartao`); **não** vão no `POST` atual.  
+- `#statusEntregaContainer` e ecrãs físico/virtual podem ainda ter **copy estático** noutros sítios (fora do âmbito desta fatia).  
+- **Próxima fatia:** ligar detalhe do cartão (físico/virtual) a um cartão **selecionado** do `GET`, ou ocultar ações até haver `aprovado`/`ativo`.
+
+---
+
+## Execução — Wizard visual solicitação cartão (7 passos) — 2026-05-03
+
+**Lagertha:** formulário simples substituído por wizard em `#cartaoWizardRoot` com barra de progresso, cards e navegação; **mantém** `enviarSolicitacao()` + `coletarDadosCartao()` + `POST { tipo, limite }` + `GET` para estado.
+
+**Ragnar:** `POST /api/cards` inalterado (`credito` + `limite` com `clampLimiteCartao`); `limite` preferencialmente do **range** `#cartaoLimiteDesejado`, senão fallback `calcularLimite(renda)`; `GET /api/cards` define texto do **passo 7** (pendente vs aprovado/ativo) e se o painel esconde o wizard.
+
+**Ivar:** sem mock CAMILA/VIRTUAL na grelha; **sem** “aprovado” falso — “Cartão aprovado” só com `status` `aprovado`/`ativo` no GET; copy LGPD deixa claro que persistência completa no servidor é fase futura; senha/renda continuam validadas antes do POST; **não** alterado backend.
+
+### Ficheiros
+
+| Ficheiro | Alteração |
+|----------|-----------|
+| `public/banco/css/style.cartaoWizard.css` | **Novo:** fundo em gradiente escuro, cartão branco, barra de progresso, botões primário/secundário, estados passo 7 (pendente / aprovado), range de limite, responsivo. |
+| `public/banco/index.html` | Link ao CSS; markup do wizard (passos 1–7), inputs com IDs (`cartaoInputRua`…, `cartaoLimiteDesejado`, `cartaoInputSenha`, `termosCheck`); `atualizarEnderecoEntrega` e `voltarParaCartaoSolicitacao` alinhados ao wizard / `#cartaoWizardRoot`. |
+| `public/banco/js/cartao.js` | `coletarDadosCartao` por IDs no `#cartaoWizardForm`; wizard (`agilbankWizardGoToStep`, `HydratePerfil`, `Next`/`Prev`/`TryBack`, `BindNav`, `AplicarResultadoPosPost`); `resetCartaoSolicitacaoFlowUi` reinicia passo 1 + hydrate; `enviarSolicitacao` esconde `#cartaoWizardRoot`, `limite` do slider, sucesso → passo 7 + GET + delay + `agilbankRefreshPainelCartoes`; mensagem painel para `pendente`; `selecionarVencimento` usa `#cartaoInputRua`. |
+
+### Validação
+
+- `npm run build` em `agilbank-frontend`: **OK**.
+
+### Preservado do fluxo anterior
+
+- `enviarSolicitacao`, `coletarDadosCartao` → `localStorage` `dadosCartao`, `termosCheck`, validações essenciais, barra `#progressContainer` durante POST, `agilbankRefreshPainelCartoes` / ofertas / grelha real.
+
+### Riscos / próxima fatia
+
+- `startCountdown` continua a assumir `#countdown` presente (legado).  
+- **Próxima fatia:** desativar ou ligar CTAs “Status de entrega / Ver cartão” da lista ao `status` real; persistir dados do wizard no backend quando houver contrato.
+
+---
+
+## Execução — Ações do painel ligadas ao GET /api/cards — 2026-05-03
+
+**Ragnar (GET `/api/cards`):** campos usados: `id`, `maskedNumber`, `last4`, `validade`, `limite`, `saldoUtilizado`, `status`, `tipo`, `bandeira`, `dataSolicitacao`, `dataAprovacao`, `createdAt`. **Não** existem na API campos de rastreio/entrega nem CVV — UI não inventa.
+
+**Lagertha:** grelha com seleção (`data-cartao-id`); botões `#cartaoAcaoStatus`, `#cartaoAcaoVer`, `#cartaoAcaoFisico`, `#cartaoAcaoVirtual`; `showTransporteCartao` / `showStatusEntregaContainer` / `showCartaoFisicoContainer` / `showCartaoVirtualContainer` delegam para `agilbankCartaoAcao*` quando há lista em memória.
+
+**Ivar:** pendente → **bloqueados** Ver / físico / virtual; **Status de entrega** mostra timeline honesta (“Em análise” ou “ainda não disponível”); sem números/CVV fictícios; `cartaoVirtualBtnCriar` / `cartaoFisicoBtnDesbloquear` **desativados** quando a vista vem dos dados reais da API; timeline mock antiga **removida** do HTML e substituída por conteúdo gerado em JS.
+
+### Ações ligadas
+
+| Ação | Comportamento |
+|------|----------------|
+| **Seleção na grelha** | Define `__agilbankCartaoSelecionadoId` e atualiza estado dos botões. |
+| **Status de entrega** | `agilbankCartaoAcaoStatus` → `statusEntregaTimelineHost` + linhas informativas; pendente = “Em análise”; aprovado/ativo sem dados API = mensagem de indisponibilidade. |
+| **Ver cartão** | Só se `status` aprovado/ativo → preenche `#cartaoFisicoContainer` com `maskedNumber`/`last4`, `validade`, `limite`, `saldoUtilizado`, titular (GET perfil). |
+| **Cartão físico** | Igual com título “Cartão físico”. |
+| **Cartão virtual** | Só se aprovado/ativo **e** `tipo === 'debito'`; caso contrário modal explicativo; preenche `#cartaoVirtualContainer` com os mesmos campos da API (sem CVV). |
+
+### Ações bloqueadas por `status`
+
+| `status` | Ver / físico / virtual | Status entrega |
+|----------|-------------------------|----------------|
+| `pendente` | Botões desativados; clique mostra modal “Em análise” se ainda chamado. | Permite abrir ecrã com texto honesto “Em análise”. |
+| `aprovado` / `ativo` | Ativados conforme tipo (virtual só débito). | Mensagem “ainda não disponível pelo aplicativo” (sem dados na API). |
+
+### Riscos
+
+- Titular vem de `user-complete-data` (cache `__agilbankTitularCartaoCache`), não do registo do cartão.  
+- Movimentações nos ecrãs físico/virtual continuam placeholder até haver endpoint.
+
+### Próxima fatia
+
+- Endpoint ou campos de **entrega** e **movimentações** no `GET` (ou rotas dedicadas) + UI consumindo-os.
+
+---
+
+## Planeamento (sem execucao de codigo) — Persistencia dados wizard → backend — 2026-05-03
+
+**Contexto:** o wizard (`coletarDadosCartao` em `cartao.js`) recolhe renda, empresa(s), tempo no emprego, endereco (IDs no DOM), senha de 4 digitos, aceite LGPD; o `POST /api/cards` persiste apenas **`tipo`** e **`limite`** no modelo `Cartao` (`src/routes/cards.js`). O `User` ja tem `Endereco` e `DadosProfissionais` no Prisma. Dados extra continuam em `localStorage` (`dadosCartao`) — nao vao no POST atual.
+
+### 1. Quais dados do wizard sao realmente necessarios para analise?
+
+Para **analise de credito** tipica (e alinhamento ao que o wizard ja pede): **renda mensal**, **estabilidade/tempo no emprego**, **vinculo empregaticio** (empresa / cargo quando existir), **coerencia de morada** (se diferente do cadastro ou para entrega). **Identidade** (nome, CPF, e-mail, telefone) ja costumam estar no `User`. **Snapshot** da submissao (valores no momento do pedido) e util para auditoria se o utilizador alterar o perfil depois.
+
+### 2. Quais ja existem no User / user_data?
+
+No **Prisma**: `User` — `nomeCompleto`, `email`, `cpf`, `telefone`, `dataNascimento`, …; **`Endereco`** (CEP, logradouro, numero, complemento, bairro, cidade, estado); **`DadosProfissionais`** — `profissao`, `empresa`, `rendaMensal`, `tempoTrabalho`, `cargo`. O frontend `user-complete-data` agrega isto; **grande parte do wizard duplica** dados que ja podem existir no servidor.
+
+### 3. Quais precisam de tabela / JSON de "solicitacao de cartao"?
+
+- **Opcional mas recomendado para compliance/auditoria:** registo imutavel ou semi-imutavel da **solicitacao** ligada ao `cartaoId` (ou `userId` + timestamp): ex. coluna **`Json`** em `Cartao` (ex.: `dadosSolicitacao`) **ou** modelo **`SolicitacaoCartao`** / **`CardApplication`** com FK para `Cartao` e campos nao sensiveis + versao de termos.
+- **Motivo:** provar "o que foi declarado quando pediu o cartao" sem misturar com PIN nem expor tudo no `GET`.
+
+### 4. Quais dados NAO devem ser guardados (ou nao em claro)?
+
+- **Senha / PIN do cartao (4 digitos)** — **nunca** em texto plano na BD, **nunca** em `localStorage` como fonte de verdade, **nunca** no `GET`.
+- **PAN completo** (nao coletado hoje) — idem.
+- Evitar duplicar em JSON campos que ja estao no `User` **com redundancia desnecessaria**, salvo para **snapshot** consciente (minimizar: so deltas face ao perfil).
+
+### 5. Senha de 4 digitos: bloquear, remover ou tratar com seguranca?
+
+**Ivar / recomendacao de produto:** ate existir **integracao PCI** (HSM / emissor / tokenizacao), **nao persistir** o PIN no servidor. Opcoes: **(A)** remover o campo do wizard e definir PIN so apos emissao (fluxo bancario real); **(B)** manter so na UI para "simulacao" e **nao enviar** no payload; **(C)** canal seguro a parte (fora de ambito). **Bloqueado:** guardar PIN em claro ou hash fraco reversivel "para conveniencia".
+
+### 6. Como registar aceite LGPD?
+
+- **`recordAudit`** (ja usado em `cards.js`) com `action` dedicado, ex.: `card.application.lgpd_accepted`, `metadata`: `{ version: "2026-05-wizard-v1", cartaoId }`, `ip`, `userAgent`.
+- Opcionalmente **`lgpdConsentAt`** + **`lgpdConsentVersion`** numa tabela de consentimento ou no snapshot JSON **sem** dados sensiveis.
+- O checkbox do wizard deve corresponder a uma **versao textual** versionada (URL ou id de politica).
+
+### 7. O `POST /api/cards` deve aceitar `dadosAnaliseCartao`?
+
+**Ragnar — proposta de contrato (extensao opcional, retrocompativel):**
+
+```json
+{
+  "tipo": "credito",
+  "limite": 5000,
+  "dadosAnalise": {
+    "rendaMensalDeclarada": 5000.0,
+    "tempoEmprego": "1a",
+    "empresa": "string opcional",
+    "empresaAtual": "string opcional",
+    "enderecoEntregaDiferente": false,
+    "observacao": "string curta opcional"
+  },
+  "lgpd": { "versao": "wizard-v1", "aceito": true }
+}
+```
+
+- **Validacao:** `validateCardRequest` + schema novo; **ignorar** campos desconhecidos em clientes antigos.
+- **Persistencia:** escrever `dadosAnalise` + consentimento em **BD** (JSON no `Cartao` ou tabela dedicada); **nao** incluir PIN.
+- **Sincronizacao perfil:** opcionalmente atualizar `DadosProfissionais` / `Endereco` **so** se produto decidir "cadastro passa a ser fonte oficial" (contrato a parte; avaliar impacto em `GET user/profile`).
+
+### 8. O `GET /api/cards` deve devolver esses dados?
+
+**Recomendacao:** **nao** devolver o blob completo de analise ao cliente. Manter `publicCard()` como hoje (cartao "publico"). Para backoffice/analista: **rota admin** ou `GET` com scope elevado, **nunca** PIN. Se o app precisar de "resumo" na UI: apenas flags (`analiseCompleta: true`) ou campos **nao sensiveis** acordados.
+
+---
+
+### Plano de contrato (resumo)
+
+| Camada | Conteudo |
+|--------|----------|
+| **POST** | Mantem `tipo` + `limite`; acrescenta opcional `dadosAnalise` (subset validado) + `lgpd.versao` + `lgpd.aceito`. |
+| **BD** | `Cartao.dadosSolicitacao Json?` **ou** tabela `SolicitacaoCartao`; + `AuditLog` para LGPD. |
+| **GET publico** | Sem alteracao de exposicao sensivel; sem PIN; sem JSON completo de analise. |
+
+### Campos **permitidos** (exemplos) no payload / snapshot
+
+- `rendaMensalDeclarada` (numero), `tempoEmprego` (enum/string curta), `empresa`, `empresaAtual` (opcionais), flags de morada, `lgpd.versao`, timestamp implicito no servidor.
+
+### Campos **proibidos** (persistencia / GET)
+
+- **PIN/senha do cartao**, PAN completo, CVV, qualquer segredo de canal de pagamento em respostas publicas.
+
+### Migration necessaria?
+
+- **Sim**, se se optar por coluna nova em `Cartao` (`Json`) ou nova tabela — **migration Prisma + `validateCardRequest` + testes**.
+- **Nao**, se a **unica** decisao for sincronizar so `DadosProfissionais`/`Endereco` existentes (sem snapshot de cartao) — menor risco de exposicao no `GET`, mas **perde** prova do que foi declarado no pedido.
+
+### Proxima fatia executavel **pequena**
+
+1. Documento de contrato + alteracao `validation.js` com `dadosAnalise` opcional (sem PIN).
+2. **Migration** `Cartao.dadosSolicitacao Json?` (nullable) + escrita no `POST` + `recordAudit` LGPD.
+3. **Front:** enviar subset de `coletarDadosCartao` no body (sem `senhaCartao`); parar de gravar senha em `localStorage` ou limpar apos POST.
+4. **GET:** manter `publicCard` inalterado.
+
+### Lagertha — mapeamento payload wizard (salvar / UI / remover-bloquear)
+
+| Origem wizard | Salvar no BD (quando houver contrato) | So UI / fluxo | Remover ou bloquear |
+|---------------|----------------------------------------|-----------------|---------------------|
+| Renda, tempo emprego, empresa(s) | `dadosAnalise` + opcional upsert `DadosProfissionais` | Validacao antes do POST | — |
+| Endereco (rua, CEP, etc.) | Snapshot ou upsert `Endereco` conforme produto | Preencher formulario | — |
+| Limite (slider) | Ja vai em `POST` (`limite`) | — | — |
+| LGPD checkbox | Audit + versao | — | Nao persistir sem versao |
+| Senha 4 digitos | — | Opcional simulacao local **sem** enviar | **Nao** persistir; **nao** GET |
+
+### Decisao **Ivar**
+
+- **Bloqueado** persistir senha/PIN em claro ou devolve-lo no `GET`.
+- **Bloqueado** usar `localStorage` como fonte principal de dados sensiveis.
+- **Bloqueado** alterar schema "no escuro" — qualquer coluna/tabela exige **migration nomeada** e revisao de `publicCard` / documentacao de API.
+- **Aprovado** planear extensao **retrocompativel** do `POST` com `dadosAnalise` + auditoria LGPD e snapshot **minimo** no servidor, sem alargar o `GET` publico.
+
+---
+
+## Execucao — Persistencia segura wizard → POST /api/cards — 2026-05-03
+
+**Objetivo:** snapshot opcional em `Cartao.dadosSolicitacao` (JSON), consentimento LGPD em colunas dedicadas, validacao e bloqueio de PIN/CVV/PAN; `GET` e respostas de cartao via `publicCard()` sem expor snapshot nem consentimento.
+
+### Ficheiros alterados
+
+| Ficheiro | Alteracao |
+|----------|-----------|
+| `prisma/schema.prisma` | `Cartao`: `dadosSolicitacao Json?`, `lgpdConsentAt DateTime?`, `lgpdConsentVersion String?`. |
+| `prisma/migrations/20260503140000_cartao_dados_solicitacao_lgpd/migration.sql` | `ALTER TABLE cartoes` — tres colunas nullable. |
+| `src/middleware/validation.js` | `rejectForbiddenCardBodyFields` + integracao em `validateCardRequest`; whitelist `dadosAnalise` / `endereco` / `lgpd`. |
+| `src/routes/cards.js` | `publicCard()` omite `dadosSolicitacao`, `lgpdConsentAt`, `lgpdConsentVersion`; `sanitizeDadosAnaliseForStorage`; `POST /` grava snapshot + consentimento + `recordAudit` `card.application.lgpd_accepted` quando aplicavel. |
+| `agilbank-frontend/public/banco/js/cartao.js` | Payload com `dadosAnalise` + `lgpd`; `coletarDadosCartao` sem `localStorage` nem `senhaCartao` no objeto; `limparDadosCartao` apos sucesso e no reset do fluxo; `recuperarDadosCartao` deixa de ler cache sensivel. |
+| `docs/reports/AGILBANK-STATUS-MIGRACAO-LEGADO.md` | Este registo. |
+
+### Migration
+
+- Nome da pasta: **`20260503140000_cartao_dados_solicitacao_lgpd`**
+- Aplicar em ambientes reais: `npm run db:deploy` (ou `prisma migrate deploy`) com `DATABASE_URL` configurado.
+
+### Contrato final `POST /api/cards`
+
+**Obrigatorio (inalterado):** `tipo` ∈ `credito` | `debito`; `limite` opcional, float 100–50000.
+
+**Opcional:**
+
+- `dadosAnalise` — objeto com apenas: `rendaMensalDeclarada` (0–50M), `tempoEmprego` (≤80 chars), `empresa`, `empresaAtual` (≤200), `enderecoEntregaDiferente` (boolean), `observacao` (≤500), `endereco` `{ rua, bairro, cidade, estado, cep }` com limites de tamanho.
+- `lgpd` — se enviado: `{ versao: string 1–64, aceito: true }` obrigatorio.
+
+**Proibido no corpo:** chaves de nivel raiz como `senha`, `pin`, `cvv`, `pan`, `dadosSolicitacao`, etc.; dentro de `dadosAnalise`/`endereco`, nomes que casem padroes sensiveis.
+
+**Persistencia em BD:** `dadosSolicitacao` = `{ schemaVersion: 1, dadosAnalise: <sanitizado> }` ou omitido se vazio; `lgpdConsentAt` / `lgpdConsentVersion` quando `lgpd` valido.
+
+**Resposta `POST` e `GET`:** objeto cartao passa por `publicCard()` — **sem** `dadosSolicitacao`, `lgpdConsentAt`, `lgpdConsentVersion`, `cardToken`. O `GET /` mantem `select` explicito sem esses campos.
+
+### Validacoes executadas
+
+- `npm run build` na raiz (`prisma generate`): OK.
+- `npm run build` em `agilbank-frontend` (Vite): OK.
+- `npm test` (Jest): OK (21 testes).
+
+### Decisao Ivar (pos-implementacao)
+
+- **Aprovado** recorte: POST retrocompativel (`tipo` + `limite` apenas continua valido); snapshot e LGPD opcionais; PIN nao entra no payload nem no modelo; `publicCard` nao vaza snapshot nem consentimento.
+- **Ressalva:** PIN de 4 digitos continua exigido na UI como simulacao local — **nao** e transmitido; persistencia real de PIN exigiria fluxo PCI/emissor (fora desta fatia).
+- **Pendencia:** aplicar migration em cada base; opcionalmente alinhar Swagger `components/schemas/Card` ao novo corpo.
+
+### Riscos restantes
+
+- Clientes antigos nao enviam `lgpd` — consentimento em colunas fica null (aceitavel ate alinhar todos os clientes).
+- `cartao_solicitado` em `localStorage` continua (metadados do cartao da API, nao wizard completo).
+
+### Proxima fatia recomendada
+
+- Atualizar OpenAPI/Swagger do cartao; teste de integracao `POST /api/cards` com `dadosAnalise` + verificacao Prisma; opcional `PUT user/profile` para espelhar endereco/renda no `User`.
+
+---
+
+## Execucao — Decisao basica limite/status a partir de `dadosAnalise` — 2026-05-03
+
+**Objetivo:** usar `rendaMensalDeclarada` sanitizada para sugerir limite (30% da renda, clamp R$ 300–10.000), escolher limite final quando o cliente nao envia `limite`, e status inicial `aprovado` se renda >= 2000; caso contrario `pendente`. Sem novo schema; sem alteracao ao `GET` (mesmo `select` + `publicCard`).
+
+**Ficheiro:** `src/routes/cards.js` — `limiteSugeridoPorRenda030`, `resolveLimiteEStatusCriacaoCard`, `POST /` grava `limite`, `status`, `dataAprovacao` (quando aprovado) e acrescenta `dadosSolicitacao.decisaoAutomatica` (`versaoRegra`, `limiteFonte`, `statusCriterio`, `limiteSugeridoRenda030`) para auditoria legivel.
+
+### Regras (transparentes)
+
+| Condicao | Limite final (resumo) | Status |
+|----------|------------------------|--------|
+| `limite` no body | valor do cliente (ja validado 100–50k) | renda >= 2000 → `aprovado`; sem renda ou < 2000 → `pendente` |
+| Sem `limite`, com `rendaMensalDeclarada` | `clamp(renda * 0.3, 300, 10000)` | >= 2000 → `aprovado`; < 2000 → `pendente` |
+| Sem `limite`, sem renda | `calculateCreditLimit(scoreCredito)` (legado) | `pendente` |
+
+### Exemplos entrada/saida (resposta `data.cartao` via `publicCard`)
+
+1. `{ "tipo": "credito" }` — sem `dadosAnalise`: limite por score; `status: "pendente"`; `dataAprovacao` null.
+2. `{ "tipo": "credito", "dadosAnalise": { "rendaMensalDeclarada": 1500 } }` — sem `limite`: limite 450; `status: "pendente"`.
+3. `{ "tipo": "credito", "dadosAnalise": { "rendaMensalDeclarada": 8000 } }` — sem `limite`: limite 2400; `status: "aprovado"`; `dataAprovacao` preenchida.
+4. `{ "tipo": "credito", "limite": 5000, "dadosAnalise": { "rendaMensalDeclarada": 8000 } }` — limite 5000 (fonte cliente); `status: "aprovado"`.
+
+### Impacto no fluxo atual
+
+- **Lagertha:** UI ja trata `aprovado` / `pendente` no wizard e no painel; cartoes com renda alta podem surgir ja `aprovado` sem chamar `POST .../approve`.
+- **Ragnar:** contrato HTTP inalterado em campos de resposta; valores de `limite`/`status`/`dataAprovacao` passam a refletir as regras acima.
+
+### Riscos
+
+- Aprovacao automatica por limiar fixo (2000) e produto demo — nao substitui politica de credito real.
+- `POST .../approve` continua util para cartoes `pendente`; duplo fluxo deve ser conhecido pela equipa.
+
+### Decisao Ivar
+
+- Logica fixa, documentada, sem motor de score; sem schema novo; `GET` seguro.
+
+### Proxima evolucao possivel
+
+- Notificacao e-mail no auto-`aprovado` (paridade com `/:id/approve`); limiares configuraveis; uso de outros campos de `dadosAnalise` (ex. tempo de emprego) com regras igualmente explicitas.
+
+### Validacao
+
+- `npm test`: OK (21 testes).
+
+---
+
+## Auditoria — Remocao de mocks que pareciam dados reais (telas autenticadas) — 2026-05-03
+
+**Objetivo:** eliminar nomes, valores monetarios ficticios de extrato, beneficiario boleto/GRU e identificadores que pareciam cadastro real; manter placeholders honestos ou dados de API onde ja existem.
+
+**Escopo:** `agilbank-frontend/public/banco/index.html` apenas (sem backend; `cartao.js` sem alteracoes — ja sem CAMILA).
+
+### Ragnar — dados reais hoje vs ausentes
+
+| Dado | Origem real hoje | Se ausente |
+|------|------------------|------------|
+| Nome / e-mail / CPF / telefone | `GET user/user-complete-data` (wizard, perfil) | `—` / `Nao informado` na UI |
+| Saldo conta | Preenchido por scripts de perfil/API quando integrado | `saldoValue` pode mostrar `********` ou `—` (comportamento existente) |
+| Cartoes | `GET /api/cards` + `cartao.js` | Mascarado da API ou mensagem honesta |
+| Limite cartao | `GET /api/cards` | Ja tratado no painel |
+| Movimentacoes conta (nao Pix) | **Endpoint ausente** para extrato geral fora do Pix | Lista legada removida; apenas Pix real em `#extratoPixListaReal` |
+| Movimentacoes cartao | **Endpoint ausente** | UI cartao: placeholders `••••` / mensagens `Ainda nao disponivel` (ja regra anterior) |
+| Entrega / rastreio cartao | **Endpoint ausente** | Texto honesto em `cartao.js` / timeline |
+
+**Contrato recomendado (futuro, sem implementar agora):** `GET /api/movimentacoes?conta=1`, `GET /api/cards/:id/entrega`, `GET /api/cards/:id/movimentos` com paginacao e sem CVV/PAN.
+
+### Lagertha — mocks encontrados e correcao
+
+| Local | Antes | Depois |
+|-------|-------|--------|
+| `#extratoContainer .movimentacoes-entrada` | Duas linhas com `R$ 1.500,50` e textos de deposito ficticios | Bloco vazio + comentario; lista real continua em `#extratoPixListaReal` |
+| `containerGerarBoletoPix` | Protocolo, CPF, nome FULANO, valor R$ 1.500,00 fixos | Todos `Indisponível` |
+| `#gruWelcomeUsuario` (ex-`ailton023`) | Username ficticio | `—` ou nome de `localStorage` `agilbank_user`/`govbr_user` ao abrir o container (sem inventar) |
+| `boletoContainer` beneficiario | CAMILA…, CNPJ, valores, codigo de barras, Pix EMV copia-e-cola | `Indisponível` / `—`; inputs Pix e linha digitavel **vazios** + `placeholder` explicando demonstracao (sem string EMV falsa) |
+| `resultadoVerificacaoContainer` | Protocolo e data/hora fixos | Protocolo `Indisponível`; data/hora reais no momento de `levarParaResultadoVerificacao()` |
+| Wizard cartao (copy) | Texto desatualizado (“so tipo e limite”) | Alinhado ao POST atual (analise + LGPD; senha nao enviada) |
+| Botao “Voltar ao Menu” | `button` sem fechamento | `</button>` corrigido |
+| Extrato JS | `statEnt` sem null-check | `if (statEnt)`; `showExtratoContainer` usa seletores dentro de `#extratoContainer` |
+
+**Mantidos (aceitavel):** `placeholder="000.000.000-00"` em inputs de CPF (formato de mascara, nao dado de cliente); valores fixos em **copy de seguro/emprestimo** (precos de produto de exemplo, nao extrato da conta); `R$ 0,00` em campos calculados por JS.
+
+### Ivar — decisao
+
+- **Aprovado** para merge desta fatia: nenhum nome de pessoa ficticia, valor de extrato ficticio ou beneficiario “CAMILA” permanece como dado plausivel de cliente; GRU/boleto deixam claro indisponibilidade ou layout de demonstracao.
+- **Bloqueado nesta fatia:** inventar endpoint ou saldo/movimentacao; alterar fluxo Pix transacional (apenas remocao de payload EMV estatico na tela de **boleto** de demonstracao).
+- **Ressalva:** `copiarPix` / `copiarCodigo` na tela boleto copiam vazio ate existir integracao — comportamento aceitavel para demo honesta.
+
+### Validacoes executadas
+
+- `npm run build` (`agilbank-frontend`): OK.
+- Grep `CAMILA`, `1.500,50`, `FULANO`, `ailton023`, protocolos numericos removidos em `public/banco/index.html`: **zero** ocorrencias.
+
+### Riscos restantes
+
+- Outros ficheiros JS (`containerEmprestimo.js`, etc.) podem conter texto de exemplo; fora do escopo desta fatia.
+- Tela GRU/boleto continua **layout** de documento sem dados reais — confundir com comprovante verdadeiro e mitigacao UX futura.
+
+### Proxima fatia recomendada
+
+- Varredura nos restantes `public/banco/js/*.js`; integrar GRU/boleto a API quando existir; endpoint de movimentacoes de conta nao-Pix.
+
+---
+
+## Auditoria (somente leitura) — Decisao basica cartao por `rendaMensalDeclarada` — 2026-05-03
+
+**Objetivo:** confirmar que a implementacao em `src/routes/cards.js` + validacao + schema cumpre as regras acordadas, **sem** alterar codigo nesta passagem (nenhum bug bloqueante encontrado).
+
+### Ragnar — confirmacoes no codigo
+
+| Verificacao | Resultado |
+|-------------|-----------|
+| POST legado `{ tipo, limite }` | `validateCardRequest` mantem `tipo` + `limite` opcional; `rejectForbiddenCardBodyFields` nao exige `dadosAnalise`/`lgpd`; `resolveLimiteEStatusCriacaoCard` usa limite do body e `rendaN` null → `pendente` + limite cliente ou score se limite omitido |
+| POST com `dadosAnalise.rendaMensalDeclarada` | `sanitizeDadosAnaliseForStorage` persiste renda; decisao usa `analiseSan.rendaMensalDeclarada` para limite sugerido (0,3; clamp 300–10k) e status |
+| Sem renda valida no snapshot (`rendaN == null`) | `statusInicial` permanece `pendente`; `statusCriterio` `pendente_sem_renda_declarada` |
+| `rendaN >= 2000` | `statusInicial` = `aprovado`, `dataAprovacao` preenchida |
+| `limite` enviado | Primeiro ramo de `resolveLimiteEStatusCriacaoCard` — respeita valor apos validacao express-validator (100–50000) |
+| `GET /api/cards` | `findMany` com `select` **sem** `dadosSolicitacao`, `lgpdConsentAt`, `lgpdConsentVersion`; `publicCard()` remove esses campos (e `cardToken`) tambem nas respostas `POST` |
+| Score “escondido” | So `calculateCreditLimit(scoreCredito)` quando nao ha renda nem limite cliente — funcao explicita no mesmo ficheiro, sem modelo de score adicional |
+
+**Casos numericos verificados por inspeccao da funcao** `limiteSugeridoPorRenda030`: renda 1500 → 450; 2000 → 600; 5000 → 1500; renda 1e7 → limite 10000 (cap).
+
+### Lagertha — frontend (sem alteracao nesta auditoria)
+
+- O wizard e o painel ja consomem `status` e `limite` vindos de `GET /api/cards` / resposta do `POST`; textos do wizard foram alinhados em fatia anterior a envio de `dadosAnalise` + LGPD.
+- “Aprovacao antes da API”: passo 7 depende do `GET` apos o `POST` na logica existente (`cartao.js`) — nao foi reauditado linha-a-linha nesta passagem; recomenda-se teste manual rapido pos-deploy.
+
+### Ivar — decisao
+
+- **Nenhum bug bloqueante** identificado; **nao** se aplicou alteracao de codigo nesta auditoria.
+- **Aprovado** manter implementacao atual: criterio de renda >= 2000 documentado; sem vazamento de `dadosSolicitacao`/LGPD no `GET`; sem schema extra alem do ja migrado.
+
+### Validacoes executadas (ferramenta)
+
+- `npm run build` (raiz / `prisma generate`): OK.
+- `npm test` (Jest): OK (21 testes).
+- **Nota:** nao ha testes automatizados dedicados a `POST /api/cards` com matriz de renda/limite — lacuna recomendada para proxima fatia.
+
+### Proxima fatia recomendada
+
+- `tests/cards.decisao.test.js` (ou supertest contra app) com matriz: sem renda, 1500, 2000, 5000 sem limite, renda alta cap 10k, POST so `{ tipo, limite }`, assert `publicCard`/`GET select`.
+
+---
+
+## Execucao — Testes automatizados POST/GET `/api/cards` — 2026-05-03
+
+**Ficheiros:** `tests/cards.test.js` (novo); `src/server.js` (em `NODE_ENV=test` nao chama `app.listen` — supertest nao precisa de porta; corrige `EADDRINUSE` ao importar o servidor em mais do que um ficheiro de teste).
+
+### Cenarios cobertos (supertest + Prisma mockado, sem BD remoto)
+
+1. POST legado `{ tipo: credito, limite: 5000 }` → 201, `pendente`, limite 5000, resposta sem campos proibidos.
+2. POST so `{ tipo: credito }` (score 600) → `pendente`, limite por score (2000).
+3. `rendaMensalDeclarada` 1500 sem limite → `pendente`, limite 450.
+4. Renda 2000 sem limite → `aprovado`, limite 600, `dataAprovacao` definida.
+5. Renda 5000 sem limite → `aprovado`, limite 1500.
+6. Renda 1_000_000 sem limite → limite 10000 (cap), `aprovado`.
+7. `limite` 4200 + renda 8000 → limite 4200, `aprovado`, `decisaoAutomatica.limiteFonte` = `cliente` no `create`.
+8. POST com `senha` no corpo → 400 `FORBIDDEN_FIELD`, sem `create`.
+9. GET `/api/cards` → cada cartao na resposta **nao** tem `dadosSolicitacao`, `lgpdConsentAt`, `lgpdConsentVersion`, `cardToken`, `senha`, `pin`, `cvv`, `pan`.
+
+### Lagertha (relatorio)
+
+- Frontend **nao** precisa de alteracao: continua a usar apenas `status`, `limite`, `maskedNumber`, etc. do GET/POST publicos.
+- Nenhum campo novo sensivel e esperado pela UI.
+
+### Ivar
+
+- Testes **nao** dependem de servicos externos nem de Postgres real (Prisma jest mock em `tests/setup.js`).
+- Cobertura focada nas regras criticas de decisao e de nao vazamento no JSON publico.
+- **Aprovado** a alteracao minima em `server.js` para ambiente de teste (comportamento de producao inalterado quando `NODE_ENV` nao e `test`).
+
+### Validacoes
+
+- `npm test`: OK (30 testes: 21 auth + 9 cards).
+- `npm run build` (raiz): OK (`prisma generate`).
+
+### Proxima fatia
+
+- ~~Testes para `POST /api/cards/:id/approve`, duplicidade `CARD_ALREADY_EXISTS`, e validacao de `dadosAnalise` invalido (400).~~ **Concluido** — ver **Execucao — Ampliacao testes cartao (erros e approve)** (2026-05-03) mais abaixo.
+
+---
+
+## Execucao — Ampliacao testes cartao (erros e approve) — 2026-05-03
+
+**Plano:** Ragnar ampliar `tests/cards.test.js`; Lagertha/Ivar apenas relatorio; producao so se bug comprovado.
+
+### Ficheiros alterados
+
+- `tests/cards.test.js` — novos cenarios (unica alteracao de codigo).
+- `docs/reports/AGILBANK-STATUS-MIGRACAO-LEGADO.md` — este registo.
+
+**Alteracao de producao (`src/routes/cards.js`, `src/server.js`):** **nao** — nenhum bug comprovado; comportamento alinhado aos testes.
+
+### Cenarios cobertos (Ragnar)
+
+1. **CARD_ALREADY_EXISTS:** POST `/api/cards` com cartao existente `pendente` ou `aprovado` do mesmo `tipo` → 400, codigo `CARD_ALREADY_EXISTS`, `prisma.cartao.create` nao chamado.
+2. **POST `/api/cards/:id/approve` (sucesso):** `findFirst` devolve pendente do utilizador; `update` com `status: aprovado` e `dataAprovacao`; corpo JSON sem `dadosSolicitacao`, LGPD interno, `cardToken`, `senha`/`pin`/`cvv`/`pan` (mesmo que o mock de `update` inclua dados sensiveis — valida `publicCard`).
+3. **Approve id inexistente:** `findFirst` null → 404 `CARD_NOT_FOUND`, `update` nao chamado.
+4. **Approve sem linha pendente (equiv. outro utilizador / UUID alheio):** mesmo contrato 404 `CARD_NOT_FOUND`, `update` nao chamado (sem vazar existencia de cartao de terceiros).
+5. **Validacao `dadosAnalise` / `lgpd`:** renda nao numerica finita; renda negativa; `empresa` > 200 caracteres; `lgpd.aceito: false`; `senha` dentro de `dadosAnalise` → 400 com `VALIDATION_ERROR` ou `FORBIDDEN_FIELD` conforme validacao actual; `create` nao chamado.
+
+### Lagertha (confirmacao frontend)
+
+- **Nenhuma alteracao de UI** necessaria para esta fatia (apenas testes backend).
+- Erros ja expostiveis pelo fluxo actual (`success: false`, `code`, mensagens) — o wizard/painel ja trata falhas de API de forma generica.
+- **Nenhum campo sensivel novo** deve ser esperado pela UI; approve e POST continuam a devolver apenas shape publico de cartao.
+
+### Ivar — decisao final
+
+- Testes **nao** exigem Postgres remoto nem BD real: Prisma continua mockado em `tests/setup.js`.
+- Mocks **nao** ocultam bug de seguranca: o caso de approve verifica explicitamente ausencia de chaves proibidas na resposta HTTP.
+- **Nenhuma** mudanca de regra de negocio sem bug; **aprovado** o recorte (testes + documentacao).
+
+### Validacoes obrigatorias
+
+- `npm test`: OK (40 testes: 21 auth + 19 cards).
+- `npm run build` (raiz, `prisma generate`): OK.
+
+### Proxima fatia recomendada
+
+- ~~Testes approve adicionais...~~ **Concluido** — ver **Execucao — Testes de borda cartao (fecho modulo)** abaixo.
+
+---
+
+## Execucao — Testes de borda cartao (fecho modulo) — 2026-05-03
+
+**Plano:** Ragnar cobrir `ativo`, approve ja aprovado, matriz de campos proibidos, GET com mock permissivo; producao apenas se bug; Lagertha/Ivar no relatorio.
+
+### Ficheiros alterados
+
+- `tests/cards.test.js` — cenarios novos (CARD_ALREADY_EXISTS `ativo`; approve 404 quando so existe `aprovado`; `describe.each` pin/cvv/pan/senha/password em `dadosAnalise` e no root; GET com lixo sensivel no mock + `password` na lista de asserts).
+- `src/routes/cards.js` — (1) `findFirst` de duplicidade: `status.in` passou a incluir `ativo` (alinha com mensagem "ativo ou pendente" e evita segundo POST se existir legado `ativo`); (2) `publicCard`: remove tambem `senha`, `pin`, `cvv`, `pan`, `password` se presentes (defesa em profundidade no JSON publico).
+- `docs/reports/AGILBANK-STATUS-MIGRACAO-LEGADO.md` — este registo.
+
+### Bugs encontrados e correcao
+
+1. **Duplicidade:** a mensagem e o comentario falavam em cartao **ativo**, mas a query so filtrava `aprovado` e `pendente`. Com cartao em status `ativo` na BD, um segundo POST podia passar. **Correcao:** incluir `'ativo'` em `status.in`.
+2. **GET / publicCard:** o `select` do Prisma ja exclui a maior parte dos campos, mas `publicCard` nao removia chaves de pagamento se algum dia aparecessem no objeto. **Correcao:** omitir explicitamente no destructuring (sem alterar campos que a API ja expoe legitimamente).
+
+### Novos cenarios (testes)
+
+1. POST com cartao existente `ativo` mesmo `tipo` → 400 `CARD_ALREADY_EXISTS`, sem `create`.
+2. POST `.../approve` quando nao ha linha `pendente` para o id (equiv. ja `aprovado`) → **404** `CARD_NOT_FOUND`, mensagem contem "nao encontrado" / "ja processado"; **sem** `update` — **contrato documentado:** a rota so faz `findFirst` com `status: 'pendente'`; nao se alterou comportamento.
+3. `dadosAnalise` com `pin`, `cvv`, `pan`, `senha`, `password` → 400 `FORBIDDEN_FIELD`, sem `create`.
+4. Root body com os mesmos cinco campos → 400 `FORBIDDEN_FIELD`, sem `create`.
+5. GET: mock devolve objecto com `dadosSolicitacao`, LGPD interno, `cardToken`, `senha`, `pin`, `cvv`, `pan`, `password`; resposta **nao** contem nenhuma dessas chaves.
+
+### Lagertha
+
+- **Sem** mudanca de UI: fluxo continua a depender apenas de campos publicos do cartao.
+- Erros (`success`, `code`, mensagem) trataveis pelo fluxo generico actual.
+- Nenhuma expectativa nova de campo sensivel no cliente.
+
+### Ivar — decisao final
+
+- Testes sem BD real; mock permissivo no GET **propositado** para nao mascarar vazamento — com `publicCard` endurecido, a resposta permanece limpa.
+- **Contrato de approve inalterado** (404 + `CARD_NOT_FOUND` quando nao ha pendente).
+- Alteracao de producao **justificada** por lacuna de duplicidade (`ativo`) e endurecimento de serializacao publica; **aprovado**.
+
+### Validacoes obrigatorias
+
+- `npm test`: OK (50 testes: 21 auth + 29 cards).
+- `npm run build`: OK (`prisma generate`).
+
+### Proxima fatia recomendada (apos modulo cards)
+
+- Rotas restantes de cartao em `cards.js` (`block`, `unblock`, `PUT limit`) com supertest + mocks, se o roadmap incluir cobertura; ou avancar migracao legado noutro dominio (fora do escopo cards).

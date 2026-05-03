@@ -147,13 +147,15 @@ app.use('*', (req, res) => {
 // Inicialização do servidor
 async function startServer() {
   try {
-    // Iniciar servidor primeiro
-    app.listen(PORT, HOST, () => {
-      console.log(`🚀 Servidor AgilBank iniciado na porta ${PORT}`);
-      console.log(`🌐 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📚 Documentação: http://${HOST}:${PORT}/api/docs`);
-      console.log(`🔍 Health Check: http://${HOST}:${PORT}/api/health`);
-    });
+    // Em testes (supertest) não escutar porta — evita EADDRINUSE ao importar `server` em vários ficheiros.
+    if (process.env.NODE_ENV !== 'test') {
+      app.listen(PORT, HOST, () => {
+        console.log(`🚀 Servidor AgilBank iniciado na porta ${PORT}`);
+        console.log(`🌐 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`📚 Documentação: http://${HOST}:${PORT}/api/docs`);
+        console.log(`🔍 Health Check: http://${HOST}:${PORT}/api/health`);
+      });
+    }
 
     // Conectar ao banco de dados (opcional)
     try {

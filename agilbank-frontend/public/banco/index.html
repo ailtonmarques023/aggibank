@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="css/style.container.notificacao.css .css">
     <link rel="stylesheet" href="css/style.pedirCartao.container.css">
     <link rel="stylesheet" href="css/style.gerenciamento.cartao.container.css">
+    <link rel="stylesheet" href="css/style.cartaoWizard.css">
     <link rel="stylesheet" href="css/style.cartao-status-card {pedidoCartaoAprovado}.css">
     <link rel="stylesheet" href="css/style.containerPrincipal.css">
     <link rel="stylesheet" href="css/style.rodape.css">
@@ -3848,38 +3849,17 @@
                 </div>
             </div>
 
+            <div id="extratoPixMensagem" style="display:none;padding:12px 16px;margin:8px 0;background:#fff8e6;color:#5c4a00;border-radius:8px;font-size:14px;line-height:1.4;"></div>
+            <div id="extratoPixListaReal" style="display:none;"></div>
+
             <div class="sem-movimentacoes" style="display: none;">
                 <i class="fas fa-receipt"></i>
                 <h3>Nenhuma movimentação encontrada</h3>
                 <p>Você ainda não realizou nenhuma movimentação em sua conta. Quando fizer transações, elas aparecerão aqui.</p>
             </div>
 
-            <div class="movimentacoes-entrada" style="display: none;">
-                <div class="movimentacao-item">
-                    <div class="movimentacao-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="movimentacao-info">
-                        <h4>Depósito Credpessoal</h4>
-                        <p>Crédito aprovado</p>
-                    </div>
-                    <div class="movimentacao-valor positivo" id="valorCredito">
-                        R$ 1.500,50
-                    </div>
-                </div>
-                <div class="movimentacao-item">
-                    <div class="movimentacao-icon">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </div>
-                    <div class="movimentacao-info">
-                        <h4>Depósito</h4>
-                        <p>Transferência recebida</p>
-                    </div>
-                    <div class="movimentacao-valor positivo">
-                        R$ 1.500,50
-                    </div>
-                </div>
-            </div>
+            <!-- Legado: linhas fictícias removidas. Movimentações reais (Pix) em #extratoPixListaReal via carregarExtratoPixReal(). -->
+            <div class="movimentacoes-entrada" style="display: none;" aria-hidden="true"></div>
         </div>
     </div>
 
@@ -3897,39 +3877,160 @@
                 <i class="fas fa-gear"></i>
             </div>
         </div>
+        <!-- Wizard solicitação cartão (lógica POST/GET em js/cartao.js) -->
+        <div id="cartaoSolicitacaoFlow" style="display: block;">
+            <div id="cartaoWizardRoot" class="cartao-wizard-root">
+                <div class="cartao-wizard-top">
+                    <p class="cartao-wizard-kicker">AgilBank</p>
+                    <h2 class="cartao-wizard-title">Solicitar cartão</h2>
+                    <div class="cartao-wizard-progress-wrap">
+                        <div class="cartao-wizard-progress-track">
+                            <div class="cartao-wizard-progress-fill" id="cartaoWizardProgressFill"></div>
+                        </div>
+                        <span class="cartao-wizard-step-label" id="cartaoWizardStepLabel">Passo 1 de 7</span>
+                    </div>
+                </div>
+                <form id="cartaoWizardForm" class="formulario-cartao cartao-wizard-card" autocomplete="off" onsubmit="return false;">
+                    <!-- 1 Seus dados -->
+                    <div class="cartao-wizard-step is-active" data-step="1">
+                        <h3>Seus dados</h3>
+                        <p class="wiz-lead">Confirmamos quem está solicitando. Dados vindos do seu cadastro quando disponíveis.</p>
+                        <dl class="cartao-wizard-dl">
+                            <div><dt>Nome</dt><dd id="wizDispNome">—</dd></div>
+                            <div><dt>E-mail</dt><dd id="wizDispEmail">—</dd></div>
+                            <div><dt>CPF</dt><dd id="wizDispCpf">—</dd></div>
+                            <div><dt>Telefone</dt><dd id="wizDispTel">—</dd></div>
+                        </dl>
+                    </div>
+                    <!-- 2 Endereço -->
+                    <div class="cartao-wizard-step" data-step="2">
+                        <h3>Seu endereço</h3>
+                        <p class="wiz-lead">Endereço conforme cadastro. Campos ausentes aparecem como &quot;Não informado&quot;.</p>
+                        <dl class="cartao-wizard-dl">
+                            <div><dt>Logradouro</dt><dd id="wizDispRua">—</dd></div>
+                            <div><dt>Bairro</dt><dd id="wizDispBairro">—</dd></div>
+                            <div><dt>Cidade / UF</dt><dd id="wizDispCidadeUf">—</dd></div>
+                            <div><dt>CEP</dt><dd id="wizDispCep">—</dd></div>
+                        </dl>
+                        <input type="hidden" id="cartaoInputRua" />
+                        <input type="hidden" id="cartaoInputBairro" />
+                        <input type="hidden" id="cartaoInputCidade" />
+                        <input type="hidden" id="cartaoInputEstado" />
+                        <input type="hidden" id="cartaoInputCep" />
+                    </div>
+                    <!-- 3 Profissionais -->
+                    <div class="cartao-wizard-step" data-step="3">
+                        <h3>Dados profissionais</h3>
+                        <p class="wiz-lead">Informe renda e, se quiser, dados da empresa. Os dados de análise e o aceite LGPD são enviados à API com a solicitação (sem senha do cartão).</p>
+                        <div class="cartao-wizard-field">
+                            <label for="rendaInput">Renda mensal (R$)</label>
+                            <input type="text" id="rendaInput" placeholder="Ex.: 5000" inputmode="numeric" />
+                        </div>
+                        <div class="cartao-wizard-field">
+                            <label for="cartaoInputEmpresa">Empresa / empregador (opcional)</label>
+                            <input type="text" id="cartaoInputEmpresa" placeholder="Nome da empresa" />
+                        </div>
+                        <div class="cartao-wizard-field">
+                            <label for="cartaoInputEmpresaAtual">Empresa atual (opcional)</label>
+                            <input type="text" id="cartaoInputEmpresaAtual" placeholder="Nome da empresa atual" />
+                        </div>
+                        <div class="form-group cartao-wizard-field">
+                            <label for="cartaoSelectTempo">Tempo no emprego</label>
+                            <select id="cartaoSelectTempo">
+                                <option value="">Selecione</option>
+                                <option value="6m">Menos de 6 meses</option>
+                                <option value="1a">6 meses a 1 ano</option>
+                                <option value="2a">1 a 2 anos</option>
+                                <option value="2a+">Mais de 2 anos</option>
+                                <option value="ni">Não informado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- 4 Revisão -->
+                    <div class="cartao-wizard-step" data-step="4">
+                        <h3>Revisão</h3>
+                        <p class="wiz-lead">Confira antes de definir o limite desejado. O envio registra tipo, limite, dados de análise e consentimento conforme o backend.</p>
+                        <dl class="cartao-wizard-dl" id="cartaoWizardRevisaoDl"></dl>
+                    </div>
+                    <!-- 5 Limite -->
+                    <div class="cartao-wizard-step" data-step="5">
+                        <h3>Limite desejado</h3>
+                        <p class="wiz-lead">Escolha o valor desejado para solicitação. Isto não é aprovação de crédito — a análise definirá o limite final.</p>
+                        <div class="cartao-wizard-range-wrap">
+                            <input type="range" id="cartaoLimiteDesejado" min="100" max="50000" step="100" value="5000" />
+                            <div class="cartao-wizard-limite-meta"><span>Mín. R$ 100</span><span>Máx. R$ 50.000</span></div>
+                            <span id="cartaoLimiteDesejadoLabel">R$ 5.000,00</span>
+                        </div>
+                    </div>
+                    <!-- 6 Termos -->
+                    <div class="cartao-wizard-step" data-step="6">
+                        <h3>Termos e privacidade</h3>
+                        <p class="wiz-lead">Para concluir, aceite os termos e defina a senha de uso do cartão (4 dígitos).</p>
+                        <div class="cartao-wizard-field">
+                            <label for="cartaoInputSenha">Senha do cartão (4 dígitos)</label>
+                            <input type="password" id="cartaoInputSenha" maxlength="4" placeholder="••••" inputmode="numeric" />
+                        </div>
+                        <p class="cartao-wizard-lgpd">Seus dados pessoais e cadastrais são tratados conforme a LGPD, para análise de crédito e prevenção à fraude. Não vendemos seus dados. A senha de 4 dígitos não é enviada ao servidor. Limite, tipo, dados de análise e aceite LGPD são enviados à API.</p>
+                        <label class="cartao-wizard-check">
+                            <input type="checkbox" id="termosCheck" />
+                            <span>Li e aceito os termos de solicitação do cartão e o uso dos dados conforme descrito acima.</span>
+                        </label>
+                    </div>
+                    <!-- 7 Resultado -->
+                    <div class="cartao-wizard-step" data-step="7" id="cartaoWizardResultado">
+                        <div id="cartaoWizardResultadoIcon">✓</div>
+                        <h3 id="cartaoWizardResultadoTitulo">Solicitação enviada</h3>
+                        <p class="wiz-lead" id="cartaoWizardResultadoTexto">Seu pedido está em análise.</p>
+                        <button type="button" class="cartao-wizard-btn-primary" id="cartaoWizardVerMeus" style="width:100%;margin-top:16px;">Ver meus cartões</button>
+                    </div>
+                </form>
+                <div class="cartao-wizard-nav" id="cartaoWizardNav">
+                    <button type="button" class="cartao-wizard-btn-secondary" id="cartaoWizardPrev">Voltar</button>
+                    <button type="button" class="cartao-wizard-btn-primary" id="cartaoWizardNext">Continuar</button>
+                </div>
+            </div>
+            <div id="progressContainer" style="display: none; padding: 24px; text-align: center;">
+                <p style="margin-bottom:12px;">Enviando solicitação…</p>
+                <div style="width: 100%; height: 10px; background: #e0e0e0; border-radius: 6px; overflow: hidden;">
+                    <div id="progressFill" style="height: 100%; width: 0%; background: #0066b3; transition: width 0.12s linear;"></div>
+                </div>
+            </div>
+            <div id="vencimentoContainer" style="display:none; padding:16px;">
+                <p style="font-size:0.9rem;">Escolha o vencimento (opcional):</p>
+                <div class="vencimento-option" onclick="selecionarVencimento(5, event)" style="padding:8px; margin:4px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">Dia 5</div>
+                <div class="vencimento-option" onclick="selecionarVencimento(15, event)" style="padding:8px; margin:4px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">Dia 15</div>
+                <div class="vencimento-option" onclick="selecionarVencimento(25, event)" style="padding:8px; margin:4px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">Dia 25</div>
+            </div>
+            <div id="aprovacaoContainer" style="display:none; padding:16px;"><p>Processando…</p></div>
+            <div id="cartaoInfo" style="display:none; padding:16px;"><p id="limiteValue"></p></div>
+            <div id="statusContainer" style="display:none; padding:16px;"></div>
+            <div id="cartaoSolicitacaoPendenteContainer" style="display:none; padding:24px; text-align:center;">
+                <h3 style="color:#005B96;">Solicitação enviada</h3>
+                <p style="color:#444;">Seu pedido está em análise. Use o botão abaixo para atualizar a lista.</p>
+                <button type="button" class="limite-button" style="margin-top:12px;" onclick="if (typeof window.agilbankRefreshPainelCartoes === 'function') window.agilbankRefreshPainelCartoes();">Atualizar lista</button>
+            </div>
+        </div>
+        <div id="cartaoListaRealSection" style="display:block;">
+            <p id="cartaoPainelMensagem" style="display:none; padding:12px 16px; margin:0 12px 8px; background:#e8f4fc; color:#003d66; border-radius:8px; font-size:0.9rem;"></p>
+        </div>
         <!--Limite-->
         <div class="limite-section">
             <h2 class="limite-title">Precisando de limite?</h2>
             <p class="limite-description">Descubra as opções para obter limite de crédito e aproveite os benefícios do cartão.</p>
             <button class="limite-button" onclick="showOpcoesLimiteContainer()">Acessar opções de limite</button>
         </div>
-        <!--Cartões-->
+        <!--Cartões (lista preenchida via GET /api/cards em cartao.js) -->
         <div class="cartoes-section">
-            <h1 class="cartoes-title">Cartões</h1>
-            <div class="cartoes-grid">
-                <!--Cartão físico-->
-                <div class="cartao-item">
-                    <div>
-                        <div class="cartao-nome">CAMILA</div>
-                        <div class="cartao-numero">•••• 9619</div>
-                    </div>
-                    <button class="cartao-action" onclick="showCartaoFisicoContainer()" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: all 0.3s ease; transform-origin: center;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Desbloquear</button>
-                </div>
-            
-                <!--Cartão virtual-->
-                <div class="cartao-item virtual">
-                    <div>
-                        <div class="cartao-nome">VIRTUAL</div>
-                        <div class="cartao-numero">•••• 8656</div>
-                    </div>
-                    <button class="cartao-action" onclick="showCartaoVirtualContainer()" style="box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: all 0.3s ease; transform-origin: center;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Mostrar dados</button>
-                </div> 
+            <h1 class="cartoes-title">Meus cartões</h1>
+            <div class="cartoes-grid" id="cartoesReaisGrid">
+                <p class="cartao-empty-msg" style="padding:16px;color:#666;">Carregando cartões…</p>
             </div>
             <!--Status de entrega-->
-            <div class="cartao-actions">
-                <button class="action-button" onclick="showStatusEntregaContainer()">Status de entrega</button>
-                <button class="action-button" onclick="showTransporteCartao()">Ver Cartão</button>
-                <button class="action-button" onclick="criarCartaoVirtual()">Bloquear</button>
+            <div class="cartao-actions" id="cartaoPainelAcoes">
+                <button type="button" class="action-button" id="cartaoAcaoStatus">Status de entrega</button>
+                <button type="button" class="action-button" id="cartaoAcaoVer">Ver cartão</button>
+                <button type="button" class="action-button" id="cartaoAcaoFisico">Cartão físico</button>
+                <button type="button" class="action-button" id="cartaoAcaoVirtual">Cartão virtual</button>
             </div>
         </div>
 
@@ -3997,61 +4098,13 @@
             </div>
         </div>
 
-        <div class="status-timeline">
-            <div class="status-item completed">
-                <div class="status-dot"></div>
-                <div class="status-content">
-                    <h4>Pedido Aprovado</h4>
-                    <p>Seu cartão foi aprovado e está em processo de produção</p>
-                    <small>15/03/2024 às 14:30</small>
-                </div>
-            </div>
+        <div class="status-timeline" id="statusEntregaTimelineHost"></div>
 
-            <div class="status-item active">
-                <div class="status-dot"></div>
-                <div class="status-content">
-                    <h4>Pagamento Pendente</h4>
-                    <p>É necessário o pagamento da taxa de envio e processamento</p>
-            <p><b>Como fazer o pagamento?</b></p>
-            <p>Acesse o link de pagamento <a href="#" style="color: #0066b3; text-decoration: underline;">[inserir link]</a>.</p>
-            <small>Siga as instruções para concluir a transação.</small>
-            <small>15/03/2024 às 15:45</small>
-                </div>
-            </div>
-
-            <div class="status-item">
-                <div class="status-dot"></div>
-                <div class="status-content">
-                    <h4>Em Produção</h4>
-                    <p>Seu cartão está sendo produzido com seus dados</p>
-                    <small>Aguardando pagamento</small>
-                </div>
-            </div>
-
-            <div class="status-item">
-                <div class="status-dot"></div>
-                <div class="status-content">
-                    <h4>Em Transporte</h4>
-                    <p>Seu cartão está a caminho do endereço cadastrado</p>
-                    <small>Aguardando produção</small>
-                </div>
-            </div>
-
-            <div class="status-item">
-                <div class="status-dot"></div>
-                <div class="status-content">
-                    <h4>Entrega</h4>
-                    <p>Previsão de entrega em até 5 dias úteis</p>
-                    <small>Aguardando transporte</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="status-info">
+        <div class="status-info" id="statusEntregaInfoHost">
             <div class="status-info-item">
                 <h4>Informações da Entrega</h4>
-                <p>Código de Rastreio: ************</p>
-                <p>Transportadora: <b>Correios</b></p>
+                <p id="statusEntregaLinha1">—</p>
+                <p id="statusEntregaLinha2">—</p>
             </div>
 
             <div class="status-info-item">
@@ -4206,7 +4259,7 @@
             </div>
             <!-- actions -->    
             <div class="cartao-virtual-actions">
-                <button class="btn-primary small" onclick="criarCartaoVirtual()">
+                <button type="button" class="btn-primary small" id="cartaoVirtualBtnCriar" onclick="criarCartaoVirtual()">
                     <i class="fas fa-plus-circle"></i>
                     Criar
                 </button>
@@ -4290,7 +4343,7 @@
             </div>
 
             <div class="cartao-virtual-actions">
-                <button class="btn-primary small" onclick="criarCartaoVirtual()">
+                <button type="button" class="btn-primary small" id="cartaoFisicoBtnDesbloquear" onclick="criarCartaoVirtual()">
                     <i class="fas fa-plus-circle"></i>
                     Desbloquear
                 </button>
@@ -4507,15 +4560,15 @@
             <div class="confirmation-details">
                 <div class="detail-item">
                     <span class="detail-label">Protocolo:</span>
-                    <span>2025031387654</span>
+                    <span id="verificacaoProtocoloValor">Indisponível</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Data de envio:</span>
-                    <span id="currentDate">13/03/2025</span>
+                    <span id="currentDate">—</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Hora:</span>
-                    <span id="currentTime">14:30</span>
+                    <span id="currentTime">—</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Status:</span>
@@ -4557,7 +4610,7 @@
             <p>Você receberá uma notificação por e-mail assim que o processo for concluído.</p>
             
             <div style="margin-top: 30px; margin-bottom: 20px;">
-                <button class="btn btn-primary" onclick="showCartaoGerenciamento()">Voltar ao Menu 
+                <button type="button" class="btn btn-primary" onclick="showCartaoGerenciamento()">Voltar ao Menu</button>
             </div>
         </div>
     </div>
@@ -4571,7 +4624,7 @@
                 </div>
             <div class="welcome-text">
                 <span>Seja bem-vindo,</span>
-                <span class="username">ailton023</span>
+                <span class="username" id="gruWelcomeUsuario">—</span>
             </div>
             <div class="nav-buttons">
                 <button class="nav-btn">Gerar GRU</button>
@@ -4583,27 +4636,27 @@
             <div class="info-pagamento">
                 <div class="detalhe-pagamento">
                     <span class="label">Número do Protocolo:</span>
-                    <span class="valor">0123456789</span>
+                    <span class="valor">Indisponível</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Situação da Solicitação:</span>
-                    <span class="valor">Em processamento</span>
+                    <span class="valor">Indisponível</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Data da Solicitação:</span>
-                    <span class="valor">25/03/2024</span>
+                    <span class="valor">Indisponível</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">CPF:</span>
-                    <span class="valor">123.456.789-00</span>
+                    <span class="valor">Indisponível</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Nome:</span>
-                    <span class="valor">FULANO DA SILVA</span>
+                    <span class="valor">Indisponível</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Valor:</span>
-                    <span class="valor">R$ 1.500,00</span>
+                    <span class="valor">Indisponível</span>
                 </div>
             </div>
             <div class="acoes-pagamento">
@@ -4656,7 +4709,7 @@
                     <!-- botão pix copia e cola -->
                     <div class="pix-info-boleto">
                         <div class="pix-copia-cola-boleto">
-                            <input type="text" readonly value="00020126580014BR.AgilBank.BCB.PIX0136f5429e3c-5e61-4354-b3f6-d156ac3dd801" class="pix-code-boleto" id="pixCodeBoleto">
+                            <input type="text" readonly value="" placeholder="Código Pix indisponível nesta demonstração" class="pix-code-boleto" id="pixCodeBoleto" title="Layout de exemplo — sem cobrança real">
                             <button onclick="copiarPix()" class="copiar-pix-boleto">
                                 <i class="fas fa-copy"></i>
                                 Copiar Pix
@@ -4674,27 +4727,27 @@
                 <div class="container-campo">
                 <div class="campo">
                     <span class="campo-label">Nome do Beneficiário</span>
-                    <span class="campo-valor">CAMILA MARIA DE OLIVEIRA NASCIMENTO</span>
+                    <span class="campo-valor">Indisponível</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">CNPJ do Beneficiário</span>
-                    <span class="campo-valor">51.955.241/0001-25</span>
+                    <span class="campo-valor">Indisponível</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Data de Vencimento</span>
-                    <span class="campo-valor">17/03/2025</span>
+                    <span class="campo-valor">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Valor Total</span>
-                    <span class="campo-valor">R$ 89,47</span>
+                    <span class="campo-valor">Indisponível</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Data de Emissão</span>
-                    <span class="campo-valor">15/03/2024</span>
+                    <span class="campo-valor">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Número de Controle</span>
-                    <span class="campo-valor">2024031500123456</span>
+                    <span class="campo-valor">Indisponível</span>
                 </div>
                 </div>  
                 <!-- aviso de segurança -->
@@ -4711,15 +4764,15 @@
                 <img src="https://i.postimg.cc/6pXLhF1N/Captura-de-tela-2025-03-18-140740.png" alt="banco do brasil" style="width: 100%; height: 20px;">
                 <p style="font-size: 11px; margin-left: 10px; color:#666; text-align: left;">Pagável em qualquer banco até o vencimento</p>
                 <div class="dados-beneficiario">
-                    <small>Nome: CAMILA MARIA DE OLIVEIRA NASCIMENTO</small>
-                    <small>CNPJ: 51.955.241/0001-25</small>
-                    <small style="display: inline-block;">Data de vencimento: 17/03/2025<span style="float: right; margin-left: 70px;">Valor: <b>R$ 89,47</b></span></small>
+                    <small>Nome: Indisponível</small>
+                    <small>CNPJ: Indisponível</small>
+                    <small style="display: inline-block;">Data de vencimento: —<span style="float: right; margin-left: 70px;">Valor: <b>Indisponível</b></span></small>
                 </div>
                 <div class="codigo-barras">
                     <img src="https://i.postimg.cc/k4K3yvj6/codigo-de-barras.png" alt="Código de Barras">
                 </div>
                 <div class="codigo-linha-container">
-                    <input type="text" readonly value="85810000000 5 89470328250 5 76070825075 9 79150939977 9" class="codigo-linha" id="codigoLinha"> <br>
+                    <input type="text" readonly value="" placeholder="Código de barras indisponível nesta demonstração" class="codigo-linha" id="codigoLinha" title="Layout de exemplo — sem cobrança real"> <br>
                     <button onclick="copiarCodigo()" class="copiar-codigo">
                         <i class="fas fa-copy"></i>
                         Copiar código
@@ -5972,16 +6025,13 @@
         let saldoVisivel = true;
         let saldoReal = null;
 
-        // Função para abrir o formulário dinâmico de cartão
+        // Função para abrir o formulário dinâmico de cartão (GET /api/cards → formulário ou lista real)
         function openDynamicCardForm() {
-            // Verificar se o usuário está logado
             const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 alert('Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
                 return;
             }
-
-            // Fluxo interno: painel de cartões no dashboard (sem página externa)
             showCartaoGerenciamento();
         }
 
@@ -6130,6 +6180,11 @@
                 window.scrollTo(0, 0);
                 
                 console.log('✅ Painel de gerenciamento de cartão aberto');
+                if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+                    window.agilbankRefreshPainelCartoes().catch(function (e) {
+                        console.warn('agilbankRefreshPainelCartoes:', e);
+                    });
+                }
             } catch (error) {
                 console.error('❌ Erro ao abrir painel de gerenciamento:', error);
                 alert('Erro ao abrir painel de gerenciamento: ' + error.message);
@@ -6141,6 +6196,10 @@
             const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 alert('Você precisa estar logado. Faça login primeiro.');
+                return;
+            }
+            if (typeof window.agilbankCartaoAcaoVer === 'function' && window.__agilbankCartoesLista && window.__agilbankCartoesLista.length) {
+                window.agilbankCartaoAcaoVer();
                 return;
             }
             showCartaoFisicoContainer();
@@ -6188,9 +6247,9 @@
                         
                         console.log('✅ Container de configurações exibido');
                         
-                        // Carregar configurações do banco
-                        // DESABILITADO - Não carregar dados automaticamente
-                        console.log('🚫 Carregamento automático desabilitado');
+                        if (typeof carregarConfiguracoes === 'function') {
+                            carregarConfiguracoes();
+                        }
                         
                         console.log('🎉 Painel de configurações aberto com sucesso!');
                     } else {
@@ -6994,40 +7053,196 @@
             extratoContainer.style.transform = 'translateX(0)';
             window.scrollTo(0, 0); // Adiciona scroll para o topo
 
-            // Mostrar movimentações automaticamente
-            const movimentacoesEntrada = document.querySelector('.movimentacoes-entrada');
-            const semMovimentacoes = document.querySelector('.sem-movimentacoes');
-            const valorCredito = document.getElementById('valorCredito');
-            
-            movimentacoesEntrada.style.display = 'block';
-            semMovimentacoes.style.display = 'none';
-            
-            if (valorCredito) valorCredito.textContent = textoSaldoExtratoOuMensagem();
+            const movimentacoesEntrada = document.querySelector('#extratoContainer .movimentacoes-entrada');
+            const semMovimentacoes = document.querySelector('#extratoContainer .sem-movimentacoes');
+            if (movimentacoesEntrada) movimentacoesEntrada.style.display = 'none';
+            if (semMovimentacoes) semMovimentacoes.style.display = 'none';
+            if (typeof carregarExtratoPixReal === 'function') {
+                carregarExtratoPixReal();
+            }
         });
         }
 
-        // Adicionar event listeners para os filtros
-        document.querySelectorAll('.filtro-opcao').forEach(opcao => {
+        // Transações Pix do extrato (API real); null = erro de carga, [] = vazio com sucesso
+        var extratoPixTransacoesCache = null;
+
+        function renderExtratoPixDesdeCache() {
+            var listaEl = document.getElementById('extratoPixListaReal');
+            var msgEl = document.getElementById('extratoPixMensagem');
+            var semEl = document.querySelector('#extratoContainer .sem-movimentacoes');
+            var statEnt = document.querySelector('#extratoContainer .movimentacoes-entrada');
+            if (!listaEl || !msgEl || !semEl) return;
+            if (extratoPixTransacoesCache === null) return;
+            if (statEnt) statEnt.style.display = 'none';
+
+            var ativo = document.querySelector('#extratoContainer .filtro-opcao.ativo');
+            var filtro = ativo ? ativo.getAttribute('data-tipo') : 'todos';
+            var arr = extratoPixTransacoesCache.slice();
+            if (filtro === 'saidas') {
+                arr = arr.filter(function (t) { return t && t.tipo === 'envio'; });
+            } else if (filtro === 'entradas') {
+                arr = arr.filter(function (t) { return t && t.tipo !== 'envio'; });
+            }
+
+            listaEl.innerHTML = '';
+            if (arr.length === 0) {
+                listaEl.style.display = 'none';
+                semEl.style.display = 'block';
+                var h3 = semEl.querySelector('h3');
+                var p = semEl.querySelector('p');
+                if (h3) h3.textContent = 'Nenhuma movimentação neste filtro';
+                if (p) p.textContent = 'Transações Pix registradas aparecem aqui após o envio ou recebimento.';
+                return;
+            }
+
+            semEl.style.display = 'none';
+            listaEl.style.display = 'block';
+
+            arr.forEach(function (t) {
+                if (!t) return;
+                var isEnvio = t.tipo === 'envio';
+                var titulo = isEnvio ? 'PIX enviado' : 'PIX recebido';
+                var rawChave = t.chavePix != null ? String(t.chavePix).trim() : '';
+                var destinatario = rawChave.length > 0 ? rawChave : 'Destinatário não informado';
+                var descTrim = (t.descricao != null && String(t.descricao).trim()) ? String(t.descricao).trim() : '';
+                var desc = descTrim;
+                if (!desc) {
+                    desc = isEnvio ? ('PIX enviado para ' + destinatario) : 'PIX recebido';
+                }
+                var valNum = Number(t.valor);
+                if (isNaN(valNum)) valNum = 0;
+                var valorStr = 'R$ ' + valNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                var valorMostra = isEnvio ? ('- ' + valorStr) : ('+ ' + valorStr);
+                var clsVal = isEnvio ? 'movimentacao-valor negativo' : 'movimentacao-valor positivo';
+                var dataStr = '—';
+                if (t.dataTransacao) {
+                    var dt = new Date(t.dataTransacao);
+                    if (!isNaN(dt.getTime())) {
+                        dataStr = dt.toLocaleString('pt-BR', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+                var st = t.status != null ? String(t.status) : '—';
+
+                var item = document.createElement('div');
+                item.className = 'movimentacao-item';
+
+                var iconWrap = document.createElement('div');
+                iconWrap.className = 'movimentacao-icon';
+                var ic = document.createElement('i');
+                ic.className = 'fas fa-qrcode';
+                iconWrap.appendChild(ic);
+
+                var info = document.createElement('div');
+                info.className = 'movimentacao-info';
+                var h4 = document.createElement('h4');
+                h4.textContent = titulo;
+                var pPara = document.createElement('p');
+                pPara.textContent = isEnvio ? ('Para: ' + destinatario) : ('Chave Pix: ' + destinatario);
+                var pDesc = document.createElement('p');
+                pDesc.textContent = desc;
+                var pData = document.createElement('p');
+                pData.textContent = 'Data: ' + dataStr + ' · Status: ' + st;
+                info.appendChild(h4);
+                info.appendChild(pPara);
+                info.appendChild(pDesc);
+                info.appendChild(pData);
+
+                var valDiv = document.createElement('div');
+                valDiv.className = clsVal;
+                valDiv.textContent = valorMostra;
+
+                item.appendChild(iconWrap);
+                item.appendChild(info);
+                item.appendChild(valDiv);
+                listaEl.appendChild(item);
+            });
+        }
+
+        async function carregarExtratoPixReal() {
+            var msgEl = document.getElementById('extratoPixMensagem');
+            var listaEl = document.getElementById('extratoPixListaReal');
+            var semEl = document.querySelector('#extratoContainer .sem-movimentacoes');
+            var statEnt = document.querySelector('#extratoContainer .movimentacoes-entrada');
+            if (!msgEl || !listaEl || !semEl) return;
+
+            msgEl.style.display = 'block';
+            msgEl.textContent = 'Carregando movimentações Pix...';
+            listaEl.style.display = 'none';
+            listaEl.innerHTML = '';
+            semEl.style.display = 'none';
+            if (statEnt) statEnt.style.display = 'none';
+            extratoPixTransacoesCache = null;
+
+            var token = typeof getAuthToken === 'function' ? getAuthToken() : null;
+            if (!token) {
+                msgEl.textContent = 'Faça login para ver o extrato Pix.';
+                return;
+            }
+
+            try {
+                var response = await fetch(`${AGILBANK_API_BASE}/pix/transactions?page=1&limit=20`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                var raw = await response.json().catch(function () { return {}; });
+                if (!response.ok) {
+                    var extratoMsg = (raw && raw.code === 'ACCOUNT_NOT_VERIFIED')
+                        ? 'Verifique seu e-mail para consultar movimentações Pix.'
+                        : (typeof pixApiMessage === 'function'
+                            ? pixApiMessage(raw, 'Não foi possível carregar o extrato agora.')
+                            : 'Não foi possível carregar o extrato agora.');
+                    msgEl.textContent = extratoMsg;
+                    listaEl.style.display = 'none';
+                    extratoPixTransacoesCache = null;
+                    return;
+                }
+                var d = typeof pixBody === 'function' ? pixBody(raw) : raw.data;
+                extratoPixTransacoesCache = (d && Array.isArray(d.transacoes)) ? d.transacoes : [];
+                msgEl.style.display = 'none';
+                msgEl.textContent = '';
+                renderExtratoPixDesdeCache();
+            } catch (err) {
+                console.error('Extrato Pix:', err);
+                msgEl.textContent = 'Não foi possível carregar o extrato agora.';
+                listaEl.style.display = 'none';
+                extratoPixTransacoesCache = null;
+            }
+        }
+
+        // Adicionar event listeners para os filtros (apenas extrato)
+        document.querySelectorAll('#extratoContainer .filtro-opcao').forEach(opcao => {
             opcao.addEventListener('click', () => {
                 const tipo = opcao.dataset.tipo;
-                const semMovimentacoes = document.querySelector('.sem-movimentacoes');
-                const movimentacoesEntrada = document.querySelector('.movimentacoes-entrada');
+                const semMovimentacoes = document.querySelector('#extratoContainer .sem-movimentacoes');
+                const movimentacoesEntrada = document.querySelector('#extratoContainer .movimentacoes-entrada');
                 
                 // Remove a classe ativo de todos os filtros
-                document.querySelectorAll('.filtro-opcao').forEach(o => o.classList.remove('ativo'));
+                document.querySelectorAll('#extratoContainer .filtro-opcao').forEach(o => o.classList.remove('ativo'));
                 
                 // Adiciona a classe ativo ao filtro clicado
                 opcao.classList.add('ativo');
                 
-                // Mostra/oculta as mensagens baseado no tipo selecionado
-                if (tipo === 'pix' || tipo === 'saidas') {
-                    semMovimentacoes.style.display = 'block';
-                    movimentacoesEntrada.style.display = 'none';
-                } else if (tipo === 'entradas' || tipo === 'todos') {
-                    semMovimentacoes.style.display = 'none';
-                    movimentacoesEntrada.style.display = 'block';
-                    const valorCredito = document.getElementById('valorCredito');
-                    if (valorCredito) valorCredito.textContent = textoSaldoExtratoOuMensagem();
+                if (movimentacoesEntrada) movimentacoesEntrada.style.display = 'none';
+                if (extratoPixTransacoesCache !== null && typeof renderExtratoPixDesdeCache === 'function') {
+                    renderExtratoPixDesdeCache();
+                } else {
+                    var msgFiltro = document.getElementById('extratoPixMensagem');
+                    if (msgFiltro && msgFiltro.style.display === 'block' && msgFiltro.textContent) {
+                        if (msgFiltro.textContent === 'Carregando movimentações Pix...') return;
+                        return;
+                    }
+                    if (semMovimentacoes) {
+                        semMovimentacoes.style.display = 'block';
+                        var h3f = semMovimentacoes.querySelector('h3');
+                        var pf = semMovimentacoes.querySelector('p');
+                        if (h3f) h3f.textContent = 'Nenhuma movimentação encontrada';
+                        if (pf) pf.textContent = 'Abra o extrato novamente para carregar as movimentações Pix.';
+                    }
                 }
             });
         });
@@ -7102,59 +7317,7 @@
         // Adicionar event listener para o item de extrato no menu
         document.querySelector('.menu-item[onclick="showExtratoContainer()"]').addEventListener('click', showExtratoContainer);
 
-        function enviarSolicitacao() {
-            if (!document.getElementById('termosCheck').checked) {
-                alert('Por favor, aceite os termos para continuar.');
-                return;
-            }
-
-            const renda = parseFloat(document.getElementById('rendaInput').value.replace('R$ ', '').replace(',', '.')) || 0;
-            // Calcular limite baseado na renda (sem valor fixo)
-            const limite = Math.min(Math.max(renda * 0.4, 1000), 10000);
-
-            document.querySelector('.formulario-cartao').style.display = 'none';
-            document.getElementById('progressContainer').style.display = 'block';
-            
-            let progress = 0;
-            const progressFill = document.getElementById('progressFill');
-            const progressInterval = setInterval(() => {
-                progress += 1;
-                progressFill.style.width = progress + '%';
-                
-                if (progress >= 100) {
-                    clearInterval(progressInterval);
-                    document.getElementById('progressContainer').style.display = 'none';
-                    document.getElementById('vencimentoContainer').style.display = 'block';
-                }
-            }, 50);
-        }
-
-        function selecionarVencimento(dia) {
-            document.querySelectorAll('.vencimento-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-            event.target.classList.add('selected');
-
-            setTimeout(() => {
-                document.getElementById('vencimentoContainer').style.display = 'none';
-                document.getElementById('aprovacaoContainer').style.display = 'block';
-                
-                setTimeout(() => {
-                    document.getElementById('aprovacaoContainer').style.display = 'none';
-                    document.getElementById('cartaoInfo').style.display = 'block';
-                    document.getElementById('statusContainer').style.display = 'block';
-                    
-                    const renda = parseFloat(document.getElementById('rendaInput').value.replace('R$ ', '').replace(',', '.')) || 0;
-                    // Calcular limite baseado na renda (sem valor fixo)
-            const limite = Math.min(Math.max(renda * 0.4, 1000), 10000);
-                    
-                    document.getElementById('limiteValue').textContent = `R$ ${limite.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-                    document.getElementById('vencimentoValue').textContent = `Dia ${dia}`;
-                    document.getElementById('enderecoValue').textContent = document.querySelector('input[placeholder="Rua, número, complemento"]').value;
-                    atualizarEnderecoEntrega();
-                }, 2000);
-            }, 1000);
-        }
+        // enviarSolicitacao / selecionarVencimento — implementação em js/cartao.js (POST real + GET)
 
         // Event listener removido - agora o botão Cartão usa onclick="showCartaoGerenciamento()" diretamente
         
@@ -7199,29 +7362,28 @@
 
         // Adicionar função para mostrar status de entrega
         function showStatusEntregaContainer() {
+            if (typeof window.agilbankCartaoAcaoStatus === 'function' && window.__agilbankCartoesLista && window.__agilbankCartoesLista.length) {
+                window.agilbankCartaoAcaoStatus();
+                return;
+            }
             ocultarTodosContainers();
             document.getElementById('statusEntregaContainer').style.display = 'block';
             window.scrollTo(0, 0);
         }
 
         // Adicionar event listener para o botão de status de entrega
-        document.addEventListener('DOMContentLoaded', function() {
-            const statusEntregaButton = document.querySelector('.cartao-actions .action-button:first-child');
-            if (statusEntregaButton) {
-                statusEntregaButton.addEventListener('click', showStatusEntregaContainer);
-            }
-        });
 
         // Atualizar o endereço de entrega com o endereço cadastrado
         function atualizarEnderecoEntrega() {
-            const enderecoInput = document.querySelector('input[placeholder="Rua, número, complemento"]');
-            const bairroInput = document.querySelector('input[placeholder="Bairro"]');
-            const cidadeInput = document.querySelector('input[placeholder="Cidade"]');
-            const estadoInput = document.querySelector('input[placeholder="Estado"]');
-            
+            const enderecoInput = document.getElementById('cartaoInputRua') || document.querySelector('input[placeholder="Rua, número, complemento"]');
+            const bairroInput = document.getElementById('cartaoInputBairro') || document.querySelector('input[placeholder="Bairro"]');
+            const cidadeInput = document.getElementById('cartaoInputCidade') || document.querySelector('input[placeholder="Cidade"]');
+            const estadoInput = document.getElementById('cartaoInputEstado') || document.querySelector('input[placeholder="Estado"]');
+
             if (enderecoInput && bairroInput && cidadeInput && estadoInput) {
                 const enderecoCompleto = `${enderecoInput.value} - ${bairroInput.value} - ${cidadeInput.value}/${estadoInput.value}`;
-                document.getElementById('enderecoEntrega').textContent = enderecoCompleto;
+                var ent = document.getElementById('enderecoEntrega');
+                if (ent) ent.textContent = enderecoCompleto;
             }
         }
 
@@ -7247,12 +7409,22 @@
 
         // Função para voltar para a etapa anterior do formulário de cartão
         function voltarParaCartaoSolicitacao() {
-            // Verificar qual etapa está ativa no formulário de cartão
+            if (typeof window.agilbankWizardTryBack === 'function' && window.agilbankWizardTryBack()) {
+                return;
+            }
             const formularioCartao = document.querySelector('.formulario-cartao');
             const progressContainer = document.getElementById('progressContainer');
             const vencimentoContainer = document.getElementById('vencimentoContainer');
             const aprovacaoContainer = document.getElementById('aprovacaoContainer');
-            
+            const pendenteContainer = document.getElementById('cartaoSolicitacaoPendenteContainer');
+
+            if (pendenteContainer && pendenteContainer.style.display === 'block') {
+                pendenteContainer.style.display = 'none';
+                var wzR = document.getElementById('cartaoWizardRoot');
+                if (wzR) wzR.style.display = 'block';
+                return;
+            }
+
             if (aprovacaoContainer && aprovacaoContainer.style.display === 'block') {
                 // Se está na tela de aprovação, voltar para vencimento
                 aprovacaoContainer.style.display = 'none';
@@ -7262,9 +7434,11 @@
                 vencimentoContainer.style.display = 'none';
                 progressContainer.style.display = 'block';
             } else if (progressContainer && progressContainer.style.display === 'block') {
-                // Se está na tela de progresso, voltar para formulário
                 progressContainer.style.display = 'none';
-                formularioCartao.style.display = 'block';
+                var wzRoot = document.getElementById('cartaoWizardRoot');
+                if (wzRoot) wzRoot.style.display = 'block';
+                var wzNav = document.getElementById('cartaoWizardNav');
+                if (wzNav) wzNav.style.display = 'flex';
             } else {
                 // Se está no formulário inicial, voltar para tela principal
                 ocultarTodosContainers();
@@ -7322,11 +7496,19 @@
 
         //Função para mostrar o cartão virtual
         function showCartaoVirtualContainer() {
+            if (typeof window.agilbankCartaoAcaoVirtual === 'function' && window.__agilbankCartoesLista && window.__agilbankCartoesLista.length) {
+                window.agilbankCartaoAcaoVirtual();
+                return;
+            }
             ocultarTodosContainers();
             mostrarAnimacaoLogo02(() => {   
             document.getElementById('cartaoVirtualContainer').style.display = 'block';
             window.scrollTo(0, 0);
-            // Carregar dados do cartão quando abrir o container
+            var crL = document.getElementById('cartaoVirtualBtnCriar');
+            if (crL) {
+                crL.disabled = false;
+                crL.removeAttribute('title');
+            }
             carregarDadosCartaoVirtual();
         });
         }
@@ -7435,10 +7617,19 @@
         }
         //Função para mostrar o cartão físico
         function showCartaoFisicoContainer() {
+            if (typeof window.agilbankCartaoAcaoFisico === 'function' && window.__agilbankCartoesLista && window.__agilbankCartoesLista.length) {
+                window.agilbankCartaoAcaoFisico();
+                return;
+            }
             ocultarTodosContainers();
             mostrarAnimacaoLogo02(() => {
             document.getElementById('cartaoFisicoContainer').style.display = 'block';
             window.scrollTo(0, 0);
+            var desbL = document.getElementById('cartaoFisicoBtnDesbloquear');
+            if (desbL) {
+                desbL.disabled = false;
+                desbL.removeAttribute('title');
+            }
         });
         }
 
@@ -7615,7 +7806,19 @@
     function levarParaResultadoVerificacao() {
         ocultarTodosContainers();
         mostrarAnimacaoLogo02(() => {
-        document.getElementById('resultadoVerificacaoContainer').style.display = 'block';
+        var now = new Date();
+        var dEl = document.getElementById('currentDate');
+        var tEl = document.getElementById('currentTime');
+        if (dEl && !isNaN(now.getTime())) {
+            dEl.textContent = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        if (tEl && !isNaN(now.getTime())) {
+            tEl.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        var pEl = document.getElementById('verificacaoProtocoloValor');
+        if (pEl) pEl.textContent = 'Indisponível';
+        var resC = document.getElementById('resultadoVerificacaoContainer');
+        if (resC) resC.style.display = 'block';
         window.scrollTo(0, 0);
     });
     }
@@ -7624,6 +7827,21 @@
     function containerGerarBoletoPix() {
         ocultarTodosContainers();
         mostrarAnimacaoGovBr(() => {
+        var gruNome = document.getElementById('gruWelcomeUsuario');
+        if (gruNome) {
+            try {
+                var raw = localStorage.getItem('agilbank_user') || localStorage.getItem('govbr_user');
+                if (raw) {
+                    var u = JSON.parse(raw);
+                    var n = (u && (u.nomeCompleto || u.nome || u.name)) ? String(u.nomeCompleto || u.nome || u.name).trim() : '';
+                    gruNome.textContent = n || '—';
+                } else {
+                    gruNome.textContent = '—';
+                }
+            } catch (e) {
+                gruNome.textContent = '—';
+            }
+        }
         document.getElementById('containerGerarBoletoPix').style.display = 'block';
         window.scrollTo(0, 0);
     });
@@ -7840,6 +8058,24 @@
             modal.classList.remove('show');
         }
 
+        function pixBody(body) {
+            if (body && typeof body === 'object' && body.data !== undefined && body.data !== null) {
+                return body.data;
+            }
+            return body;
+        }
+
+        function pixApiMessage(body, fallback) {
+            if (!body || typeof body !== 'object') return fallback || 'Erro desconhecido';
+            if (body.code === 'ACCOUNT_NOT_VERIFIED') return 'Verifique seu e-mail para usar o Pix.';
+            if (body.message) return String(body.message);
+            if (body.code) return String(body.code);
+            if (Array.isArray(body.errors) && body.errors.length > 0 && body.errors[0].message) {
+                return String(body.errors[0].message);
+            }
+            return fallback || 'Erro desconhecido';
+        }
+
         // Carregar dados PIX (saldo, limites)
         async function carregarDadosPix() {
             try {
@@ -7858,12 +8094,19 @@
                     }
                 });
 
+                const raw = await response.json().catch(function () { return {}; });
                 if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('saldoDisponivel').textContent = `R$ ${data.saldoDisponivel || '0,00'}`;
-                    document.getElementById('limiteDiario').textContent = `R$ ${data.limiteDiario || '0,00'}`;
+                    var d = pixBody(raw);
+                    var saldoTopo = document.getElementById('saldoValue');
+                    var saldoTxt = saldoTopo && saldoTopo.textContent ? saldoTopo.textContent.trim() : '';
+                    document.getElementById('saldoDisponivel').textContent = saldoTxt || 'Saldo: ver valor no topo da página';
+                    var lim = d && d.limiteDiario != null ? Number(d.limiteDiario) : 0;
+                    document.getElementById('limiteDiario').textContent = 'R$ ' + lim.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
                 } else {
-                    alert('Erro ao carregar dados PIX');
+                    alert(pixApiMessage(raw, 'Erro ao carregar dados PIX'));
                     fecharModalEnviarPix();
                 }
             } catch (error) {
@@ -7890,14 +8133,16 @@
                     }
                 });
 
+                const raw = await response.json().catch(function () { return {}; });
                 if (response.ok) {
-                    const data = await response.json();
+                    var d = pixBody(raw);
+                    var chaves = (d && d.chavesPix) ? d.chavesPix : [];
                     const listaChaves = document.getElementById('listaChavesPix');
                     if (listaChaves) {
                         listaChaves.innerHTML = '';
 
-                        if (data.chaves && data.chaves.length > 0) {
-                            data.chaves.forEach(chave => {
+                        if (chaves && chaves.length > 0) {
+                            chaves.forEach(function (chave) {
                                 const chaveItem = document.createElement('div');
                                 chaveItem.className = 'chave-item';
                                 chaveItem.innerHTML = `
@@ -7912,7 +8157,7 @@
                         }
                     }
                 } else {
-                    alert('Erro ao carregar chaves PIX');
+                    alert(pixApiMessage(raw, 'Erro ao carregar chaves PIX'));
                     fecharModalReceberPix();
                 }
             } catch (error) {
@@ -7939,21 +8184,27 @@
                     }
                 });
 
+                const raw = await response.json().catch(function () { return {}; });
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Atualizar limites
-                    document.getElementById('limiteDiarioAtual').textContent = `R$ ${data.limiteDiario.toFixed(2)}`;
-                    document.getElementById('limiteMensalAtual').textContent = `R$ ${data.limiteMensal.toFixed(2)}`;
-                    
-                    // Calcular percentuais
-                    const percentualDiario = (data.usadoHoje / data.limiteDiario) * 100;
-                    const percentualMensal = (data.usadoMes / data.limiteMensal) * 100;
-                    
-                    document.getElementById('progressDiario').style.width = `${Math.min(percentualDiario, 100)}%`;
-                    document.getElementById('progressMensal').style.width = `${Math.min(percentualMensal, 100)}%`;
+                    var data = pixBody(raw);
+                    document.getElementById('limiteDiarioAtual').textContent = 'R$ ' + Number(data.limiteDiario || 0).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    document.getElementById('limiteMensalAtual').textContent = 'R$ ' + Number(data.limiteMensal || 0).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    var pctD = (Number(data.limiteDiario) > 0)
+                        ? (Number(data.usadoHoje || 0) / Number(data.limiteDiario)) * 100
+                        : 0;
+                    var pctM = (Number(data.limiteMensal) > 0)
+                        ? (Number(data.usadoMes || 0) / Number(data.limiteMensal)) * 100
+                        : 0;
+                    document.getElementById('progressDiario').style.width = Math.min(pctD, 100) + '%';
+                    document.getElementById('progressMensal').style.width = Math.min(pctM, 100) + '%';
                 } else {
-                    alert('Erro ao carregar limites PIX');
+                    alert(pixApiMessage(raw, 'Erro ao carregar limites PIX'));
                     fecharModalLimitesPix();
                 }
             } catch (error) {
@@ -8088,8 +8339,8 @@
                     fecharModalChavePix();
                     carregarChavesPix();
                 } else {
-                    const error = await response.json();
-                    alert(error.error || 'Erro ao cadastrar chave PIX');
+                    var errBody = await response.json().catch(function () { return {}; });
+                    alert(pixApiMessage(errBody, 'Erro ao cadastrar chave PIX'));
                 }
             } catch (error) {
                 console.error('Erro ao cadastrar chave PIX:', error);
@@ -8135,12 +8386,31 @@
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    alert(`PIX enviado com sucesso!\nNovo saldo: R$ ${data.transaction.novoSaldo}`);
+                    var body = await response.json().catch(function () { return {}; });
+                    var d = pixBody(body);
+                    var msg = (body.message && String(body.message).trim()) || 'PIX enviado com sucesso';
+                    var t = d && d.transacao ? d.transacao : {};
+                    var linhas = [];
+                    if (t.id) linhas.push('ID: ' + t.id);
+                    if (t.chavePix) linhas.push('Chave: ' + t.chavePix);
+                    if (t.valor != null) {
+                        linhas.push('Valor: R$ ' + Number(t.valor).toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }));
+                    }
+                    var detalhe = linhas.join('\n');
+                    alert(msg + (detalhe ? '\n\n' + detalhe : ''));
                     fecharModalEnviarPix();
+                    if (typeof carregarPerfilUsuario === 'function') {
+                        carregarPerfilUsuario();
+                    }
+                    if (typeof carregarExtratoPixReal === 'function') {
+                        carregarExtratoPixReal();
+                    }
                 } else {
-                    const error = await response.json();
-                    alert(error.error || 'Erro ao enviar PIX');
+                    var errSend = await response.json().catch(function () { return {}; });
+                    alert(pixApiMessage(errSend, 'Erro ao enviar PIX'));
                 }
             } catch (error) {
                 console.error('Erro ao enviar PIX:', error);
@@ -10369,10 +10639,23 @@
                     const limiteCartao = data.user_data?.usuario?.limite_cartao || 0;
                     
                     console.log('🔍 Limite do cartão encontrado:', limiteCartao);
-                    
-                    // Modal só aparece se usuário NÃO tem cartão (limite = 0)
-                    if (limiteCartao === 0 || !limiteCartao) {
-                        console.log('✅ Usuário não tem cartão - exibindo modal de propaganda');
+
+                    var temCartaoApi = false;
+                    if (typeof window.agilbankFetchCartoes === 'function') {
+                        try {
+                            var apiCartoes = await window.agilbankFetchCartoes();
+                            temCartaoApi = Array.isArray(apiCartoes) && apiCartoes.length > 0;
+                            if (temCartaoApi && typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
+                                window.agilbankSetDashboardCardOffersVisible(false);
+                            }
+                        } catch (fetchErr) {
+                            console.warn('GET /api/cards (checagem modal):', fetchErr);
+                        }
+                    }
+
+                    // Modal só se não houver limite na ficha E não houver cartão/solicitação na API
+                    if ((limiteCartao === 0 || !limiteCartao) && !temCartaoApi) {
+                        console.log('✅ Sem cartão (perfil e API) — exibindo modal de propaganda');
                         
                         const modal = document.getElementById('agilModal');
                         if (modal) {
@@ -10416,7 +10699,7 @@
                             }
                         }
                     } else {
-                        console.log('✅ Usuário já tem cartão - NÃO exibindo modal');
+                        console.log('✅ Usuário já tem cartão (perfil ou API) — NÃO exibindo modal');
                     }
                 } else {
                     console.error('❌ Erro ao carregar dados do usuário:', response.status);

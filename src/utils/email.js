@@ -1,6 +1,28 @@
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
 
+/**
+ * Base URL do front onde ficam confirmar-email.html e reset-password.html (pasta /banco).
+ * Evita duplicar /banco se FRONTEND_URL já terminar com /banco.
+ */
+function frontendBancoPagesBase() {
+  const raw = String(process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '');
+  if (!raw) return '/banco';
+  const lower = raw.toLowerCase();
+  if (lower.endsWith('/banco')) return raw;
+  return `${raw}/banco`;
+}
+
+function confirmarEmailPageUrl(token) {
+  const base = frontendBancoPagesBase();
+  return `${base}/confirmar-email.html?token=${encodeURIComponent(token)}`;
+}
+
+function resetPasswordPageUrl(token) {
+  const base = frontendBancoPagesBase();
+  return `${base}/reset-password.html?token=${encodeURIComponent(token)}`;
+}
+
 // Configuração do transporter de email
 const createTransporter = () => {
   return nodemailer.createTransporter({
@@ -55,13 +77,13 @@ const emailTemplates = {
             
             <p>Para ativar sua conta e começar a usar todos os serviços do AgilBank, clique no botão abaixo:</p>
             
-            <a href="${process.env.FRONTEND_URL}/verify-email?token=${data.token}" class="button">
+            <a href="${confirmarEmailPageUrl(data.token)}" class="button">
               ✅ Verificar Email
             </a>
             
             <p>Ou copie e cole este link no seu navegador:</p>
             <p style="word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;">
-              ${process.env.FRONTEND_URL}/verify-email?token=${data.token}
+              ${confirmarEmailPageUrl(data.token)}
             </p>
             
             <p><strong>Importante:</strong> Este link expira em 24 horas por motivos de segurança.</p>
@@ -112,13 +134,13 @@ const emailTemplates = {
             
             <p>Para redefinir sua senha, clique no botão abaixo:</p>
             
-            <a href="${process.env.FRONTEND_URL}/reset-password?token=${data.token}" class="button">
+            <a href="${resetPasswordPageUrl(data.token)}" class="button">
               🔐 Redefinir Senha
             </a>
             
             <p>Ou copie e cole este link no seu navegador:</p>
             <p style="word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;">
-              ${process.env.FRONTEND_URL}/reset-password?token=${data.token}
+              ${resetPasswordPageUrl(data.token)}
             </p>
             
             <p><strong>Este link expira em 1 hora por motivos de segurança.</strong></p>

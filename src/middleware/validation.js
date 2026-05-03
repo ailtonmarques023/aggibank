@@ -310,8 +310,224 @@ const validatePixTransaction = [
   handleValidationErrors
 ];
 
+/**
+ * Bloqueia campos sensiveis no corpo e valida estrutura opcional de dadosAnalise / lgpd.
+ * POST legado { tipo, limite } continua valido.
+ */
+function rejectForbiddenCardBodyFields(req, res, next) {
+  const body = req.body;
+  if (!body || typeof body !== 'object') {
+    return next();
+  }
+
+  const forbiddenRoot = new Set([
+    'senha',
+    'senhacartao',
+    'senhadocartao',
+    'pin',
+    'cvv',
+    'pan',
+    'password',
+    'numerocartao',
+    'cardnumber',
+    'dadosSolicitacao',
+    'cardtoken',
+  ]);
+
+  for (const key of Object.keys(body)) {
+    const lower = key.toLowerCase();
+    if (forbiddenRoot.has(lower)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campo não permitido na solicitação de cartão',
+        code: 'FORBIDDEN_FIELD',
+      });
+    }
+  }
+
+  const da = body.dadosAnalise;
+  if (da !== undefined && da !== null) {
+    if (typeof da !== 'object' || Array.isArray(da)) {
+      return res.status(400).json({
+        success: false,
+        message: 'dadosAnalise deve ser um objeto',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    const allowedDa = new Set([
+      'rendaMensalDeclarada',
+      'tempoEmprego',
+      'empresa',
+      'empresaAtual',
+      'enderecoEntregaDiferente',
+      'observacao',
+      'endereco',
+    ]);
+
+    for (const k of Object.keys(da)) {
+      const kl = k.toLowerCase();
+      if (/senha|pin|cvv|pan|password|cardtoken|numerocartao/.test(kl)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Campo não permitido em dadosAnalise',
+          code: 'FORBIDDEN_FIELD',
+        });
+      }
+      if (!allowedDa.has(k)) {
+        return res.status(400).json({
+          success: false,
+          message: `Campo não permitido em dadosAnalise: ${k}`,
+          code: 'VALIDATION_ERROR',
+        });
+      }
+    }
+
+    if (da.endereco !== undefined && da.endereco !== null) {
+      if (typeof da.endereco !== 'object' || Array.isArray(da.endereco)) {
+        return res.status(400).json({
+          success: false,
+          message: 'endereco inválido',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const allowedEnd = new Set(['rua', 'bairro', 'cidade', 'estado', 'cep']);
+      for (const ek of Object.keys(da.endereco)) {
+        const ekl = ek.toLowerCase();
+        if (/senha|pin|cvv|pan/.test(ekl)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Campo não permitido em endereco',
+            code: 'FORBIDDEN_FIELD',
+          });
+        }
+        if (!allowedEnd.has(ek)) {
+          return res.status(400).json({
+            success: false,
+            message: `Campo não permitido em endereco: ${ek}`,
+            code: 'VALIDATION_ERROR',
+          });
+        }
+      }
+    }
+
+    if (da.rendaMensalDeclarada !== undefined && da.rendaMensalDeclarada !== null) {
+      const n = Number(da.rendaMensalDeclarada);
+      if (!Number.isFinite(n) || n < 0 || n > 50_000_000) {
+        return res.status(400).json({
+          success: false,
+          message: 'rendaMensalDeclarada inválida',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+    }
+
+    if (da.tempoEmprego !== undefined && da.tempoEmprego !== null) {
+      const s = String(da.tempoEmprego);
+      if (s.length > 80) {
+        return res.status(400).json({
+          success: false,
+          message: 'tempoEmprego muito longo',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+    }
+
+    if (da.empresa !== undefined && da.empresa !== null && String(da.empresa).length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: 'empresa muito longa',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    if (da.empresaAtual !== undefined && da.empresaAtual !== null && String(da.empresaAtual).length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: 'empresaAtual muito longa',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    if (da.observacao !== undefined && da.observacao !== null && String(da.observacao).length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: 'observacao muito longa',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    if (
+      da.enderecoEntregaDiferente !== undefined &&
+      da.enderecoEntregaDiferente !== null &&
+      typeof da.enderecoEntregaDiferente !== 'boolean'
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'enderecoEntregaDiferente deve ser booleano',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    if (da.endereco) {
+      const maxLens = { rua: 200, bairro: 100, cidade: 100, estado: 2, cep: 20 };
+      for (const [fk, max] of Object.entries(maxLens)) {
+        if (da.endereco[fk] != null && String(da.endereco[fk]).length > max) {
+          return res.status(400).json({
+            success: false,
+            message: `endereco.${fk} muito longo`,
+            code: 'VALIDATION_ERROR',
+          });
+        }
+      }
+    }
+  }
+
+  const lg = body.lgpd;
+  if (lg !== undefined && lg !== null) {
+    if (typeof lg !== 'object' || Array.isArray(lg)) {
+      return res.status(400).json({
+        success: false,
+        message: 'lgpd deve ser um objeto',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    const allowedLg = new Set(['versao', 'aceito']);
+    for (const k of Object.keys(lg)) {
+      if (!allowedLg.has(k)) {
+        return res.status(400).json({
+          success: false,
+          message: `Campo não permitido em lgpd: ${k}`,
+          code: 'VALIDATION_ERROR',
+        });
+      }
+    }
+
+    if (lg.aceito !== true) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aceite LGPD é obrigatório quando lgpd é enviado',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    const ver = lg.versao == null ? '' : String(lg.versao).trim();
+    if (!ver || ver.length > 64) {
+      return res.status(400).json({
+        success: false,
+        message: 'Versão LGPD inválida',
+        code: 'VALIDATION_ERROR',
+      });
+    }
+  }
+
+  next();
+}
+
 // Validações para cartão
 const validateCardRequest = [
+  rejectForbiddenCardBodyFields,
   body('tipo')
     .isIn(['credito', 'debito'])
     .withMessage('Tipo de cartão deve ser crédito ou débito'),

@@ -9,11 +9,150 @@ const { recordAudit } = require('../utils/auditLog');
 
 const router = express.Router();
 
-/** Resposta API: sem token interno demo (persistido só no banco). */
+const SCHEMA_SOLICITACAO = 1;
+
+/** Resposta API: sem token interno, sem snapshot de solicitacao nem metadados LGPD persistidos. */
 function publicCard(cartao) {
   if (!cartao) return cartao;
-  const { cardToken: _omit, ...rest } = cartao;
+  const {
+    cardToken: _omitToken,
+    dadosSolicitacao: _omitSnap,
+    lgpdConsentAt: _omitLgpdAt,
+    lgpdConsentVersion: _omitLgpdVer,
+    senha: _omitSenha,
+    pin: _omitPin,
+    cvv: _omitCvv,
+    pan: _omitPan,
+    password: _omitPassword,
+    ...rest
+  } = cartao;
   return rest;
+}
+
+function trimStr(v, max) {
+  if (v === undefined || v === null) return undefined;
+  const s = String(v).trim();
+  if (s === '') return undefined;
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+/**
+ * Monta objeto persistivel em dadosSolicitacao (apenas whitelist; sem PIN/CVV/PAN).
+ */
+function sanitizeDadosAnaliseForStorage(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return null;
+  }
+
+  const out = {};
+
+  if (raw.rendaMensalDeclarada !== undefined && raw.rendaMensalDeclarada !== null) {
+    const n = Number(raw.rendaMensalDeclarada);
+    if (Number.isFinite(n) && n >= 0 && n <= 50_000_000) {
+      out.rendaMensalDeclarada = Math.round(n * 100) / 100;
+    }
+  }
+
+  const tempo = trimStr(raw.tempoEmprego, 80);
+  if (tempo !== undefined) out.tempoEmprego = tempo;
+
+  const empresa = trimStr(raw.empresa, 200);
+  if (empresa !== undefined) out.empresa = empresa;
+
+  const empresaAtual = trimStr(raw.empresaAtual, 200);
+  if (empresaAtual !== undefined) out.empresaAtual = empresaAtual;
+
+  if (typeof raw.enderecoEntregaDiferente === 'boolean') {
+    out.enderecoEntregaDiferente = raw.enderecoEntregaDiferente;
+  }
+
+  const obs = trimStr(raw.observacao, 500);
+  if (obs !== undefined) out.observacao = obs;
+
+  if (raw.endereco && typeof raw.endereco === 'object' && !Array.isArray(raw.endereco)) {
+    const e = {};
+    const rua = trimStr(raw.endereco.rua, 200);
+    const bairro = trimStr(raw.endereco.bairro, 100);
+    const cidade = trimStr(raw.endereco.cidade, 100);
+    const estado = trimStr(raw.endereco.estado, 2);
+    const cep = trimStr(raw.endereco.cep, 20);
+    if (rua !== undefined) e.rua = rua;
+    if (bairro !== undefined) e.bairro = bairro;
+    if (cidade !== undefined) e.cidade = cidade;
+    if (estado !== undefined) e.estado = estado.toUpperCase();
+    if (cep !== undefined) e.cep = cep;
+    if (Object.keys(e).length) out.endereco = e;
+  }
+
+  return Object.keys(out).length ? out : null;
+}
+
+/** Renda mensal declarada >= este valor (BRL) → status inicial `aprovado` (regra explícita, sem score). */
+const REGRA_RENDA_MIN_APROVACAO = 2000;
+
+/**
+ * Limite sugerido: 30% da renda declarada, entre R$ 300 e R$ 10.000.
+ * @param {number} renda
+ * @returns {number|null}
+ */
+function limiteSugeridoPorRenda030(renda) {
+  const r = Number(renda);
+  if (!Number.isFinite(r) || r < 0) return null;
+  const raw = r * 0.3;
+  const rounded = Math.round(raw * 100) / 100;
+  return Math.min(10_000, Math.max(300, rounded));
+}
+
+/**
+ * Define limite final e status inicial a partir de `dadosAnalise` sanitizado (renda) e corpo do POST.
+ * Transparência: retorna rótulos de critério para persistir em `dadosSolicitacao.decisaoAutomatica`.
+ *
+ * @param {{ limiteBody: unknown, analiseSan: object|null, scoreCredito: number }} p
+ */
+function resolveLimiteEStatusCriacaoCard({ limiteBody, analiseSan, scoreCredito }) {
+  const rendaVal = analiseSan && analiseSan.rendaMensalDeclarada != null
+    ? analiseSan.rendaMensalDeclarada
+    : null;
+  const rendaN = rendaVal != null && Number.isFinite(Number(rendaVal)) ? Number(rendaVal) : null;
+
+  const limiteSugerido = rendaN != null ? limiteSugeridoPorRenda030(rendaN) : null;
+
+  let limiteFonte = 'score_credito';
+  let limiteFinal;
+  if (limiteBody !== undefined && limiteBody !== null && limiteBody !== '') {
+    limiteFinal = Number(limiteBody);
+    limiteFonte = 'cliente';
+  } else if (limiteSugerido != null) {
+    limiteFinal = limiteSugerido;
+    limiteFonte = 'sugerido_renda_0_3';
+  } else {
+    limiteFinal = calculateCreditLimit(scoreCredito);
+    limiteFonte = 'score_credito';
+  }
+
+  let statusInicial = 'pendente';
+  let statusCriterio = 'pendente_sem_renda_declarada';
+  if (rendaN != null && Number.isFinite(rendaN)) {
+    if (rendaN >= REGRA_RENDA_MIN_APROVACAO) {
+      statusInicial = 'aprovado';
+      statusCriterio = 'aprovado_renda_maior_igual_2000';
+    } else {
+      statusInicial = 'pendente';
+      statusCriterio = 'pendente_renda_menor_2000';
+    }
+  }
+
+  const dataAprovacao = statusInicial === 'aprovado' ? new Date() : null;
+
+  return {
+    limiteFinal,
+    statusInicial,
+    dataAprovacao,
+    limiteFonte,
+    statusCriterio,
+    limiteSugerido,
+    rendaN,
+  };
 }
 
 // Aplicar autenticação em todas as rotas
@@ -88,14 +227,43 @@ router.get('/', async (req, res) => {
  */
 router.post('/', validateCardRequest, async (req, res) => {
   try {
-    const { tipo, limite } = req.body;
+    const { tipo, limite, dadosAnalise, lgpd } = req.body;
+
+    const analiseSan = sanitizeDadosAnaliseForStorage(dadosAnalise);
+
+    const decisao = resolveLimiteEStatusCriacaoCard({
+      limiteBody: limite,
+      analiseSan,
+      scoreCredito: req.user.scoreCredito,
+    });
+
+    let dadosSolicitacao = null;
+    if (analiseSan) {
+      dadosSolicitacao = {
+        schemaVersion: SCHEMA_SOLICITACAO,
+        dadosAnalise: analiseSan,
+        decisaoAutomatica: {
+          versaoRegra: '202605-v1',
+          limiteFonte: decisao.limiteFonte,
+          statusCriterio: decisao.statusCriterio,
+          limiteSugeridoRenda030: decisao.limiteSugerido,
+        },
+      };
+    }
+
+    let lgpdConsentAt = null;
+    let lgpdConsentVersion = null;
+    if (lgpd && typeof lgpd === 'object' && lgpd.aceito === true && lgpd.versao) {
+      lgpdConsentAt = new Date();
+      lgpdConsentVersion = String(lgpd.versao).trim().slice(0, 64);
+    }
 
     // Verificar se usuário já tem cartão ativo do mesmo tipo
     const cartaoExistente = await prisma.cartao.findFirst({
       where: {
         userId: req.user.id,
         tipo,
-        status: { in: ['aprovado', 'pendente'] }
+        status: { in: ['aprovado', 'pendente', 'ativo'] }
       }
     });
 
@@ -109,8 +277,6 @@ router.post('/', validateCardRequest, async (req, res) => {
 
     const { maskedNumber, last4, bandeira, validade, cardToken } = generateDemoCardFields();
 
-    const limiteFinal = limite || calculateCreditLimit(req.user.scoreCredito);
-
     const cartao = await prisma.cartao.create({
       data: {
         userId: req.user.id,
@@ -119,16 +285,24 @@ router.post('/', validateCardRequest, async (req, res) => {
         validade,
         bandeira,
         cardToken,
-        limite: limiteFinal,
+        limite: decisao.limiteFinal,
         tipo,
-        status: 'pendente',
+        status: decisao.statusInicial,
+        dataAprovacao: decisao.dataAprovacao,
+        ...(dadosSolicitacao ? { dadosSolicitacao } : {}),
+        ...(lgpdConsentAt ? { lgpdConsentAt, lgpdConsentVersion } : {}),
       },
     });
 
     logger.banking('card_requested', req.user.id, {
       tipo,
-      limite: limiteFinal,
+      limite: decisao.limiteFinal,
+      status: decisao.statusInicial,
       bandeira,
+      limiteFonte: decisao.limiteFonte,
+      statusCriterio: decisao.statusCriterio,
+      temSnapshotSolicitacao: Boolean(dadosSolicitacao),
+      temConsentimentoLgpd: Boolean(lgpdConsentAt),
     });
 
     await recordAudit({
@@ -136,10 +310,29 @@ router.post('/', validateCardRequest, async (req, res) => {
       action: 'card.requested',
       entity: 'Cartao',
       entityId: cartao.id,
-      metadata: { tipo, bandeira },
+      metadata: {
+        tipo,
+        bandeira,
+        temDadosAnalise: Boolean(analiseSan),
+        statusInicial: decisao.statusInicial,
+        limiteFonte: decisao.limiteFonte,
+        statusCriterio: decisao.statusCriterio,
+      },
       ip: req.ip,
       userAgent: req.get('User-Agent'),
     });
+
+    if (lgpdConsentAt) {
+      await recordAudit({
+        userId: req.user.id,
+        action: 'card.application.lgpd_accepted',
+        entity: 'Cartao',
+        entityId: cartao.id,
+        metadata: { versao: lgpdConsentVersion },
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+    }
 
     res.status(201).json({
       success: true,

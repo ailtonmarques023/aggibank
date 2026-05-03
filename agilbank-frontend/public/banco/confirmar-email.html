@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Confirmado - AgilBank</title>
+    <title>Confirmação de e-mail - AgilBank</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
         * {
@@ -80,6 +80,10 @@
             margin-bottom: 20px;
         }
 
+        .confirmation-title.error-title {
+            color: #c62828;
+        }
+
         .confirmation-message {
             color: #666;
             font-size: 16px;
@@ -145,6 +149,11 @@
             font-size: 12px;
         }
 
+        .panel-loading p {
+            color: #666;
+            font-size: 16px;
+        }
+
         @media (max-width: 480px) {
             .confirmation-container {
                 padding: 30px 20px;
@@ -158,7 +167,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="confirmation-container">
+    <div id="panelLoading" class="confirmation-container panel-loading">
+        <p>Verificando seu e-mail...</p>
+        <div class="footer">
+            <p>AgilBank - Sistema de Pagamentos Digitais</p>
+        </div>
+    </div>
+
+    <div id="panelError" class="confirmation-container" style="display: none;">
+        <h1 class="confirmation-title error-title">Não foi possível verificar</h1>
+        <p class="confirmation-message" id="errorMessage">Não foi possível verificar o email</p>
+        <button type="button" class="login-button" onclick="goLogin()">Ir para o login</button>
+        <div class="footer">
+            <p>AgilBank - Sistema de Pagamentos Digitais</p>
+        </div>
+    </div>
+
+    <div id="panelSuccess" class="confirmation-container" style="display: none;">
         <div class="success-icon">
             <i class="fas fa-check"></i>
         </div>
@@ -189,62 +214,101 @@
     </div>
 
     <script>
-        // Obter parâmetros da URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const email = urlParams.get('email');
-        const token = urlParams.get('token');
-        
-        // Exibir email se disponível
-        if (email) {
-            document.getElementById('userEmail').textContent = email;
-        }
-        
-        // Contador regressivo
-        let countdown = 5;
-        const timerElement = document.getElementById('timer');
-        const countdownElement = document.getElementById('countdown');
-        
-        const countdownInterval = setInterval(() => {
-            countdown--;
-            timerElement.textContent = countdown;
-            
-            if (countdown <= 0) {
-                clearInterval(countdownInterval);
-                redirectToLogin();
+        function getAgilbankApiBase() {
+            if (window.AGILBANK_API_BASE && typeof window.AGILBANK_API_BASE === 'string') {
+                var b = window.AGILBANK_API_BASE.replace(/\/$/, '');
+                return b.endsWith('/api') ? b : (b + '/api');
             }
-        }, 1000);
-        
-        function redirectToLogin() {
-            const button = document.querySelector('.login-button');
-            const buttonText = document.getElementById('buttonText');
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            
-            // Mostrar loading
-            button.disabled = true;
-            loadingSpinner.style.display = 'inline-block';
-            buttonText.textContent = 'Redirecionando...';
-            countdownElement.style.display = 'none';
-            
-            // Redirecionar após 1 segundo
-            setTimeout(() => {
-                window.location.href = 'index.agilbank.html';
+            var h = window.location.hostname;
+            if (h === 'localhost' || h === '127.0.0.1') {
+                return 'http://localhost:3001/api';
+            }
+            return window.location.origin + '/api';
+        }
+
+        function goLogin() {
+            window.location.href = 'index.html';
+        }
+
+        function showPanel(id) {
+            document.getElementById('panelLoading').style.display = id === 'panelLoading' ? 'block' : 'none';
+            document.getElementById('panelError').style.display = id === 'panelError' ? 'block' : 'none';
+            document.getElementById('panelSuccess').style.display = id === 'panelSuccess' ? 'block' : 'none';
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('errorMessage');
+            if (el) el.textContent = msg || 'Não foi possível verificar o email';
+            showPanel('panelError');
+        }
+
+        var countdownInterval = null;
+
+        function startSuccessCountdown() {
+            var countdown = 5;
+            var timerElement = document.getElementById('timer');
+            var countdownElement = document.getElementById('countdown');
+            if (!timerElement || !countdownElement) return;
+            countdownInterval = setInterval(function () {
+                countdown--;
+                timerElement.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    redirectToLogin();
+                }
             }, 1000);
         }
-        
-        // Confirmar email no backend (opcional)
-        if (token && email) {
-            fetch('https://aggibank-production.up.railway.app/api/auth/confirm-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    token: token,
-                    email: email
+
+        function redirectToLogin() {
+            var button = document.querySelector('#panelSuccess .login-button');
+            var buttonText = document.getElementById('buttonText');
+            var loadingSpinner = document.getElementById('loadingSpinner');
+            var countdownElement = document.getElementById('countdown');
+            if (button) button.disabled = true;
+            if (loadingSpinner) loadingSpinner.style.display = 'inline-block';
+            if (buttonText) buttonText.textContent = 'Redirecionando...';
+            if (countdownElement) countdownElement.style.display = 'none';
+            setTimeout(function () {
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+
+        var urlParams = new URLSearchParams(window.location.search);
+        var email = urlParams.get('email');
+        var token = urlParams.get('token');
+
+        if (!token) {
+            showError('Link inválido: falta o token de verificação.');
+        } else {
+            (function verifyEmail() {
+                var url = getAgilbankApiBase().replace(/\/$/, '') + '/auth/verify-email';
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token })
                 })
-            }).catch(error => {
-                console.log('Confirmação automática não disponível:', error);
-            });
+                    .then(function (res) {
+                        return res.json().then(function (data) {
+                            return { res: res, data: data };
+                        });
+                    })
+                    .then(function (r) {
+                        if (r.res.ok && r.data && r.data.success) {
+                            showPanel('panelSuccess');
+                            var msg = (r.data.message && String(r.data.message).trim()) || 'Email verificado com sucesso';
+                            var ue = document.getElementById('userEmail');
+                            if (ue) ue.textContent = email || msg;
+                            startSuccessCountdown();
+                        } else {
+                            var d = r.data || {};
+                            var err = d.message || d.code || 'Não foi possível verificar o email';
+                            showError(err);
+                        }
+                    })
+                    .catch(function () {
+                        showError('Não foi possível verificar o email');
+                    });
+            })();
         }
     </script>
 </body>

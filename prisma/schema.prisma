@@ -98,22 +98,25 @@ model ConfiguracoesUsuario {
 }
 
 model Cartao {
-  id              String    @id @default(cuid())
-  userId          String
-  maskedNumber    String
-  last4           String    @db.VarChar(4)
-  validade        String
-  bandeira        String
-  cardToken       String?   @unique
-  limite          Decimal   @db.Decimal(10, 2)
-  saldoUtilizado  Decimal   @default(0) @db.Decimal(10, 2)
-  status          String    @default("pendente")
-  tipo            String    @default("credito")
-  dataSolicitacao DateTime  @default(now())
-  dataAprovacao   DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(cuid())
+  userId              String
+  maskedNumber        String
+  last4               String    @db.VarChar(4)
+  validade            String
+  bandeira            String
+  cardToken           String?   @unique
+  limite              Decimal   @db.Decimal(10, 2)
+  saldoUtilizado      Decimal   @default(0) @db.Decimal(10, 2)
+  status              String    @default("pendente")
+  tipo                String    @default("credito")
+  dataSolicitacao     DateTime  @default(now())
+  dataAprovacao       DateTime?
+  dadosSolicitacao    Json?
+  lgpdConsentAt       DateTime?
+  lgpdConsentVersion  String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("cartoes")
 }
