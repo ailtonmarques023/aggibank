@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { prisma } = require('../config/database');
 const {
@@ -6,15 +7,27 @@ const {
   generateRefreshToken,
   verifyRefreshToken,
   hashRefreshToken,
+  hashOpaqueToken,
   authenticateToken,
 } = require('../middleware/auth');
-const { validateUserRegistration, validateLogin } = require('../middleware/validation');
+const {
+  validateUserRegistration,
+  validateLogin,
+  validateForgotPassword,
+  validateVerifyResetToken,
+  validateResetPassword,
+} = require('../middleware/validation');
 const logger = require('../utils/logger');
-const { sendEmail } = require('../utils/email');
+const { sendEmail, sendPasswordResetEmail } = require('../utils/email');
 const { recordAudit } = require('../utils/auditLog');
 
 const router = express.Router();
 const CPF_LOGIN_REGEX = /^\d{11}$/;
+
+const FORGOT_PASSWORD_PUBLIC_MESSAGE =
+  'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado.';
+
+const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
 
 const getLoginIdentifier = (body) => {
   const rawIdentifier = body.identificador || body.email;
@@ -73,7 +86,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     const agencia = '0001';
 
     // Gerar token de verificação
-    const tokenVerificacao = require('crypto').randomBytes(32).toString('hex');
+    const tokenVerificacao = crypto.randomBytes(32).toString('hex');
 
     // Criar usuário
     const user = await prisma.user.create({
@@ -483,6 +496,242 @@ router.post('/logout', authenticateToken, async (req, res) => {
  *       400:
  *         description: Token inválido
  */
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Solicitar instruções de redefinição de senha
+ *     tags: [Autenticação]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, cpf]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               cpf:
+ *                 type: string
+ *                 description: CPF com 11 dígitos
+ *     responses:
+ *       200:
+ *         description: Resposta genérica (não indica se o usuário existe)
+ */
+router.post('/forgot-password', validateForgotPassword, async (req, res) => {
+  const genericResponse = () =>
+    res.status(200).json({
+      success: true,
+      message: FORGOT_PASSWORD_PUBLIC_MESSAGE,
+    });
+
+  try {
+    const email = String(req.body.email || '')
+      .trim()
+      .toLowerCase();
+    const cpf = String(req.body.cpf || '').replace(/\D/g, '');
+
+    const user = await prisma.user.findFirst({
+      where: {
+        email,
+        cpf,
+      },
+      select: {
+        id: true,
+        nomeCompleto: true,
+        email: true,
+      },
+    });
+
+    if (!user) {
+      logger.security('password_reset_forgot', { reason: 'no_user_match', emailRedacted: true });
+      return genericResponse();
+    }
+
+    await prisma.token.updateMany({
+      where: {
+        userId: user.id,
+        tipo: 'password_reset',
+        isAtivo: true,
+      },
+      data: { isAtivo: false },
+    });
+
+    const plainToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashOpaqueToken(plainToken);
+    const expiraEm = new Date(Date.now() + 60 * 60 * 1000);
+
+    await prisma.token.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        tipo: 'password_reset',
+        expiraEm,
+        isAtivo: true,
+      },
+    });
+
+    try {
+      await sendPasswordResetEmail({
+        nome: user.nomeCompleto,
+        email: user.email,
+        token: plainToken,
+      });
+    } catch (emailError) {
+      logger.warn('Erro ao enviar e-mail de redefinição de senha:', emailError);
+    }
+
+    logger.banking('password_reset_requested', user.id, { email: user.email });
+
+    return genericResponse();
+  } catch (error) {
+    logger.error('Erro em forgot-password:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/verify-reset-token:
+ *   post:
+ *     summary: Validar token de redefinição de senha
+ *     tags: [Autenticação]
+ */
+router.post('/verify-reset-token', validateVerifyResetToken, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const tokenHash = hashOpaqueToken(token);
+    const now = new Date();
+
+    const record = await prisma.token.findFirst({
+      where: {
+        tokenHash,
+        tipo: 'password_reset',
+        isAtivo: true,
+        expiraEm: { gt: now },
+      },
+      include: {
+        user: {
+          select: {
+            nomeCompleto: true,
+            isAtivo: true,
+          },
+        },
+      },
+    });
+
+    if (!record || !record.user?.isAtivo) {
+      return res.status(200).json({
+        valid: false,
+        message: RESET_TOKEN_INVALID_MESSAGE,
+      });
+    }
+
+    return res.status(200).json({
+      valid: true,
+      nome: record.user.nomeCompleto,
+    });
+  } catch (error) {
+    logger.error('Erro em verify-reset-token:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Definir nova senha com token de redefinição
+ *     tags: [Autenticação]
+ */
+router.post('/reset-password', validateResetPassword, async (req, res) => {
+  try {
+    const { token, new_password: newPassword } = req.body;
+    const tokenHash = hashOpaqueToken(token);
+    const now = new Date();
+
+    const record = await prisma.token.findFirst({
+      where: {
+        tokenHash,
+        tipo: 'password_reset',
+        isAtivo: true,
+        expiraEm: { gt: now },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            isAtivo: true,
+          },
+        },
+      },
+    });
+
+    if (!record || !record.user?.isAtivo) {
+      return res.status(400).json({
+        success: false,
+        message: RESET_TOKEN_INVALID_MESSAGE,
+        code: 'INVALID_RESET_TOKEN',
+      });
+    }
+
+    const saltRounds = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
+    const senhaHash = await bcrypt.hash(newPassword, saltRounds);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: record.user.id },
+        data: { senha: senhaHash },
+      }),
+      prisma.token.update({
+        where: { id: record.id },
+        data: { isAtivo: false },
+      }),
+      prisma.token.updateMany({
+        where: {
+          userId: record.user.id,
+          tipo: 'refresh',
+          isAtivo: true,
+        },
+        data: { isAtivo: false },
+      }),
+    ]);
+
+    logger.banking('password_reset_completed', record.user.id, {});
+
+    await recordAudit({
+      userId: record.user.id,
+      action: 'auth.password_reset_success',
+      entity: 'User',
+      entityId: record.user.id,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Senha redefinida com sucesso.',
+    });
+  } catch (error) {
+    logger.error('Erro em reset-password:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
 router.post('/verify-email', async (req, res) => {
   try {
     const { token } = req.body;

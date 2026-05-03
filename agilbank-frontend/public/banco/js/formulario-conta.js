@@ -410,17 +410,17 @@ class FormularioConta {
         console.log('  Tamanho:', senhaValue.length);
         
         return {
-            // Dados pessoais
-            nome: document.getElementById('contaNome')?.value || '',
+            // Dados pessoais (IDs do index: contaNomeCompleto / contaDataNascimento; página legada: contaNome / contaDataNasc)
+            nome: document.getElementById('contaNomeCompleto')?.value || document.getElementById('contaNome')?.value || '',
             cpf: document.getElementById('contaCpf')?.value || '',
             email: document.getElementById('contaEmail')?.value || '',
             telefone: document.getElementById('contaTelefone')?.value || '',
-            dataNascimento: document.getElementById('contaDataNasc')?.value || '',
+            dataNascimento: document.getElementById('contaDataNascimento')?.value || document.getElementById('contaDataNasc')?.value || '',
             senha: senhaValue,
             
-            // Endereço
+            // Endereço (rua: contaRua no index, contaEndereco na página legada)
             cep: document.getElementById('contaCep')?.value || '',
-            endereco: document.getElementById('contaEndereco')?.value || '',
+            endereco: document.getElementById('contaRua')?.value || document.getElementById('contaEndereco')?.value || '',
             numero: document.getElementById('contaNumero')?.value || '',
             complemento: document.getElementById('contaComplemento')?.value || '',
             bairro: document.getElementById('contaBairro')?.value || '',
@@ -489,109 +489,152 @@ class FormularioConta {
         return true;
     }
     
+    buildRegisterPayload(formData) {
+        const nomeCompleto = String(formData.nome || '').trim();
+        const cpf = String(formData.cpf || '').replace(/\D/g, '');
+        const email = String(formData.email || '').trim();
+        const telefoneRaw = String(formData.telefone || '');
+        const telefoneDigits = telefoneRaw.replace(/\D/g, '');
+        const telefone = telefoneDigits.length >= 10 ? telefoneDigits : telefoneRaw.trim();
+        const dataNascimento = String(formData.dataNascimento || '').trim();
+        const senha = String(formData.senha || '');
+
+        const cep = String(formData.cep || '').trim();
+        const logradouro = String(formData.endereco || '').trim();
+        const numero = String(formData.numero || '').trim();
+        const complemento = String(formData.complemento || '').trim();
+        const bairro = String(formData.bairro || '').trim();
+        const cidade = String(formData.cidade || '').trim();
+        const estado = String(formData.estado || '').trim();
+
+        const payload = {
+            nomeCompleto,
+            email,
+            cpf,
+            dataNascimento,
+            senha
+        };
+
+        if (telefone) {
+            payload.telefone = telefone;
+        }
+
+        const hasEndereco = [cep, logradouro, numero, bairro, cidade, estado].some((x) => x && String(x).trim());
+        if (hasEndereco) {
+            payload.endereco = {
+                cep,
+                logradouro,
+                numero,
+                complemento: complemento || '',
+                bairro,
+                cidade,
+                estado
+            };
+        }
+
+        const profissao = String(formData.profissao || '').trim();
+        const rendaStr = String(formData.renda || '').trim();
+        let rendaMensal = null;
+        if (rendaStr !== '') {
+            const r = parseFloat(rendaStr.replace(',', '.'));
+            if (!Number.isNaN(r)) {
+                rendaMensal = r;
+            }
+        }
+        const empresa = String(formData.empresa || '').trim();
+        const cargo = String(formData.cargo || '').trim();
+
+        if (profissao) {
+            payload.dadosProfissionais = { profissao };
+            if (rendaMensal !== null) {
+                payload.dadosProfissionais.rendaMensal = rendaMensal;
+            }
+            if (empresa) {
+                payload.dadosProfissionais.empresa = empresa;
+            }
+            if (cargo) {
+                payload.dadosProfissionais.cargo = cargo;
+            }
+        }
+
+        return payload;
+    }
+
+    parseRegisterErrorBody(data) {
+        if (!data || typeof data !== 'object') {
+            return 'Erro ao criar usuário no banco de dados';
+        }
+        let msg = data.message || data.error || '';
+        if (!msg && data.code) {
+            msg = String(data.code);
+        }
+        if (!msg && Array.isArray(data.errors) && data.errors.length && data.errors[0]) {
+            const e0 = data.errors[0];
+            msg = e0.msg || e0.message || '';
+        }
+        return msg || 'Erro ao criar usuário no banco de dados';
+    }
+
     async createUserInDatabase(formData) {
         try {
             console.log('💾 Enviando dados para o banco de dados...');
-            
-            // Preparar dados para envio
-            const userData = {
-                nome: formData.nome,
-                cpf: formData.cpf,
-                email: formData.email,
-                telefone: formData.telefone,
-                dataNascimento: formData.dataNascimento,
-                senha: formData.senha, // ✅ ADICIONADO: Campo senha
-                endereco: {
-                    cep: formData.cep,
-                    endereco: formData.endereco,
-                    numero: formData.numero,
-                    complemento: formData.complemento,
-                    bairro: formData.bairro,
-                    cidade: formData.cidade,
-                    estado: formData.estado
-                },
-                dadosProfissionais: {
-                    profissao: formData.profissao,
-                    renda: formData.renda,
-                    empresa: formData.empresa,
-                    cargo: formData.cargo
-                },
-                documentos: formData.documentos,
-                aceitaTermos: formData.aceitaTermos,
-                aceitaComunicacoes: formData.aceitaComunicacoes,
-                aceitaPolitica: formData.aceitaPolitica,
-                dataCriacao: new Date().toISOString(),
-                status: 'pendente_confirmacao'
-            };
 
-            // Fazer chamada real para a API
-            const response = await fetch('http://127.0.0.1:5000/api/usuarios/criar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.getAuthToken()}`
-                },
-                body: JSON.stringify(userData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Erro ao criar usuário no banco de dados');
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                throw new Error('AgilBank.api indisponível. Recarregue a página.');
             }
 
-            const result = await response.json();
+            const payload = this.buildRegisterPayload(formData);
+
+            const response = await window.AgilBank.api.request('auth/register', {
+                auth: false,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json().catch(function () {
+                return {};
+            });
+
+            if (!response.ok || result.success === false) {
+                throw new Error(this.parseRegisterErrorBody(result));
+            }
+
+            const inner = result.data && typeof result.data === 'object' ? result.data : {};
+            const user = inner.user || result.user || (inner.id != null ? inner : null);
+            const userId =
+                user && user.id != null
+                    ? user.id
+                    : result.userId != null
+                      ? result.userId
+                      : null;
+
+            if (userId == null || userId === '') {
+                throw new Error(this.parseRegisterErrorBody(result));
+            }
+
             console.log('✅ Usuário criado no banco:', result);
-            
+
             return {
-                userId: result.userId,
+                userId: userId,
                 status: 'created',
-                message: 'Usuário criado com sucesso no banco de dados',
+                message: result.message || 'Usuário criado com sucesso no banco de dados',
                 data: result
             };
-
         } catch (error) {
             console.error('❌ Erro ao criar usuário:', error);
             throw new Error(`Falha ao criar usuário: ${error.message}`);
         }
     }
-    
+
     async sendConfirmationEmail(email, userId) {
-        try {
-            console.log('📧 Enviando email de confirmação...');
-            
-            // Fazer chamada real para o serviço de email
-            const response = await fetch('http://127.0.0.1:5000/api/email/confirmacao', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.getAuthToken()}`
-                },
-                body: JSON.stringify({
-                    email: email,
-                    userId: userId,
-                    tipo: 'confirmacao_conta'
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Erro ao enviar email de confirmação');
-            }
-
-            const result = await response.json();
-            console.log('✅ Email enviado:', result);
-            
-            return {
-                status: 'sent',
-                message: `Email de confirmação enviado para ${email}`,
-                emailId: result.emailId,
-                data: result
-            };
-
-        } catch (error) {
-            console.error('❌ Erro ao enviar email:', error);
-            throw new Error(`Falha ao enviar email: ${error.message}`);
-        }
+        console.info(
+            '[FormularioConta] E-mail de verificação já enviado pelo backend em POST /api/auth/register; não há segunda chamada (email/confirmacao).',
+            { email: email, userId: userId }
+        );
+        return { success: true, skipped: true };
     }
     
     getAuthToken() {

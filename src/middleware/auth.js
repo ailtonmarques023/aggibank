@@ -3,11 +3,13 @@ const jwt = require('jsonwebtoken');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 
-/** HMAC-SHA256 do refresh token; nunca persistir o token em claro. */
-const hashRefreshToken = (refreshToken) => {
+/** HMAC-SHA256 de token opaco (reset, refresh, etc.); nunca persistir o valor em claro. */
+const hashOpaqueToken = (opaqueToken) => {
   const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || '';
-  return crypto.createHmac('sha256', secret).update(refreshToken).digest('hex');
+  return crypto.createHmac('sha256', secret).update(opaqueToken).digest('hex');
 };
+
+const hashRefreshToken = (refreshToken) => hashOpaqueToken(refreshToken);
 
 // Middleware para verificar token JWT
 const authenticateToken = async (req, res, next) => {
@@ -261,6 +263,7 @@ module.exports = {
   generateToken,
   generateRefreshToken,
   verifyRefreshToken,
+  hashOpaqueToken,
   hashRefreshToken,
   optionalAuth,
 };

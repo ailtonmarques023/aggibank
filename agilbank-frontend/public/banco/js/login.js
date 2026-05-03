@@ -3,8 +3,33 @@ class LoginSystem {
     constructor() {
         this.isLoggedIn = false;
         this.userData = null;
-        this.apiBase = 'http://127.0.0.1:5000/api';
         this.init();
+    }
+
+    extractLoginToken(data) {
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+        return (
+            data.accessToken ||
+            data.token ||
+            (data.data && data.data.accessToken) ||
+            (data.data && data.data.token) ||
+            null
+        );
+    }
+
+    extractLoginUser(data) {
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+        return (
+            data.user ||
+            data.usuario ||
+            (data.data && data.data.user) ||
+            (data.data && data.data.usuario) ||
+            null
+        );
     }
 
     init() {
@@ -19,8 +44,10 @@ class LoginSystem {
         const token =
             sessionStorage.getItem('govbr_token') ||
             sessionStorage.getItem('agilbank_token') ||
+            sessionStorage.getItem('token') ||
             localStorage.getItem('govbr_token') ||
-            localStorage.getItem('agilbank_token');
+            localStorage.getItem('agilbank_token') ||
+            localStorage.getItem('token');
         if (token) {
             try {
                 const storedUser =
@@ -36,6 +63,8 @@ class LoginSystem {
                     sessionStorage.setItem('govbr_token', token);
                     localStorage.setItem('govbr_token', token);
                 }
+                sessionStorage.setItem('token', token);
+                localStorage.setItem('token', token);
 
                 if (storedUser && !sessionStorage.getItem('govbr_user')) {
                     sessionStorage.setItem('govbr_user', storedUser);
@@ -294,7 +323,14 @@ class LoginSystem {
         this.showLoading();
 
         try {
-            const response = await fetch(`${this.apiBase}/auth/login`, {
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                this.hideLoading();
+                this.showError('Cliente de API indisponível. Recarregue a página.');
+                return;
+            }
+
+            const response = await window.AgilBank.api.request('auth/login', {
+                auth: false,
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -305,32 +341,55 @@ class LoginSystem {
                 })
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(function () {
+                return {};
+            });
 
             if (response.ok) {
-                // Salvar token
-                const userData = JSON.stringify(data.user);
-                sessionStorage.setItem('govbr_token', data.accessToken);
-                sessionStorage.setItem('govbr_user', userData);
-                localStorage.setItem('govbr_token', data.accessToken);
-                localStorage.setItem('govbr_user', userData);
-                
-                this.userData = data.user;
+                const token = this.extractLoginToken(data);
+                const user = this.extractLoginUser(data);
+
+                if (!token) {
+                    this.hideLoading();
+                    this.showError('Erro no login: resposta inválida do servidor.');
+                    return;
+                }
+
+                if (window.AgilBank.auth && typeof window.AgilBank.auth.setSession === 'function') {
+                    window.AgilBank.auth.setSession(token, user);
+                } else {
+                    const userData = JSON.stringify(user || {});
+                    sessionStorage.setItem('govbr_token', token);
+                    sessionStorage.setItem('agilbank_token', token);
+                    sessionStorage.setItem('token', token);
+                    sessionStorage.setItem('govbr_user', userData);
+                    sessionStorage.setItem('agilbank_user', userData);
+                    localStorage.setItem('govbr_token', token);
+                    localStorage.setItem('agilbank_token', token);
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('govbr_user', userData);
+                    localStorage.setItem('agilbank_user', userData);
+                }
+
+                this.userData = user || {};
                 this.isLoggedIn = true;
-                
-                // ✅ Disparar evento de login para UserDataManager
+
                 const loginEvent = new CustomEvent('userLoggedIn', {
-                    detail: { userData: data.user }
+                    detail: { userData: this.userData }
                 });
                 document.dispatchEvent(loginEvent);
-                
+
                 this.hideLoading();
-                this.updateUserHeader(data.user);
+                this.updateUserHeader(this.userData);
                 this.showMainApp();
                 this.showSuccessMessage();
             } else {
                 this.hideLoading();
-                this.showError(data.error || 'Erro ao fazer login. Tente novamente.');
+                this.showError(
+                    data.message ||
+                        data.error ||
+                        'Erro ao fazer login. Tente novamente.'
+                );
             }
         } catch (error) {
             console.error('Erro no login:', error);
@@ -366,7 +425,7 @@ class LoginSystem {
                 <i class="fas fa-check-circle"></i>
             </div>
             <div class="login-success-title">Login realizado com sucesso!</div>
-            <div class="login-success-message">Bem-vindo(a), ${this.userData.name}!</div>
+            <div class="login-success-message">Bem-vindo(a), ${this.userData.nomeCompleto || this.userData.name || 'Usuário'}!</div>
         `;
 
         document.body.appendChild(successDiv);
@@ -375,20 +434,6 @@ class LoginSystem {
         setTimeout(() => {
             successDiv.remove();
         }, 3000);
-    }
-
-    logout() {
-        sessionStorage.removeItem('govbr_login');
-        localStorage.removeItem('govbr_login');
-        this.isLoggedIn = false;
-        this.userData = null;
-        this.showLoginScreen();
-        
-        // Limpar formulário
-        document.getElementById('loginForm').reset();
-        document.querySelectorAll('.login-input').forEach(input => {
-            input.classList.remove('error', 'valid');
-        });
     }
 
     togglePassword() {
@@ -515,12 +560,11 @@ class LoginSystem {
         const token = sessionStorage.getItem('govbr_token') || localStorage.getItem('govbr_token');
         
         // Tentar chamar API de logout (opcional)
-        if (token) {
+        if (token && window.AgilBank && window.AgilBank.api && typeof window.AgilBank.api.request === 'function') {
             try {
-                await fetch(`${this.apiBase}/auth/logout`, {
+                await window.AgilBank.api.request('auth/logout', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -529,14 +573,23 @@ class LoginSystem {
                 console.log('⚠️ Erro na API de logout, continuando logout local:', error);
             }
         }
-        
-        // Limpar dados locais (sempre fazer isso)
-        sessionStorage.removeItem('govbr_token');
-        sessionStorage.removeItem('govbr_user');
-        sessionStorage.removeItem('govbr_login');
-        localStorage.removeItem('govbr_token');
-        localStorage.removeItem('govbr_user');
-        localStorage.removeItem('govbr_login');
+
+        if (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.clearSession === 'function') {
+            window.AgilBank.auth.clearSession();
+        } else {
+            sessionStorage.removeItem('govbr_token');
+            sessionStorage.removeItem('govbr_user');
+            sessionStorage.removeItem('agilbank_token');
+            sessionStorage.removeItem('agilbank_user');
+            sessionStorage.removeItem('govbr_login');
+            sessionStorage.removeItem('token');
+            localStorage.removeItem('govbr_token');
+            localStorage.removeItem('govbr_user');
+            localStorage.removeItem('agilbank_token');
+            localStorage.removeItem('agilbank_user');
+            localStorage.removeItem('govbr_login');
+            localStorage.removeItem('token');
+        }
         
         this.isLoggedIn = false;
         this.userData = null;

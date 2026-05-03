@@ -165,6 +165,60 @@ const validateUserRegistration = [
   handleValidationErrors
 ];
 
+const normalizeCpfDigits = (value) => {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  return String(value).replace(/\D/g, '');
+};
+
+// Esqueci senha — e-mail + CPF (11 dígitos após normalização)
+const validateForgotPassword = [
+  body('email')
+    .notEmpty()
+    .withMessage('E-mail é obrigatório')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('E-mail inválido'),
+
+  body('cpf')
+    .notEmpty()
+    .withMessage('CPF é obrigatório')
+    .customSanitizer(normalizeCpfDigits)
+    .matches(/^\d{11}$/)
+    .withMessage('CPF deve conter exatamente 11 dígitos'),
+
+  handleValidationErrors,
+];
+
+const validateVerifyResetToken = [
+  body('token')
+    .notEmpty()
+    .withMessage('Token é obrigatório')
+    .isString()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Token inválido'),
+
+  handleValidationErrors,
+];
+
+const validateResetPassword = [
+  body('token')
+    .notEmpty()
+    .withMessage('Token é obrigatório')
+    .isString()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Token inválido'),
+
+  body('new_password')
+    .matches(/^\d{6}$/)
+    .withMessage('Senha deve conter exatamente 6 dígitos numéricos'),
+
+  handleValidationErrors,
+];
+
 // Validações para login
 const validateLogin = [
   body('email')
@@ -404,6 +458,9 @@ const validateAddress = [
 module.exports = {
   handleValidationErrors,
   validateUserRegistration,
+  validateForgotPassword,
+  validateVerifyResetToken,
+  validateResetPassword,
   validateLogin,
   validateProfileUpdate,
   validatePixTransaction,

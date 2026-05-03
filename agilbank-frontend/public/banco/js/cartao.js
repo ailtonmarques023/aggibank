@@ -131,6 +131,71 @@ function limparDadosCartao() {
     localStorage.removeItem('dadosCartao');
 }
 
+function getCartaoAuthToken() {
+    if (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.getToken === 'function') {
+        var t = window.AgilBank.auth.getToken();
+        if (t) return t;
+    }
+    return (
+        sessionStorage.getItem('govbr_token') ||
+        localStorage.getItem('govbr_token') ||
+        sessionStorage.getItem('agilbank_token') ||
+        localStorage.getItem('agilbank_token') ||
+        sessionStorage.getItem('token') ||
+        localStorage.getItem('token') ||
+        null
+    );
+}
+
+function clampLimiteCartao(valor) {
+    var n = typeof valor === 'number' ? valor : parseFloat(String(valor), 10);
+    if (!isFinite(n)) return 100;
+    return Math.min(50000, Math.max(100, n));
+}
+
+function extrairCartaoDaResposta(body) {
+    if (!body || typeof body !== 'object') return null;
+    if (body.data && body.data.cartao) return body.data.cartao;
+    if (body.cartao) return body.cartao;
+    return null;
+}
+
+function extrairCartoesDaResposta(body) {
+    if (!body || typeof body !== 'object') return [];
+    var list =
+        (body.data && body.data.cartoes) ||
+        body.cartoes ||
+        body.cards ||
+        null;
+    return Array.isArray(list) ? list : [];
+}
+
+function buildNumeroLegacyFromLast4(last4) {
+    var l4 = String(last4 == null ? '0000' : last4)
+        .replace(/\D/g, '')
+        .slice(-4)
+        .padStart(4, '0');
+    return '4532' + '11111111' + l4;
+}
+
+function normalizarCartaoParaLegado(cartao, fallbackLimite) {
+    if (!cartao || typeof cartao !== 'object') {
+        return { limite: fallbackLimite };
+    }
+    var last4 = cartao.last4 != null ? String(cartao.last4) : '0000';
+    var limiteRaw = cartao.limite != null ? cartao.limite : fallbackLimite;
+    var limite = typeof limiteRaw === 'number' ? limiteRaw : parseFloat(String(limiteRaw), 10);
+    var numero = buildNumeroLegacyFromLast4(last4);
+    return Object.assign({}, cartao, {
+        limite: isFinite(limite) ? limite : fallbackLimite,
+        numero: numero,
+        maskedNumber: cartao.maskedNumber || '**** **** **** ' + last4.slice(-4),
+        validade: cartao.validade,
+        status: cartao.status,
+        tipo: cartao.tipo || 'credito'
+    });
+}
+
 // ==========================================
 // Funções de Interface do Usuário
 // ==========================================
@@ -151,10 +216,14 @@ function calcularLimite(renda) {
  * Valida os termos, coleta dados e envia para a API real
  */
 async function enviarSolicitacao() {
-    // Verificar se o usuário está logado
-    const token = localStorage.getItem('govbr_token');
+    var token = getCartaoAuthToken();
     if (!token) {
         showErrorModal('Erro de Autenticação', 'Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
+        return;
+    }
+
+    if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+        showErrorModal('Erro', 'Cliente de API indisponível. Recarregue a página.');
         return;
     }
 
@@ -174,43 +243,45 @@ async function enviarSolicitacao() {
     iniciarBarraProgresso();
 
     try {
-        // Preparar dados para a API
         const rendaInput = document.getElementById('rendaInput').value;
         const renda = parseFloat(rendaInput.replace(/\D/g, ''));
-        
-        const cardData = {
-            titular: dadosCartao.empregoAtual || 'Titular do Cartão',
-            limite: calcularLimite(renda),
-            tipo: 'credito',
-            renda_mensal: renda,
-            endereco: dadosCartao.endereco,
-            tempo_emprego: dadosCartao.tempoEmprego
-        };
+        var limitePedido = clampLimiteCartao(calcularLimite(renda));
+        var payloadApi = { tipo: 'credito', limite: limitePedido };
 
-        console.log('🔄 Enviando solicitação de cartão para API...', cardData);
+        console.log('🔄 Enviando solicitação de cartão para API...', payloadApi);
 
-        // Enviar para a API real
-        const response = await fetch('http://127.0.0.1:5000/api/cards', {
+        const response = await window.AgilBank.api.request('cards', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(cardData)
+            body: JSON.stringify(payloadApi)
         });
 
-        const result = await response.json();
+        const result = await response.json().catch(function () {
+            return {};
+        });
 
         if (response.ok) {
-            console.log('✅ Cartão criado com sucesso:', result);
-            
-            // Salvar dados do cartão no localStorage para referência
-            localStorage.setItem('cartao_solicitado', JSON.stringify(result));
-            
-            // Atualizar interface com dados reais
-            document.getElementById('valorLiberado').textContent = result.limite.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-            
-            // Continuar com o fluxo de aprovação
+            var cartaoApi = extrairCartaoDaResposta(result);
+            var normalized = normalizarCartaoParaLegado(cartaoApi, limitePedido);
+            console.log('✅ Cartão criado com sucesso:', normalized);
+
+            localStorage.setItem('cartao_solicitado', JSON.stringify(normalized));
+
+            var limiteNum = normalized.limite;
+            var textoLimite = typeof limiteNum === 'number'
+                ? 'R$ ' + limiteNum.toFixed(2).replace('.', ',')
+                : String(limiteNum);
+            if (typeof window.aplicarLimiteCartaoNosSeisElementos === 'function') {
+                window.aplicarLimiteCartaoNosSeisElementos(textoLimite);
+            } else {
+                ['limiteOpcoesValorPrincipal', 'limiteOpcoesValorDetalhe', 'limiteCartaoVirtualHeader', 'limiteCartaoVirtualRodape', 'limiteCartaoFisicoHeader', 'limiteCartaoFisicoRodape'].forEach(function (elid) {
+                    var el = document.getElementById(elid);
+                    if (el) el.textContent = textoLimite;
+                });
+            }
+
             setTimeout(() => {
                 document.getElementById('progressContainer').style.display = 'none';
                 document.getElementById('vencimentoContainer').style.display = 'block';
@@ -218,9 +289,11 @@ async function enviarSolicitacao() {
 
         } else {
             console.error('❌ Erro ao criar cartão:', result);
-            showErrorModal('Erro na Solicitação', result.error || 'Erro ao processar solicitação do cartão');
-            
-            // Voltar ao formulário
+            showErrorModal(
+                'Erro na Solicitação',
+                result.message || result.error || 'Erro ao processar solicitação do cartão'
+            );
+
             document.getElementById('progressContainer').style.display = 'none';
             document.querySelector('.formulario-cartao').style.display = 'block';
         }
@@ -229,7 +302,6 @@ async function enviarSolicitacao() {
         console.error('❌ Erro na requisição:', error);
         showErrorModal('Erro de Conexão', 'Erro ao conectar com o servidor. Verifique sua internet e tente novamente.');
         
-        // Voltar ao formulário
         document.getElementById('progressContainer').style.display = 'none';
         document.querySelector('.formulario-cartao').style.display = 'block';
     }
@@ -375,18 +447,25 @@ async function selecionarVencimento(dia) {
  * Atualiza informações adicionais do cartão com dados reais
  */
 function atualizarInformacoesCartao(cartaoData, diaVencimento) {
-    // Atualizar número do cartão (mascarado)
-    const numeroCartaoElement = document.getElementById('numeroCartao');
-    if (numeroCartaoElement && cartaoData.numero) {
-        const numeroMascarado = cartaoData.numero.substring(0, 4) + '****' + cartaoData.numero.substring(12);
-        numeroCartaoElement.textContent = numeroMascarado;
+    function aplicarNumero(el) {
+        if (cartaoData.numero) {
+            const numeroMascarado = cartaoData.numero.substring(0, 4) + '****' + cartaoData.numero.substring(12);
+            el.textContent = numeroMascarado;
+        }
     }
-
-    // Atualizar validade
-    const validadeElement = document.getElementById('validadeCartao');
-    if (validadeElement && cartaoData.validade) {
-        validadeElement.textContent = cartaoData.validade;
+    function aplicarValidade(el) {
+        if (cartaoData.validade) {
+            el.textContent = cartaoData.validade;
+        }
     }
+    ['numeroCartaoVirtual', 'numeroCartaoFisico'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) aplicarNumero(el);
+    });
+    ['validadeCartaoVirtual', 'validadeCartaoFisico'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) aplicarValidade(el);
+    });
 
     // Atualizar status
     const statusElement = document.getElementById('statusCartao');
@@ -412,44 +491,64 @@ function atualizarInformacoesCartao(cartaoData, diaVencimento) {
 /**
  * Verifica se o usuário já solicitou um cartão e redireciona adequadamente
  */
+/**
+ * @returns {boolean|undefined} true = tem cartão (fluxo gerenciamento); false = lista vazia (abrir solicitação); undefined = erro/auth (não assumir sem cartão)
+ */
 async function verificarCartaoSolicitado() {
-    const token = localStorage.getItem('govbr_token');
+    var token = getCartaoAuthToken();
     if (!token) {
-        return false; // Usuário não logado
+        return false;
+    }
+
+    if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+        console.warn('⚠️ AgilBank.api indisponível ao verificar cartões');
+        return undefined;
     }
 
     try {
-        // Buscar cartões do usuário na API
-        const response = await fetch('http://127.0.0.1:5000/api/cards', {
+        const response = await window.AgilBank.api.request('cards', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
 
-        if (response.ok) {
-            const result = await response.json();
-            const cartoes = result.cards || [];
+        if (response.status === 401 || response.status === 403) {
+            var errBody = await response.json().catch(function () {
+                return {};
+            });
+            showErrorModal(
+                'Acesso ao cartão',
+                errBody.message || 'Não foi possível verificar seus cartões. Faça login ou verifique seu e-mail.'
+            );
+            return undefined;
+        }
 
-            if (cartoes.length > 0) {
-                console.log('✅ Usuário já possui cartões:', cartoes);
-                
-                // Se já tem cartão, redireciona para gerenciamento
-                ocultarTodosContainers();
-                mostrarAnimacaoLogo02(() => {
-                    document.getElementById('cartaoGerenciamentoContainer').style.display = 'block';
-                    document.getElementById('cartaoGerenciamentoContainer').style.opacity = '1';
-                    document.getElementById('cartaoGerenciamentoContainer').style.transform = 'translateX(0)';
-                    window.scrollTo(0, 0);
-                });
-                return true;
-            }
-        } else {
+        if (!response.ok) {
             console.log('⚠️ Erro ao buscar cartões:', response.status);
+            return undefined;
+        }
+
+        const result = await response.json().catch(function () {
+            return {};
+        });
+        const cartoes = extrairCartoesDaResposta(result);
+
+        if (cartoes.length > 0) {
+            console.log('✅ Usuário já possui cartões:', cartoes);
+
+            ocultarTodosContainers();
+            mostrarAnimacaoLogo02(() => {
+                document.getElementById('cartaoGerenciamentoContainer').style.display = 'block';
+                document.getElementById('cartaoGerenciamentoContainer').style.opacity = '1';
+                document.getElementById('cartaoGerenciamentoContainer').style.transform = 'translateX(0)';
+                window.scrollTo(0, 0);
+            });
+            return true;
         }
     } catch (error) {
         console.error('❌ Erro ao verificar cartões:', error);
+        return undefined;
     }
 
     return false;
@@ -462,7 +561,7 @@ setTimeout(() => {
         const originalShowCartaoContainer = showCartaoContainer;
         showCartaoContainer = async function() {
             const temCartao = await verificarCartaoSolicitado();
-            if (!temCartao) {
+            if (temCartao === false) {
                 originalShowCartaoContainer();
             }
         };

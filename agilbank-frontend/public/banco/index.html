@@ -5,9 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="format-detection" content="telephone=no">
     <title>Caixa Tem - Simulação</title>
+    <script src="js/legacyAuthStore.js"></script>
+    <script src="js/legacyApiClient.js"></script>
+    <script src="js/legacyNavigation.js"></script>
     <script>
         (function enforceSingleLoginScreen() {
-            var sessionToken = sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token');
+            var authStore = window.AgilBank && window.AgilBank.auth;
+            var sessionToken = authStore && typeof authStore.getToken === 'function'
+                ? authStore.getToken()
+                : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
+                    localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
             if (!sessionToken) {
                 localStorage.removeItem('agilbank_token');
                 localStorage.removeItem('agilbank_user');
@@ -15,6 +22,7 @@
                 localStorage.removeItem('govbr_token');
                 localStorage.removeItem('govbr_user');
                 localStorage.removeItem('govbr_login');
+                localStorage.removeItem('token');
                 window.location.replace('/login');
             }
         })();
@@ -1951,8 +1959,8 @@
             </div>
             <div class="modal-body">
                 <div class="info-box" style="background: #d4edda; border-color: #28a745; margin-bottom: 20px;">
-                    <h3 style="color: #28a745; margin: 0 0 8px 0;">✅ CPF Validado</h3>
-                    <p style="margin: 0; color: #155724;">Agora você pode criar uma nova senha para sua conta.</p>
+                    <h3 style="color: #28a745; margin: 0 0 8px 0;">📧 Verifique seu e-mail</h3>
+                    <p style="margin: 0; color: #155724;">A redefinição de senha é feita pelo link enviado ao e-mail cadastrado. Abra esse link para definir a nova senha com segurança.</p>
                 </div>
                 <form id="criarSenhaForm">
                     <div class="form-group">
@@ -2142,7 +2150,7 @@
             <!-- Barra de progresso -->
             <div class="limite-progress-container" style="margin-bottom: 12px;">
                 <div class="limite-progress-bar" style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
-                    <div class="limite-progress-fill" id="limiteProgressFill" style="height: 100%; background: linear-gradient(90deg, #0066b3, #28a745); border-radius: 4px; width: 0%; transition: width 0.3s ease;"></div>
+                    <div class="limite-progress-fill" id="limiteProgressFillDashboard" style="height: 100%; background: linear-gradient(90deg, #0066b3, #28a745); border-radius: 4px; width: 0%; transition: width 0.3s ease;"></div>
                 </div>
             </div>
             
@@ -2303,7 +2311,7 @@
             </div>
         </div>
         <!--conteudo-->
-        <div class="vantagens-container">
+        <div class="vantagens-container" id="vantagensContainer">
             <div class="slider-dots">
                 <span class="dot active"></span>
                 <span class="dot"></span>
@@ -3082,7 +3090,7 @@
 
                 <div class="infoBox-Dados credito-disponivel" style="margin: 20px 0;">
                     <span class="infoLabel-Dados">Crédito Disponível</span>
-                    <span class="infoValue-Dados" id="valorLiberado">R$ 0,00</span>
+                    <span class="infoValue-Dados" id="emprestimoCreditoDisponivelValor">R$ 0,00</span>
                     <small>*Valor liberado após contrato do seguro</small>
                 </div>
             </div>
@@ -3128,7 +3136,7 @@
                 <div class="emprestimo-liberado-content">
                     <div class="info-box">
                         <span class="info-label">Valor Liberado:</span>
-                        <span class="info-value" style="color: #0066b3;" id="valorLiberado">R$ 0,00</span>
+                        <span class="info-value" style="color: #0066b3;" id="emprestimoValorLiberadoValor">R$ 0,00</span>
                     </div>
                     
                     <div class="info-box">
@@ -3225,7 +3233,7 @@
                 <!-- Modal dos termos e condições -->
                 <div id="termosModaEmprestimo" class="termos-modal-emprestimo">
                     <div class="termos-content-emprestimo">
-                        <button class="close-termos" onclick="fecharModalTermos()">&times;</button>
+                        <button class="close-termos" onclick="fecharModalTermosEmprestimo()">&times;</button>
                         
                         <div class="termos-header-emprestimo">
                             <h3>Termos e Condições do Empréstimo</h3>
@@ -3266,7 +3274,7 @@
 
                         <div class="termos-footer">
                             <button class="btn-aceitar-termos" onclick="fecharModalTermos1()">Aceitar</button>
-                            <button class="btn-recusar-termos" onclick="fecharModalTermos()">Recusar</button>
+                            <button class="btn-recusar-termos" onclick="recusarModalTermosEmprestimo()">Recusar</button>
                         </div>
                     </div>
                 </div>
@@ -3275,7 +3283,7 @@
                 <!-- barra de progresso -->
                 <div class="limite-progress-container">
                         <div class="limite-progress-bar">
-                            <div class="limite-progress-fill" id="limiteProgressFill" style="width: 0%;"></div>
+                            <div class="limite-progress-fill" id="limiteProgressFillEmprestimoLiberado" style="width: 0%;"></div>
                         </div>
                 </div>
 
@@ -4077,7 +4085,7 @@
                     </div>
                     <div class="limite-info">
                         <h3>Seu Limite Atual</h3>
-                        <div class="limite-valor" id="valorLiberado">R$ 0,00</div>
+                        <div class="limite-valor" id="limiteOpcoesValorPrincipal">R$ 0,00</div>
                     </div>
                 </div>
                 <div class="limite-progress-bar"> <!--barra de progresso-->
@@ -4085,7 +4093,7 @@
                 </div>
                 <div class="limite-details"> <!--detalhes-->
                     <span>R$ 0,00</span>
-                    <span id="valorLiberado">R$ 0,00</span>
+                    <span id="limiteOpcoesValorDetalhe">R$ 0,00</span>
                 </div>
             </div>
                         <!-- deixe aberto para me voltar para essa parte -->
@@ -4167,16 +4175,16 @@
                 </div>
                 <div class="cartao-numero">
                     <span class="label">Número do Cartão</span>
-                    <span class="numero" id="numeroCartao">•••• •••• •••• ••••</span>
+                    <span class="numero" id="numeroCartaoVirtual">•••• •••• •••• ••••</span>
                 </div>
                 <div class="cartao-info">
                     <div class="cartao-titular">
                         <span class="label">Titular</span>
-                        <span class="valor" id="titularCartao">NOME DO TITULAR</span>
+                        <span class="valor" id="titularCartaoVirtual">NOME DO TITULAR</span>
                     </div>
                     <div class="cartao-validade">
                         <span class="label">Validade</span>
-                        <span class="valor" id="validadeCartao">MM/AA</span>
+                        <span class="valor" id="validadeCartaoVirtual">MM/AA</span>
                     </div>
                 </div>
             </div>
@@ -4184,15 +4192,15 @@
             <div class="cartao-limite-info">
                 <div class="limite-header">
                     <h3>Limite Disponível</h3>
-                    <span class="limite-valor" id="valorLiberado">R$ 0,00</span>
+                    <span class="limite-valor" id="limiteCartaoVirtualHeader">R$ 0,00</span>
                 </div>
                 <div class="limite-progress-container">
                     <div class="limite-progress-bar">
-                        <div class="limite-progress-fill" id="limiteProgressFill" style="width: 0%;"></div>
+                        <div class="limite-progress-fill" id="limiteProgressFillCartaoVirtual" style="width: 0%;"></div>
                     </div>
                     <div class="limite-labels">
                         <span>Usado: R$ 0,00</span>
-                        <span id="valorLiberado">R$ 0,00</span>
+                        <span id="limiteCartaoVirtualRodape">R$ 0,00</span>
                     </div>
                 </div>
             </div>
@@ -4202,11 +4210,11 @@
                     <i class="fas fa-plus-circle"></i>
                     Criar
                 </button>
-                <button class="btn-secondary small" onclick="copiarDadosCartao()">
+                <button class="btn-secondary small" onclick="copiarDadosCartao('virtual')">
                     <i class="fas fa-copy"></i>
                     Copiar
                 </button>
-                <button class="btn-secondary small" onclick="bloquearCartao()" id="btnBloquear">
+                <button class="btn-secondary small" onclick="bloquearCartao()" id="btnBloquearCartaoVirtual">
                     <i class="fas fa-lock"></i>
                     Bloquear
                 </button>
@@ -4218,7 +4226,7 @@
                     <h3>Últimas Movimentações</h3>
                     <button class="btn-link" onclick="verTodasMovimentacoes()">Ver todas</button>
                 </div>
-                <div class="movimentacoes-lista" id="movimentacoesLista">
+                <div class="movimentacoes-lista" id="movimentacoesListaCartaoVirtual">
                     <div class="sem-movimentacoes">
                         <i class="fas fa-history"></i>
                         <p>Nenhuma movimentação realizada ainda</p>
@@ -4249,16 +4257,16 @@
                 </div>
                 <div class="cartao-numero">
                     <span class="label">Número do Cartão</span>
-                    <span class="numero" id="numeroCartao">•••• •••• •••• ••••</span>
+                    <span class="numero" id="numeroCartaoFisico">•••• •••• •••• ••••</span>
                 </div>
                 <div class="cartao-info">
                     <div class="cartao-titular">
                         <span class="label">Titular</span>
-                        <span class="valor" id="titularCartao">NOME DO TITULAR</span>
+                        <span class="valor" id="titularCartaoFisico">NOME DO TITULAR</span>
                     </div>
                     <div class="cartao-validade">
                         <span class="label">Validade</span>
-                        <span class="valor" id="validadeCartao">MM/AA</span>
+                        <span class="valor" id="validadeCartaoFisico">MM/AA</span>
                     </div>
                 </div>
             </div>
@@ -4266,17 +4274,17 @@
             <div class="cartao-limite-info">
                 <div class="limite-header">
                     <h3>Limite Disponível</h3>
-                    <span class="limite-valor" id="valorLiberado">R$ 0,00</span>
+                    <span class="limite-valor" id="limiteCartaoFisicoHeader">R$ 0,00</span>
                 </div>
                 <!-- barra de progresso -->
                 <div class="limite-progress-container">
                     <div class="limite-progress-bar">
-                        <div class="limite-progress-fill" id="limiteProgressFill" style="width: 0%;"></div>
+                        <div class="limite-progress-fill" id="limiteProgressFillCartaoFisico" style="width: 0%;"></div>
                     </div>
                     <!-- ve esta formatação detalhes -->
                     <div class="limite-labels">
                         <span>Usado: R$ 0,00</span>
-                        <span id="valorLiberado">R$ 0,00</span>
+                        <span id="limiteCartaoFisicoRodape">R$ 0,00</span>
                     </div>
                 </div>
             </div>
@@ -4286,11 +4294,11 @@
                     <i class="fas fa-plus-circle"></i>
                     Desbloquear
                 </button>
-                <button class="btn-secondary small" onclick="copiarDadosCartao()">
+                <button class="btn-secondary small" onclick="copiarDadosCartao('fisico')">
                     <i class="fas fa-copy"></i>
                     Movimentações
                 </button>
-                <button class="btn-secondary small" onclick="bloquearCartao()" id="btnBloquear">
+                <button class="btn-secondary small" onclick="bloquearCartao()" id="btnBloquearCartaoFisico">
                     <i class="fas fa-lock"></i>
                     Bloquear
                 </button>
@@ -4301,7 +4309,7 @@
                     <h3>Últimas Movimentações</h3>
                     <button class="btn-link" onclick="verTodasMovimentacoes()">Ver todas</button>
                 </div>
-                <div class="movimentacoes-lista" id="movimentacoesLista">
+                <div class="movimentacoes-lista" id="movimentacoesListaCartaoFisico">
                     <div class="sem-movimentacoes">
                         <i class="fas fa-history"></i>
                         <p>Nenhuma movimentação realizada ainda</p>
@@ -5505,6 +5513,12 @@
                         <input type="date" id="contaDataNascimento" class="conta-form-input" required>
                         <div class="conta-form-error" id="error-contaDataNascimento"></div>
                     </div>
+                    
+                    <div class="conta-form-group">
+                        <label for="contaSenha" class="conta-form-label required">Senha (6 dígitos)</label>
+                        <input type="password" id="contaSenha" class="conta-form-input" placeholder="000000" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="new-password" required>
+                        <div class="conta-form-error" id="error-contaSenha"></div>
+                    </div>
                 </div>
 
                 <!-- Seção 2: Endereço -->
@@ -5734,6 +5748,43 @@
         
         // Elementos do DOM
         const saldoValue = document.getElementById('saldoValue');
+        const AGILBANK_API_BASE = window.AgilBank?.api?.getBaseUrl?.() || window.AGILBANK_API_BASE || 'http://localhost:3001/api';
+        const getAuthToken = () =>
+            window.AgilBank?.auth?.getToken?.() ||
+            sessionStorage.getItem('govbr_token') ||
+            sessionStorage.getItem('agilbank_token') ||
+            sessionStorage.getItem('token') ||
+            localStorage.getItem('govbr_token') ||
+            localStorage.getItem('agilbank_token') ||
+            localStorage.getItem('token');
+        function aplicarLimiteCartaoNosSeisElementos(textoFormatado) {
+            ['limiteOpcoesValorPrincipal', 'limiteOpcoesValorDetalhe', 'limiteCartaoVirtualHeader', 'limiteCartaoVirtualRodape', 'limiteCartaoFisicoHeader', 'limiteCartaoFisicoRodape'].forEach(function(elid) {
+                var el = document.getElementById(elid);
+                if (el) el.textContent = textoFormatado;
+            });
+        }
+        function aplicarPercentualLimiteCartaoNosTresContainers(percentual) {
+            var n = Number(percentual);
+            if (!isFinite(n)) n = 0;
+            if (n < 0) n = 0;
+            if (n > 100) n = 100;
+            ['limiteCartaoContainer', 'cartaoVirtualContainer', 'cartaoFisicoContainer'].forEach(function(cid) {
+                var root = document.getElementById(cid);
+                if (!root) return;
+                var fill = root.querySelector('.limite-progress-fill');
+                if (fill) fill.style.width = n + '%';
+            });
+        }
+        function aplicarPercentualBarraEmprestimoLiberado(percentual) {
+            var n = Number(percentual);
+            if (!isFinite(n)) n = 0;
+            if (n < 0) n = 0;
+            if (n > 100) n = 100;
+            var root = document.getElementById('emprestimoLiberado');
+            if (!root) return;
+            var fill = root.querySelector('.limite-progress-fill');
+            if (fill) fill.style.width = n + '%';
+        }
         const toggleSaldo = document.getElementById('toggleSaldo');
         const eyeIcon = document.getElementById('eyeIcon');
         const topSearchIcon = document.querySelector('.top-search-icon');
@@ -5743,8 +5794,8 @@
         const pixContainer = document.getElementById('pixContainer');
         const notification = document.getElementById('notification');
         const extratoContainer = document.getElementById('extratoContainer');
-        const cartaoContainer = document.getElementById('cartaoContainer');
         const cartaoGerenciamentoContainer = document.getElementById('cartaoGerenciamentoContainer');
+        const cartaoContainer = document.getElementById('cartaoContainer') || cartaoGerenciamentoContainer;
         const tabs = document.querySelectorAll('.tab');
         const suaConta = document.getElementById('sua-conta');
         const promocoes = document.getElementById('promocoes');
@@ -5760,14 +5811,14 @@
         // Função para abrir o formulário dinâmico de cartão
         function openDynamicCardForm() {
             // Verificar se o usuário está logado
-            const token = localStorage.getItem('govbr_token');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 alert('Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
                 return;
             }
 
-            // Redirecionar para o formulário na mesma janela
-            window.location.href = 'dynamic_card_form_conta_style.html';
+            // Fluxo interno: painel de cartões no dashboard (sem página externa)
+            showCartaoGerenciamento();
         }
 
         // Funções de notificação
@@ -5783,6 +5834,11 @@
 
         // TODO:Funções de navegação
         function ocultarTodosContainers() {
+            if (window.AgilBank?.nav?.hideAll) {
+                window.AgilBank.nav.hideAll();
+                return;
+            }
+
             container.style.display = 'none';
             pixContainer.style.display = 'none';
             notification.style.display = 'none';
@@ -5816,6 +5872,10 @@
         }
 
         function voltarParaPrincipal() {
+            if (window.AgilBank?.nav?.show?.('dashboard')) {
+                return;
+            }
+
             ocultarTodosContainers();
             container.style.display = 'block';
             window.scrollTo(0, 0);
@@ -5850,6 +5910,32 @@
                 
                 window.scrollTo(0, 0);
             });
+        }
+
+        function mostrarTermosCondicoes() {
+            var modal = document.getElementById('termosModaEmprestimo');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function confirmarEmprestimo() {
+            var concedido = document.getElementById('emprestimoConcedidoContainer');
+            if (!concedido) {
+                alert('Não foi possível abrir a próxima etapa. Tente novamente mais tarde.');
+                return;
+            }
+            if (typeof ocultarTodosContainers === 'function') {
+                ocultarTodosContainers();
+            }
+            var liberado = document.getElementById('emprestimoLiberado');
+            if (liberado) {
+                liberado.style.display = 'block';
+            }
+            concedido.style.display = 'block';
+            if (typeof window.scrollTo === 'function') {
+                window.scrollTo(0, 0);
+            }
         }
 
         function showExtratoContainer() {
@@ -5913,8 +5999,12 @@
 
         // Função para mostrar tela de transporte do cartão
         function showTransporteCartao() {
-            // Redirecionar para o formulário de cartão na mesma janela
-            window.location.href = 'dynamic_card_form_conta_style.html';
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+            if (!token) {
+                alert('Você precisa estar logado. Faça login primeiro.');
+                return;
+            }
+            showCartaoFisicoContainer();
         }
 
         function irParaConfiguracoes() {
@@ -5930,7 +6020,7 @@
                     // Ocultar containers manualmente
                     const containers = [
                         'container', 'pixContainer', 'notification', 'extratoContainer',
-                        'cartaoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer',
+                        'cartaoGerenciamentoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer',
                         'creditoContainer', 'contaContainer'
                     ];
                     
@@ -6089,7 +6179,7 @@
             console.log('🔧 Abrindo configurações com animação...');
             
             // Ocultar outros containers
-            const containers = ['container', 'pixContainer', 'notification', 'extratoContainer', 'cartaoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer', 'creditoContainer', 'contaContainer'];
+            const containers = ['container', 'pixContainer', 'notification', 'extratoContainer', 'cartaoGerenciamentoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer', 'creditoContainer', 'contaContainer'];
             containers.forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -6142,7 +6232,7 @@
             console.log('👤 Abrindo perfil (versão simples)...');
             
             // Ocultar outros containers
-            const containers = ['container', 'pixContainer', 'notification', 'extratoContainer', 'cartaoContainer', 'configuracoesContainer', 'chatContainer', 'emprestimoContainer', 'creditoContainer', 'contaContainer'];
+            const containers = ['container', 'pixContainer', 'notification', 'extratoContainer', 'cartaoGerenciamentoContainer', 'configuracoesContainer', 'chatContainer', 'emprestimoContainer', 'creditoContainer', 'contaContainer'];
             containers.forEach(id => {
                 const element = document.getElementById(id);
                 if (element) element.style.display = 'none';
@@ -6166,17 +6256,17 @@
             
             try {
                 // Testar endpoint de health
-                const healthResponse = await fetch('http://127.0.0.1:5000/api/health');
+                const healthResponse = await window.AgilBank.api.request('health', { auth: false });
                 console.log('Health check:', healthResponse.status);
                 
                 // Testar endpoint de perfil
-                const token = localStorage.getItem('govbr_token');
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
                 if (!token) {
                     console.log('⚠️ Token não encontrado, usuário não está logado');
                     return;
                 }
 
-                const profileResponse = await fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+                const profileResponse = await window.AgilBank.api.request('user/user-complete-data', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -6219,13 +6309,13 @@
         async function carregarConfiguracoes() {
             try {
                 console.log('Carregando configurações do banco...');
-                const token = localStorage.getItem('govbr_token');
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
                 if (!token) {
                     console.log('⚠️ Token não encontrado, usuário não está logado');
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/user/settings', {
+                const response = await window.AgilBank.api.request('user/settings', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -6237,23 +6327,42 @@
                 if (response.ok) {
                     const settings = await response.json();
                     console.log('Configurações carregadas:', settings);
+
+                    const cfg = settings.data && settings.data.configuracoes;
+                    const emailVal = cfg != null && cfg.notificacoesEmail !== undefined
+                        ? !!cfg.notificacoesEmail
+                        : !!(settings.notifications && settings.notifications.email);
+                    const smsVal = cfg != null && cfg.notificacoesSms !== undefined
+                        ? !!cfg.notificacoesSms
+                        : !!(settings.notifications && settings.notifications.sms);
+                    const pushVal = cfg != null && cfg.notificacoesPush !== undefined
+                        ? !!cfg.notificacoesPush
+                        : !!(settings.notifications && settings.notifications.push);
+                    const temaVal = (cfg && cfg.temaInterface) || settings.theme || 'claro';
+                    const idiomaVal = (cfg && cfg.idioma) || settings.language || 'pt-BR';
                     
-                    // Atualizar toggles de notificações
-                    const emailToggle = document.querySelector('input[type="checkbox"]');
-                    const smsToggle = document.querySelectorAll('input[type="checkbox"]')[1];
+                    const cfgRoot = document.getElementById('configuracoesContainer');
+                    const cfgChecks = cfgRoot ? cfgRoot.querySelectorAll('input[type="checkbox"]') : [];
+                    const pushToggle = cfgChecks[0];
+                    const emailToggle = cfgChecks[1];
+                    const smsToggle = cfgChecks[2];
                     
-                    if (emailToggle) emailToggle.checked = settings.notifications.email;
-                    if (smsToggle) smsToggle.checked = settings.notifications.sms;
+                    if (pushToggle) pushToggle.checked = pushVal;
+                    if (emailToggle) emailToggle.checked = emailVal;
+                    if (smsToggle) smsToggle.checked = smsVal;
                     
                     // Atualizar seletor de tema
                     const temaSelect = document.querySelector('.tema-select');
                     if (temaSelect) {
-                        temaSelect.value = settings.theme;
+                        temaSelect.value = temaVal;
                         // Adicionar event listener para salvar automaticamente
                         temaSelect.addEventListener('change', salvarConfiguracoes);
                     }
                     
                     // Adicionar event listeners para os toggles
+                    if (pushToggle) {
+                        pushToggle.addEventListener('change', salvarConfiguracoes);
+                    }
                     if (emailToggle) {
                         emailToggle.addEventListener('change', salvarConfiguracoes);
                     }
@@ -6273,7 +6382,7 @@
         function verificarLoginExistente() {
             console.log('🔍 Verificando se usuário já está logado...');
             
-            const token = localStorage.getItem('govbr_token');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (token) {
                 console.log('✅ Token encontrado, usuário já está logado');
                 // Esconder formulário de login
@@ -6303,7 +6412,8 @@
             }
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
+                const response = await window.AgilBank.api.request('auth/login', {
+                    auth: false,
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -6320,9 +6430,22 @@
                     const data = await response.json();
                     console.log('✅ Login bem-sucedido:', data);
                     
-                    // Salvar token no localStorage
-                    localStorage.setItem('govbr_token', data.accessToken);
-                    console.log('💾 Token salvo no localStorage');
+                    const token = data.accessToken || data.token || (data.data && data.data.accessToken) || (data.data && data.data.token);
+                    const user = data.user || data.usuario || (data.data && data.data.user) || (data.data && data.data.usuario);
+                    
+                    if (!token) {
+                        console.error('❌ Login sem token na resposta');
+                        alert('Erro no login: resposta inválida do servidor.');
+                        return;
+                    }
+                    
+                    if (window.AgilBank?.auth?.setSession && typeof window.AgilBank.auth.setSession === 'function') {
+                        window.AgilBank.auth.setSession(token, user);
+                    }
+                    localStorage.setItem('govbr_token', token);
+                    localStorage.setItem('agilbank_token', token);
+                    localStorage.setItem('token', token);
+                    console.log('💾 Token salvo (govbr_token, agilbank_token, token)');
                     
                     // Esconder formulário de login
                     const loginContainer = document.getElementById('loginContainer');
@@ -6342,9 +6465,9 @@
                     }, 2000);
                     
                 } else {
-                    const error = await response.json();
+                    const error = await response.json().catch(function () { return {}; });
                     console.error('❌ Erro no login:', error);
-                    alert('Erro no login: ' + (error.error || 'Credenciais inválidas'));
+                    alert('Erro no login: ' + (error.error || error.message || 'Credenciais inválidas'));
                 }
                 
             } catch (error) {
@@ -6358,7 +6481,7 @@
             console.log('🔄 Carregando dados do perfil do usuário...');
             
             // Verificar se há token de autenticação
-            const token = localStorage.getItem('govbr_token');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 console.log('⚠️ Token não encontrado, usando dados padrão');
                 usarDadosPadrao();
@@ -6368,7 +6491,7 @@
             console.log('✅ Token encontrado, fazendo requisição para API...');
 
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+                const response = await window.AgilBank.api.request('user/user-complete-data', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -6487,14 +6610,9 @@
                 console.log('✅ Saldo atualizado:', saldo);
             }
             
-            // Atualizar limite do cartão automaticamente
+            // Atualizar limite do cartão automaticamente (somente telas de cartão/limite; não empréstimo)
             if (limite_cartao && limite_cartao > 0) {
-            const elementosLimite = document.querySelectorAll('#valorLiberado');
-            elementosLimite.forEach(elemento => {
-                if (elemento) {
-                    elemento.textContent = `R$ ${limite_cartao.toFixed(2).replace('.', ',')}`;
-                }
-            });
+            aplicarLimiteCartaoNosSeisElementos(`R$ ${limite_cartao.toFixed(2).replace('.', ',')}`);
             
                 // Mostrar painel do cartão se tiver limite
                 const cardLimitPanel = document.getElementById('userCardLimit');
@@ -6615,13 +6733,8 @@
                      console.log('✅ Painel do cartão atualizado:', profile.limite_cartao);
                  }
                  
-                 // 2. Atualizar TODOS os elementos que mostram limite
-                 const elementosLimite = document.querySelectorAll('#valorLiberado');
-                 elementosLimite.forEach(elemento => {
-                     if (elemento) {
-                         elemento.textContent = `R$ ${profile.limite_cartao.toFixed(2).replace('.', ',')}`;
-                     }
-                 });
+                 // 2. Atualizar elementos dedicados de limite de cartão (não inclui empréstimo)
+                 aplicarLimiteCartaoNosSeisElementos(`R$ ${profile.limite_cartao.toFixed(2).replace('.', ',')}`);
                  
                  console.log('✅ Limite atualizado em todos os lugares:', profile.limite_cartao);
              } else {
@@ -6673,35 +6786,35 @@
             try {
                 console.log('Salvando configurações...');
                 
-                // Coletar dados dos toggles
-                const emailToggle = document.querySelector('input[type="checkbox"]');
-                const smsToggle = document.querySelectorAll('input[type="checkbox"]')[1];
+                const cfgRoot = document.getElementById('configuracoesContainer');
+                const cfgChecks = cfgRoot ? cfgRoot.querySelectorAll('input[type="checkbox"]') : [];
+                const pushToggle = cfgChecks[0];
+                const emailToggle = cfgChecks[1];
+                const smsToggle = cfgChecks[2];
                 const temaSelect = document.querySelector('.tema-select');
                 
-                const settings = {
-                    notifications: {
-                        email: emailToggle ? emailToggle.checked : true,
-                        sms: smsToggle ? smsToggle.checked : true,
-                        push: true // Padrão
-                    },
-                    theme: temaSelect ? temaSelect.value : 'claro',
-                    language: 'pt-BR'
+                const payload = {
+                    notificacoesEmail: emailToggle ? emailToggle.checked : true,
+                    notificacoesSms: smsToggle ? smsToggle.checked : false,
+                    notificacoesPush: pushToggle ? pushToggle.checked : false,
+                    temaInterface: temaSelect ? temaSelect.value : 'claro',
+                    idioma: 'pt-BR'
                 };
 
-                const token = localStorage.getItem('govbr_token');
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
                 if (!token) {
                     console.log('⚠️ Token não encontrado, usuário não está logado');
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/user/settings', {
+                const response = await window.AgilBank.api.request('user/settings', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
                     credentials: 'include',
-                    body: JSON.stringify(settings)
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
@@ -6731,7 +6844,7 @@
                     // Ocultar containers manualmente
                     const containers = [
                         'container', 'pixContainer', 'notification', 'extratoContainer',
-                        'cartaoContainer', 'configuracoesContainer', 'chatContainer', 'emprestimoContainer',
+                        'cartaoGerenciamentoContainer', 'configuracoesContainer', 'chatContainer', 'emprestimoContainer',
                         'creditoContainer', 'contaContainer'
                     ];
                     
@@ -7212,7 +7325,7 @@
             try {
                 console.log('🔄 Carregando dados do cartão virtual...');
                 
-                const token = localStorage.getItem('govbr_token');
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
                 if (!token) {
                     console.log('⚠️ Token não encontrado, usuário não está logado');
                     return;
@@ -7221,7 +7334,7 @@
                 console.log('🔑 Token encontrado:', token.substring(0, 20) + '...');
 
                 // Buscar dados do usuário para obter o limite
-                const userResponse = await fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+                const userResponse = await window.AgilBank.api.request('user/user-complete-data', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -7272,13 +7385,8 @@
                             cardLimitPanel.style.display = 'block';
                         }
                         
-                        // Atualizar todos os elementos de limite
-                        const elementosLimite = document.querySelectorAll('#valorLiberado');
-                        elementosLimite.forEach(elemento => {
-                            if (elemento) {
-                                elemento.textContent = `R$ ${limiteDisponivel.toFixed(2).replace('.', ',')}`;
-                            }
-                        });
+                        // Atualizar somente campos de limite de cartão (IDs dedicados)
+                        aplicarLimiteCartaoNosSeisElementos(`R$ ${limiteDisponivel.toFixed(2).replace('.', ',')}`);
                         
                         console.log('✅ Limite exibido automaticamente:', limiteDisponivel);
                     }
@@ -7286,26 +7394,7 @@
                     console.log('💰 Limite é 0?', limiteDisponivel === 0);
                     console.log('💰 Limite é null/undefined?', limiteDisponivel == null);
                     
-                    // Atualizar elementos na tela - buscar especificamente no container do cartão virtual
                     const cartaoVirtualContainer = document.getElementById('cartaoVirtualContainer');
-                    const valorLiberadoElement = cartaoVirtualContainer ? cartaoVirtualContainer.querySelector('#valorLiberado') : null;
-                    console.log('🎯 Elemento valorLiberado encontrado:', valorLiberadoElement);
-                    
-                    if (valorLiberadoElement) {
-                        valorLiberadoElement.textContent = `R$ ${limiteDisponivel.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                        console.log('✅ Valor atualizado no elemento:', valorLiberadoElement.textContent);
-                        console.log('✅ Valor anterior era:', valorLiberadoElement.getAttribute('data-old-value') || 'não definido');
-                        valorLiberadoElement.setAttribute('data-old-value', valorLiberadoElement.textContent);
-                    } else {
-                        console.log('❌ Elemento valorLiberado não encontrado no container do cartão virtual');
-                        // Tentar buscar todos os elementos com esse ID
-                        const allElements = document.querySelectorAll('#valorLiberado');
-                        console.log('🔍 Todos os elementos valorLiberado encontrados:', allElements.length);
-                        allElements.forEach((el, index) => {
-                            console.log(`Elemento ${index}:`, el);
-                        });
-                    }
-                    
                     // Atualizar valores "Usado" e "Total" - buscar especificamente no container do cartão virtual
                     const limiteLabels = cartaoVirtualContainer ? cartaoVirtualContainer.querySelectorAll('.limite-labels span') : [];
                     console.log('🏷️ Labels encontrados:', limiteLabels.length);
@@ -7318,15 +7407,9 @@
                         }
                     });
                     
-                    // Atualizar barra de progresso se existir - buscar especificamente no container do cartão virtual
-                    const progressBar = cartaoVirtualContainer ? cartaoVirtualContainer.querySelector('.limite-progress-fill') : null;
-                    console.log('📊 Barra de progresso encontrada:', progressBar);
-                    
-                    if (progressBar) {
-                        const percentualUsado = limiteDisponivel > 0 ? (limiteUsado / limiteDisponivel) * 100 : 0;
-                        progressBar.style.width = `${percentualUsado}%`;
-                        console.log('✅ Barra de progresso atualizada');
-                    }
+                    const percentualUsadoBarra = limiteDisponivel > 0 ? (limiteUsado / limiteDisponivel) * 100 : 0;
+                    aplicarPercentualLimiteCartaoNosTresContainers(percentualUsadoBarra);
+                    console.log('✅ Barras de progresso de limite (três containers) atualizadas');
                     
                     console.log(`✅ Limite atualizado: R$ ${limiteDisponivel.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
                 } else {
@@ -7341,14 +7424,6 @@
         }
         //Função para mostrar o cartão físico
         function showCartaoFisicoContainer() {
-            ocultarTodosContainers();
-            mostrarAnimacaoLogo02(() => {
-            document.getElementById('cartaoFisicoContainer').style.display = 'block';
-            window.scrollTo(0, 0);
-        });
-        }
-           //Função para mostrar o atencao e pagamento
-           function showCartaoFisicoContainer() {
             ocultarTodosContainers();
             mostrarAnimacaoLogo02(() => {
             document.getElementById('cartaoFisicoContainer').style.display = 'block';
@@ -7467,9 +7542,9 @@
     }
     
     // Iniciar a contagem regressiva quando a página carregar
-    window.onload = function() {
+    window.addEventListener('load', function() {
         startCountdown();
-    };
+    });
     
     // Funcionamento do botão de prosseguir
     document.getElementById('showAtencaoPagamento').addEventListener('click', function() {
@@ -7553,9 +7628,9 @@
     }
 
     // Função para iniciar com o container principal visível
-    window.onload = function() {
+    window.addEventListener('load', function() {
         voltarParaPrincipal();
-    };
+    });
     
     // mensagem de alerta para funçoes do pix
     function mensagemAlertaPix() {
@@ -7757,7 +7832,7 @@
         // Carregar dados PIX (saldo, limites)
         async function carregarDadosPix() {
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para acessar o PIX');
                     fecharModalEnviarPix();
@@ -7765,7 +7840,7 @@
                 }
 
                 // Carregar saldo e limites
-                const response = await fetch('http://127.0.0.1:5000/api/pix/limits', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/limits`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -7790,14 +7865,14 @@
         // Carregar chaves PIX do usuário
         async function carregarChavesPix() {
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para acessar o PIX');
                     fecharModalReceberPix();
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/pix/keys', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/keys`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -7839,14 +7914,14 @@
         // Carregar limites PIX
         async function carregarLimitesPix() {
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para acessar o PIX');
                     fecharModalLimitesPix();
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/pix/limits', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/limits`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -7886,13 +7961,13 @@
             }
 
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para validar chave PIX');
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/pix/validate', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/validate`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -7924,13 +7999,13 @@
             if (!valor) return;
 
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para gerar QR Code PIX');
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/pix/qr-code', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/qr-code`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -7981,14 +8056,14 @@
             const chaveData = { tipo, valor };
 
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para cadastrar chave PIX');
                     fecharModalChavePix();
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/pix/keys', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/keys`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -8032,14 +8107,14 @@
             const pixData = { chavePix, valor, descricao };
 
             try {
-                const token = localStorage.getItem('token');
+                const token = getAuthToken();
                 if (!token) {
                     alert('Faça login para enviar PIX');
                     fecharModalEnviarPix();
                     return;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/pix/send', {
+                const response = await fetch(`${AGILBANK_API_BASE}/pix/send`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -8164,7 +8239,14 @@
     function levarParaVantagens() {
         ocultarTodosContainers();
         mostrarAnimacaoGovBr(() => {
-            document.getElementById('vantagensContainer').style.display = 'block';
+            const creditoEl = document.getElementById('creditoContainer');
+            const vantagensEl = document.getElementById('vantagensContainer');
+            if (creditoEl) {
+                creditoEl.style.display = 'block';
+            }
+            if (vantagensEl) {
+                vantagensEl.style.display = 'block';
+            }
             window.scrollTo(0, 0);
         });
     }
@@ -8196,6 +8278,21 @@
     <script src="js/login.js"></script>
     
     <script>
+    function fecharModalTermos1() {
+        var modal = document.getElementById('termosModaEmprestimo');
+        var cb = document.getElementById('aceitarTermos');
+        if (modal) modal.style.display = 'none';
+        if (cb) cb.checked = true;
+    }
+    function fecharModalTermosEmprestimo() {
+        var modal = document.getElementById('termosModaEmprestimo');
+        if (modal) modal.style.display = 'none';
+    }
+    function recusarModalTermosEmprestimo() {
+        fecharModalTermosEmprestimo();
+        var cb = document.getElementById('aceitarTermos');
+        if (cb) cb.checked = false;
+    }
     // ===== FUNÇÃO SIMPLES PARA AVANÇAR QUADRADOS DE SENHA =====
     function avancarProximo(input, index) {
         // Limitar a 1 dígito
@@ -9051,63 +9148,103 @@
         }
     }
     
+    function obterNumeroSecaoContaAtiva() {
+        var form = document.getElementById('contaForm');
+        if (!form) return 1;
+        var ativa = form.querySelector('.conta-form-section.active');
+        if (!ativa) return 1;
+        var n = parseInt(ativa.getAttribute('data-section'), 10);
+        return isNaN(n) ? 1 : n;
+    }
+
+    function montarPayloadRegistro() {
+        var nomeCompleto = (document.getElementById('contaNomeCompleto') && document.getElementById('contaNomeCompleto').value || '').trim();
+        var cpf = (document.getElementById('contaCpf') && document.getElementById('contaCpf').value || '').replace(/\D/g, '');
+        var email = (document.getElementById('contaEmail') && document.getElementById('contaEmail').value || '').trim();
+        var telefoneRaw = document.getElementById('contaTelefone') && document.getElementById('contaTelefone').value || '';
+        var telefoneDigits = telefoneRaw.replace(/\D/g, '');
+        var telefone = telefoneDigits.length >= 10 ? telefoneDigits : telefoneRaw.trim();
+        var dataNascimento = (document.getElementById('contaDataNascimento') && document.getElementById('contaDataNascimento').value || '').trim();
+        var senha = (document.getElementById('contaSenha') && document.getElementById('contaSenha').value || '').trim();
+        var cep = (document.getElementById('contaCep') && document.getElementById('contaCep').value || '').trim();
+        var logradouro = (document.getElementById('contaRua') && document.getElementById('contaRua').value || '').trim();
+        var numero = (document.getElementById('contaNumero') && document.getElementById('contaNumero').value || '').trim();
+        var complemento = (document.getElementById('contaComplemento') && document.getElementById('contaComplemento').value || '').trim();
+        var bairro = (document.getElementById('contaBairro') && document.getElementById('contaBairro').value || '').trim();
+        var cidade = (document.getElementById('contaCidade') && document.getElementById('contaCidade').value || '').trim();
+        var estado = (document.getElementById('contaEstado') && document.getElementById('contaEstado').value || '').trim();
+        var profissao = (document.getElementById('contaProfissao') && document.getElementById('contaProfissao').value || '').trim();
+        var empresa = (document.getElementById('contaEmpresa') && document.getElementById('contaEmpresa').value || '').trim();
+        var cargo = (document.getElementById('contaCargo') && document.getElementById('contaCargo').value || '').trim();
+        var rendaStr = (document.getElementById('contaRenda') && document.getElementById('contaRenda').value || '').trim();
+        var rendaMensal = rendaStr === '' ? null : parseFloat(rendaStr.replace(',', '.'));
+        if (rendaStr !== '' && (isNaN(rendaMensal) || rendaMensal === null)) {
+            rendaMensal = null;
+        }
+        return {
+            nomeCompleto: nomeCompleto,
+            email: email,
+            cpf: cpf,
+            telefone: telefone,
+            dataNascimento: dataNascimento,
+            senha: senha,
+            endereco: {
+                cep: cep,
+                logradouro: logradouro,
+                numero: numero,
+                complemento: complemento,
+                bairro: bairro,
+                cidade: cidade,
+                estado: estado
+            },
+            dadosProfissionais: {
+                profissao: profissao,
+                empresa: empresa,
+                cargo: cargo,
+                rendaMensal: rendaMensal
+            }
+        };
+    }
+
     // Função para próximo passo - Navegar entre telas
     function proximoPasso() {
         console.log('🚀 Navegando para próxima tela...');
         
-        // Verificar qual tela está ativa
-        const step1 = document.getElementById('contaStep1');
-        const step2 = document.getElementById('contaStep2');
-        const step3 = document.getElementById('contaStep3');
-        const step4 = document.getElementById('contaStep4');
+        var n = obterNumeroSecaoContaAtiva();
         
-        if (step1 && step1.classList.contains('active')) {
-            // Validar primeira tela (Dados Pessoais)
+        if (n === 1) {
             if (!validarTela1()) return;
-            
-            // Ir para tela 2 (Endereço)
             mostrarTela(2);
             atualizarProgresso(2);
             atualizarBotoes(2);
-            
-        } else if (step2 && step2.classList.contains('active')) {
-            // Validar segunda tela (Endereço)
+        } else if (n === 2) {
             if (!validarTela2()) return;
-            
-            // Ir para tela 3 (Informações Profissionais)
             mostrarTela(3);
             atualizarProgresso(3);
             atualizarBotoes(3);
-            
-        } else if (step3 && step3.classList.contains('active')) {
-            // Validar terceira tela (Informações Profissionais)
+        } else if (n === 3) {
             if (!validarTela3()) return;
-            
-            // Ir para tela 4 (Confirmação)
             mostrarTela(4);
             atualizarProgresso(4);
             atualizarBotoes(4);
-            
-        } else if (step4 && step4.classList.contains('active')) {
-            // Finalizar cadastro na última tela
+        } else if (n === 4) {
+            var termos = document.getElementById('contaTermos');
+            if (!termos || !termos.checked) {
+                alert('Por favor, aceite os termos para finalizar o cadastro.');
+                return;
+            }
             finalizarCadastro();
         }
     }
     
     // Função para validar tela 1 (Dados Pessoais)
     function validarTela1() {
-        const nome = document.getElementById('contaNome').value.trim();
+        const nome = document.getElementById('contaNomeCompleto').value.trim();
         const cpf = document.getElementById('contaCpf').value.trim();
         const email = document.getElementById('contaEmail').value.trim();
-        const dataNasc = document.getElementById('contaDataNasc').value.trim();
-        const sexo = document.getElementById('contaSexo').value.trim();
-        
-        console.log('🔍 Validando Tela 1:');
-        console.log('Nome:', nome);
-        console.log('CPF:', cpf);
-        console.log('Email:', email);
-        console.log('Data Nasc:', dataNasc);
-        console.log('Sexo:', sexo);
+        const telefone = document.getElementById('contaTelefone').value.trim();
+        const dataNasc = document.getElementById('contaDataNascimento').value.trim();
+        const senha = document.getElementById('contaSenha').value.trim();
         
         if (!nome) {
             alert('Por favor, preencha o nome completo.');
@@ -9119,8 +9256,18 @@
             return false;
         }
         
+        if (cpf.replace(/\D/g, '').length !== 11) {
+            alert('O CPF deve conter 11 dígitos.');
+            return false;
+        }
+        
         if (!email) {
             alert('Por favor, preencha o e-mail.');
+            return false;
+        }
+        
+        if (!telefone) {
+            alert('Por favor, preencha o telefone.');
             return false;
         }
         
@@ -9129,8 +9276,8 @@
             return false;
         }
         
-        if (!sexo) {
-            alert('Por favor, selecione o sexo.');
+        if (!/^\d{6}$/.test(senha)) {
+            alert('A senha deve ter exatamente 6 dígitos numéricos.');
             return false;
         }
         
@@ -9141,7 +9288,7 @@
     // Função para validar tela 2 (Endereço)
     function validarTela2() {
         const cep = document.getElementById('contaCep').value.trim();
-        const endereco = document.getElementById('contaEndereco').value.trim();
+        const rua = document.getElementById('contaRua').value.trim();
         const numero = document.getElementById('contaNumero').value.trim();
         const bairro = document.getElementById('contaBairro').value.trim();
         const cidade = document.getElementById('contaCidade').value.trim();
@@ -9152,8 +9299,8 @@
             return false;
         }
         
-        if (!endereco) {
-            alert('Por favor, preencha o endereço.');
+        if (!rua) {
+            alert('Por favor, preencha o logradouro (rua).');
             return false;
         }
         
@@ -9185,7 +9332,7 @@
     function validarTela3() {
         const profissao = document.getElementById('contaProfissao').value.trim();
         const renda = document.getElementById('contaRenda').value.trim();
-        const finalidade = document.getElementById('contaFinalidade').value.trim();
+        const estadoCivil = document.getElementById('contaEstadoCivil').value.trim();
         
         if (!profissao) {
             alert('Por favor, preencha a profissão.');
@@ -9193,12 +9340,12 @@
         }
         
         if (!renda) {
-            alert('Por favor, selecione a renda mensal.');
+            alert('Por favor, preencha a renda mensal.');
             return false;
         }
         
-        if (!finalidade) {
-            alert('Por favor, selecione a finalidade da conta.');
+        if (!estadoCivil) {
+            alert('Por favor, selecione o estado civil.');
             return false;
         }
         
@@ -9208,16 +9355,15 @@
     
     // Função para mostrar uma tela específica
     function mostrarTela(numeroTela) {
-        // Esconder todas as telas
-        document.querySelectorAll('.conta-form-section').forEach(section => {
+        var form = document.getElementById('contaForm');
+        if (!form) return;
+        form.querySelectorAll('.conta-form-section').forEach(function (section) {
             section.classList.remove('active');
         });
-        
-        // Mostrar a tela desejada
-        const tela = document.getElementById(`contaStep${numeroTela}`);
+        var tela = form.querySelector('.conta-form-section[data-section="' + numeroTela + '"]');
         if (tela) {
             tela.classList.add('active');
-            console.log(`✅ Mostrando tela ${numeroTela}`);
+            console.log('✅ Mostrando tela ' + numeroTela);
         }
     }
     
@@ -9238,25 +9384,17 @@
     function voltarTela() {
         console.log('🔙 Voltando para tela anterior...');
         
-        const step1 = document.getElementById('contaStep1');
-        const step2 = document.getElementById('contaStep2');
-        const step3 = document.getElementById('contaStep3');
-        const step4 = document.getElementById('contaStep4');
+        var n = obterNumeroSecaoContaAtiva();
         
-        if (step2 && step2.classList.contains('active')) {
-            // Voltar para tela 1
+        if (n === 2) {
             mostrarTela(1);
             atualizarProgresso(1);
             atualizarBotoes(1);
-            
-        } else if (step3 && step3.classList.contains('active')) {
-            // Voltar para tela 2
+        } else if (n === 3) {
             mostrarTela(2);
             atualizarProgresso(2);
             atualizarBotoes(2);
-            
-        } else if (step4 && step4.classList.contains('active')) {
-            // Voltar para tela 3
+        } else if (n === 4) {
             mostrarTela(3);
             atualizarProgresso(3);
             atualizarBotoes(3);
@@ -9285,53 +9423,66 @@
         }
     }
     
+    function extrairMensagemErroCadastro(data) {
+        if (!data || typeof data !== 'object') return 'Erro ao criar conta';
+        var msg = data.message || data.error || '';
+        if (!msg && data.errors && data.errors.length && data.errors[0].message) {
+            msg = data.errors[0].message;
+        }
+        if (!msg && data.code) msg = String(data.code);
+        return msg || 'Erro ao criar conta';
+    }
+
     // Função para finalizar o cadastro (chamada apenas na última tela)
     async function finalizarCadastro() {
         console.log('🚀 Finalizando cadastro...');
         
         // Mostrar loading
         const btnProximo = document.querySelector('button[onclick="proximoPasso()"]');
-        const textoOriginal = btnProximo.innerHTML;
-        btnProximo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando conta...';
-        btnProximo.disabled = true;
+        const hadBtn = !!btnProximo;
+        const textoOriginal = hadBtn ? btnProximo.innerHTML : '';
+        if (hadBtn) {
+            btnProximo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando conta...';
+            btnProximo.disabled = true;
+        }
         
         try {
-            // Enviar dados para a API
-            const response = await fetch('http://127.0.0.1:5000/api/auth/register', {
+            const payload = montarPayloadRegistro();
+            
+            const response = await window.AgilBank.api.request('auth/register', {
+                auth: false,
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(dadosCadastro)
+                body: JSON.stringify(payload)
             });
             
-            const data = await response.json();
+            const data = await response.json().catch(function () { return {}; });
             
-            if (data.success) {
-                // Sucesso - mostrar confirmação
-                mostrarConfirmacaoCadastro(dadosCadastro.nome_completo, dadosCadastro.telefone);
+            if (response.ok && data.success) {
+                mostrarConfirmacaoCadastro(payload.nomeCompleto, payload.telefone, payload.email);
                 
-                // Fechar formulário após 3 segundos
                 setTimeout(() => {
                     fecharFormulario();
                 }, 3000);
-                
             } else {
-                throw new Error(data.error || 'Erro ao criar conta');
+                throw new Error(extrairMensagemErroCadastro(data));
             }
             
         } catch (error) {
             console.error('Erro no cadastro:', error);
-            alert('Erro ao criar conta: ' + error.message);
+            alert('Erro ao criar conta: ' + (error.message || 'Tente novamente.'));
         } finally {
-            // Restaurar botão
-            btnProximo.innerHTML = textoOriginal;
-            btnProximo.disabled = false;
+            if (hadBtn) {
+                btnProximo.innerHTML = textoOriginal;
+                btnProximo.disabled = false;
+            }
         }
     }
     
     // Função para mostrar confirmação de cadastro
-    function mostrarConfirmacaoCadastro(nome, telefone) {
+    function mostrarConfirmacaoCadastro(nome, telefone, email) {
         // Esconder formulário
         const formulario = document.querySelector('.conta-form-container');
         if (formulario) {
@@ -9351,6 +9502,7 @@
             
             // Adicionar informação sobre cadastro
             const infoDiv = document.querySelector('.conta-account-info');
+            var emailSafe = email || '';
             if (infoDiv) {
                 infoDiv.innerHTML = `
                     <div class="conta-info-item">
@@ -9359,7 +9511,7 @@
                     </div>
                     <div class="conta-info-item">
                         <i class="fas fa-envelope"></i>
-                        <span>Email de boas-vindas enviado para ${dadosCadastro.email}</span>
+                        <span>Email de boas-vindas enviado para ${emailSafe}</span>
                     </div>
                     <div class="conta-info-item">
                         <i class="fas fa-sign-in-alt"></i>
@@ -9442,9 +9594,9 @@
         
         // Campos do formulário de conta
         const camposConta = [
-            'contaNome', 'contaCpf', 'contaEmail', 'contaTelefone',
-            'contaCep', 'contaEndereco', 'contaNumero', 'contaCidade',
-            'contaEstado', 'contaProfissao', 'contaRenda'
+            'contaNomeCompleto', 'contaCpf', 'contaEmail', 'contaTelefone', 'contaDataNascimento', 'contaSenha',
+            'contaCep', 'contaRua', 'contaNumero', 'contaBairro', 'contaCidade',
+            'contaEstado', 'contaProfissao', 'contaEmpresa', 'contaCargo', 'contaRenda', 'contaEstadoCivil'
         ];
         
         camposConta.forEach(campoId => {
@@ -9642,34 +9794,34 @@
                 btn.disabled = true;
                 
                 try {
-                    // Enviar requisição para API
-                    const response = await fetch('http://127.0.0.1:5000/api/auth/forgot-password', {
+                    const response = await window.AgilBank.api.request('auth/forgot-password', {
+                        auth: false,
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
                             email: email,
                             cpf: cpfClean
                         })
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        // Sucesso - mostrar modal de criar senha
+
+                    const data = await response.json().catch(function () { return {}; });
+
+                    if (response.ok && data.success) {
                         fecharEsqueciSenha();
-                        mostrarCriarSenha();
+                        alert(
+                            data.message ||
+                                'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado. Verifique a caixa de entrada e o spam.'
+                        );
                     } else {
-                        throw new Error(data.error || 'Erro ao validar dados');
+                        throw new Error(data.message || data.error || 'Erro ao enviar solicitação');
                     }
-                    
                 } catch (error) {
                     console.error('Erro ao validar dados:', error);
-                    if (error.message.includes('CPF')) {
-                        mostrarErroCpf(error.message);
+                    var msg = error && error.message ? error.message : 'Erro de conexão. Tente novamente.';
+                    if (msg.includes('CPF')) {
+                        mostrarErroCpf(msg);
                     } else {
-                        mostrarErroEmail(error.message);
+                        mostrarErroEmail(msg);
                     }
                 } finally {
                     // Restaurar botão
@@ -9692,39 +9844,17 @@
                 limparErroNovaSenhaCriar();
                 limparErroConfirmarSenhaCriar();
                 
-                // Validar senha
-                if (novaSenha.length < 6) {
-                    mostrarErroNovaSenhaCriar('A senha deve ter pelo menos 6 caracteres');
-                    return;
-                }
-                
                 if (novaSenha !== confirmarSenha) {
                     mostrarErroConfirmarSenhaCriar('As senhas não coincidem');
                     return;
                 }
-                
-                // Mostrar loading
-                const btn = criarSenhaForm.querySelector('button[type="submit"]');
-                const textoOriginal = btn.textContent;
-                btn.textContent = 'Criando...';
-                btn.disabled = true;
-                
-                try {
-                    // Aqui você pode adicionar a lógica para criar a senha
-                    // Por enquanto, vamos simular um sucesso
-                    setTimeout(() => {
-                        alert('Senha criada com sucesso!');
-                        fecharCriarSenha();
-                    }, 1000);
-                    
-                } catch (error) {
-                    console.error('Erro ao criar senha:', error);
-                    mostrarErroNovaSenhaCriar('Erro ao criar senha');
-                } finally {
-                    // Restaurar botão
-                    btn.textContent = textoOriginal;
-                    btn.disabled = false;
-                }
+
+                mostrarErroNovaSenhaCriar(
+                    'A nova senha só pode ser definida pelo link enviado ao seu e-mail após “Esqueci minha senha”. Esta tela não altera a senha no servidor.'
+                );
+                alert(
+                    'Para criar a nova senha, abra o link de redefinição enviado ao e-mail cadastrado (válido por tempo limitado). Se não recebeu, solicite novamente em Esqueci minha senha.'
+                );
             });
         }
 
@@ -9824,16 +9954,15 @@
     // Função para verificar token de reset
     async function verificarTokenReset(token) {
         try {
-            const response = await fetch('http://127.0.0.1:5000/api/auth/verify-reset-token', {
+            const response = await window.AgilBank.api.request('auth/verify-reset-token', {
+                auth: false,
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: token })
             });
-            
-            const data = await response.json();
-            
+
+            const data = await response.json().catch(function () { return {}; });
+
             if (data.valid) {
                 // Token válido, mostrar formulário
                 document.getElementById('redefinirSenhaContent').innerHTML = `
@@ -9860,11 +9989,12 @@
                 // Reconfigurar evento do formulário
                 configurarFormularioRedefinirSenha();
             } else {
-                // Token inválido
+                var msgInvalido = (data && data.message) ? data.message : 'Este link de recuperação de senha é inválido ou expirou.';
+                msgInvalido = String(msgInvalido).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 document.getElementById('redefinirSenhaContent').innerHTML = `
                     <div style="text-align: center; padding: 20px;">
                         <h3 style="color: #e74c3c;">Token Inválido</h3>
-                        <p>Este link de recuperação de senha é inválido ou expirou.</p>
+                        <p>${msgInvalido}</p>
                         <p>Por favor, solicite um novo link de recuperação.</p>
                         <button class="btn-primary" onclick="fecharRedefinirSenha()">Fechar</button>
                     </div>
@@ -9892,59 +10022,53 @@
                 const novaSenha = document.getElementById('novaSenha').value;
                 const confirmarSenha = document.getElementById('confirmarSenha').value;
                 
-                // Validar senhas
-                if (novaSenha.length < 6) {
-                    mostrarErroRedefinirSenha('novaSenhaError', 'Senha deve ter pelo menos 6 caracteres');
+                if (!/^\d{6}$/.test(novaSenha)) {
+                    mostrarErroRedefinirSenha('novaSenhaError', 'A senha deve ter exatamente 6 dígitos numéricos');
                     return;
                 }
-                
+
                 if (novaSenha !== confirmarSenha) {
                     mostrarErroRedefinirSenha('confirmarSenhaError', 'Senhas não coincidem');
                     return;
                 }
-                
-                // Limpar erros
+
                 limparErrosRedefinirSenha();
-                
-                // Mostrar loading
+
                 const btn = form.querySelector('button[type="submit"]');
                 const textoOriginal = btn.textContent;
                 btn.textContent = 'Redefinindo...';
                 btn.disabled = true;
-                
+
                 try {
-                    const response = await fetch('http://127.0.0.1:5000/api/auth/reset-password', {
+                    const response = await window.AgilBank.api.request('auth/reset-password', {
+                        auth: false,
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             token: window.resetToken,
                             new_password: novaSenha
                         })
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        // Sucesso
+
+                    const data = await response.json().catch(function () { return {}; });
+
+                    if (response.ok && data.success) {
                         document.getElementById('redefinirSenhaContent').innerHTML = `
                             <div style="text-align: center; padding: 20px;">
                                 <h3 style="color: #27ae60;">✅ Senha Redefinida!</h3>
-                                <p>Sua senha foi redefinida com sucesso.</p>
+                                <p>${data.message || 'Sua senha foi redefinida com sucesso.'}</p>
                                 <p>Agora você pode fazer login com sua nova senha.</p>
                                 <button class="btn-primary" onclick="fecharRedefinirSenha(); mostrarLogin()">Fazer Login</button>
                             </div>
                         `;
                     } else {
-                        // Erro
-                        mostrarErroRedefinirSenha('novaSenhaError', data.error || 'Erro ao redefinir senha');
+                        var errReset = data.message || data.error || data.code || 'Erro ao redefinir senha';
+                        mostrarErroRedefinirSenha('novaSenhaError', errReset);
                     }
                 } catch (error) {
                     console.error('Erro ao redefinir senha:', error);
                     mostrarErroRedefinirSenha('novaSenhaError', 'Erro de conexão. Tente novamente.');
                 } finally {
-                    // Restaurar botão
                     btn.textContent = textoOriginal;
                     btn.disabled = false;
                 }
@@ -9978,10 +10102,13 @@
         // Deixar o LoginSystem gerenciar completamente a exibição
         // Esta função só deve ser chamada se o usuário já estiver logado
         const token =
+            window.AgilBank?.auth?.getToken?.() ||
             sessionStorage.getItem('govbr_token') ||
             sessionStorage.getItem('agilbank_token') ||
+            sessionStorage.getItem('token') ||
             localStorage.getItem('govbr_token') ||
-            localStorage.getItem('agilbank_token');
+            localStorage.getItem('agilbank_token') ||
+            localStorage.getItem('token');
         if (!token) {
             console.log('❌ Usuário não logado, deixando LoginSystem gerenciar...');
             return;
@@ -10066,11 +10193,13 @@
                 sessionStorage.removeItem('govbr_login');
                 sessionStorage.removeItem('agilbank_token');
                 sessionStorage.removeItem('agilbank_user');
+                sessionStorage.removeItem('token');
                 localStorage.removeItem('govbr_token');
                 localStorage.removeItem('govbr_user');
                 localStorage.removeItem('govbr_login');
                 localStorage.removeItem('agilbank_token');
                 localStorage.removeItem('agilbank_user');
+                localStorage.removeItem('token');
                 
                 console.log('✅ Logout manual concluído');
                 window.location.replace('/login');
@@ -10208,19 +10337,20 @@
                 console.log('🔍 Verificando dados do usuário...');
                 
                 // Verificar se usuário está logado
-                const token = localStorage.getItem('govbr_token');
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
                 if (!token) {
                     console.log('⚠️ Usuário não está logado');
                     return;
                 }
                 
                 // Buscar dados atualizados do servidor
-                const response = await fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+                const response = await window.AgilBank.api.request('user/user-complete-data', {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'include'
                 });
                 
                 if (response.ok) {
@@ -10238,7 +10368,7 @@
                             // Ocultar todos os outros elementos que podem estar bloqueando
                             const elementsToHide = [
                                 'userCardLimit', 'opcoesLimiteContainer', 'cartaoGerenciamentoContainer',
-                                'cartaoContainer', 'container', 'pixContainer', 'notification',
+                                'container', 'pixContainer', 'notification',
                                 'extratoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer',
                                 'creditoContainer', 'contaContainer'
                             ];
@@ -10298,7 +10428,7 @@
                 // Ocultar todos os outros elementos que podem estar bloqueando
                 const elementsToHide = [
                     'userCardLimit', 'opcoesLimiteContainer', 'cartaoGerenciamentoContainer',
-                    'cartaoContainer', 'container', 'pixContainer', 'notification',
+                    'container', 'pixContainer', 'notification',
                     'extratoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer',
                     'creditoContainer', 'contaContainer'
                 ];
@@ -10379,7 +10509,7 @@
             console.log('🔍 Debugando fluxo de cartão...');
             
             // 1. Verificar se o servidor está rodando
-            fetch('http://127.0.0.1:5000/api/health')
+            window.AgilBank.api.request('health', { auth: false })
                 .then(response => response.json())
                 .then(data => {
                     console.log('✅ Servidor está funcionando:', data);
@@ -10411,15 +10541,16 @@
             console.log('🔄 Forçando atualização do limite após aprovação...');
             
             // Buscar dados atualizados do servidor
-            const token = localStorage.getItem('govbr_token');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) return;
             
-            fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+            window.AgilBank.api.request('user/user-complete-data', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
@@ -10464,19 +10595,20 @@
         function checkAndShowLimit() {
             console.log('🔍 Verificando se usuário tem limite de cartão...');
             
-            const token = localStorage.getItem('govbr_token');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 console.log('⚠️ Usuário não está logado');
                 return;
             }
             
             // Buscar dados atualizados do servidor
-            fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+            window.AgilBank.api.request('user/user-complete-data', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
@@ -10501,18 +10633,19 @@
         // Função para buscar limite do cartão do usuário
         async function getUserCardLimit() {
             try {
-                const token = localStorage.getItem('govbr_token');
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
                 if (!token) {
                     console.log('⚠️ Token não encontrado para buscar limite');
                     return 0;
                 }
 
-                const response = await fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+                const response = await window.AgilBank.api.request('user/user-complete-data', {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'include'
                 });
 
                 if (response.ok) {
@@ -10641,9 +10774,8 @@
             const limiteValorHeader = document.getElementById('limiteValorHeader');
             const limiteUsado = document.getElementById('limiteUsado');
             const limiteTotal = document.getElementById('limiteTotal');
-            const limiteProgressFill = document.getElementById('limiteProgressFill');
             
-            if (limiteContainer && limiteValorHeader && limiteUsado && limiteTotal && limiteProgressFill) {
+            if (limiteContainer && limiteValorHeader && limiteUsado && limiteTotal) {
                 // Mostrar o container
                 limiteContainer.style.display = 'block';
                 
@@ -10654,24 +10786,17 @@
                 
                 // Calcular uso (por enquanto 0, mas pode ser expandido)
                 const limiteUsadoValor = 0;
-                const percentualUsado = (limiteUsadoValor / newLimit) * 100;
+                const percentualUsado = newLimit > 0 ? (limiteUsadoValor / newLimit) * 100 : 0;
                 
                 limiteUsado.textContent = `Usado: R$ ${limiteUsadoValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 
-                // Atualizar barra de progresso
-                limiteProgressFill.style.width = `${percentualUsado}%`;
+                aplicarPercentualLimiteCartaoNosTresContainers(percentualUsado);
                 
                 console.log('✅ Componente de limite atualizado no header:', limiteFormatado);
             }
             
-            // 2. Atualizar no header principal
-            const elementosLimite = document.querySelectorAll('#valorLiberado');
-            elementosLimite.forEach(elemento => {
-                if (elemento) {
-                    elemento.textContent = `R$ ${newLimit.toFixed(2).replace('.', ',')}`;
-                    console.log('✅ Limite atualizado no header:', elemento.textContent);
-                }
-            });
+            // 2. Atualizar blocos de limite de cartão (sem empréstimo)
+            aplicarLimiteCartaoNosSeisElementos(`R$ ${newLimit.toFixed(2).replace('.', ',')}`);
             
             // 3. Atualizar no painel do cartão virtual
             const limiteValueElement = document.getElementById('cardLimitValue');
@@ -10712,15 +10837,16 @@
             }
             
             // Buscar dados reais do banco de dados
-            const token = localStorage.getItem('govbr_token');
+            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) return;
             
-            fetch('http://127.0.0.1:5000/api/user/user-complete-data', {
+            window.AgilBank.api.request('user/user-complete-data', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
@@ -10732,13 +10858,11 @@
                     // Atualizar elementos com dados reais
                     const limiteUsadoElement = document.getElementById('limiteUsado');
                     const limiteTotalElement = document.getElementById('limiteTotal');
-                    const limiteProgressFill = document.getElementById('limiteProgressFill');
                     
-                    if (limiteUsadoElement && limiteTotalElement && limiteProgressFill) {
+                    if (limiteUsadoElement && limiteTotalElement) {
                         limiteUsadoElement.textContent = `Usado: R$ ${limiteUsado.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                         limiteTotalElement.textContent = `R$ ${limiteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                        limiteProgressFill.style.width = `${percentualUsado}%`;
-                        limiteProgressFill.style.background = 'linear-gradient(90deg, #0066b3, #28a745)';
+                        aplicarPercentualLimiteCartaoNosTresContainers(percentualUsado);
                     }
                 }
             })
@@ -10785,6 +10909,135 @@
         }
         
         // Modal será exibido apenas após login bem-sucedido
+
+        // Funções de compatibilidade para botões legados.
+        // Mantêm os cliques funcionando sem alterar a estrutura atual das telas.
+        if (typeof window.renegociarEmprestimo !== 'function') {
+            window.renegociarEmprestimo = function() {
+                alert('Renegociação de empréstimo indisponível no momento.');
+            };
+        }
+
+        if (typeof window.gerarSegundaVia !== 'function') {
+            window.gerarSegundaVia = function() {
+                if (typeof levarboletoContainer === 'function') {
+                    levarboletoContainer();
+                    return;
+                }
+
+                if (typeof containerGerarBoletoPix === 'function') {
+                    containerGerarBoletoPix();
+                    return;
+                }
+
+                alert('Segunda via indisponível no momento.');
+            };
+        }
+
+        if (typeof window.verExtrato !== 'function') {
+            window.verExtrato = function() {
+                if (typeof showExtratoContainer === 'function') {
+                    showExtratoContainer();
+                    return;
+                }
+
+                alert('Extrato indisponível no momento.');
+            };
+        }
+
+        if (typeof window.verTodasMovimentacoes !== 'function') {
+            window.verTodasMovimentacoes = function() {
+                if (typeof showExtratoContainer === 'function') {
+                    showExtratoContainer();
+                    return;
+                }
+
+                alert('Movimentações indisponíveis no momento.');
+            };
+        }
+
+        if (typeof window.copiarCodigo !== 'function') {
+            window.copiarCodigo = function() {
+                const codigoInput = document.getElementById('codigoLinha');
+                const codigo = codigoInput ? codigoInput.value : '';
+
+                if (!codigo) {
+                    alert('Código não encontrado.');
+                    return;
+                }
+
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(codigo)
+                        .then(() => alert('Código copiado com sucesso!'))
+                        .catch(() => alert('Não foi possível copiar o código.'));
+                    return;
+                }
+
+                codigoInput.select();
+                document.execCommand('copy');
+                alert('Código copiado com sucesso!');
+            };
+        }
+
+        if (typeof window.copiarDadosCartao !== 'function') {
+            window.copiarDadosCartao = function(tipo) {
+                var suf = 'Virtual';
+                if (tipo === 'fisico') {
+                    suf = 'Fisico';
+                } else if (tipo === 'virtual') {
+                    suf = 'Virtual';
+                } else {
+                    var vc = document.getElementById('cartaoVirtualContainer');
+                    var fc = document.getElementById('cartaoFisicoContainer');
+                    function vis(el) {
+                        if (!el) return false;
+                        var st = window.getComputedStyle(el);
+                        return st.display !== 'none' && st.visibility !== 'hidden' && parseFloat(st.opacity || '1') > 0;
+                    }
+                    if (vis(fc) && !vis(vc)) suf = 'Fisico';
+                    else if (vis(vc) && !vis(fc)) suf = 'Virtual';
+                    else if (vis(fc) && vis(vc)) suf = 'Virtual';
+                    else suf = 'Virtual';
+                }
+                var numero = document.getElementById('numeroCartao' + suf)?.textContent?.trim() || '';
+                var titular = document.getElementById('titularCartao' + suf)?.textContent?.trim() || '';
+                var validade = document.getElementById('validadeCartao' + suf)?.textContent?.trim() || '';
+                const dados = [
+                    numero && `Número: ${numero}`,
+                    titular && `Titular: ${titular}`,
+                    validade && `Validade: ${validade}`
+                ].filter(Boolean).join('\n');
+
+                if (!dados) {
+                    alert('Dados do cartão não encontrados.');
+                    return;
+                }
+
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(dados)
+                        .then(() => alert('Dados do cartão copiados com sucesso!'))
+                        .catch(() => alert('Não foi possível copiar os dados do cartão.'));
+                    return;
+                }
+
+                alert('Seu navegador não permitiu copiar automaticamente.');
+            };
+        }
+
+        if (typeof window.bloquearCartao !== 'function') {
+            window.bloquearCartao = function() {
+                alert('Bloqueio de cartão indisponível no momento.');
+            };
+        }
+
+        if (typeof window.fecharModalBiometria !== 'function') {
+            window.fecharModalBiometria = function() {
+                const modal = document.getElementById('biometriaModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        }
         
         // TESTE MANUAL - Expor função globalmente
         window.showAgilModal = showAgilModal;

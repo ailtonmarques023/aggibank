@@ -3,6 +3,7 @@ const AUTH_USER_KEY = 'agilbank_user';
 const LEGACY_TOKEN_KEY = 'govbr_token';
 const LEGACY_USER_KEY = 'govbr_user';
 const LEGACY_LOGIN_KEY = 'govbr_login';
+const PLAIN_TOKEN_KEY = 'token';
 
 const hasStorage = () => typeof window !== 'undefined';
 
@@ -22,11 +23,13 @@ export const clearStoredAuth = () => {
   sessionStorage.removeItem(LEGACY_TOKEN_KEY);
   sessionStorage.removeItem(LEGACY_USER_KEY);
   sessionStorage.removeItem(LEGACY_LOGIN_KEY);
+  sessionStorage.removeItem(PLAIN_TOKEN_KEY);
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
   localStorage.removeItem(LEGACY_TOKEN_KEY);
   localStorage.removeItem(LEGACY_USER_KEY);
   localStorage.removeItem(LEGACY_LOGIN_KEY);
+  localStorage.removeItem(PLAIN_TOKEN_KEY);
   notifyAuthChanged();
 };
 
@@ -44,11 +47,13 @@ export const getStoredAuth = () => {
     localStorage.removeItem(LEGACY_TOKEN_KEY);
     localStorage.removeItem(LEGACY_USER_KEY);
     localStorage.removeItem(LEGACY_LOGIN_KEY);
+    localStorage.removeItem(PLAIN_TOKEN_KEY);
   } else {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
     localStorage.setItem(AUTH_USER_KEY, userData);
     localStorage.setItem(LEGACY_TOKEN_KEY, token);
     localStorage.setItem(LEGACY_USER_KEY, userData);
+    localStorage.setItem(PLAIN_TOKEN_KEY, token);
   }
 
   return {
@@ -67,9 +72,11 @@ export const storeAuthSession = (token, user) => {
   sessionStorage.setItem(AUTH_USER_KEY, userData);
   sessionStorage.setItem(LEGACY_TOKEN_KEY, token);
   sessionStorage.setItem(LEGACY_USER_KEY, userData);
+  sessionStorage.setItem(PLAIN_TOKEN_KEY, token);
   localStorage.setItem(AUTH_TOKEN_KEY, token);
   localStorage.setItem(AUTH_USER_KEY, userData);
   localStorage.setItem(LEGACY_TOKEN_KEY, token);
   localStorage.setItem(LEGACY_USER_KEY, userData);
+  localStorage.setItem(PLAIN_TOKEN_KEY, token);
   notifyAuthChanged();
 };

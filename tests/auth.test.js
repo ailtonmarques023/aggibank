@@ -4,10 +4,12 @@ const { prisma } = require('../src/config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../src/utils/logger');
+const { sendPasswordResetEmail } = require('../src/utils/email');
 
 describe('Auth Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.$transaction.mockImplementation((ops) => Promise.all(ops));
   });
 
   describe('POST /api/auth/register', () => {
@@ -324,6 +326,147 @@ describe('Auth Routes', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('inválido');
+    });
+  });
+
+  describe('POST /api/auth/forgot-password', () => {
+    const forgotBody = {
+      email: 'joao@test.com',
+      cpf: '12345678901',
+    };
+
+    it('returns generic 200 and creates password_reset token when user exists', async () => {
+      prisma.user.findFirst.mockResolvedValue({
+        id: 'user-id',
+        nomeCompleto: 'João Silva',
+        email: 'joao@test.com',
+      });
+      prisma.token.updateMany.mockResolvedValue({ count: 0 });
+      prisma.token.create.mockResolvedValue({ id: 'pr-token' });
+      sendPasswordResetEmail.mockResolvedValue({});
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send(forgotBody)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe(
+        'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado.'
+      );
+      expect(prisma.token.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-id',
+          tipo: 'password_reset',
+          isAtivo: true,
+        }),
+      });
+      expect(sendPasswordResetEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'joao@test.com',
+          token: expect.any(String),
+        })
+      );
+    });
+
+    it('returns same generic 200 when user does not exist and does not create token', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send(forgotBody)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe(
+        'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado.'
+      );
+      expect(prisma.token.create).not.toHaveBeenCalled();
+      expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 VALIDATION_ERROR for invalid body', async () => {
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'not-an-email', cpf: '123' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('POST /api/auth/verify-reset-token', () => {
+    it('returns valid true and nome for active token', async () => {
+      prisma.token.findFirst.mockResolvedValue({
+        id: 't1',
+        user: { nomeCompleto: 'Maria Souza', isAtivo: true },
+      });
+
+      const response = await request(app)
+        .post('/api/auth/verify-reset-token')
+        .send({ token: 'some-plain-token' })
+        .expect(200);
+
+      expect(response.body.valid).toBe(true);
+      expect(response.body.nome).toBe('Maria Souza');
+    });
+
+    it('returns valid false for invalid or expired token', async () => {
+      prisma.token.findFirst.mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/auth/verify-reset-token')
+        .send({ token: 'bad' })
+        .expect(200);
+
+      expect(response.body.valid).toBe(false);
+      expect(response.body.message).toBe('Token inválido ou expirado.');
+    });
+  });
+
+  describe('POST /api/auth/reset-password', () => {
+    it('resets password and invalidates token when token is valid', async () => {
+      prisma.token.findFirst.mockResolvedValue({
+        id: 'reset-id',
+        userId: 'user-id',
+        user: { id: 'user-id', isAtivo: true },
+      });
+      prisma.user.update.mockResolvedValue({});
+      prisma.token.update.mockResolvedValue({});
+      prisma.token.updateMany.mockResolvedValue({ count: 1 });
+
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'plain-reset', new_password: '654321' })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Senha redefinida com sucesso.');
+      expect(bcrypt.hash).toHaveBeenCalledWith('654321', expect.any(Number));
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('fails on reused or invalid token', async () => {
+      prisma.token.findFirst.mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'used', new_password: '123456' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.code).toBe('INVALID_RESET_TOKEN');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 VALIDATION_ERROR for invalid new_password', async () => {
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'abc', new_password: '12' })
+        .expect(400);
+
+      expect(response.body.code).toBe('VALIDATION_ERROR');
     });
   });
 

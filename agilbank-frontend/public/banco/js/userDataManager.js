@@ -6,8 +6,56 @@
 class UserDataManager {
     constructor() {
         this.userData = null;
-        this.apiBase = 'http://127.0.0.1:5000/api';
         this.init();
+    }
+
+    /**
+     * Extrai o objeto usuário do JSON de GET /api/user/profile (e variantes tolerantes).
+     */
+    extractUserFromProfileResponse(body) {
+        if (!body || typeof body !== 'object') {
+            return null;
+        }
+        const fromDataUser = body.data && body.data.user;
+        const fromDataProfile = body.data && body.data.profile;
+        const fromDataFlat =
+            body.data && typeof body.data === 'object' && !body.data.user && !body.data.profile
+                ? body.data
+                : null;
+        const useFlat =
+            fromDataFlat &&
+            (Object.prototype.hasOwnProperty.call(fromDataFlat, 'email') ||
+                Object.prototype.hasOwnProperty.call(fromDataFlat, 'id'));
+        const raw =
+            fromDataUser ||
+            fromDataProfile ||
+            (useFlat ? fromDataFlat : null) ||
+            body.user ||
+            body.profile ||
+            null;
+        return this.normalizeUserFields(raw);
+    }
+
+    /**
+     * Garante aliases snake_case usados por updateUserMenu, formatCPF, etc. (backend 3001 usa camelCase).
+     */
+    normalizeUserFields(user) {
+        if (!user || typeof user !== 'object') {
+            return user;
+        }
+        return Object.assign({}, user, {
+            nome_completo: user.nome_completo || user.nomeCompleto || user.name,
+            numero_conta: user.numero_conta || user.numeroConta,
+            digito_conta: user.digito_conta || user.digitoConta
+        });
+    }
+
+    persistUserToStorage() {
+        const userData = JSON.stringify(this.userData);
+        sessionStorage.setItem('govbr_user', userData);
+        sessionStorage.setItem('agilbank_user', userData);
+        localStorage.setItem('govbr_user', userData);
+        localStorage.setItem('agilbank_user', userData);
     }
 
     init() {
@@ -21,9 +69,13 @@ class UserDataManager {
      */
     loadUserDataFromStorage() {
         try {
-            const storedUser = sessionStorage.getItem('govbr_user') || localStorage.getItem('govbr_user');
+            const storedUser =
+                sessionStorage.getItem('govbr_user') ||
+                sessionStorage.getItem('agilbank_user') ||
+                localStorage.getItem('govbr_user') ||
+                localStorage.getItem('agilbank_user');
             if (storedUser) {
-                this.userData = JSON.parse(storedUser);
+                this.userData = this.normalizeUserFields(JSON.parse(storedUser));
                 console.log('✅ Dados do usuário carregados da sessão:', this.userData);
                 this.updateAllUserData();
             } else {
@@ -39,37 +91,49 @@ class UserDataManager {
      */
     async loadUserDataFromAPI() {
         try {
-            const token = sessionStorage.getItem('govbr_token') || localStorage.getItem('govbr_token');
+            const token =
+                (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.getToken === 'function'
+                    ? window.AgilBank.auth.getToken()
+                    : null) ||
+                sessionStorage.getItem('govbr_token') ||
+                localStorage.getItem('govbr_token');
             if (!token) {
                 console.log('⚠️ Token não encontrado');
                 return null;
             }
 
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                console.error('❌ AgilBank.api indisponível');
+                return null;
+            }
+
             console.log('🔄 Carregando dados do usuário da API...');
-            const response = await fetch(`${this.apiBase}/auth/me`, {
+            const response = await window.AgilBank.api.request('user/profile', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
 
+            const body = await response.json().catch(function () {
+                return {};
+            });
+
             if (response.ok) {
-                const data = await response.json();
-                this.userData = data.user;
-                
-                // Salvar dados atualizados na sessão atual
-                const userData = JSON.stringify(this.userData);
-                sessionStorage.setItem('govbr_user', userData);
-                localStorage.setItem('govbr_user', userData);
-                
+                const user = this.extractUserFromProfileResponse(body);
+                if (!user) {
+                    console.error('❌ Resposta de perfil sem usuário reconhecível:', body);
+                    return null;
+                }
+                this.userData = user;
+                this.persistUserToStorage();
+
                 console.log('✅ Dados do usuário atualizados da API:', this.userData);
                 this.updateAllUserData();
                 return this.userData;
-            } else {
-                console.error('❌ Erro ao carregar dados da API:', response.status);
-                return null;
             }
+            console.error('❌ Erro ao carregar dados da API:', response.status);
+            return null;
         } catch (error) {
             console.error('❌ Erro na requisição da API:', error);
             return null;
@@ -190,7 +254,7 @@ class UserDataManager {
     setupEventListeners() {
         // Atualizar dados quando o usuário fizer login
         document.addEventListener('userLoggedIn', (event) => {
-            this.userData = event.detail.userData;
+            this.userData = this.normalizeUserFields(event.detail.userData);
             this.updateAllUserData();
         });
 
@@ -202,7 +266,10 @@ class UserDataManager {
 
         // Atualizar dados quando houver mudanças no perfil
         document.addEventListener('profileUpdated', (event) => {
-            this.userData = { ...this.userData, ...event.detail.updatedData };
+            this.userData = this.normalizeUserFields({
+                ...this.userData,
+                ...event.detail.updatedData
+            });
             this.updateAllUserData();
         });
     }
@@ -245,10 +312,8 @@ class UserDataManager {
      */
     updateUserData(updatedData) {
         if (this.userData) {
-            this.userData = { ...this.userData, ...updatedData };
-            const userData = JSON.stringify(this.userData);
-            sessionStorage.setItem('govbr_user', userData);
-            localStorage.setItem('govbr_user', userData);
+            this.userData = this.normalizeUserFields({ ...this.userData, ...updatedData });
+            this.persistUserToStorage();
             this.updateAllUserData();
         }
     }
