@@ -28,12 +28,24 @@ describe('Auth Routes', () => {
       prisma.user.create.mockResolvedValue({
         id: 'user-id',
         ...userData,
+        tokenVerificacao: 'verification-token',
         saldoAtual: 0,
+        limiteCartao: null,
+        limitePixDiario: 1000,
+        limitePixMensal: 10000,
+        scoreCredito: 0,
+        numeroConta: '123456',
+        digitoConta: '78',
+        agencia: '0001',
         isAtivo: true,
         isVerificado: false,
-        createdAt: new Date()
+        dataVerificacao: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        endereco: null,
+        dadosProfissionais: null,
+        configuracoes: {}
       });
-      prisma.configuracoesUsuario.create.mockResolvedValue({});
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -43,6 +55,24 @@ describe('Auth Routes', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain('registrado com sucesso');
       expect(response.body.data.user.email).toBe(userData.email);
+      expect(response.body.data.user.senha).toBeUndefined();
+      expect(response.body.data.user.tokenVerificacao).toBeUndefined();
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            configuracoes: {
+              create: expect.objectContaining({
+                notificacoesEmail: true,
+                notificacoesSms: true,
+                notificacoesPush: true,
+                temaInterface: 'claro',
+                idioma: 'pt-BR',
+              }),
+            },
+          }),
+        })
+      );
+      expect(prisma.configuracoesUsuario.create).not.toHaveBeenCalled();
     });
 
     it('should return error when create fails with unique constraint', async () => {

@@ -29,6 +29,31 @@ const FORGOT_PASSWORD_PUBLIC_MESSAGE =
 
 const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
 
+const toPublicRegisterUser = (user) => ({
+  id: user.id,
+  nomeCompleto: user.nomeCompleto,
+  email: user.email,
+  cpf: user.cpf,
+  telefone: user.telefone,
+  dataNascimento: user.dataNascimento,
+  saldoAtual: user.saldoAtual,
+  limiteCartao: user.limiteCartao,
+  limitePixDiario: user.limitePixDiario,
+  limitePixMensal: user.limitePixMensal,
+  scoreCredito: user.scoreCredito,
+  numeroConta: user.numeroConta,
+  digitoConta: user.digitoConta,
+  agencia: user.agencia,
+  isAtivo: user.isAtivo,
+  isVerificado: user.isVerificado,
+  dataVerificacao: user.dataVerificacao,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  endereco: user.endereco,
+  dadosProfissionais: user.dadosProfissionais,
+  configuracoes: user.configuracoes,
+});
+
 const getLoginIdentifier = (body) => {
   const rawIdentifier = body.identificador || body.email;
   const identifier = typeof rawIdentifier === 'string' ? rawIdentifier.trim() : '';
@@ -125,25 +150,24 @@ router.post('/register', validateUserRegistration, async (req, res) => {
             rendaMensal: dadosProfissionais.rendaMensal ? parseFloat(dadosProfissionais.rendaMensal) : null,
             tempoTrabalho: dadosProfissionais.tempoTrabalho || ''
           }
-        } : undefined
+        } : undefined,
+        configuracoes: {
+          create: {
+            notificacoesEmail: true,
+            notificacoesSms: true,
+            notificacoesPush: true,
+            temaInterface: 'claro',
+            idioma: 'pt-BR',
+          }
+        }
       },
       include: {
         endereco: true,
-        dadosProfissionais: true
+        dadosProfissionais: true,
+        configuracoes: true
       }
     });
-
-    // Criar configurações padrão do usuário
-    await prisma.configuracoesUsuario.create({
-      data: {
-        userId: user.id,
-        notificacoesEmail: true,
-        notificacoesSms: true,
-        notificacoesPush: true,
-        temaInterface: 'claro',
-        idioma: 'pt-BR',
-      }
-    });
+    const publicUser = toPublicRegisterUser(user);
 
     // Enviar email de verificação
     try {
@@ -172,7 +196,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       success: true,
       message: 'Usuário registrado com sucesso. Verifique seu email para ativar a conta.',
       data: {
-        user,
+        user: publicUser,
         message: 'Verifique seu email para ativar sua conta'
       }
     });
