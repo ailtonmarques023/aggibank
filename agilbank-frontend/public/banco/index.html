@@ -5911,6 +5911,7 @@
             opcoes = opcoes || {};
             var modo = opcoes.modo || 'autenticado';
             var estadoInd = opcoes.estado === 'indisponivel';
+            var preservarDadosAtuais = opcoes.preservarDadosAtuais === true;
 
             if (dados && typeof dados === 'object' && dados.user_data && dados.user_data.usuario) {
                 dados = dados.user_data.usuario;
@@ -5920,6 +5921,8 @@
 
             if (modo === 'publico') {
                 saldoReal = null;
+                window.__agilbankHeaderTemDadosReais = false;
+                window.__agilbankUltimosDadosUsuarioReais = null;
                 var pn = document.getElementById('user-name');
                 var pe = document.getElementById('user-email');
                 var pa = document.getElementById('user-account');
@@ -5942,6 +5945,10 @@
             }
 
             if (estadoInd || !dados) {
+                if (preservarDadosAtuais && window.__agilbankHeaderTemDadosReais) {
+                    console.warn('⚠️ Refresh de usuário falhou; mantendo últimos dados reais do header.', opcoes.fonte || 'fonte-desconhecida');
+                    return;
+                }
                 saldoReal = null;
                 var msgNome = 'Dados indisponíveis';
                 var msgMail = 'Não foi possível carregar. Tente atualizar a página.';
@@ -5970,10 +5977,17 @@
 
             var n = window.normalizarDadosUsuarioBruto(dados);
             if (!n || (!n.email && !n.nomeCompleto)) {
-                return window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: opcoes.fonte || 'normalizar' });
+                return window.aplicarDadosUsuarioReais(null, {
+                    modo: 'autenticado',
+                    estado: 'indisponivel',
+                    fonte: opcoes.fonte || 'normalizar',
+                    preservarDadosAtuais: true
+                });
             }
 
             saldoReal = n.saldoAtual;
+            window.__agilbankHeaderTemDadosReais = true;
+            window.__agilbankUltimosDadosUsuarioReais = n;
 
             var nomeExibir = n.nomeCompleto || '—';
             var emailExibir = n.email || '—';
@@ -6710,18 +6724,33 @@
                 } else if (response.status === 401) {
                     console.log('🔒 Sessão inválida ou expirada');
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                        window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'carregarPerfilUsuario-401' });
+                        window.aplicarDadosUsuarioReais(null, {
+                            modo: 'autenticado',
+                            estado: 'indisponivel',
+                            fonte: 'carregarPerfilUsuario-401',
+                            preservarDadosAtuais: true
+                        });
                     }
                 } else {
                     console.error('❌ Erro ao carregar perfil:', response.status, response.statusText);
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                        window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'carregarPerfilUsuario-erro' });
+                        window.aplicarDadosUsuarioReais(null, {
+                            modo: 'autenticado',
+                            estado: 'indisponivel',
+                            fonte: 'carregarPerfilUsuario-erro',
+                            preservarDadosAtuais: true
+                        });
                     }
                 }
             } catch (error) {
                 console.error('❌ Erro ao carregar perfil:', error);
                 if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                    window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'carregarPerfilUsuario-catch' });
+                    window.aplicarDadosUsuarioReais(null, {
+                        modo: 'autenticado',
+                        estado: 'indisponivel',
+                        fonte: 'carregarPerfilUsuario-catch',
+                        preservarDadosAtuais: true
+                    });
                 }
             }
         }
@@ -6731,7 +6760,12 @@
             if (token) {
                 console.log('⚠️ Token presente — não aplicar placeholders fictícios');
                 if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                    window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'usarDadosPadrao' });
+                    window.aplicarDadosUsuarioReais(null, {
+                        modo: 'autenticado',
+                        estado: 'indisponivel',
+                        fonte: 'usarDadosPadrao',
+                        preservarDadosAtuais: true
+                    });
                 }
                 return;
             }
@@ -11019,7 +11053,12 @@
             if (typeof carregarPerfilUsuario === 'function') {
                 carregarPerfilUsuario();
             } else if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                window.aplicarDadosUsuarioReais(null, { modo: 'autenticado', estado: 'indisponivel', fonte: 'forceUpdateHeaderData' });
+                window.aplicarDadosUsuarioReais(null, {
+                    modo: 'autenticado',
+                    estado: 'indisponivel',
+                    fonte: 'forceUpdateHeaderData',
+                    preservarDadosAtuais: true
+                });
             }
         }
 
