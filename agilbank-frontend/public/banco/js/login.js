@@ -1,4 +1,89 @@
 // Sistema de Login GOV.BR - Integrado com Banco de Dados
+function agilbankPrepareUiForLogout() {
+    try {
+        if (typeof window.agilbankSetSolicitacaoWizardMode === 'function') {
+            window.agilbankSetSolicitacaoWizardMode(false);
+        }
+
+        document.body.classList.remove('agilbank-cartao-wizard-open');
+
+        [
+            'cartaoGerenciamentoContainer',
+            'cartaoSolicitacaoFlow',
+            'cartaoListaRealSection',
+            'perfilContainer',
+            'configuracoesContainer',
+            'notification',
+            'pixContainer',
+            'extratoContainer',
+            'emprestimoContainer',
+            'creditoContainer',
+            'contaContainer'
+        ].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = 'none';
+                element.style.opacity = '';
+                element.style.transform = '';
+            }
+        });
+
+        [
+            'wizDispNome',
+            'wizDispEmail',
+            'wizDispCpf',
+            'wizDispTel',
+            'wizDispRua',
+            'wizDispBairro',
+            'wizDispCidadeUf',
+            'wizDispCep',
+            'cartaoWizardRevisaoDl'
+        ].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = '—';
+            }
+        });
+
+        [
+            'cartaoInputRua',
+            'cartaoInputBairro',
+            'cartaoInputCidade',
+            'cartaoInputEstado',
+            'cartaoInputCep',
+            'rendaInput',
+            'cartaoInputEmpresa',
+            'cartaoInputEmpresaAtual',
+            'cartaoInputSenha'
+        ].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = '';
+            }
+        });
+
+        const tempo = document.getElementById('cartaoSelectTempo');
+        if (tempo) {
+            tempo.value = '';
+        }
+
+        const termos = document.getElementById('termosCheck');
+        if (termos) {
+            termos.checked = false;
+        }
+
+        window.__agilbankHeaderTemDadosReais = false;
+        window.__agilbankUltimosDadosUsuarioReais = null;
+        window.__agilbankCartoesLista = [];
+        window.__agilbankCartaoSelecionadoId = null;
+        window.__agilbankTitularCartaoCache = null;
+    } catch (error) {
+        console.warn('⚠️ Falha ao preparar UI para logout:', error);
+    }
+}
+
+window.agilbankPrepareUiForLogout = agilbankPrepareUiForLogout;
+
 class LoginSystem {
     constructor() {
         this.isLoggedIn = false;
@@ -153,17 +238,28 @@ class LoginSystem {
         const userMenuDropdown = document.getElementById('userMenuDropdown');
         
         if (userMenuTrigger && userMenuDropdown) {
-            userMenuTrigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userMenuDropdown.classList.toggle('active');
-            });
+            if (!userMenuTrigger.dataset.agilbankMenuClickBound) {
+                userMenuTrigger.dataset.agilbankMenuClickBound = '1';
+                userMenuTrigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userMenuDropdown.classList.toggle('active');
+                });
+            }
             
             // Fechar menu ao clicar fora
-            document.addEventListener('click', (e) => {
-                if (!userMenuTrigger.contains(e.target) && !userMenuDropdown.contains(e.target)) {
-                    userMenuDropdown.classList.remove('active');
-                }
-            });
+            if (!document.documentElement.dataset.agilbankUserMenuCloseBound) {
+                document.documentElement.dataset.agilbankUserMenuCloseBound = '1';
+                document.addEventListener('click', (e) => {
+                    if (!userMenuTrigger.contains(e.target) && !userMenuDropdown.contains(e.target)) {
+                        userMenuDropdown.classList.remove('active');
+                    }
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        userMenuDropdown.classList.remove('active');
+                    }
+                });
+            }
         }
     }
 
@@ -594,6 +690,10 @@ class LoginSystem {
         
         this.isLoggedIn = false;
         this.userData = null;
+
+        if (typeof window.agilbankPrepareUiForLogout === 'function') {
+            window.agilbankPrepareUiForLogout();
+        }
         
         // ✅ Disparar evento de logout para UserDataManager
         const logoutEvent = new CustomEvent('userLoggedOut');

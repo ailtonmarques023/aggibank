@@ -1,3 +1,52 @@
+/* Fluxo solicitação sem cartão: isola wizard (estilo modal / mobile-first) */
+body.agilbank-cartao-wizard-open {
+    overflow: hidden;
+    height: 100%;
+}
+
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    z-index: 999998;
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #050a12;
+    box-sizing: border-box;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa .limite-section,
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa .cartoes-section,
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa .mais-section,
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa #cartaoListaRealSection {
+    display: none !important;
+}
+
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa .cartao-header {
+    flex-shrink: 0;
+    background: rgba(5, 10, 18, 0.96);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa #cartaoSolicitacaoFlow {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 /* Wizard solicitação cartão — AgilBank (escopo #cartaoWizardRoot) */
 #cartaoWizardRoot.cartao-wizard-root {
     --wiz-bg0: #0a1628;
@@ -9,30 +58,48 @@
     --wiz-text: #1a2b3c;
     --wiz-radius: 18px;
     background: linear-gradient(165deg, var(--wiz-bg0) 0%, #0f2844 45%, var(--wiz-bg1) 100%);
-    padding: 16px 14px 100px;
+    padding: 18px 16px 24px;
     min-height: 72vh;
     box-sizing: border-box;
 }
 
+#cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa #cartaoWizardRoot.cartao-wizard-root {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    min-height: auto;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
 .cartao-wizard-top {
     text-align: center;
-    margin-bottom: 14px;
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto 14px;
+    box-sizing: border-box;
 }
 
 .cartao-wizard-kicker {
-    margin: 0 0 4px;
+    margin: 0 0 3px;
     font-size: 11px;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--wiz-muted);
+    font-weight: 700;
 }
 
 .cartao-wizard-title {
-    margin: 0 0 12px;
-    font-size: 1.35rem;
-    font-weight: 700;
+    margin: 0 0 14px;
+    font-size: 1.38rem;
+    font-weight: 800;
     color: #fff;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
+    line-height: 1.15;
 }
 
 .cartao-wizard-progress-wrap {
@@ -40,6 +107,7 @@
     border-radius: 999px;
     padding: 4px;
     border: 1px solid rgba(255, 255, 255, 0.12);
+    box-sizing: border-box;
 }
 
 .cartao-wizard-progress-track {
@@ -68,9 +136,10 @@
     background: var(--wiz-card);
     border-radius: var(--wiz-radius);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
-    padding: 20px 18px 22px;
+    padding: 22px 18px 20px;
     margin: 0 auto;
-    max-width: 420px;
+    max-width: 400px;
+    width: 100%;
     box-sizing: border-box;
 }
 
@@ -95,16 +164,18 @@
 }
 
 .cartao-wizard-step h3 {
-    margin: 0 0 6px;
-    font-size: 1.05rem;
+    margin: 0 0 8px;
+    font-size: 1.08rem;
+    line-height: 1.2;
+    font-weight: 800;
     color: var(--wiz-text);
 }
 
 .cartao-wizard-step .wiz-lead {
-    margin: 0 0 14px;
-    font-size: 0.82rem;
-    color: #5a6a7a;
-    line-height: 1.45;
+    margin: 0 0 16px;
+    font-size: 0.83rem;
+    color: #53687a;
+    line-height: 1.5;
 }
 
 .cartao-wizard-dl {
@@ -116,7 +187,7 @@
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    padding: 10px 0;
+    padding: 9px 0;
     border-bottom: 1px solid #e8edf2;
     font-size: 0.88rem;
 }
@@ -129,9 +200,9 @@
 
 .cartao-wizard-dl dd {
     margin: 0;
-    color: var(--wiz-text);
+    color: #001a33;
     text-align: right;
-    font-weight: 600;
+    font-weight: 800;
     max-width: 58%;
     word-break: break-word;
 }
@@ -221,17 +292,15 @@
 }
 
 .cartao-wizard-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    position: static;
+    max-width: 400px;
+    width: 100%;
+    margin: 16px auto 0;
+    padding: 0;
     display: flex;
     gap: 10px;
-    background: linear-gradient(180deg, transparent, rgba(10, 22, 40, 0.92) 28%);
-    z-index: 50;
+    background: transparent;
+    z-index: 60;
     box-sizing: border-box;
 }
 
@@ -305,6 +374,33 @@
     #cartaoWizardRoot.cartao-wizard-root {
         padding-left: 20px;
         padding-right: 20px;
+    }
+
+    .cartao-wizard-nav {
+        max-width: 400px;
+    }
+
+    #cartaoWizardForm.cartao-wizard-card.formulario-cartao {
+        max-width: 400px;
+    }
+}
+
+@media (min-width: 768px) {
+    #cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa .cartao-header,
+    #cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa #cartaoWizardRoot.cartao-wizard-root {
+        max-width: 520px;
+    }
+
+    #cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa #cartaoWizardRoot.cartao-wizard-root {
+        padding-top: 24px;
+    }
+
+    #cartaoWizardForm.cartao-wizard-card.formulario-cartao {
+        max-width: 400px;
+    }
+
+    .cartao-wizard-nav {
+        max-width: 400px;
     }
 }
 

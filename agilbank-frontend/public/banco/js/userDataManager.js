@@ -107,8 +107,8 @@ class UserDataManager {
                 return null;
             }
 
-            console.log('🔄 Carregando dados do usuário da API...');
-            const response = await window.AgilBank.api.request('user/profile', {
+            console.log('🔄 Carregando dados do usuário da API (user-complete-data)...');
+            const response = await window.AgilBank.api.request('user/user-complete-data', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -120,12 +120,19 @@ class UserDataManager {
             });
 
             if (response.ok) {
-                const user = this.extractUserFromProfileResponse(body);
-                if (!user) {
-                    console.error('❌ Resposta de perfil sem usuário reconhecível:', body);
+                var rawUser =
+                    typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                        ? window.agilbankResolverUsuarioBrutoDoPerfil(body)
+                        : body.user_data && body.user_data.usuario
+                          ? body.user_data.usuario
+                          : body.data && body.data.user
+                            ? body.data.user
+                            : null;
+                if (!rawUser) {
+                    console.error('❌ Resposta user-complete-data sem usuário reconhecível:', body);
                     return null;
                 }
-                this.userData = user;
+                this.userData = this.normalizeUserFields(rawUser);
                 this.persistUserToStorage();
 
                 console.log('✅ Dados do usuário atualizados da API:', this.userData);
@@ -150,6 +157,13 @@ class UserDataManager {
                 modo: 'autenticado',
                 fonte: 'UserDataManager.updateAllUserData'
             });
+        }
+        if (
+            typeof window.normalizarDadosUsuarioBruto === 'function' &&
+            typeof window.atualizarInterfacePerfilDoNormalizado === 'function'
+        ) {
+            var nn = window.normalizarDadosUsuarioBruto(this.userData);
+            if (nn) window.atualizarInterfacePerfilDoNormalizado(nn);
         }
     }
 
@@ -283,13 +297,16 @@ class UserDataManager {
         const elements = [
             'user-menu-fullname', 'user-menu-email', 'user-menu-account',
             'user-name', 'user-email', 'user-account',
-            'perfil-nome', 'perfil-cpf', 'nomeCompletoValor'
+            'perfil-nome', 'perfil-cpf', 'nomeCompletoValor',
+            'wizDispNome', 'wizDispEmail', 'wizDispCpf', 'wizDispTel',
+            'wizDispRua', 'wizDispBairro', 'wizDispCidadeUf', 'wizDispCep',
+            'cartaoWizardRevisaoDl'
         ];
 
         elements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
-                element.textContent = 'Carregando...';
+                element.textContent = '—';
             }
         });
     }

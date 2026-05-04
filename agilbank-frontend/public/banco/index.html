@@ -2020,9 +2020,9 @@
                 <span class="notification-badge"></span>
             </i>
             <div class="top-search-container">
-                <i class="fa-solid fa-magnifying-glass top-search-icon"></i>
+                <i class="fa-solid fa-magnifying-glass top-search-icon" title="Busca em breve" aria-label="Busca em breve"></i>
                 <div class="top-search-bar hidden">
-                    <input type="text" placeholder="Buscar...">
+                    <input type="text" placeholder="Busca em breve" readonly>
                 </div>
             </div>
             <div class="user-menu">
@@ -3878,18 +3878,9 @@
             </div>
         </div>
         <!-- Wizard solicitação cartão (lógica POST/GET em js/cartao.js) -->
-        <div id="cartaoSolicitacaoFlow" style="display: block;">
+        <div id="cartaoSolicitacaoFlow" style="display: none;">
             <div id="cartaoWizardRoot" class="cartao-wizard-root">
-                <div class="cartao-wizard-top">
-                    <p class="cartao-wizard-kicker">AgilBank</p>
-                    <h2 class="cartao-wizard-title">Solicitar cartão</h2>
-                    <div class="cartao-wizard-progress-wrap">
-                        <div class="cartao-wizard-progress-track">
-                            <div class="cartao-wizard-progress-fill" id="cartaoWizardProgressFill"></div>
-                        </div>
-                        <span class="cartao-wizard-step-label" id="cartaoWizardStepLabel">Passo 1 de 7</span>
-                    </div>
-                </div>
+               
                 <form id="cartaoWizardForm" class="formulario-cartao cartao-wizard-card" autocomplete="off" onsubmit="return false;">
                     <!-- 1 Seus dados -->
                     <div class="cartao-wizard-step is-active" data-step="1">
@@ -4799,7 +4790,7 @@
     </div>
 
     <!-- Este container é responsável por gerenciar as configurações do usuário -->
-    <div class="configuracoes-container" id="configuracoesContainer">
+    <div class="configuracoes-container" id="configuracoesContainer" style="display: none;">
         <!-- Cabeçalho das Configurações -->
         <div class="configuracoes-header">
             <div class="configuracoes-header-content">
@@ -5199,7 +5190,7 @@
     </div> 
 
     <!-- Este container é responsável por exibir e gerenciar as informações do perfil do usuário -->
-    <div class="perfil-container" id="perfilContainer">
+    <div class="perfil-container" id="perfilContainer" style="display: none;">
         <!-- Cabeçalho do Perfil -->
         <div class="perfil-header">
             <div class="perfil-avatar">
@@ -5209,8 +5200,8 @@
                 </button>
             </div>
             <div class="perfil-info">
-                <h1 class="nome" id="perfil-nome">Carregando...</h1>
-                <p class="cpf" id="perfil-cpf">CPF: Carregando...</p>
+                <h1 class="nome" id="perfil-nome">—</h1>
+                <p class="cpf" id="perfil-cpf">CPF: —</p>
                 <button class="editar-perfil">
                     <i class="fas fa-edit"></i>
                     Editar Perfil
@@ -5228,19 +5219,19 @@
                 <div class="dados-grupo">
                     <div class="dados-item">
                         <span class="label">Nome Completo:</span>
-                        <span class="valor"><b id="nomeCompletoValor">Carregando...</b></span>
+                        <span class="valor"><b id="nomeCompletoValor">—</b></span>
                     </div>
                     <div class="dados-item">
                         <span class="label">Data de Nascimento:</span>
-                        <span class="valor"><b>15/03/1985</b></span>
+                        <span class="valor"><b id="perfilDadosNascimento">—</b></span>
                     </div>
                     <div class="dados-item">
                         <span class="label">CPF:</span>
-                        <span class="valor"><b>***.***.***-**</b></span>
+                        <span class="valor"><b id="perfilDadosCpf">—</b></span>
                     </div>
                     <div class="dados-item">
                         <span class="label">RG:</span>
-                        <span class="valor"><b>**.***.***-*</b></span>
+                        <span class="valor"><b id="perfilDadosRg">Não informado</b></span>
                     </div>
                 </div>
             </div>
@@ -5258,7 +5249,7 @@
                         <i class="fas fa-envelope"></i>
                         <div class="info">
                             <span class="label">E-mail:</span>
-                            <span class="valor"><b id="emailValor">Carregando...</b></span>
+                            <span class="valor"><b id="emailValor">—</b></span>
                         </div>
                     </div>
                     <button class="editar-contato">
@@ -5270,7 +5261,7 @@
                         <i class="fas fa-phone"></i>
                         <div class="info">
                             <span class="label">Celular:</span>
-                            <span class="valor"><b id="celularValor">Carregando...</b></span>
+                            <span class="valor"><b id="celularValor">—</b></span>
                         </div>
                     </div>
                     <button class="editar-contato">
@@ -5289,11 +5280,11 @@
             <div class="endereco-content">
                 <div class="endereco-atual">
                     <div class="endereco-info">
-                        <p class="rua">Carregando...</p>
-                        <p class="complemento">Carregando...</p>
-                        <p class="bairro">Carregando...</p>
-                        <p class="cidade-estado">Carregando...</p>
-                        <p class="cep">CEP: Carregando...</p>
+                        <p class="rua">—</p>
+                        <p class="complemento">—</p>
+                        <p class="bairro">—</p>
+                        <p class="cidade-estado">—</p>
+                        <p class="cep">CEP: —</p>
                     </div>
                     <button class="editar-endereco">
                         <i class="fas fa-edit"></i>
@@ -5885,6 +5876,120 @@
             };
         };
 
+        /** Extrai `usuario` bruto de GET user/user-complete-data, GET user/profile ou objeto plano (mesma ideia que o wizard de cartão). */
+        window.agilbankExtrairUsuarioPayloadCompleto = function agilbankExtrairUsuarioPayloadCompleto(payload) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+            var u = payload.user_data && payload.user_data.usuario ? payload.user_data.usuario : null;
+            if (!u && payload.user_data && payload.user_data.user) u = payload.user_data.user;
+            if (!u && payload.data && payload.data.user) u = payload.data.user;
+            if (!u && payload.data && payload.data.user_data && payload.data.user_data.usuario) {
+                u = payload.data.user_data.usuario;
+            }
+            if (!u && payload.usuario && typeof payload.usuario === 'object') u = payload.usuario;
+            if (!u && payload.user && typeof payload.user === 'object') u = payload.user;
+            if (!u && payload.user_data && typeof payload.user_data === 'object' && !payload.user_data.usuario) {
+                var wd = payload.user_data;
+                if (wd.email || wd.nomeCompleto || wd.nome_completo || wd.cpf || wd.id) u = wd;
+            }
+            if (!u && (payload.nome_completo || payload.nomeCompleto || payload.email || payload.cpf)) u = payload;
+            return u;
+        };
+
+        /** Encadeia extrator + fallbacks (evita ternário que ignora `user_data.usuario` quando o extrator retorna null). */
+        window.agilbankResolverUsuarioBrutoDoPerfil = function agilbankResolverUsuarioBrutoDoPerfil(profile) {
+            var u = null;
+            if (typeof window.agilbankExtrairUsuarioPayloadCompleto === 'function') {
+                u = window.agilbankExtrairUsuarioPayloadCompleto(profile);
+            }
+            if (!u && profile && profile.user_data && profile.user_data.usuario) {
+                u = profile.user_data.usuario;
+            }
+            if (!u && profile && profile.data && profile.data.user) {
+                u = profile.data.user;
+            }
+            if (!u && profile && (profile.email || profile.nome_completo || profile.nomeCompleto || profile.cpf)) {
+                u = profile;
+            }
+            return u;
+        };
+
+        function agilbankFormatarDataNascimentoExibicao(raw) {
+            if (raw == null || raw === '') return 'Não informado';
+            if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+                var p = raw.slice(0, 10).split('-');
+                return p[2] + '/' + p[1] + '/' + p[0];
+            }
+            var d = new Date(raw);
+            if (isNaN(d.getTime())) return 'Não informado';
+            return d.toLocaleDateString('pt-BR');
+        }
+
+        function agilbankFormatarCpfDadosPessoais(cpf) {
+            var d = String(cpf || '').replace(/\D/g, '');
+            if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            return cpf && String(cpf).trim() ? String(cpf).trim() : 'Não informado';
+        }
+
+        function marcarCamposPerfilApiIndisponivel() {
+            var msg = 'Indisponível';
+            var map = {
+                'perfil-nome': msg,
+                'perfil-cpf': 'CPF: ' + msg,
+                'nomeCompletoValor': msg,
+                'emailValor': msg,
+                'celularValor': msg,
+                'perfilDadosNascimento': msg,
+                'perfilDadosCpf': msg,
+                'perfilDadosRg': msg,
+                'userCompany': msg,
+                'userPosition': msg,
+                'userSalary': msg,
+                'userTimeCompany': msg
+            };
+            Object.keys(map).forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = map[id];
+            });
+            var root = document.getElementById('perfilContainer');
+            if (root) {
+                var rua = root.querySelector('.endereco-info .rua');
+                var comp = root.querySelector('.endereco-info .complemento');
+                var bai = root.querySelector('.endereco-info .bairro');
+                var cid = root.querySelector('.endereco-info .cidade-estado');
+                var cep = root.querySelector('.endereco-info .cep');
+                if (rua) rua.textContent = msg;
+                if (comp) comp.textContent = msg;
+                if (bai) bai.textContent = msg;
+                if (cid) cid.textContent = msg;
+                if (cep) cep.textContent = 'CEP: ' + msg;
+            }
+        }
+
+        function agilbankPerfilAposFalhaApiPreferirCache() {
+            if (window.__agilbankUltimosDadosUsuarioReais && typeof atualizarInterfacePerfilDoNormalizado === 'function') {
+                atualizarInterfacePerfilDoNormalizado(window.__agilbankUltimosDadosUsuarioReais);
+            } else {
+                marcarCamposPerfilApiIndisponivel();
+            }
+        }
+
+        function atualizarInterfacePerfilDoNormalizado(n) {
+            if (!n || typeof n !== 'object') return;
+            var u = {
+                nomeCompleto: n.nomeCompleto,
+                nome_completo: n.nomeCompleto,
+                email: n.email,
+                cpf: n.cpf,
+                telefone: n.telefone,
+                dataNascimento: n.dataNascimento,
+                data_nascimento: n.dataNascimento,
+                endereco: n.endereco,
+                dados_profissionais: n.dados_profissionais,
+                dadosProfissionais: n.dados_profissionais
+            };
+            atualizarInterfacePerfil({ user_data: { usuario: u }, success: true });
+        }
+
         function formatarLinhaContaUsuario(n) {
             if (!n) return 'Dados da conta indisponíveis';
             var ag = n.agencia ? ('Ag ' + n.agencia) : '';
@@ -5913,10 +6018,17 @@
             var estadoInd = opcoes.estado === 'indisponivel';
             var preservarDadosAtuais = opcoes.preservarDadosAtuais === true;
 
-            if (dados && typeof dados === 'object' && dados.user_data && dados.user_data.usuario) {
-                dados = dados.user_data.usuario;
-            } else if (dados && dados.data && dados.data.user) {
-                dados = dados.data.user;
+            if (dados && typeof dados === 'object') {
+                var resolved = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                    ? window.agilbankResolverUsuarioBrutoDoPerfil(dados)
+                    : null;
+                if (resolved) {
+                    dados = resolved;
+                } else if (dados.user_data && dados.user_data.usuario) {
+                    dados = dados.user_data.usuario;
+                } else if (dados.data && dados.data.user) {
+                    dados = dados.data.user;
+                }
             }
 
             if (modo === 'publico') {
@@ -6046,6 +6158,7 @@
                 alert('Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
                 return;
             }
+            window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = true;
             showCartaoGerenciamento();
         }
 
@@ -6066,6 +6179,8 @@
                 window.AgilBank.nav.hideAll();
                 return;
             }
+
+            document.body.classList.remove('agilbank-cartao-wizard-open');
 
             container.style.display = 'none';
             pixContainer.style.display = 'none';
@@ -6451,6 +6566,12 @@
                 perfilContainer.style.display = 'block';
                 perfilContainer.style.opacity = '1';
                 window.scrollTo(0, 0);
+                if (window.__agilbankUltimosDadosUsuarioReais) {
+                    atualizarInterfacePerfilDoNormalizado(window.__agilbankUltimosDadosUsuarioReais);
+                }
+                if (typeof carregarPerfilUsuario === 'function') {
+                    carregarPerfilUsuario();
+                }
                 console.log('✅ Perfil aberto!');
             } else {
                 console.error('❌ Container de perfil não encontrado!');
@@ -6498,17 +6619,9 @@
             // Verificar se usuário já está logado
             verificarLoginExistente();
             
-            // Aguardar um pouco para garantir que tudo esteja carregado
+            // Aguardar um pouco para garantir que a sessão esteja carregada
             setTimeout(() => {
                 carregarDadosPerfilAutomaticamente();
-                // Testar elementos após 1 segundo
-                setTimeout(testarElementos, 1000);
-                // Testar API após 2 segundos
-                setTimeout(testarAPI, 2000);
-                // Testar navegação após 3 segundos
-                setTimeout(testarNavegacao, 3000);
-                // Testar abertura simples após 4 segundos
-                setTimeout(testarAberturaSimples, 4000);
             }, 1000);
         });
 
@@ -6717,12 +6830,18 @@
                         email: profile.user_data?.usuario?.email,
                         limite_cartao: profile.user_data?.usuario?.limite_cartao
                     });
-                    
-                    // Atualizar informações do perfil na interface
-                    atualizarInterfacePerfil(profile);
-                    
+                    var uOk = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                        ? window.agilbankResolverUsuarioBrutoDoPerfil(profile)
+                        : null;
+                    if (!uOk) {
+                        console.warn('⚠️ Resposta sem usuário reconhecível — tentando cache ou indisponível', profile);
+                        agilbankPerfilAposFalhaApiPreferirCache();
+                    } else {
+                        atualizarInterfacePerfil(profile);
+                    }
                 } else if (response.status === 401) {
                     console.log('🔒 Sessão inválida ou expirada');
+                    marcarCamposPerfilApiIndisponivel();
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
                         window.aplicarDadosUsuarioReais(null, {
                             modo: 'autenticado',
@@ -6733,6 +6852,7 @@
                     }
                 } else {
                     console.error('❌ Erro ao carregar perfil:', response.status, response.statusText);
+                    agilbankPerfilAposFalhaApiPreferirCache();
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
                         window.aplicarDadosUsuarioReais(null, {
                             modo: 'autenticado',
@@ -6744,6 +6864,7 @@
                 }
             } catch (error) {
                 console.error('❌ Erro ao carregar perfil:', error);
+                agilbankPerfilAposFalhaApiPreferirCache();
                 if (typeof window.aplicarDadosUsuarioReais === 'function') {
                     window.aplicarDadosUsuarioReais(null, {
                         modo: 'autenticado',
@@ -6781,76 +6902,127 @@
                 window.aplicarDadosUsuarioReais(profile, { modo: 'autenticado', fonte: 'atualizarInterfacePerfil' });
             }
 
-            var u = profile && profile.user_data && profile.user_data.usuario ? profile.user_data.usuario : null;
-            if (!u && profile && (profile.email || profile.nome_completo || profile.nomeCompleto || profile.cpf)) {
-                u = profile;
-            }
+            var u = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                ? window.agilbankResolverUsuarioBrutoDoPerfil(profile)
+                : null;
             var n = u ? window.normalizarDadosUsuarioBruto(u) : null;
+
+            function nzLabel(val) {
+                if (val == null || String(val).trim() === '') return 'Não informado';
+                return String(val).trim();
+            }
 
             var perfilNome = document.getElementById('perfil-nome');
             var perfilCpf = document.getElementById('perfil-cpf');
-            if (perfilNome) perfilNome.textContent = (n && n.nomeCompleto) ? n.nomeCompleto : '—';
+            if (perfilNome) perfilNome.textContent = n && n.nomeCompleto ? n.nomeCompleto : nzLabel('');
             if (perfilCpf) {
                 var rawCpfDigits = n && n.cpf ? String(n.cpf).replace(/\D/g, '') : '';
-                perfilCpf.textContent = rawCpfDigits.length === 11
-                    ? ('CPF: ' + rawCpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'))
-                    : 'CPF: —';
+                perfilCpf.textContent =
+                    rawCpfDigits.length === 11
+                        ? 'CPF: ' + rawCpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                        : 'CPF: ' + nzLabel(n && n.cpf ? n.cpf : '');
             }
 
+            var nomeCompletoValor = document.getElementById('nomeCompletoValor');
+            if (nomeCompletoValor) nomeCompletoValor.textContent = n && n.nomeCompleto ? n.nomeCompleto : nzLabel('');
+
             var emailValor = document.getElementById('emailValor');
-            if (emailValor) emailValor.textContent = (n && n.email) ? n.email : '—';
+            if (emailValor) emailValor.textContent = n && n.email ? n.email : nzLabel('');
 
             var celularValor = document.getElementById('celularValor');
             if (celularValor) {
-                celularValor.textContent = u && u.telefone ? formatarTelefone(u.telefone) : '—';
+                celularValor.textContent = n && n.telefone ? formatarTelefone(n.telefone) : nzLabel('');
             }
 
-            var end = u && u.endereco ? u.endereco : null;
-            if (end) {
-                var ruaElement = document.querySelector('.rua');
-                var complementoElement = document.querySelector('.complemento');
-                var bairroElement = document.querySelector('.bairro');
-                var cidadeEstadoElement = document.querySelector('.cidade-estado');
-                var cepElement = document.querySelector('.cep');
-                if (ruaElement && end.endereco) ruaElement.textContent = end.endereco;
-                if (complementoElement && end.complemento) complementoElement.textContent = end.complemento;
-                if (bairroElement && end.bairro) bairroElement.textContent = end.bairro;
-                if (cidadeEstadoElement && end.cidade && end.estado) {
-                    cidadeEstadoElement.textContent = end.cidade + ' - ' + end.estado;
+            var dn = document.getElementById('perfilDadosNascimento');
+            if (dn) {
+                var rawDn = u && (u.data_nascimento != null && u.data_nascimento !== '' ? u.data_nascimento : u.dataNascimento);
+                dn.textContent = agilbankFormatarDataNascimentoExibicao(rawDn);
+            }
+
+            var dCpf = document.getElementById('perfilDadosCpf');
+            if (dCpf) dCpf.textContent = agilbankFormatarCpfDadosPessoais(n && n.cpf ? n.cpf : '');
+
+            var dRg = document.getElementById('perfilDadosRg');
+            if (dRg) dRg.textContent = 'Não informado';
+
+            var perfilRoot = document.getElementById('perfilContainer');
+            var end = n && n.endereco ? n.endereco : u && u.endereco ? u.endereco : null;
+            if (end && perfilRoot) {
+                var ruaElement = perfilRoot.querySelector('.endereco-info .rua');
+                var complementoElement = perfilRoot.querySelector('.endereco-info .complemento');
+                var bairroElement = perfilRoot.querySelector('.endereco-info .bairro');
+                var cidadeEstadoElement = perfilRoot.querySelector('.endereco-info .cidade-estado');
+                var cepElement = perfilRoot.querySelector('.endereco-info .cep');
+                var logradouro = end.logradouro || end.rua || end.endereco || '';
+                var numero = end.numero || '';
+                var complemento = end.complemento || '';
+                var bairro = end.bairro || '';
+                var cidade = end.cidade || '';
+                var estado = end.estado || '';
+                if (ruaElement) {
+                    var linhaRua = [logradouro, numero].filter(Boolean).join(', ');
+                    ruaElement.textContent = linhaRua ? linhaRua : nzLabel('');
                 }
-                if (cepElement && end.cep) cepElement.textContent = 'CEP: ' + formatarCEP(end.cep);
+                if (complementoElement) complementoElement.textContent = complemento ? String(complemento) : nzLabel('');
+                if (bairroElement) bairroElement.textContent = bairro ? String(bairro) : nzLabel('');
+                if (cidadeEstadoElement) {
+                    cidadeEstadoElement.textContent = [cidade, estado].filter(Boolean).join(' - ') || nzLabel('');
+                }
+                if (cepElement) cepElement.textContent = end.cep ? 'CEP: ' + formatarCEP(end.cep) : 'CEP: ' + nzLabel('');
+            } else if (perfilRoot) {
+                var ruaFb = perfilRoot.querySelector('.endereco-info .rua');
+                var compFb = perfilRoot.querySelector('.endereco-info .complemento');
+                var baiFb = perfilRoot.querySelector('.endereco-info .bairro');
+                var cidFb = perfilRoot.querySelector('.endereco-info .cidade-estado');
+                var cepFb = perfilRoot.querySelector('.endereco-info .cep');
+                if (ruaFb) ruaFb.textContent = nzLabel('');
+                if (compFb) compFb.textContent = nzLabel('');
+                if (baiFb) baiFb.textContent = nzLabel('');
+                if (cidFb) cidFb.textContent = nzLabel('');
+                if (cepFb) cepFb.textContent = 'CEP: ' + nzLabel('');
             }
 
-            if (u) {
-                var campos = {
-                    'nome': n ? n.nomeCompleto : '',
-                    'email': n ? n.email : '',
-                    'telefone': u.telefone || '',
-                    'cpf': n ? n.cpf : '',
-                    'data_nascimento': u.data_nascimento || u.dataNascimento || ''
-                };
-                Object.keys(campos).forEach(function (campo) {
-                    var elemento = document.querySelector('[data-field="' + campo + '"]');
-                    if (elemento && campos[campo]) elemento.textContent = campos[campo];
-                });
-            }
-
-            var prof = u && (u.dados_profissionais || u.dadosProfissionais) ? (u.dados_profissionais || u.dadosProfissionais) : null;
+            var prof = n && n.dados_profissionais
+                ? n.dados_profissionais
+                : u && (u.dados_profissionais || u.dadosProfissionais)
+                  ? u.dados_profissionais || u.dadosProfissionais
+                  : null;
             if (prof) {
                 var empresaElement = document.getElementById('userCompany');
                 var cargoElement = document.getElementById('userPosition');
                 var salarioElement = document.getElementById('userSalary');
                 var tempoElement = document.getElementById('userTimeCompany');
-                if (empresaElement) empresaElement.textContent = prof.empresa || 'Não informado';
-                if (cargoElement) cargoElement.textContent = prof.cargo || 'Não informado';
+                if (empresaElement) empresaElement.textContent = prof.empresa ? String(prof.empresa) : 'Não informado';
+                if (cargoElement) {
+                    var cg = prof.cargo || prof.profissao;
+                    cargoElement.textContent = cg ? String(cg) : 'Não informado';
+                }
                 if (salarioElement) {
-                    salarioElement.textContent = prof.salario
-                        ? ('R$ ' + prof.salario.toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
-                        : 'Não informado';
+                    var rm =
+                        prof.rendaMensal != null
+                            ? Number(prof.rendaMensal)
+                            : prof.renda_mensal != null
+                              ? Number(prof.renda_mensal)
+                              : Number(prof.salario);
+                    salarioElement.textContent =
+                        !isNaN(rm) && rm > 0
+                            ? 'R$ ' + rm.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                            : 'Não informado';
                 }
                 if (tempoElement) {
-                    tempoElement.textContent = prof.tempo_empresa ? (prof.tempo_empresa + ' meses') : 'Não informado';
+                    var tt = prof.tempoTrabalho || prof.tempo_trabalho || prof.tempo_empresa;
+                    tempoElement.textContent = tt ? String(tt) : 'Não informado';
                 }
+            } else {
+                var empresaFallback = document.getElementById('userCompany');
+                var cargoFallback = document.getElementById('userPosition');
+                var salarioFallback = document.getElementById('userSalary');
+                var tempoFallback = document.getElementById('userTimeCompany');
+                if (empresaFallback) empresaFallback.textContent = 'Não informado';
+                if (cargoFallback) cargoFallback.textContent = 'Não informado';
+                if (salarioFallback) salarioFallback.textContent = 'Não informado';
+                if (tempoFallback) tempoFallback.textContent = 'Não informado';
             }
 
             console.log('✅ Interface do perfil atualizada com dados reais do banco');
@@ -6979,8 +7151,9 @@
                         
                         console.log('✅ Container de perfil exibido');
                         
-                        // DESABILITADO - Não carregar dados automaticamente
-                        console.log('🚫 Carregamento de perfil desabilitado');
+                        if (typeof carregarPerfilUsuario === 'function') {
+                            carregarPerfilUsuario();
+                        }
                         
                         console.log('🎉 Painel de perfil aberto com sucesso!');
                     } else {
@@ -7025,6 +7198,9 @@
         topSearchIcon.addEventListener('click', () => {
             topSearchBar.classList.toggle('hidden');
             if (!topSearchBar.classList.contains('hidden')) {
+                topSearchInput.value = '';
+                topSearchInput.placeholder = 'Busca em breve';
+                topSearchInput.readOnly = true;
                 topSearchInput.focus();
             }
         });
@@ -7475,6 +7651,9 @@
                 if (wzNav) wzNav.style.display = 'flex';
             } else {
                 // Se está no formulário inicial, voltar para tela principal
+                if (typeof window.agilbankSetSolicitacaoWizardMode === 'function') {
+                    window.agilbankSetSolicitacaoWizardMode(false);
+                }
                 ocultarTodosContainers();
                 cartaoContainer.style.display = 'block';
                 cartaoContainer.style.opacity = '1';
@@ -8482,10 +8661,6 @@
         document.getElementById('botaoFecharModal').onclick = function() {
         document.getElementById('modalOverlay1').style.display = 'none';
         };
-            ocultarTodosContainers(); // Função existente que oculta todos os containers
-            document.getElementById('perfilContainer').style.display = 'block';
-            document.getElementById('configuracoesContainer').style.display = 'none';
-            window.scrollTo(0, 0);
 
         // este aqui e a funcao para a animacao do logo do governo
         function mostrarAnimacaoGovBr(callback) {
@@ -10468,24 +10643,30 @@
         
         if (userMenuTrigger && userMenuDropdown) {
             // Toggle do menu
-            userMenuTrigger.addEventListener('click', function(e) {
-                e.stopPropagation();
-                userMenuDropdown.classList.toggle('active');
-            });
+            if (!userMenuTrigger.dataset.agilbankMenuClickBound) {
+                userMenuTrigger.dataset.agilbankMenuClickBound = '1';
+                userMenuTrigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    userMenuDropdown.classList.toggle('active');
+                });
+            }
             
             // Fechar menu ao clicar fora
-            document.addEventListener('click', function(e) {
-                if (!userMenuTrigger.contains(e.target) && !userMenuDropdown.contains(e.target)) {
-                    userMenuDropdown.classList.remove('active');
-                }
-            });
-            
-            // Fechar menu ao pressionar ESC
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    userMenuDropdown.classList.remove('active');
-                }
-            });
+            if (!document.documentElement.dataset.agilbankUserMenuCloseBound) {
+                document.documentElement.dataset.agilbankUserMenuCloseBound = '1';
+                document.addEventListener('click', function(e) {
+                    if (!userMenuTrigger.contains(e.target) && !userMenuDropdown.contains(e.target)) {
+                        userMenuDropdown.classList.remove('active');
+                    }
+                });
+                
+                // Fechar menu ao pressionar ESC
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        userMenuDropdown.classList.remove('active');
+                    }
+                });
+            }
         }
     });
     

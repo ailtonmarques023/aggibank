@@ -126,12 +126,90 @@ function agilbankWizardExtrairEnderecoPerfil(norm) {
         o.rua = e;
         return o;
     }
-    o.rua = e.rua || e.logradouro || e.endereco || '';
+    var logr = e.rua || e.logradouro || e.endereco || '';
+    var num = e.numero != null && String(e.numero).trim() ? String(e.numero).trim() : '';
+    var comp = e.complemento != null && String(e.complemento).trim() ? String(e.complemento).trim() : '';
+    var ruaParts = [logr];
+    if (num) ruaParts.push(num);
+    o.rua = ruaParts.filter(function (x) { return x && String(x).trim(); }).join(', ');
+    if (comp) o.rua = o.rua ? o.rua + ' — ' + comp : comp;
     o.bairro = e.bairro || '';
     o.cidade = e.cidade || e.localidade || '';
     o.estado = e.estado || e.uf || '';
     o.cep = e.cep || e.CEP || '';
     return o;
+}
+
+/** Mesmo desembrulho que `aplicarDadosUsuarioReais` — cobre `user_data.usuario`, `data.user` e respostas planas. */
+function agilbankWizardExtractUsuario(profile) {
+    if (!profile || typeof profile !== 'object') return null;
+    var u = profile.user_data && profile.user_data.usuario ? profile.user_data.usuario : null;
+    if (!u && profile.data) {
+        if (profile.data.user) u = profile.data.user;
+        else if (profile.data.user_data && profile.data.user_data.usuario) u = profile.data.user_data.usuario;
+    }
+    if (!u && (profile.nome_completo || profile.nomeCompleto || profile.email || profile.cpf)) u = profile;
+    return u;
+}
+
+function agilbankWizardFormatarCpfExibicao(cpf) {
+    var cpfD = String(cpf || '').replace(/\D/g, '');
+    if (cpfD.length === 11) return cpfD.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    return String(cpf || '').trim();
+}
+
+/** Tenta mapear texto livre de `tempoTrabalho` (Prisma) para valores do `<select id="cartaoSelectTempo">`. */
+function agilbankWizardMapTempoEmpregoSelect(tempoRaw) {
+    if (tempoRaw == null || tempoRaw === '') return '';
+    var t = String(tempoRaw).toLowerCase().trim();
+    if (t === '6m' || t === '1a' || t === '2a' || t === '2a+' || t === 'ni') return t;
+    if (t.indexOf('não inform') >= 0 || t.indexOf('nao inform') >= 0) return 'ni';
+    if (t.indexOf('menos') >= 0 && t.indexOf('6') >= 0) return '6m';
+    if (t.indexOf('mais de 2') >= 0 || (t.indexOf('2') >= 0 && t.indexOf('ano') >= 0 && t.indexOf('1 a') < 0)) return '2a+';
+    if (t.indexOf('1 a 2') >= 0 || t.indexOf('dois ano') >= 0) return '2a';
+    if (t.indexOf('6 meses') >= 0 || t.indexOf('um ano') >= 0 || t.indexOf('1 ano') >= 0) return '1a';
+    return '';
+}
+
+function agilbankWizardAplicarProfissionaisDoPerfil(n) {
+    if (!n || !n.dados_profissionais || typeof n.dados_profissionais !== 'object') return;
+    var prof = n.dados_profissionais;
+    var ge = document.getElementById('cartaoInputEmpresa');
+    var ga = document.getElementById('cartaoInputEmpresaAtual');
+    var ri = document.getElementById('rendaInput');
+    var st = document.getElementById('cartaoSelectTempo');
+    var emp =
+        prof.empresa != null && String(prof.empresa).trim()
+            ? String(prof.empresa).trim()
+            : prof.empresaAtual != null && String(prof.empresaAtual).trim()
+              ? String(prof.empresaAtual).trim()
+              : '';
+    var cargo =
+        prof.cargo != null && String(prof.cargo).trim() ? String(prof.cargo).trim() : '';
+    if (ge && !String(ge.value).trim() && emp) ge.value = emp;
+    if (ga && !String(ga.value).trim() && cargo) ga.value = cargo;
+    if (ri && !String(ri.value).trim()) {
+        var rm = prof.rendaMensal != null ? prof.rendaMensal : prof.renda_mensal;
+        if (rm != null && rm !== '') {
+            var rNum = Number(rm);
+            if (isFinite(rNum) && rNum >= 1) {
+                ri.value = String(Math.round(rNum));
+            }
+        }
+    }
+    if (st && !String(st.value).trim()) {
+        var tt = prof.tempoTrabalho != null ? prof.tempoTrabalho : prof.tempo_trabalho;
+        var mapped = agilbankWizardMapTempoEmpregoSelect(tt);
+        if (mapped) st.value = mapped;
+    }
+}
+
+function agilbankSetSolicitacaoWizardMode(ativo) {
+    var ger = document.getElementById('cartaoGerenciamentoContainer');
+    if (ger) {
+        ger.classList.toggle('cartao-gerenciamento--solicitacao-ativa', !!ativo);
+    }
+    document.body.classList.toggle('agilbank-cartao-wizard-open', !!ativo);
 }
 
 async function agilbankWizardHydratePerfil() {
@@ -142,38 +220,39 @@ async function agilbankWizardHydratePerfil() {
     var cpf = '';
     var tel = '';
     var end = { rua: '', bairro: '', cidade: '', estado: '', cep: '' };
+
+    function aplicarNormalizado(n) {
+        if (!n) return;
+        nome = n.nomeCompleto || '';
+        email = n.email || '';
+        cpf = agilbankWizardFormatarCpfExibicao(n.cpf || '');
+        tel = n.telefone != null ? String(n.telefone).trim() : '';
+        end = agilbankWizardExtrairEnderecoPerfil(n);
+        agilbankWizardAplicarProfissionaisDoPerfil(n);
+    }
+
+    if (window.__agilbankUltimosDadosUsuarioReais) {
+        aplicarNormalizado(window.__agilbankUltimosDadosUsuarioReais);
+    }
+
     try {
         var response = await window.AgilBank.api.request('user/user-complete-data', {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + token
+            },
             credentials: 'include'
         });
         if (response.ok) {
             var profile = await response.json().catch(function () {
                 return {};
             });
-            var u = profile.user_data && profile.user_data.usuario ? profile.user_data.usuario : null;
+            var u = agilbankWizardExtractUsuario(profile);
             var n = u && typeof window.normalizarDadosUsuarioBruto === 'function' ? window.normalizarDadosUsuarioBruto(u) : null;
-            if (n) {
-                nome = n.nomeCompleto;
-                email = n.email;
-                cpf = n.cpf || '';
-                var cpfD = String(cpf).replace(/\D/g, '');
-                if (cpfD.length === 11) {
-                    cpf = cpfD.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-                tel = n.telefone || '';
-                end = agilbankWizardExtrairEnderecoPerfil(n);
-                var prof = n.dados_profissionais;
-                if (prof && typeof prof === 'object') {
-                    var ge = document.getElementById('cartaoInputEmpresa');
-                    var ga = document.getElementById('cartaoInputEmpresaAtual');
-                    if (ge && !String(ge.value).trim() && prof.empresa) ge.value = String(prof.empresa);
-                    if (ga && !String(ga.value).trim() && (prof.cargo || prof.empresa_atual)) {
-                        ga.value = String(prof.cargo || prof.empresa_atual || '');
-                    }
-                }
-            }
+            if (n) aplicarNormalizado(n);
+        } else {
+            console.warn('agilbankWizardHydratePerfil: GET user-complete-data', response.status);
         }
     } catch (err) {
         console.warn('agilbankWizardHydratePerfil', err);
@@ -514,7 +593,7 @@ function agilbankEnsureTitularNomeCache() {
             });
         })
         .then(function (data) {
-            var u = data.user_data && data.user_data.usuario ? data.user_data.usuario : null;
+            var u = agilbankWizardExtractUsuario(data);
             var n = u && typeof window.normalizarDadosUsuarioBruto === 'function' ? window.normalizarDadosUsuarioBruto(u) : null;
             var nome = n && n.nomeCompleto ? String(n.nomeCompleto).trim() : '';
             window.__agilbankTitularCartaoCache = nome || 'Indisponível';
@@ -880,13 +959,18 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
     var flow = document.getElementById('cartaoSolicitacaoFlow');
     var listaSec = document.getElementById('cartaoListaRealSection');
     var msg = document.getElementById('cartaoPainelMensagem');
+    var abrirSolicitacao = window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh === true;
+    window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = false;
 
     agilbankSetDashboardCardOffersVisible(list.length === 0);
 
     if (list.length === 0) {
-        if (flow) flow.style.display = 'block';
-        if (listaSec) listaSec.style.display = 'block';
-        resetCartaoSolicitacaoFlowUi();
+        agilbankSetSolicitacaoWizardMode(abrirSolicitacao);
+        if (flow) flow.style.display = abrirSolicitacao ? 'block' : 'none';
+        if (listaSec) listaSec.style.display = abrirSolicitacao ? 'none' : 'block';
+        if (abrirSolicitacao) {
+            resetCartaoSolicitacaoFlowUi();
+        }
         renderCartoesReaisGrid([]);
         if (msg) {
             msg.style.display = 'none';
@@ -895,6 +979,7 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
         return;
     }
 
+    agilbankSetSolicitacaoWizardMode(false);
     if (flow) flow.style.display = 'none';
     if (listaSec) listaSec.style.display = 'block';
     renderCartoesReaisGrid(list);
@@ -922,6 +1007,7 @@ async function agilbankRefreshPainelCartoes() {
 window.agilbankRefreshPainelCartoes = agilbankRefreshPainelCartoes;
 window.agilbankAplicarEstadoPainelCartao = agilbankAplicarEstadoPainelCartao;
 window.agilbankSetDashboardCardOffersVisible = agilbankSetDashboardCardOffersVisible;
+window.agilbankSetSolicitacaoWizardMode = agilbankSetSolicitacaoWizardMode;
 window.agilbankFetchCartoes = fetchCartoesFromApi;
 
 function buildNumeroLegacyFromLast4(last4) {
