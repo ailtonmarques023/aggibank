@@ -23,8 +23,8 @@ function resetPasswordPageUrl(token) {
   return `${base}/reset-password.html?token=${encodeURIComponent(token)}`;
 }
 
-// Configuração do transporter de email
-const createTransporter = () => {
+// API oficial do Nodemailer é `createTransport` (não existe `createTransporter`).
+const buildSmtpTransport = () => {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT) || 587,
@@ -255,7 +255,7 @@ const emailTemplates = {
 // Função principal para enviar email
 const sendEmail = async ({ to, subject, html, template, data = {} }) => {
   try {
-    const transporter = createTransporter();
+    const transporter = buildSmtpTransport();
 
     let emailContent;
     
@@ -341,7 +341,7 @@ const sendCardNotification = async (userData, cardData) => {
 // Função para testar configuração de email
 const testEmailConfiguration = async () => {
   try {
-    const transporter = createTransporter();
+    const transporter = buildSmtpTransport();
     await transporter.verify();
     logger.info('✅ Configuração de email verificada com sucesso');
     return true;

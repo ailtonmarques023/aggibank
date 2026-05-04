@@ -29,6 +29,61 @@ const FORGOT_PASSWORD_PUBLIC_MESSAGE =
 
 const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
 
+/** Garante JSON serializável (evita surpresas com Decimal em alguns runtimes). */
+function asJsonNumber(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'number') return value;
+  return Number(value);
+}
+
+function toPublicEndereco(e) {
+  if (!e) return null;
+  return {
+    id: e.id,
+    userId: e.userId,
+    cep: e.cep,
+    logradouro: e.logradouro,
+    numero: e.numero,
+    complemento: e.complemento,
+    bairro: e.bairro,
+    cidade: e.cidade,
+    estado: e.estado,
+    pais: e.pais,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+  };
+}
+
+function toPublicDadosProfissionais(d) {
+  if (!d) return null;
+  return {
+    id: d.id,
+    userId: d.userId,
+    profissao: d.profissao,
+    empresa: d.empresa,
+    cargo: d.cargo,
+    rendaMensal: d.rendaMensal == null ? null : asJsonNumber(d.rendaMensal),
+    tempoTrabalho: d.tempoTrabalho,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+  };
+}
+
+function toPublicConfiguracoes(c) {
+  if (!c) return null;
+  return {
+    id: c.id,
+    userId: c.userId,
+    notificacoesEmail: c.notificacoesEmail,
+    notificacoesSms: c.notificacoesSms,
+    notificacoesPush: c.notificacoesPush,
+    temaInterface: c.temaInterface,
+    idioma: c.idioma,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
 const toPublicRegisterUser = (user) => ({
   id: user.id,
   nomeCompleto: user.nomeCompleto,
@@ -36,10 +91,10 @@ const toPublicRegisterUser = (user) => ({
   cpf: user.cpf,
   telefone: user.telefone,
   dataNascimento: user.dataNascimento,
-  saldoAtual: user.saldoAtual,
-  limiteCartao: user.limiteCartao,
-  limitePixDiario: user.limitePixDiario,
-  limitePixMensal: user.limitePixMensal,
+  saldoAtual: asJsonNumber(user.saldoAtual),
+  limiteCartao: user.limiteCartao == null ? null : asJsonNumber(user.limiteCartao),
+  limitePixDiario: user.limitePixDiario == null ? null : asJsonNumber(user.limitePixDiario),
+  limitePixMensal: user.limitePixMensal == null ? null : asJsonNumber(user.limitePixMensal),
   scoreCredito: user.scoreCredito,
   numeroConta: user.numeroConta,
   digitoConta: user.digitoConta,
@@ -49,9 +104,9 @@ const toPublicRegisterUser = (user) => ({
   dataVerificacao: user.dataVerificacao,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
-  endereco: user.endereco,
-  dadosProfissionais: user.dadosProfissionais,
-  configuracoes: user.configuracoes,
+  endereco: toPublicEndereco(user.endereco),
+  dadosProfissionais: toPublicDadosProfissionais(user.dadosProfissionais),
+  configuracoes: toPublicConfiguracoes(user.configuracoes),
 });
 
 const getLoginIdentifier = (body) => {
@@ -113,80 +168,63 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     // Gerar token de verificação
     const tokenVerificacao = crypto.randomBytes(32).toString('hex');
 
-    // Criar usuário
-    const user = await prisma.user.create({
-      data: {
-        nomeCompleto,
-        email,
-        cpf,
-        telefone,
-        dataNascimento: new Date(dataNascimento),
-        senha: senhaHash,
-        numeroConta,
-        digitoConta,
-        agencia,
-        tokenVerificacao,
-        limitePixDiario: 1000,
-        limitePixMensal: 10000,
-        // Criar endereço se fornecido
-        endereco: endereco ? {
-          create: {
-            cep: endereco.cep,
-            logradouro: endereco.logradouro,
-            numero: endereco.numero,
-            complemento: endereco.complemento || '',
-            bairro: endereco.bairro,
-            cidade: endereco.cidade,
-            estado: endereco.estado,
-            pais: 'Brasil'
+    // Transação explícita: User + Endereco + DadosProfissionais + Configuracoes em commit único
+    const user = await prisma.$transaction((tx) =>
+      tx.user.create({
+        data: {
+          nomeCompleto,
+          email,
+          cpf,
+          telefone,
+          dataNascimento: new Date(dataNascimento),
+          senha: senhaHash,
+          numeroConta,
+          digitoConta,
+          agencia,
+          tokenVerificacao,
+          limitePixDiario: 1000,
+          limitePixMensal: 10000,
+          endereco: endereco ? {
+            create: {
+              cep: endereco.cep,
+              logradouro: endereco.logradouro,
+              numero: endereco.numero,
+              complemento: endereco.complemento || '',
+              bairro: endereco.bairro,
+              cidade: endereco.cidade,
+              estado: endereco.estado,
+              pais: 'Brasil'
+            }
+          } : undefined,
+          dadosProfissionais: dadosProfissionais ? {
+            create: {
+              profissao: dadosProfissionais.profissao,
+              empresa: dadosProfissionais.empresa || '',
+              cargo: dadosProfissionais.cargo || '',
+              rendaMensal: dadosProfissionais.rendaMensal ? parseFloat(dadosProfissionais.rendaMensal) : null,
+              tempoTrabalho: dadosProfissionais.tempoTrabalho || ''
+            }
+          } : undefined,
+          configuracoes: {
+            create: {
+              notificacoesEmail: true,
+              notificacoesSms: true,
+              notificacoesPush: true,
+              temaInterface: 'claro',
+              idioma: 'pt-BR',
+            }
           }
-        } : undefined,
-        // Criar dados profissionais se fornecidos
-        dadosProfissionais: dadosProfissionais ? {
-          create: {
-            profissao: dadosProfissionais.profissao,
-            empresa: dadosProfissionais.empresa || '',
-            cargo: dadosProfissionais.cargo || '',
-            rendaMensal: dadosProfissionais.rendaMensal ? parseFloat(dadosProfissionais.rendaMensal) : null,
-            tempoTrabalho: dadosProfissionais.tempoTrabalho || ''
-          }
-        } : undefined,
-        configuracoes: {
-          create: {
-            notificacoesEmail: true,
-            notificacoesSms: true,
-            notificacoesPush: true,
-            temaInterface: 'claro',
-            idioma: 'pt-BR',
-          }
+        },
+        include: {
+          endereco: true,
+          dadosProfissionais: true,
+          configuracoes: true
         }
-      },
-      include: {
-        endereco: true,
-        dadosProfissionais: true,
-        configuracoes: true
-      }
-    });
+      })
+    );
+
     const publicUser = toPublicRegisterUser(user);
 
-    // Enviar email de verificação
-    try {
-      await sendEmail({
-        to: email,
-        subject: 'Bem-vindo ao AgilBank - Verifique sua conta',
-        template: 'welcome',
-        data: {
-          nome: nomeCompleto,
-          token: tokenVerificacao,
-          numeroConta: `${numeroConta}-${digitoConta}`,
-          agencia,
-        }
-      });
-    } catch (emailError) {
-      logger.warn('Erro ao enviar email de verificação:', emailError);
-    }
-
-    // Log da operação
     logger.banking('user_registration', user.id, {
       email,
       numeroConta: `${numeroConta}-${digitoConta}`,
@@ -199,6 +237,25 @@ router.post('/register', validateUserRegistration, async (req, res) => {
         user: publicUser,
         message: 'Verifique seu email para ativar sua conta'
       }
+    });
+
+    // Não bloquear nem falhar a resposta HTTP por SMTP lento/indisponível
+    setImmediate(() => {
+      Promise.resolve(
+        sendEmail({
+          to: email,
+          subject: 'Bem-vindo ao AgilBank - Verifique sua conta',
+          template: 'welcome',
+          data: {
+            nome: nomeCompleto,
+            token: tokenVerificacao,
+            numeroConta: `${numeroConta}-${digitoConta}`,
+            agencia,
+          }
+        }),
+      ).catch((emailError) => {
+        logger.warn('Erro ao enviar email de verificação:', emailError);
+      });
     });
 
   } catch (error) {

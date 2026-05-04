@@ -4,12 +4,17 @@ const { prisma } = require('../src/config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../src/utils/logger');
-const { sendPasswordResetEmail } = require('../src/utils/email');
+const { sendPasswordResetEmail, sendEmail } = require('../src/utils/email');
 
 describe('Auth Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    prisma.$transaction.mockImplementation((ops) => Promise.all(ops));
+    prisma.$transaction.mockImplementation(async (arg) => {
+      if (typeof arg === 'function') {
+        return arg({ user: prisma.user });
+      }
+      return Promise.all(arg);
+    });
   });
 
   describe('POST /api/auth/register', () => {
@@ -57,6 +62,8 @@ describe('Auth Routes', () => {
       expect(response.body.data.user.email).toBe(userData.email);
       expect(response.body.data.user.senha).toBeUndefined();
       expect(response.body.data.user.tokenVerificacao).toBeUndefined();
+      expect(response.body.data.user.token).toBeUndefined();
+      expect(prisma.$transaction).toHaveBeenCalled();
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -73,6 +80,173 @@ describe('Auth Routes', () => {
         })
       );
       expect(prisma.configuracoesUsuario.create).not.toHaveBeenCalled();
+    });
+
+    it('retorna 201 com endereco, dadosProfissionais e configuracoes no user publico', async () => {
+      const userData = {
+        nomeCompleto: 'Maria Silva',
+        email: 'maria@test.com',
+        cpf: '52998224725',
+        telefone: '11988887777',
+        dataNascimento: '1990-06-15',
+        senha: '123456',
+        endereco: {
+          cep: '01310100',
+          logradouro: 'Av Paulista',
+          numero: '1000',
+          complemento: 'Apto 1',
+          bairro: 'Bela Vista',
+          cidade: 'São Paulo',
+          estado: 'SP',
+        },
+        dadosProfissionais: {
+          profissao: 'Engenheira',
+          empresa: 'Tech Co',
+          cargo: 'Dev',
+          rendaMensal: '5000',
+        },
+      };
+
+      prisma.user.create.mockResolvedValue({
+        id: 'u-full',
+        nomeCompleto: userData.nomeCompleto,
+        email: userData.email,
+        cpf: userData.cpf,
+        telefone: userData.telefone,
+        dataNascimento: new Date(userData.dataNascimento),
+        saldoAtual: 0,
+        limiteCartao: null,
+        limitePixDiario: 1000,
+        limitePixMensal: 10000,
+        scoreCredito: 0,
+        numeroConta: '123456',
+        digitoConta: '12',
+        agencia: '0001',
+        isAtivo: true,
+        isVerificado: false,
+        dataVerificacao: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        endereco: {
+          id: 'e1',
+          userId: 'u-full',
+          cep: '01310100',
+          logradouro: 'Av Paulista',
+          numero: '1000',
+          complemento: 'Apto 1',
+          bairro: 'Bela Vista',
+          cidade: 'São Paulo',
+          estado: 'SP',
+          pais: 'Brasil',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        dadosProfissionais: {
+          id: 'd1',
+          userId: 'u-full',
+          profissao: 'Engenheira',
+          empresa: 'Tech Co',
+          cargo: 'Dev',
+          rendaMensal: 5000,
+          tempoTrabalho: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        configuracoes: {
+          id: 'c1',
+          userId: 'u-full',
+          notificacoesEmail: true,
+          notificacoesSms: true,
+          notificacoesPush: true,
+          temaInterface: 'claro',
+          idioma: 'pt-BR',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      expect(response.body.data.user.endereco).toMatchObject({
+        cep: '01310100',
+        logradouro: 'Av Paulista',
+      });
+      expect(response.body.data.user.dadosProfissionais).toMatchObject({
+        profissao: 'Engenheira',
+        rendaMensal: 5000,
+      });
+      expect(response.body.data.user.configuracoes).toMatchObject({
+        idioma: 'pt-BR',
+      });
+    });
+
+    it('retorna 201 mesmo quando envio de email falha (assincrono)', async () => {
+      const userData = {
+        nomeCompleto: 'João Silva',
+        email: 'joao@test.com',
+        cpf: '12345678901',
+        telefone: '(11) 99999-9999',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      sendEmail.mockImplementation(() => Promise.reject(new Error('SMTP indisponível')));
+
+      prisma.user.create.mockResolvedValue({
+        id: 'user-id',
+        ...userData,
+        tokenVerificacao: 'verification-token',
+        saldoAtual: 0,
+        limiteCartao: null,
+        limitePixDiario: 1000,
+        limitePixMensal: 10000,
+        scoreCredito: 0,
+        numeroConta: '123456',
+        digitoConta: '78',
+        agencia: '0001',
+        isAtivo: true,
+        isVerificado: false,
+        dataVerificacao: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        endereco: null,
+        dadosProfissionais: null,
+        configuracoes: {},
+      });
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(sendEmail).toHaveBeenCalled();
+    });
+
+    it('retorna 500 quando a transacao de registro falha (sem persistir user no mock)', async () => {
+      const userData = {
+        nomeCompleto: 'João Silva',
+        email: 'joao@test.com',
+        cpf: '12345678901',
+        telefone: '(11) 99999-9999',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      prisma.$transaction.mockRejectedValueOnce(new Error('falha simulada no banco'));
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(500);
+
+      expect(response.body.code).toBe('INTERNAL_ERROR');
+      expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
     it('should return error when create fails with unique constraint', async () => {
