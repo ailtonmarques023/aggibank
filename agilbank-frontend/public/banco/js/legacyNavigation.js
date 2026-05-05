@@ -63,6 +63,18 @@
     }
 
     function hideAll() {
+        window.document.body.classList.remove('agilbank-cartao-wizard-open');
+
+        const cartaoGerenciamento = getElement('cartaoGerenciamentoContainer');
+        if (cartaoGerenciamento) {
+            cartaoGerenciamento.classList.remove('cartao-gerenciamento--solicitacao-ativa');
+        }
+
+        const cartaoSolicitacao = getElement('cartaoSolicitacaoFlow');
+        if (cartaoSolicitacao) {
+            cartaoSolicitacao.style.display = 'none';
+        }
+
         HIDE_ALL_NAMES.forEach(function hideContainer(name) {
             const element = getElement(CONTAINERS[name]);
             if (element) {

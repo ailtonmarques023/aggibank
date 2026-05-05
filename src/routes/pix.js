@@ -7,6 +7,43 @@ const { sendTransactionNotification } = require('../utils/email');
 
 const router = express.Router();
 
+function getIdempotencyKey(req) {
+  const rawKey = req.get('Idempotency-Key') || req.body?.idempotencyKey;
+  if (!rawKey) return null;
+
+  const key = String(rawKey).trim();
+  if (!key) return null;
+
+  return key.slice(0, 120);
+}
+
+function isUniqueConstraintError(error) {
+  return error && error.code === 'P2002';
+}
+
+function isValidIdempotencyKey(key) {
+  return /^[a-zA-Z0-9._:-]{8,120}$/.test(key);
+}
+
+async function findPixByIdempotencyKey(idempotencyKey) {
+  if (!idempotencyKey) return null;
+
+  return prisma.transacaoPix.findUnique({
+    where: { idempotencyKey }
+  });
+}
+
+function sendIdempotentPixResponse(res, transacao) {
+  return res.json({
+    success: true,
+    message: 'PIX enviado com sucesso',
+    data: {
+      transacao,
+      idempotent: true
+    }
+  });
+}
+
 // Aplicar autenticação em todas as rotas
 router.use(authenticateToken);
 router.use(requireVerification);
@@ -183,6 +220,28 @@ router.post('/keys', async (req, res) => {
 router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), async (req, res) => {
   try {
     const { chavePix, valor, descricao } = req.body;
+    const idempotencyKey = getIdempotencyKey(req);
+
+    if (idempotencyKey && !isValidIdempotencyKey(idempotencyKey)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Chave de idempotência inválida',
+        code: 'INVALID_IDEMPOTENCY_KEY'
+      });
+    }
+
+    const transacaoExistente = await findPixByIdempotencyKey(idempotencyKey);
+    if (transacaoExistente) {
+      if (transacaoExistente.userId !== req.user.id) {
+        return res.status(409).json({
+          success: false,
+          message: 'Chave de idempotência já utilizada',
+          code: 'IDEMPOTENCY_KEY_CONFLICT'
+        });
+      }
+
+      return sendIdempotentPixResponse(res, transacaoExistente);
+    }
 
     // Verificar saldo disponível
     if (req.user.saldoAtual < valor) {
@@ -230,7 +289,8 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
           valor,
           descricao,
           tipo: 'envio',
-          status: 'processada'
+          status: 'processada',
+          idempotencyKey
         }
       });
 
@@ -253,7 +313,10 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
           valor: -valor,
           saldoAnterior: req.user.saldoAtual,
           saldoAtual: req.user.saldoAtual - valor,
-          categoria: 'transferencia'
+          categoria: 'transferencia',
+          referenceType: 'pix',
+          referenceId: transacaoPix.id,
+          idempotencyKey
         }
       });
 
@@ -265,11 +328,13 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
       await sendTransactionNotification(
         { nome: req.user.nomeCompleto, email: req.user.email },
         {
-          tipo: 'envio',
+          tipo: 'PIX enviado',
           valor: valor.toFixed(2),
           descricao,
           dataTransacao: resultado.dataTransacao,
-          status: resultado.status
+          status: resultado.status,
+          remetente: req.user.nomeCompleto,
+          destinatario: chavePix,
         }
       );
     } catch (emailError) {
@@ -288,6 +353,19 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
     });
 
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      try {
+        const idempotencyKey = getIdempotencyKey(req);
+        const transacaoExistente = await findPixByIdempotencyKey(idempotencyKey);
+
+        if (transacaoExistente && transacaoExistente.userId === req.user.id) {
+          return sendIdempotentPixResponse(res, transacaoExistente);
+        }
+      } catch (lookupError) {
+        logger.error('Erro ao recuperar PIX idempotente:', lookupError);
+      }
+    }
+
     logger.error('Erro ao enviar PIX:', error);
     res.status(500).json({
       success: false,

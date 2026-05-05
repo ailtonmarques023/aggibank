@@ -138,6 +138,31 @@ const requireOwnershipOrAdmin = (req, res, next) => {
   });
 };
 
+// Middleware para rotas internas protegidas por chave de serviço
+const requireInternalApiKey = (envKeyName = 'INTERNAL_API_KEY') => {
+  return (req, res, next) => {
+    const expected = process.env[envKeyName];
+    if (!expected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Operação interna indisponível no momento',
+        code: 'INTERNAL_OPERATION_UNAVAILABLE'
+      });
+    }
+
+    const provided = req.get('x-internal-key');
+    if (!provided || provided !== expected) {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado',
+        code: 'ACCESS_DENIED'
+      });
+    }
+
+    next();
+  };
+};
+
 // Middleware para rate limiting específico por usuário
 const userRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
   const requests = new Map();
@@ -258,6 +283,7 @@ module.exports = {
   requireVerification,
   requirePermission,
   requireOwnershipOrAdmin,
+  requireInternalApiKey,
   userRateLimit,
   logCriticalOperation,
   generateToken,

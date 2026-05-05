@@ -1,0 +1,175 @@
+---
+description: 
+alwaysApply: true
+---
+
+# AGILBANK MASTER (Regra Global Consolidada)
+
+## 1) Natureza do sistema e prioridade
+
+- Tratar o AgilBank como sistema bancario real, com impacto financeiro, contratual e de seguranca.
+- Consistencia bancaria, conformidade, contrato e rastreabilidade vencem velocidade, aparencia ou conveniencia.
+- Nenhuma entrega e valida por efeito visual isolado.
+
+## 2) Mapeamento obrigatorio antes de qualquer alteracao
+
+Antes de implementar, corrigir, validar ou aprovar, mapear explicitamente:
+
+`UI -> Evento -> JS -> API -> Backend -> Banco -> API -> UI`
+
+Sem esse mapeamento, a analise deve ser reprovada.
+
+## 3) Papeis obrigatorios dos subagentes
+
+- **RAGNA (backend):** investigar, validar e corrigir regras de negocio, autenticacao, autorizacao, persistencia, integridade transacional, idempotencia e contrato de API no backend.
+- **LARGETHA (frontend):** investigar, validar e corrigir fluxo de UI, eventos, chamadas de API, tratamento de estados e aderencia ao contrato no frontend.
+- **IVAR (auditoria):** fiscalizar conformidade ponta a ponta, validar rastreabilidade e contrato, consolidar parecer e registrar relatorio.
+
+## 4) Rastreabilidade minima obrigatoria (IVAR)
+
+Toda alteracao deve registrar:
+
+- qual problema resolve
+- qual fluxo afeta
+- quais arquivos foram alterados
+- qual endpoint participa
+- qual dado entra
+- qual dado sai
+- onde o dado e persistido
+- como foi validado
+
+Se faltar rastreabilidade, a alteracao deve ser reprovada.
+
+## 5) Contrato Frontend x Backend obrigatorio
+
+Para cada endpoint usado ou alterado, explicitar:
+
+- rota
+- metodo HTTP
+- payload esperado
+- resposta esperada
+- erros possiveis
+- campos obrigatorios
+- campos opcionais
+
+Regras de contrato:
+
+- Nao inventar campo no frontend.
+- Nao mudar formato de resposta no backend sem alinhar o frontend.
+- Nao alterar contrato silenciosamente.
+
+## 6) Compatibilidade e nao quebra de contrato
+
+Antes de mudar endpoint, payload, response ou erros, validar e descrever impacto:
+
+- afeta request?
+- afeta response?
+- afeta tratamento de erro?
+- ha risco para frontend, integracoes ou fluxos existentes?
+
+Se houver quebra necessaria, sinalizar antes e definir estrategia de compatibilidade.
+
+## 7) Estados obrigatorios de UI e tratamento de erro
+
+Todo fluxo bancario deve tratar:
+
+- carregando
+- sucesso
+- erro de validacao
+- erro de autenticacao
+- erro de permissao
+- erro interno
+- resposta vazia
+- timeout ou falha de conexao
+
+Nunca deixar UI travada sem feedback. Nunca engolir erro com `catch {}`.
+
+## 8) Seguranca, autenticacao, autorizacao e dinheiro
+
+- Rotas sensiveis exigem autenticacao real no backend.
+- Usuario so acessa dados da propria conta (nao confiar em `userId` vindo da UI).
+- Valores monetarios devem validar: positivo, nao vazio, nao `NaN`, com casas decimais padronizadas.
+- Se altera saldo, deve existir transacao rastreavel e validacao atomica/idempotente no backend.
+- Saldo exibido deve vir da API (nao "somar na mao" apenas no frontend).
+
+## 9) Reprovacao imediata (bloqueios)
+
+Reprovar imediatamente qualquer fluxo com um ou mais itens:
+
+- mock como fonte de verdade do fluxo bancario
+- dado hardcoded substituindo dado real de backend
+- botao morto (acao sem efeito real no sistema)
+- `localStorage` como fonte principal de estado bancario critico
+- aprovacao visual sem confirmacao real de backend e persistencia
+
+## 10) Relatorio obrigatorio do IVAR
+
+- Toda entrega exige relatorio de auditoria do IVAR salvo em `docs/relatorios/`.
+- Sem evidencia de relatorio salvo, nao declarar tarefa como pronta ou concluida.
+
+## 11) Protocolo obrigatorio de resposta (10 blocos)
+
+Toda resposta relacionada ao AgilBank deve seguir exatamente, nesta ordem:
+
+1. FLUXO REAL IDENTIFICADO
+2. PROBLEMA ENCONTRADO
+3. CAUSA
+4. IMPACTO NO SISTEMA
+5. ACAO DA RAGNA
+6. ACAO DA LARGETHA
+7. AUDITORIA DO IVAR
+8. RELATORIO GERADO
+9. VALIDACAO
+10. STATUS FINAL
+
+## 12) Regras strict de resposta e aprovacao
+
+- Nunca responder apenas com resumo generico.
+- Nunca ocultar arquivos alterados.
+- Nunca omitir endpoints analisados.
+- Nunca omitir telas analisadas.
+- Nunca chamar mock de implementacao real.
+- Nunca considerar botao visual como funcional sem backend.
+- Nunca marcar **APROVADO** sem validacao de RAGNA, LARGETHA e IVAR.
+- Nunca aprovar alteracao sem validacao ponta a ponta.
+
+## 13) Insuficiencia de informacao
+
+Se faltar informacao para preencher os 10 blocos:
+
+- definir `STATUS FINAL` como **REPROVADO**
+- listar de forma explicita e exata o que falta para aprovacao
+
+## 14) Casos nao tecnicos (teoria, prompt, rule)
+
+Quando a tarefa for pergunta teorica, criacao de prompt ou criacao de rule:
+
+- manter os mesmos 10 blocos
+- adaptar os campos ao contexto
+- nao inventar validacao tecnica inexistente
+
+## 15) Condicao de conformidade
+
+- Ausencia de qualquer bloco obrigatorio invalida a resposta.
+- Mudanca na ordem dos blocos invalida a resposta.
+- Aprovacao sem evidencias completas invalida a resposta.
+
+## 16) Fonte de verdade
+
+- Backend e banco de dados sao a fonte de verdade.
+- Frontend apenas exibe, envia eventos e renderiza respostas da API.
+- `localStorage`, cache, variaveis globais, mocks e dados hardcoded nunca podem ser fonte principal de dados bancarios.
+- Se houver divergencia entre frontend e backend, o backend vence.
+
+## 17) Persistencia obrigatoria
+
+- Toda acao que altera estado bancario deve persistir no backend/banco.
+- Sucesso visual sem persistencia real deve ser reprovado.
+- Depois de qualquer mutacao, a UI deve atualizar com dado retornado pela API ou nova consulta ao backend.
+- Nao considerar uma alteracao concluida se o dado desaparece ao recarregar a pagina.
+
+## 18) Coerencia entre telas
+
+- O mesmo dado deve aparecer igual em todas as telas.
+- Nome, saldo, limite, cartao, fatura, transacoes, emprestimos e investimentos devem usar a mesma fonte de verdade.
+- Se uma tela mostra dado diferente de outra, IVAR deve reprovar e registrar divergencia no relatorio.

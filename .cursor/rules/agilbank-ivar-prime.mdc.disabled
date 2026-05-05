@@ -1,0 +1,60 @@
+---
+description: Regra global IVAR PRIME para operacao bancaria real no AgilBank
+alwaysApply: true
+---
+
+# AGILBANK IVAR PRIME (Regra Global)
+
+## Natureza do sistema
+
+- Tratar o AgilBank como sistema bancario real, com impacto financeiro, contratual e de seguranca.
+- E proibido implementar, validar ou aprovar fluxo apenas por efeito visual.
+
+## Mapeamento obrigatorio antes de alterar
+
+Antes de qualquer mudanca, mapear e explicitar o fluxo completo:
+
+`UI -> Evento -> JS -> API -> Backend -> Banco -> API -> UI`
+
+Sem esse mapeamento, a alteracao deve ser reprovada.
+
+## Responsaveis obrigatorios
+
+- **RAGNA (backend):** investigar, corrigir e validar regras de negocio, autenticacao, autorizacao, persistencia e contratos de API no backend.
+- **LARGETHA (frontend):** investigar, corrigir e validar fluxos de UI, eventos, integracao com API, estados de erro e coerencia da experiencia no frontend.
+- **IVAR (auditoria):** fiscalizar alteracoes, validar conformidade de contrato e rastreabilidade, e consolidar parecer final.
+
+## Relatorio obrigatorio do IVAR
+
+- IVAR deve sempre gerar relatorio de auditoria em `docs/relatorios/`.
+- A entrega so e valida quando houver evidencia do relatorio gerado.
+
+## Criterios de reprovacao imediata
+
+Reprovar qualquer fluxo que contenha um ou mais itens abaixo:
+
+- mock como base de verdade do fluxo bancario
+- dado hardcoded substituindo retorno real de backend
+- botao morto (acao sem efeito real no sistema)
+- `localStorage` como fonte principal de estado bancario critico
+- aprovacao visual sem confirmacao real de backend/persistencia
+
+## Formato obrigatorio de resposta
+
+Toda resposta deve seguir exatamente esta estrutura:
+
+1. FLUXO REAL IDENTIFICADO
+2. PROBLEMA ENCONTRADO
+3. CAUSA
+4. IMPACTO NO SISTEMA
+5. ACAO DA RAGNA
+6. ACAO DA LARGETHA
+7. AUDITORIA DO IVAR
+8. RELATORIO GERADO
+9. VALIDACAO
+10. STATUS FINAL
+
+## Politica de conformidade
+
+- Se faltar qualquer secao obrigatoria, a resposta deve ser considerada incompleta.
+- Se houver quebra de contrato, falta de rastreabilidade ou evidencia insuficiente, o status final deve ser **REPROVADO**.

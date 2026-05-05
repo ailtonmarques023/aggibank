@@ -2,13 +2,17 @@
     'use strict';
 
     const root = window.AgilBank = window.AgilBank || {};
-    const DEFAULT_API_BASE = 'http://localhost:3001/api';
+    /** Fallback se agilbankApiBase.js não carregar (deve coincidir com PORT do .env; env.example = 5000). */
+    const DEFAULT_API_BASE = 'http://localhost:5000/api';
 
     function normalizeBaseUrl(baseUrl) {
         return String(baseUrl || DEFAULT_API_BASE).replace(/\/+$/, '');
     }
 
     function getBaseUrl() {
+        if (typeof window.getAgilbankApiBase === 'function') {
+            return normalizeBaseUrl(window.getAgilbankApiBase());
+        }
         return normalizeBaseUrl(window.AGILBANK_API_BASE || DEFAULT_API_BASE);
     }
 

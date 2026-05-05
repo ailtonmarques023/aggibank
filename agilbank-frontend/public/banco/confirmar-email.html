@@ -213,19 +213,8 @@
         </div>
     </div>
 
+    <script src="js/agilbankApiBase.js"></script>
     <script>
-        function getAgilbankApiBase() {
-            if (window.AGILBANK_API_BASE && typeof window.AGILBANK_API_BASE === 'string') {
-                var b = window.AGILBANK_API_BASE.replace(/\/$/, '');
-                return b.endsWith('/api') ? b : (b + '/api');
-            }
-            var h = window.location.hostname;
-            if (h === 'localhost' || h === '127.0.0.1') {
-                return 'http://localhost:3001/api';
-            }
-            return window.location.origin + '/api';
-        }
-
         function goLogin() {
             window.location.href = 'index.html';
         }
@@ -281,7 +270,7 @@
             showError('Link inválido: falta o token de verificação.');
         } else {
             (function verifyEmail() {
-                var url = getAgilbankApiBase().replace(/\/$/, '') + '/auth/verify-email';
+                var url = (typeof window.getAgilbankApiBase === 'function' ? window.getAgilbankApiBase() : 'http://localhost:5000/api').replace(/\/$/, '') + '/auth/verify-email';
                 fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

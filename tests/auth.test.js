@@ -674,6 +674,61 @@ describe('Auth Routes', () => {
     });
   });
 
+  describe('POST /api/auth/resend-verification-email', () => {
+    it('returns 400 ALREADY_VERIFIED when account is already verified', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...global.testUser, isVerificado: true });
+
+      const response = await request(app)
+        .post('/api/auth/resend-verification-email')
+        .set('Authorization', `Bearer ${global.testToken}`)
+        .send({})
+        .expect(400);
+
+      expect(response.body.code).toBe('ALREADY_VERIFIED');
+      expect(sendEmail).not.toHaveBeenCalled();
+    });
+
+    it('returns 200, persists new token and sends welcome email when unverified', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...global.testUser, isVerificado: false });
+      prisma.user.update.mockResolvedValue({});
+      sendEmail.mockResolvedValue(undefined);
+
+      const response = await request(app)
+        .post('/api/auth/resend-verification-email')
+        .set('Authorization', `Bearer ${global.testToken}`)
+        .send({})
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: global.testUser.id },
+          data: expect.objectContaining({ tokenVerificacao: expect.any(String) }),
+        }),
+      );
+      expect(sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          template: 'welcome',
+          to: global.testUser.email,
+        }),
+      );
+    });
+
+    it('returns 503 EMAIL_SEND_FAILED when SMTP fails', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...global.testUser, isVerificado: false });
+      prisma.user.update.mockResolvedValue({});
+      sendEmail.mockRejectedValue(new Error('SMTP indisponível'));
+
+      const response = await request(app)
+        .post('/api/auth/resend-verification-email')
+        .set('Authorization', `Bearer ${global.testToken}`)
+        .send({})
+        .expect(503);
+
+      expect(response.body.code).toBe('EMAIL_SEND_FAILED');
+    });
+  });
+
   describe('POST /api/auth/verify-email', () => {
     it('should verify email successfully', async () => {
       const verifyData = {

@@ -21,6 +21,16 @@ const FORBIDDEN_CARD_KEYS = [
   'password',
 ];
 
+const FORBIDDEN_VIRTUAL_CARD_KEYS = [
+  'cardToken',
+  'cvvHash',
+  'cvv',
+  'pan',
+  'senha',
+  'pin',
+  'password',
+];
+
 function expectPublicCartaoShape(cartao) {
   expect(cartao).toBeDefined();
   FORBIDDEN_CARD_KEYS.forEach((k) => {
@@ -28,11 +38,21 @@ function expectPublicCartaoShape(cartao) {
   });
 }
 
+function expectPublicCartaoVirtualShape(cartaoVirtual) {
+  expect(cartaoVirtual).toBeDefined();
+  FORBIDDEN_VIRTUAL_CARD_KEYS.forEach((k) => {
+    expect(cartaoVirtual).not.toHaveProperty(k);
+  });
+}
+
 describe('Cards API — POST decisão e GET segurança', () => {
+  const INTERNAL_APPROVE_KEY = 'internal-approve-test-key';
+
   beforeEach(() => {
     prisma.user.findUnique.mockResolvedValue(authUser({ scoreCredito: 750 }));
     prisma.cartao.findFirst.mockResolvedValue(null);
     prisma.cartao.findMany.mockResolvedValue([]);
+    process.env.CARD_APPROVAL_INTERNAL_KEY = INTERNAL_APPROVE_KEY;
     prisma.cartao.create.mockImplementation(async ({ data }) => ({
       id: 'cartao-test-id',
       userId: data.userId,
@@ -52,6 +72,23 @@ describe('Cards API — POST decisão e GET segurança', () => {
       dadosSolicitacao: data.dadosSolicitacao,
       lgpdConsentAt: data.lgpdConsentAt,
       lgpdConsentVersion: data.lgpdConsentVersion,
+    }));
+    prisma.cartaoVirtual.findFirst.mockResolvedValue(null);
+    prisma.cartaoVirtual.create.mockImplementation(async ({ data }) => ({
+      id: 'cv1',
+      cartaoId: data.cartaoId,
+      userId: data.userId,
+      maskedNumber: data.maskedNumber,
+      last4: data.last4,
+      validade: data.validade,
+      bandeira: data.bandeira,
+      cardToken: data.cardToken,
+      cvvHash: data.cvvHash,
+      status: data.status ?? 'ativo',
+      dataBloqueio: data.dataBloqueio ?? null,
+      dataCancelado: data.dataCancelado ?? null,
+      createdAt: new Date('2026-05-01T12:00:00.000Z'),
+      updatedAt: new Date('2026-05-01T12:00:00.000Z'),
     }));
   });
 
@@ -296,6 +333,16 @@ describe('Cards API — POST decisão e GET segurança', () => {
       });
     }
 
+    it('retorna 403 para usuário comum sem credencial interna', async () => {
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .expect(403);
+
+      expect(res.body.code).toBe('ACCESS_DENIED');
+      expect(prisma.cartao.update).not.toHaveBeenCalled();
+    });
+
     it('aprova cartão pendente: status aprovado, dataAprovacao, resposta sem campos sensíveis', async () => {
       mockFindFirstPostThenApprove(pendingBase);
       const dataApr = new Date('2026-06-01T12:00:00.000Z');
@@ -312,6 +359,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
       const res = await request(app)
         .post('/api/cards/ap1/approve')
         .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
         .expect(200);
 
       expect(res.body.success).toBe(true);
@@ -341,6 +389,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
       const res = await request(app)
         .post('/api/cards/id-inexistente/approve')
         .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
         .expect(404);
 
       expect(res.body.code).toBe('CARD_NOT_FOUND');
@@ -359,6 +408,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
       const res = await request(app)
         .post('/api/cards/outro-user-card-uuid/approve')
         .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
         .expect(404);
 
       expect(res.body.code).toBe('CARD_NOT_FOUND');
@@ -380,11 +430,155 @@ describe('Cards API — POST decisão e GET segurança', () => {
       const res = await request(app)
         .post('/api/cards/already-approved-id/approve')
         .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
         .expect(404);
 
       expect(res.body.code).toBe('CARD_NOT_FOUND');
       expect(res.body.message).toMatch(/não encontrado|já processado/i);
       expect(prisma.cartao.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Cartão virtual — contrato backend real', () => {
+    const baseCardApproved = {
+      id: 'base-approved',
+      userId: 'test-user-id',
+      status: 'aprovado',
+      tipo: 'credito',
+      bandeira: 'visa',
+    };
+
+    it('cria cartão virtual para cartão base aprovado', async () => {
+      prisma.cartao.findFirst.mockResolvedValue(baseCardApproved);
+
+      const res = await request(app)
+        .post('/api/cards/base-approved/virtual')
+        .set('Authorization', BEARER)
+        .expect(201);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.cartaoVirtual.status).toBe('ativo');
+      expect(res.body.data.cartaoVirtual.maskedNumber).toContain('****');
+      expectPublicCartaoVirtualShape(res.body.data.cartaoVirtual);
+      expect(prisma.cartaoVirtual.create).toHaveBeenCalled();
+      const createData = prisma.cartaoVirtual.create.mock.calls[0][0].data;
+      expect(createData.cvvHash).toBeDefined();
+      expect(createData.cvvHash).not.toEqual('');
+    });
+
+    it('impede criação de virtual para cartão pendente/bloqueado', async () => {
+      prisma.cartao.findFirst.mockResolvedValue(null);
+
+      const res = await request(app)
+        .post('/api/cards/base-pendente/virtual')
+        .set('Authorization', BEARER)
+        .expect(400);
+
+      expect(res.body.code).toBe('BASE_CARD_NOT_ELIGIBLE');
+      expect(prisma.cartaoVirtual.create).not.toHaveBeenCalled();
+    });
+
+    it('impede acesso de terceiro no GET do cartão virtual', async () => {
+      prisma.cartao.findFirst.mockResolvedValue(null);
+
+      const res = await request(app)
+        .get('/api/cards/card-terceiro/virtual')
+        .set('Authorization', BEARER)
+        .expect(404);
+
+      expect(res.body.code).toBe('CARD_NOT_FOUND');
+      expect(prisma.cartaoVirtual.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('bloqueia e desbloqueia cartão virtual existente', async () => {
+      prisma.cartaoVirtual.findFirst
+        .mockResolvedValueOnce({
+          id: 'cv1',
+          cartaoId: 'base-approved',
+          userId: 'test-user-id',
+          status: 'ativo',
+        })
+        .mockResolvedValueOnce({
+          id: 'cv1',
+          cartaoId: 'base-approved',
+          userId: 'test-user-id',
+          status: 'bloqueado',
+        });
+
+      prisma.cartaoVirtual.update
+        .mockResolvedValueOnce({
+          id: 'cv1',
+          cartaoId: 'base-approved',
+          userId: 'test-user-id',
+          maskedNumber: '**** **** **** 4321',
+          last4: '4321',
+          validade: '10/2031',
+          bandeira: 'visa',
+          cardToken: 'secret',
+          cvvHash: 'secret-hash',
+          status: 'bloqueado',
+          dataBloqueio: new Date('2026-05-01T13:00:00.000Z'),
+        })
+        .mockResolvedValueOnce({
+          id: 'cv1',
+          cartaoId: 'base-approved',
+          userId: 'test-user-id',
+          maskedNumber: '**** **** **** 4321',
+          last4: '4321',
+          validade: '10/2031',
+          bandeira: 'visa',
+          cardToken: 'secret',
+          cvvHash: 'secret-hash',
+          status: 'ativo',
+          dataBloqueio: null,
+        });
+
+      prisma.cartao.findFirst.mockResolvedValue({
+        id: 'base-approved',
+        userId: 'test-user-id',
+        status: 'aprovado',
+      });
+
+      const blockRes = await request(app)
+        .post('/api/cards/base-approved/virtual/block')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(blockRes.body.data.cartaoVirtual.status).toBe('bloqueado');
+      expectPublicCartaoVirtualShape(blockRes.body.data.cartaoVirtual);
+
+      const unblockRes = await request(app)
+        .post('/api/cards/base-approved/virtual/unblock')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(unblockRes.body.data.cartaoVirtual.status).toBe('ativo');
+      expectPublicCartaoVirtualShape(unblockRes.body.data.cartaoVirtual);
+    });
+
+    it('GET não vaza token/hash sensível do cartão virtual', async () => {
+      prisma.cartao.findFirst.mockResolvedValue({ id: 'base-approved' });
+      prisma.cartaoVirtual.findFirst.mockResolvedValue({
+        id: 'cv1',
+        cartaoId: 'base-approved',
+        userId: 'test-user-id',
+        maskedNumber: '**** **** **** 4321',
+        last4: '4321',
+        validade: '10/2031',
+        bandeira: 'visa',
+        status: 'ativo',
+        cardToken: 'token-interno',
+        cvvHash: 'hash-interno',
+      });
+
+      const res = await request(app)
+        .get('/api/cards/base-approved/virtual')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expectPublicCartaoVirtualShape(res.body.data.cartaoVirtual);
+      expect(res.body.data.cartaoVirtual.maskedNumber).toContain('****');
     });
   });
 

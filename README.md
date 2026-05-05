@@ -101,6 +101,29 @@ npm run test:watch
 npm test -- --coverage
 ```
 
+## 📧 E-mail (SMTP) e templates transacionais
+
+O envio usa **Nodemailer** (`src/utils/email.js`) e exige no `.env` pelo menos: `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (e opcionalmente `SMTP_PORT`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `FRONTEND_URL` para links `/banco/confirmar-email.html` e `reset-password.html`).
+
+**Verificar conexão SMTP (sem enviar mensagem):**
+
+```bash
+node -e "require('dotenv').config(); const { testEmailConfiguration } = require('./src/utils/email'); testEmailConfiguration().then(ok => { process.exit(ok ? 0 : 1); });"
+```
+
+**Enviar e-mail de teste pela API (rota operacional `/api/email`, requer JWT de usuário autenticado):** com o servidor em execução, `POST /api/email/test` com header `Authorization: Bearer <token>`.
+
+**Disparar os 4 templates oficiais de uma vez (script, sem subir o servidor):**
+
+```bash
+npm run email:templates-demo -- seu@email.com
+# ou: TEST_EMAIL_TO=seu@email.com npm run email:templates-demo
+```
+
+Cada mensagem usa dados fictícios (tokens aleatórios só para preencher o layout); links de verificação/redefinição apontam para `FRONTEND_URL` do `.env`.
+
+Templates oficiais: `welcome`, `passwordReset`, `transactionNotification`, `cardNotification` (HTML + texto simples, rodapé de segurança). Falhas de SMTP **não** devem impedir cadastro (201), PIX ou aprovação de cartão — erros são registrados em log, sem expor `SMTP_PASS`.
+
 ## 📁 Estrutura do Projeto
 
 ```

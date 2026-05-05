@@ -12,7 +12,7 @@ export const accountService = {
 
   async transfer(transferData) {
     try {
-      const response = await api.post('/account/transfer', transferData);
+      const response = await api.post('/pix/send', transferData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

@@ -3,11 +3,11 @@ import { ArrowsRightLeftIcon, UserIcon, CurrencyDollarIcon } from '@heroicons/re
 import Modal, { ModalBody, ModalFooter } from './Modal';
 import Button from './Button';
 import Input from './Input';
-import { accountService } from '../services/api';
+import { accountService } from '../services/accountService';
 
 const TransferModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
-    destinatario: '',
+    chavePix: '',
     valor: '',
     descricao: ''
   });
@@ -15,18 +15,10 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
   const [step, setStep] = useState(1); // 1: Formulário, 2: Confirmação
 
-  // Mock de usuários disponíveis para transferência
-  const mockUsers = [
-    { id: '1', name: 'Maria Silva', email: 'maria@email.com', account: '54321-0' },
-    { id: '2', name: 'Pedro Costa', email: 'pedro@email.com', account: '67890-1' },
-    { id: '3', name: 'Ana Santos', email: 'ana@email.com', account: '11111-2' },
-    { id: '4', name: 'Carlos Oliveira', email: 'carlos@email.com', account: '22222-3' }
-  ];
-
   useEffect(() => {
     if (isOpen) {
       // Reset form when modal opens
-      setFormData({ destinatario: '', valor: '', descricao: '' });
+      setFormData({ chavePix: '', valor: '', descricao: '' });
       setErrors({});
       setStep(1);
     }
@@ -35,8 +27,8 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.destinatario) {
-      newErrors.destinatario = 'Selecione um destinatário';
+    if (!formData.chavePix.trim()) {
+      newErrors.chavePix = 'Informe a chave PIX do destinatário';
     }
 
     if (!formData.valor) {
@@ -82,7 +74,7 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
       setLoading(true);
       
       const transferData = {
-        destinatario: formData.destinatario,
+        chavePix: formData.chavePix.trim(),
         valor: parseFloat(formData.valor.replace(',', '.')),
         descricao: formData.descricao
       };
@@ -90,7 +82,7 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
       const result = await accountService.transfer(transferData);
       
       if (result.success) {
-        onSuccess(result.transaction);
+        onSuccess(result.data?.transacao || result.transaction);
         onClose();
       } else {
         setErrors({ submit: 'Erro ao realizar transferência' });
@@ -101,8 +93,6 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
       setLoading(false);
     }
   };
-
-  const selectedUser = mockUsers.find(user => user.id === formData.destinatario);
 
   return (
     <Modal
@@ -121,29 +111,15 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
               <span className="font-medium">Nova Transferência</span>
             </div>
 
-            {/* Destinatário */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Destinatário *
-              </label>
-              <select
-                value={formData.destinatario}
-                onChange={(e) => handleInputChange('destinatario', e.target.value)}
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-agilbank-primary focus:border-transparent ${
-                  errors.destinatario ? 'border-red-300' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Selecione um destinatário</option>
-                {mockUsers.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} - {user.account}
-                  </option>
-                ))}
-              </select>
-              {errors.destinatario && (
-                <p className="mt-1 text-sm text-red-600">{errors.destinatario}</p>
-              )}
-            </div>
+            <Input
+              label="Chave PIX do destinatário *"
+              type="text"
+              placeholder="CPF, e-mail, telefone ou chave aleatória"
+              value={formData.chavePix}
+              onChange={(e) => handleInputChange('chavePix', e.target.value)}
+              error={errors.chavePix}
+              helperText="Use a chave PIX real do destinatário"
+            />
 
             {/* Valor */}
             <Input
@@ -194,9 +170,8 @@ const TransferModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="flex items-center gap-3">
                 <UserIcon className="h-5 w-5 text-gray-500" />
                 <div>
-                  <p className="text-sm text-gray-600">Destinatário</p>
-                  <p className="font-medium">{selectedUser?.name}</p>
-                  <p className="text-sm text-gray-500">{selectedUser?.account}</p>
+                  <p className="text-sm text-gray-600">Chave PIX do destinatário</p>
+                  <p className="font-medium break-all">{formData.chavePix}</p>
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
+const crypto = require('crypto');
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { authenticateToken, requireVerification } = require('../middleware/auth');
+const { authenticateToken, requireVerification, requireInternalApiKey } = require('../middleware/auth');
 const { validateCardRequest } = require('../middleware/validation');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
@@ -26,6 +27,17 @@ function publicCard(cartao) {
     password: _omitPassword,
     ...rest
   } = cartao;
+  return rest;
+}
+
+/** Resposta API de cartao virtual: sem token interno nem hash de CVV. */
+function publicVirtualCard(cartaoVirtual) {
+  if (!cartaoVirtual) return cartaoVirtual;
+  const {
+    cardToken: _omitToken,
+    cvvHash: _omitCvvHash,
+    ...rest
+  } = cartaoVirtual;
   return rest;
 }
 
@@ -368,7 +380,7 @@ router.post('/', validateCardRequest, async (req, res) => {
  *       200:
  *         description: Cartão aprovado com sucesso
  */
-router.post('/:id/approve', async (req, res) => {
+router.post('/:id/approve', requireInternalApiKey('CARD_APPROVAL_INTERNAL_KEY'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -683,11 +695,257 @@ router.put('/:id/limit', async (req, res) => {
   }
 });
 
+router.post('/:id/virtual', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const cartaoBase = await prisma.cartao.findFirst({
+      where: {
+        id,
+        userId: req.user.id,
+        status: { in: ['aprovado', 'ativo'] },
+      },
+    });
+
+    if (!cartaoBase) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cartão base não elegível para cartão virtual',
+        code: 'BASE_CARD_NOT_ELIGIBLE'
+      });
+    }
+
+    const existente = await prisma.cartaoVirtual.findFirst({
+      where: {
+        cartaoId: id,
+        userId: req.user.id,
+        status: { in: ['ativo', 'bloqueado'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existente) {
+      return res.status(409).json({
+        success: false,
+        message: 'Você já possui cartão virtual ativo para este cartão',
+        code: 'VIRTUAL_CARD_ALREADY_EXISTS'
+      });
+    }
+
+    const fields = generateDemoVirtualCardFields(cartaoBase.bandeira);
+    const cartaoVirtual = await prisma.cartaoVirtual.create({
+      data: {
+        cartaoId: cartaoBase.id,
+        userId: req.user.id,
+        maskedNumber: fields.maskedNumber,
+        last4: fields.last4,
+        validade: fields.validade,
+        bandeira: fields.bandeira,
+        cardToken: fields.cardToken,
+        cvvHash: fields.cvvHash,
+        status: 'ativo',
+      }
+    });
+
+    await recordAudit({
+      userId: req.user.id,
+      action: 'card.virtual.created',
+      entity: 'CartaoVirtual',
+      entityId: cartaoVirtual.id,
+      metadata: { cartaoId: cartaoBase.id },
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Cartão virtual criado com sucesso',
+      data: { cartaoVirtual: publicVirtualCard(cartaoVirtual) },
+    });
+  } catch (error) {
+    logger.error('Erro ao criar cartão virtual:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+router.get('/:id/virtual', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cartaoBase = await prisma.cartao.findFirst({
+      where: { id, userId: req.user.id },
+      select: { id: true }
+    });
+
+    if (!cartaoBase) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão não encontrado',
+        code: 'CARD_NOT_FOUND'
+      });
+    }
+
+    const cartaoVirtual = await prisma.cartaoVirtual.findFirst({
+      where: {
+        cartaoId: id,
+        userId: req.user.id,
+        status: { in: ['ativo', 'bloqueado'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!cartaoVirtual) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão virtual não encontrado',
+        code: 'VIRTUAL_CARD_NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Cartão virtual consultado com sucesso',
+      data: { cartaoVirtual: publicVirtualCard(cartaoVirtual) },
+    });
+  } catch (error) {
+    logger.error('Erro ao consultar cartão virtual:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+router.post('/:id/virtual/block', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cartaoVirtual = await prisma.cartaoVirtual.findFirst({
+      where: {
+        cartaoId: id,
+        userId: req.user.id,
+        status: 'ativo',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!cartaoVirtual) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão virtual não encontrado ou já bloqueado',
+        code: 'VIRTUAL_CARD_NOT_FOUND'
+      });
+    }
+
+    const atualizado = await prisma.cartaoVirtual.update({
+      where: { id: cartaoVirtual.id },
+      data: { status: 'bloqueado', dataBloqueio: new Date() }
+    });
+
+    await recordAudit({
+      userId: req.user.id,
+      action: 'card.virtual.blocked',
+      entity: 'CartaoVirtual',
+      entityId: atualizado.id,
+      metadata: { cartaoId: id },
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+
+    res.json({
+      success: true,
+      message: 'Cartão virtual bloqueado com sucesso',
+      data: { cartaoVirtual: publicVirtualCard(atualizado) },
+    });
+  } catch (error) {
+    logger.error('Erro ao bloquear cartão virtual:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+router.post('/:id/virtual/unblock', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cartaoBase = await prisma.cartao.findFirst({
+      where: {
+        id,
+        userId: req.user.id,
+        status: { in: ['aprovado', 'ativo'] },
+      },
+      select: { id: true }
+    });
+
+    if (!cartaoBase) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cartão base não elegível para desbloqueio virtual',
+        code: 'BASE_CARD_NOT_ELIGIBLE'
+      });
+    }
+
+    const cartaoVirtual = await prisma.cartaoVirtual.findFirst({
+      where: {
+        cartaoId: id,
+        userId: req.user.id,
+        status: 'bloqueado',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!cartaoVirtual) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão virtual não encontrado ou não está bloqueado',
+        code: 'VIRTUAL_CARD_NOT_FOUND'
+      });
+    }
+
+    const atualizado = await prisma.cartaoVirtual.update({
+      where: { id: cartaoVirtual.id },
+      data: { status: 'ativo', dataBloqueio: null }
+    });
+
+    await recordAudit({
+      userId: req.user.id,
+      action: 'card.virtual.unblocked',
+      entity: 'CartaoVirtual',
+      entityId: atualizado.id,
+      metadata: { cartaoId: id },
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+
+    res.json({
+      success: true,
+      message: 'Cartão virtual desbloqueado com sucesso',
+      data: { cartaoVirtual: publicVirtualCard(atualizado) },
+    });
+  } catch (error) {
+    logger.error('Erro ao desbloquear cartão virtual:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
 function generateExpiryDate() {
   const now = new Date();
   const year = now.getFullYear() + 5;
   const month = String(now.getMonth() + 1).padStart(2, '0');
   return `${month}/${year}`;
+}
+
+function hashCvv(cvv) {
+  return crypto.createHash('sha256').update(String(cvv)).digest('hex');
 }
 
 /** Demo: últimos 4 dígitos e máscara; PAN completo nunca é persistido. */
@@ -699,6 +957,18 @@ function generateDemoCardFields() {
   const cardToken = `demo_${uuidv4()}`;
   const validade = generateExpiryDate();
   return { maskedNumber, last4, bandeira, cardToken, validade };
+}
+
+/** Demo: PAN mascarado e CVV somente em hash persistido. */
+function generateDemoVirtualCardFields(bandeiraBase) {
+  const bandeira = bandeiraBase || 'visa';
+  const last4 = String(Math.floor(1000 + Math.random() * 9000)).padStart(4, '0');
+  const maskedNumber = `**** **** **** ${last4}`;
+  const cardToken = `virtual_${uuidv4()}`;
+  const validade = generateExpiryDate();
+  const cvv = String(Math.floor(100 + Math.random() * 900));
+  const cvvHash = hashCvv(cvv);
+  return { maskedNumber, last4, validade, bandeira, cardToken, cvvHash };
 }
 
 function calculateCreditLimit(scoreCredito) {

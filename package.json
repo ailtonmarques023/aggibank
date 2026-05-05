@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node src/scripts/seed.js",
+    "email:templates-demo": "node src/scripts/sendEmailTemplatesSample.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/",

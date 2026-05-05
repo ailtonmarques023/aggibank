@@ -46,7 +46,20 @@ class UserDataManager {
         return Object.assign({}, user, {
             nome_completo: user.nome_completo || user.nomeCompleto || user.name,
             numero_conta: user.numero_conta || user.numeroConta,
-            digito_conta: user.digito_conta || user.digitoConta
+            digito_conta: user.digito_conta || user.digitoConta,
+            endereco: user.endereco || user.address || null,
+            dados_profissionais: user.dados_profissionais || user.dadosProfissionais || null
+        });
+    }
+
+    mergeWithExistingRelatedData(nextUser) {
+        const normalized = this.normalizeUserFields(nextUser);
+        if (!normalized || typeof normalized !== 'object' || !this.userData) {
+            return normalized;
+        }
+        return Object.assign({}, normalized, {
+            endereco: normalized.endereco || this.userData.endereco || null,
+            dados_profissionais: normalized.dados_profissionais || this.userData.dados_profissionais || null
         });
     }
 
@@ -78,11 +91,14 @@ class UserDataManager {
                 this.userData = this.normalizeUserFields(JSON.parse(storedUser));
                 console.log('✅ Dados do usuário carregados da sessão:', this.userData);
                 this.updateAllUserData();
+                this.loadUserDataFromAPI();
             } else {
                 console.log('⚠️ Nenhum usuário logado encontrado');
+                this.loadUserDataFromAPI();
             }
         } catch (error) {
             console.error('❌ Erro ao carregar dados do usuário:', error);
+            this.loadUserDataFromAPI();
         }
     }
 
@@ -108,38 +124,46 @@ class UserDataManager {
             }
 
             console.log('🔄 Carregando dados do usuário da API (user-complete-data)...');
-            const response = await window.AgilBank.api.request('user/user-complete-data', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            async function requestProfile(path) {
+                const response = await window.AgilBank.api.request(path, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const body = await response.json().catch(function () {
+                    return {};
+                });
+                return { response, body, path };
+            }
 
-            const body = await response.json().catch(function () {
-                return {};
-            });
+            let result = await requestProfile('user/user-complete-data');
+            if (!result.response.ok && result.response.status !== 401) {
+                console.warn('⚠️ user/user-complete-data falhou; tentando user/profile');
+                result = await requestProfile('user/profile');
+            }
 
-            if (response.ok) {
+            if (result.response.ok) {
                 var rawUser =
                     typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
-                        ? window.agilbankResolverUsuarioBrutoDoPerfil(body)
-                        : body.user_data && body.user_data.usuario
-                          ? body.user_data.usuario
-                          : body.data && body.data.user
-                            ? body.data.user
+                        ? window.agilbankResolverUsuarioBrutoDoPerfil(result.body)
+                        : result.body.user_data && result.body.user_data.usuario
+                          ? result.body.user_data.usuario
+                          : result.body.data && result.body.data.user
+                            ? result.body.data.user
                             : null;
                 if (!rawUser) {
-                    console.error('❌ Resposta user-complete-data sem usuário reconhecível:', body);
+                    console.error('❌ Resposta de perfil sem usuário reconhecível:', result.body);
                     return null;
                 }
-                this.userData = this.normalizeUserFields(rawUser);
+                this.userData = this.mergeWithExistingRelatedData(rawUser);
                 this.persistUserToStorage();
 
                 console.log('✅ Dados do usuário atualizados da API:', this.userData);
                 this.updateAllUserData();
                 return this.userData;
             }
-            console.error('❌ Erro ao carregar dados da API:', response.status);
+            console.error('❌ Erro ao carregar dados da API:', result.response.status);
             return null;
         } catch (error) {
             console.error('❌ Erro na requisição da API:', error);
@@ -270,8 +294,9 @@ class UserDataManager {
     setupEventListeners() {
         // Atualizar dados quando o usuário fizer login
         document.addEventListener('userLoggedIn', (event) => {
-            this.userData = this.normalizeUserFields(event.detail.userData);
+            this.userData = this.mergeWithExistingRelatedData(event.detail.userData);
             this.updateAllUserData();
+            this.loadUserDataFromAPI();
         });
 
         // Atualizar dados quando o usuário fizer logout
@@ -282,7 +307,7 @@ class UserDataManager {
 
         // Atualizar dados quando houver mudanças no perfil
         document.addEventListener('profileUpdated', (event) => {
-            this.userData = this.normalizeUserFields({
+            this.userData = this.mergeWithExistingRelatedData({
                 ...this.userData,
                 ...event.detail.updatedData
             });
@@ -331,7 +356,7 @@ class UserDataManager {
      */
     updateUserData(updatedData) {
         if (this.userData) {
-            this.userData = this.normalizeUserFields({ ...this.userData, ...updatedData });
+            this.userData = this.mergeWithExistingRelatedData({ ...this.userData, ...updatedData });
             this.persistUserToStorage();
             this.updateAllUserData();
         }

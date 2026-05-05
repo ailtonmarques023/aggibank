@@ -1,0 +1,66 @@
+---
+description: 
+alwaysApply: true
+---
+
+# AGILBANK - Contrato e Rastreabilidade
+
+Ao implementar qualquer mudanca, trate estas regras como obrigatorias.
+
+## 1) Rastreabilidade minima (IVAR)
+
+Toda alteracao deve registrar:
+- qual problema resolve
+- qual fluxo afeta
+- quais arquivos foram alterados
+- qual endpoint participa
+- qual dado entra
+- qual dado sai
+- onde o dado e persistido
+- como foi validado
+
+Se faltar rastreabilidade, a alteracao deve ser reprovada.
+
+## 2) Contrato Frontend x Backend
+
+Para cada endpoint usado/alterado, explicite:
+- rota
+- metodo HTTP
+- payload esperado
+- resposta esperada
+- erros possiveis
+- campos obrigatorios e opcionais
+
+Nao inventar campo no frontend. Nao mudar formato de resposta no backend sem alinhar o frontend.
+
+## 3) Nao quebrar contrato (compatibilidade)
+
+Antes de mudar endpoint/payload/response/erros, valide e descreva impacto:
+- afeta request?
+- afeta response?
+- afeta tratamento de erro?
+- ha risco para frontend/integracoes/fluxos existentes?
+
+Nao alterar contrato silenciosamente. Se houver quebra necessaria, sinalizar antes e definir estrategia de compatibilidade.
+
+## 4) Erros e estados obrigatorios na UI
+
+Todo fluxo bancario deve tratar:
+- carregando
+- sucesso
+- erro de validacao
+- erro de autenticacao
+- erro de permissao
+- erro interno
+- resposta vazia
+- timeout/falha de conexao
+
+Nunca deixar UI travada sem feedback. Nunca engolir erro com `catch {}`.
+
+## 5) Regras de seguranca e dinheiro
+
+- Rotas sensiveis exigem autenticacao real no backend.
+- Usuario so acessa dados da propria conta (nao confiar em `userId` da UI).
+- Valores monetarios: validar positivo, nao vazio, nao `NaN`, padronizar casas decimais.
+- Se altera saldo, deve existir transacao rastreavel e validacao atomica/idempotente no backend.
+- Saldo exibido deve vir da API (nao "somar na mao" apenas no frontend).

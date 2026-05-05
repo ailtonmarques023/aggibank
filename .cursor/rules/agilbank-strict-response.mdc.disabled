@@ -1,0 +1,59 @@
+---
+description: Regra strict de resposta obrigatoria no protocolo IVAR PRIME para AgilBank
+alwaysApply: true
+---
+
+# AGILBANK STRICT RESPONSE (Complementar)
+
+## Objetivo
+
+Bloquear qualquer resposta fora do protocolo IVAR PRIME no contexto do projeto AgilBank.
+
+## Estrutura obrigatoria de toda resposta
+
+Toda resposta relacionada ao projeto AgilBank deve seguir **exatamente** os 10 blocos abaixo, nesta ordem:
+
+1. FLUXO REAL IDENTIFICADO
+2. PROBLEMA ENCONTRADO
+3. CAUSA
+4. IMPACTO NO SISTEMA
+5. ACAO DA RAGNA
+6. ACAO DA LARGETHA
+7. AUDITORIA DO IVAR
+8. RELATORIO GERADO
+9. VALIDACAO
+10. STATUS FINAL
+
+## Regras strict obrigatorias
+
+- Nunca responder apenas com resumo generico.
+- Nunca declarar "pronto", "concluido" ou equivalente sem relatorio IVAR salvo.
+- Nunca marcar **APROVADO** se RAGNA, LARGETHA ou IVAR nao validaram.
+- Nunca aprovar alteracao sem validacao ponta a ponta.
+- Nunca ocultar arquivos alterados.
+- Nunca omitir endpoints analisados.
+- Nunca omitir telas analisadas.
+- Nunca chamar mock de implementacao real.
+- Nunca aceitar `localStorage` como fonte da verdade para estado bancario critico.
+- Nunca considerar botao visual como funcional sem backend real.
+
+## Regra de insuficiencia de evidencia
+
+Se nao houver informacao suficiente para preencher os blocos:
+
+- o `STATUS FINAL` deve ser **REPROVADO**
+- deve listar de forma explicita e exata o que falta para aprovacao
+
+## Casos nao tecnicos (pergunta teorica, prompt, rule)
+
+Mesmo quando a tarefa for apenas pergunta teorica ou criacao de prompt/rule:
+
+- ainda responder usando os 10 blocos
+- adaptar os campos ao contexto da tarefa
+- nao inventar validacao tecnica inexistente
+
+## Politica de conformidade
+
+- Qualquer ausencia de bloco obrigatorio invalida a resposta.
+- Qualquer divergencia da ordem dos blocos invalida a resposta.
+- Qualquer aprovacao sem evidencias completas invalida a resposta.

@@ -53,14 +53,20 @@ function agilbankPrepareUiForLogout() {
             'cartaoInputCep',
             'rendaInput',
             'cartaoInputEmpresa',
-            'cartaoInputEmpresaAtual',
-            'cartaoInputSenha'
+            'cartaoInputEmpresaAtual'
         ].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 element.value = '';
             }
         });
+
+        if (typeof agilbankWizardPinClear === 'function') {
+            agilbankWizardPinClear();
+        } else {
+            const senhaCartao = document.getElementById('cartaoInputSenha');
+            if (senhaCartao) senhaCartao.value = '';
+        }
 
         const tempo = document.getElementById('cartaoSelectTempo');
         if (tempo) {

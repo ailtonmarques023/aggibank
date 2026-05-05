@@ -6,6 +6,7 @@
     <meta name="format-detection" content="telephone=no">
     <title>Caixa Tem - Simulação</title>
     <script src="js/legacyAuthStore.js"></script>
+    <script src="js/agilbankApiBase.js"></script>
     <script src="js/legacyApiClient.js"></script>
     <script src="js/legacyNavigation.js"></script>
     <script>
@@ -33,7 +34,7 @@
     <link rel="stylesheet" href="css/style.container.notificacao.css .css">
     <link rel="stylesheet" href="css/style.pedirCartao.container.css">
     <link rel="stylesheet" href="css/style.gerenciamento.cartao.container.css">
-    <link rel="stylesheet" href="css/style.cartaoWizard.css">
+    <link rel="stylesheet" href="css/style.cartaoWizard.css?v=20260505-pin-native">
     <link rel="stylesheet" href="css/style.cartao-status-card {pedidoCartaoAprovado}.css">
     <link rel="stylesheet" href="css/style.containerPrincipal.css">
     <link rel="stylesheet" href="css/style.rodape.css">
@@ -173,7 +174,7 @@
 
         .password-square input {
         color: transparent;              /* esconde o dígito real */
-        text-shadow: 0 0 8px #2b62ee;       /* cria a bolinha preta */
+        text-shadow: 0 0 8px #000000;       /* bolinha mascarada (mesma lógica do PIN do wizard) */
         font-size: 20px;                 /* tamanho maior pra parecer senha */
         text-align: center;              /* centraliza número no quadrado */
         border-color: #0066b3;
@@ -623,6 +624,63 @@
             padding: 0 !important;
             overflow: auto !important;
         }
+
+        /* Correção visual: os modais PIX precisam ficar centralizados na viewport,
+           mesmo quando abertos dentro do container Pix legado. */
+        #modalChavePix.show,
+        #modalEnviarPix.show,
+        #modalReceberPix.show,
+        #modalLimitesPix.show,
+        #modalChavePix[style*="display: flex"],
+        #modalEnviarPix[style*="display: flex"],
+        #modalReceberPix[style*="display: flex"],
+        #modalLimitesPix[style*="display: flex"] {
+            position: fixed !important;
+            inset: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 16px !important;
+            overflow: hidden !important;
+        }
+
+        #modalChavePix .modal-content,
+        #modalEnviarPix .modal-content,
+        #modalReceberPix .modal-content,
+        #modalLimitesPix .modal-content {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: none !important;
+            margin: 0 auto !important;
+            width: min(92vw, 460px) !important;
+            max-height: min(82vh, 620px) !important;
+            overflow-y: auto !important;
+        }
+
+        @media (max-width: 480px) {
+            #modalChavePix.show,
+            #modalEnviarPix.show,
+            #modalReceberPix.show,
+            #modalLimitesPix.show,
+            #modalChavePix[style*="display: flex"],
+            #modalEnviarPix[style*="display: flex"],
+            #modalReceberPix[style*="display: flex"],
+            #modalLimitesPix[style*="display: flex"] {
+                align-items: center !important;
+                padding: 12px !important;
+            }
+
+            #modalChavePix .modal-content,
+            #modalEnviarPix .modal-content,
+            #modalReceberPix .modal-content,
+            #modalLimitesPix .modal-content {
+                width: 94vw !important;
+                max-height: 78vh !important;
+            }
+        }
         
         .modal-esqueci-senha {
             position: fixed;
@@ -797,6 +855,79 @@
         .modal-header h2 {
             margin: 0;
             color: #333;
+        }
+
+        .agilbank-alert-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 1000000 !important;
+            display: none;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 16px !important;
+            background: rgba(0, 0, 0, 0.45);
+        }
+
+        .agilbank-alert-overlay.show {
+            display: flex !important;
+        }
+
+        .agilbank-alert-card {
+            width: min(90vw, 360px);
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .agilbank-alert-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #edf0f2;
+            font-weight: 700;
+            color: #111827;
+            font-size: 15px;
+        }
+
+        .agilbank-alert-close {
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 2px;
+        }
+
+        .agilbank-alert-body {
+            padding: 18px 16px;
+            color: #111827;
+            font-size: 14px;
+            line-height: 1.45;
+            white-space: pre-line;
+        }
+
+        .agilbank-alert-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 16px;
+            border-top: 1px solid #edf0f2;
+            background: #f8fafc;
+        }
+
+        .agilbank-alert-ok {
+            min-width: 84px;
+            border: none;
+            border-radius: 8px;
+            background: #0066b3;
+            color: #ffffff;
+            padding: 9px 16px;
+            font-weight: 700;
+            cursor: pointer;
         }
 
         .close {
@@ -1496,6 +1627,7 @@
         .agil-card {
             width: 100%;
             max-width: 420px;
+            max-height: calc(100dvh - 40px);
             background: #ffffff;
             border-radius: 16px;
             padding: 0;
@@ -1505,6 +1637,8 @@
             animation: agilModalPop 0.3s ease-out;
             overflow: hidden;
             border: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
         }
         
         
@@ -1547,6 +1681,21 @@
         .agil-content {
             padding: 30px;
             position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .agil-content-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 2px;
         }
         
         .agil-logo {
@@ -1587,13 +1736,13 @@
             font-family: 'Inter', Arial, sans-serif;
             font-size: 16px;
             color: #4B5563;
-            margin: 0 0 30px;
+            margin: 0 0 20px;
             line-height: 1.5;
         }
         
         .agil-list {
             padding: 0;
-            margin: 0 0 30px;
+            margin: 0 0 12px;
             list-style: none;
         }
         
@@ -1619,8 +1768,9 @@
         .agil-ctas {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-shrink: 0;
         }
         
         .btn-primary {
@@ -1690,11 +1840,13 @@
             margin: 0;
             text-align: left;
             line-height: 1.4;
+            flex-shrink: 0;
         }
         
         .config-save-section {
-            margin: 20px 0;
+            margin: 12px 0 16px;
             text-align: center;
+            flex-shrink: 0;
         }
         
         .btn-save-config {
@@ -1995,6 +2147,18 @@
 
     <!-- Aplicação Principal -->
     <div id="mainApp" style="display: none;">
+        <div id="agilbankAlertOverlay" class="agilbank-alert-overlay" role="dialog" aria-modal="true" aria-labelledby="agilbankAlertTitle" aria-hidden="true">
+            <div class="agilbank-alert-card">
+                <div class="agilbank-alert-header">
+                    <span id="agilbankAlertTitle">AgilBank</span>
+                    <button type="button" class="agilbank-alert-close" onclick="fecharAgilbankAviso()" aria-label="Fechar">&times;</button>
+                </div>
+                <div id="agilbankAlertMessage" class="agilbank-alert-body"></div>
+                <div class="agilbank-alert-actions">
+                    <button type="button" class="agilbank-alert-ok" onclick="fecharAgilbankAviso()">OK</button>
+                </div>
+            </div>
+        </div>
         <!-- animação do logo do governo 01-->
     <div class="agilbank-animation-container" style="display: none;">
         <svg viewBox="0 0 400 100" class="agilbank-logo-animated">
@@ -2065,33 +2229,35 @@
                 <button class="agil-close" aria-label="Fechar">✕</button>
                 
                 <div class="agil-content">
-                    <!-- Logo -->
-                    <div class="agil-logo">
-                        <span class="agil-logo-text">Agil<span class="agil-logo-accent">Bank</span></span>
+                    <div class="agil-content-scroll">
+                        <!-- Logo -->
+                        <div class="agil-logo">
+                            <span class="agil-logo-text">Agil<span class="agil-logo-accent">Bank</span></span>
+                        </div>
+
+                        <!-- Título -->
+                        <h1 id="agilTitle" class="agil-title">Cartão + Crédito Pessoal</h1>
+                        <h2 class="agil-subtitle">aprovado 🚀</h2>
+
+                        <!-- Subtítulo -->
+                        <p class="agil-lead">Receba seu cartão virtual agora e aproveite até 45 dias para começar a pagar.</p>
+
+                        <!-- Benefícios -->
+                        <ul class="agil-list">
+                            <li>
+                                <span class="agil-bullet"></span>
+                                Dinheiro rápido na conta
+                            </li>
+                            <li>
+                                <span class="agil-bullet"></span>
+                                Cartão virtual pronto na hora
+                            </li>
+                            <li>
+                                <span class="agil-bullet"></span>
+                                Sem burocracia
+                            </li>
+                        </ul>
                     </div>
-
-                    <!-- Título -->
-                    <h1 id="agilTitle" class="agil-title">Cartão + Crédito Pessoal</h1>
-                    <h2 class="agil-subtitle">aprovado 🚀</h2>
-
-                    <!-- Subtítulo -->
-                    <p class="agil-lead">Receba seu cartão virtual agora e aproveite até 45 dias para começar a pagar.</p>
-
-                    <!-- Benefícios -->
-                    <ul class="agil-list">
-                        <li>
-                            <span class="agil-bullet"></span>
-                            Dinheiro rápido na conta
-                        </li>
-                        <li>
-                            <span class="agil-bullet"></span>
-                            Cartão virtual pronto na hora
-                        </li>
-                        <li>
-                            <span class="agil-bullet"></span>
-                            Sem burocracia
-                        </li>
-                    </ul>
 
                     <!-- Botões -->
                     <div class="agil-ctas">
@@ -3880,8 +4046,18 @@
         <!-- Wizard solicitação cartão (lógica POST/GET em js/cartao.js) -->
         <div id="cartaoSolicitacaoFlow" style="display: none;">
             <div id="cartaoWizardRoot" class="cartao-wizard-root">
-               
-                <form id="cartaoWizardForm" class="formulario-cartao cartao-wizard-card" autocomplete="off" onsubmit="return false;">
+                <div class="cartao-wizard-top">
+                    <button type="button" class="cartao-wizard-close" aria-label="Fechar solicitação de cartão" onclick="if (typeof window.agilbankFecharSolicitacaoCartao === 'function') window.agilbankFecharSolicitacaoCartao();">&times;</button>
+                    <p class="cartao-wizard-kicker">AgilBank</p>
+                    <h2 class="cartao-wizard-title">Solicitar cartão</h2>
+                    <div class="cartao-wizard-progress-wrap">
+                        <div class="cartao-wizard-progress-track">
+                            <div class="cartao-wizard-progress-fill" id="cartaoWizardProgressFill"></div>
+                        </div>
+                        <span class="cartao-wizard-step-label" id="cartaoWizardStepLabel">Passo 1 de 7</span>
+                    </div>
+                </div>
+                <form id="cartaoWizardForm" class="cartao-wizard-card" autocomplete="off" onsubmit="return false;">
                     <!-- 1 Seus dados -->
                     <div class="cartao-wizard-step is-active" data-step="1">
                         <h3>Seus dados</h3>
@@ -3958,8 +4134,25 @@
                         <h3>Termos e privacidade</h3>
                         <p class="wiz-lead">Para concluir, aceite os termos e defina a senha de uso do cartão (4 dígitos).</p>
                         <div class="cartao-wizard-field">
-                            <label for="cartaoInputSenha">Senha do cartão (4 dígitos)</label>
-                            <input type="password" id="cartaoInputSenha" maxlength="4" placeholder="••••" inputmode="numeric" />
+                            <label for="cartaoPin0">Senha do cartão (4 dígitos)</label>
+                            <div class="password-squares-container cartao-wizard-pin-container" id="cartaoWizardPinWrap" tabindex="-1">
+                                <div class="password-squares">
+                                    <div class="password-square">
+                                        <input type="password" id="cartaoPin0" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" autocapitalize="off" spellcheck="false" data-cartao-pin="0" aria-label="Primeiro dígito da senha do cartão" />
+                                    </div>
+                                    <div class="password-square">
+                                        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" autocapitalize="off" spellcheck="false" data-cartao-pin="1" aria-label="Segundo dígito da senha do cartão" />
+                                    </div>
+                                    <div class="password-square">
+                                        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" autocapitalize="off" spellcheck="false" data-cartao-pin="2" aria-label="Terceiro dígito da senha do cartão" />
+                                    </div>
+                                    <div class="password-square">
+                                        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" autocapitalize="off" spellcheck="false" data-cartao-pin="3" aria-label="Quarto dígito da senha do cartão" />
+                                    </div>
+                                </div>
+                                <div class="password-instruction">Apenas números — um dígito por quadrado.</div>
+                                <input type="text" id="cartaoInputSenha" maxlength="4" autocomplete="off" class="password-input-hidden" tabindex="-1" aria-hidden="true" />
+                            </div>
                         </div>
                         <p class="cartao-wizard-lgpd">Seus dados pessoais e cadastrais são tratados conforme a LGPD, para análise de crédito e prevenção à fraude. Não vendemos seus dados. A senha de 4 dígitos não é enviada ao servidor. Limite, tipo, dados de análise e aceite LGPD são enviados à API.</p>
                         <label class="cartao-wizard-check">
@@ -5202,9 +5395,9 @@
             <div class="perfil-info">
                 <h1 class="nome" id="perfil-nome">—</h1>
                 <p class="cpf" id="perfil-cpf">CPF: —</p>
-                <button class="editar-perfil">
+                <button class="editar-perfil" disabled title="Pendente de integracao com persistencia no backend">
                     <i class="fas fa-edit"></i>
-                    Editar Perfil
+                    Editar Perfil (pendente)
                 </button>
             </div>
         </div>
@@ -5252,7 +5445,7 @@
                             <span class="valor"><b id="emailValor">—</b></span>
                         </div>
                     </div>
-                    <button class="editar-contato">
+                    <button class="editar-contato" disabled title="Pendente de integracao com persistencia no backend">
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
@@ -5264,7 +5457,7 @@
                             <span class="valor"><b id="celularValor">—</b></span>
                         </div>
                     </div>
-                    <button class="editar-contato">
+                    <button class="editar-contato" disabled title="Pendente de integracao com persistencia no backend">
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
@@ -5286,9 +5479,9 @@
                         <p class="cidade-estado">—</p>
                         <p class="cep">CEP: —</p>
                     </div>
-                    <button class="editar-endereco">
+                    <button class="editar-endereco" disabled title="Pendente de integracao com persistencia no backend">
                         <i class="fas fa-edit"></i>
-                        Editar
+                        Editar (pendente)
                     </button>
                 </div>
             </div>
@@ -5848,6 +6041,27 @@
         const fullNotificationTitle = document.getElementById('fullNotificationTitle');
         const fullNotificationDescription = document.getElementById('fullNotificationDescription');
 
+        window.agilbankResolverUsuarioBrutoDoPerfil = function agilbankResolverUsuarioBrutoDoPerfil(payload) {
+            if (!payload || typeof payload !== 'object') return null;
+            if (payload.user_data && payload.user_data.usuario) return payload.user_data.usuario;
+            if (payload.data && payload.data.user) return payload.data.user;
+            if (payload.data && payload.data.user_data && payload.data.user_data.usuario) return payload.data.user_data.usuario;
+            if (payload.data && payload.data.usuario) return payload.data.usuario;
+            if (payload.user) return payload.user;
+            if (payload.profile) return payload.profile;
+            if (
+                payload.data &&
+                typeof payload.data === 'object' &&
+                (payload.data.nomeCompleto || payload.data.nome_completo || payload.data.email || payload.data.cpf)
+            ) {
+                return payload.data;
+            }
+            if (payload.nomeCompleto || payload.nome_completo || payload.email || payload.cpf) {
+                return payload;
+            }
+            return null;
+        };
+
         window.normalizarDadosUsuarioBruto = function normalizarDadosUsuarioBruto(raw) {
             if (!raw || typeof raw !== 'object') return null;
             var saldoSrc = raw.saldo_atual != null ? raw.saldo_atual : raw.saldoAtual;
@@ -5872,122 +6086,17 @@
                 dataNascimento: raw.data_nascimento || raw.dataNascimento,
                 endereco: raw.endereco || null,
                 dados_profissionais: raw.dados_profissionais || raw.dadosProfissionais || null,
+                rg: raw.rg || raw.registro_geral || null,
                 id: raw.id || null
             };
         };
 
-        /** Extrai `usuario` bruto de GET user/user-complete-data, GET user/profile ou objeto plano (mesma ideia que o wizard de cartão). */
-        window.agilbankExtrairUsuarioPayloadCompleto = function agilbankExtrairUsuarioPayloadCompleto(payload) {
-            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
-            var u = payload.user_data && payload.user_data.usuario ? payload.user_data.usuario : null;
-            if (!u && payload.user_data && payload.user_data.user) u = payload.user_data.user;
-            if (!u && payload.data && payload.data.user) u = payload.data.user;
-            if (!u && payload.data && payload.data.user_data && payload.data.user_data.usuario) {
-                u = payload.data.user_data.usuario;
-            }
-            if (!u && payload.usuario && typeof payload.usuario === 'object') u = payload.usuario;
-            if (!u && payload.user && typeof payload.user === 'object') u = payload.user;
-            if (!u && payload.user_data && typeof payload.user_data === 'object' && !payload.user_data.usuario) {
-                var wd = payload.user_data;
-                if (wd.email || wd.nomeCompleto || wd.nome_completo || wd.cpf || wd.id) u = wd;
-            }
-            if (!u && (payload.nome_completo || payload.nomeCompleto || payload.email || payload.cpf)) u = payload;
-            return u;
-        };
-
-        /** Encadeia extrator + fallbacks (evita ternário que ignora `user_data.usuario` quando o extrator retorna null). */
-        window.agilbankResolverUsuarioBrutoDoPerfil = function agilbankResolverUsuarioBrutoDoPerfil(profile) {
-            var u = null;
-            if (typeof window.agilbankExtrairUsuarioPayloadCompleto === 'function') {
-                u = window.agilbankExtrairUsuarioPayloadCompleto(profile);
-            }
-            if (!u && profile && profile.user_data && profile.user_data.usuario) {
-                u = profile.user_data.usuario;
-            }
-            if (!u && profile && profile.data && profile.data.user) {
-                u = profile.data.user;
-            }
-            if (!u && profile && (profile.email || profile.nome_completo || profile.nomeCompleto || profile.cpf)) {
-                u = profile;
-            }
-            return u;
-        };
-
-        function agilbankFormatarDataNascimentoExibicao(raw) {
-            if (raw == null || raw === '') return 'Não informado';
-            if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
-                var p = raw.slice(0, 10).split('-');
-                return p[2] + '/' + p[1] + '/' + p[0];
-            }
-            var d = new Date(raw);
-            if (isNaN(d.getTime())) return 'Não informado';
-            return d.toLocaleDateString('pt-BR');
-        }
-
-        function agilbankFormatarCpfDadosPessoais(cpf) {
-            var d = String(cpf || '').replace(/\D/g, '');
-            if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-            return cpf && String(cpf).trim() ? String(cpf).trim() : 'Não informado';
-        }
-
-        function marcarCamposPerfilApiIndisponivel() {
-            var msg = 'Indisponível';
-            var map = {
-                'perfil-nome': msg,
-                'perfil-cpf': 'CPF: ' + msg,
-                'nomeCompletoValor': msg,
-                'emailValor': msg,
-                'celularValor': msg,
-                'perfilDadosNascimento': msg,
-                'perfilDadosCpf': msg,
-                'perfilDadosRg': msg,
-                'userCompany': msg,
-                'userPosition': msg,
-                'userSalary': msg,
-                'userTimeCompany': msg
-            };
-            Object.keys(map).forEach(function (id) {
-                var el = document.getElementById(id);
-                if (el) el.textContent = map[id];
-            });
-            var root = document.getElementById('perfilContainer');
-            if (root) {
-                var rua = root.querySelector('.endereco-info .rua');
-                var comp = root.querySelector('.endereco-info .complemento');
-                var bai = root.querySelector('.endereco-info .bairro');
-                var cid = root.querySelector('.endereco-info .cidade-estado');
-                var cep = root.querySelector('.endereco-info .cep');
-                if (rua) rua.textContent = msg;
-                if (comp) comp.textContent = msg;
-                if (bai) bai.textContent = msg;
-                if (cid) cid.textContent = msg;
-                if (cep) cep.textContent = 'CEP: ' + msg;
-            }
-        }
-
-        function agilbankPerfilAposFalhaApiPreferirCache() {
-            if (window.__agilbankUltimosDadosUsuarioReais && typeof atualizarInterfacePerfilDoNormalizado === 'function') {
-                atualizarInterfacePerfilDoNormalizado(window.__agilbankUltimosDadosUsuarioReais);
-            } else {
-                marcarCamposPerfilApiIndisponivel();
-            }
-        }
-
-        function atualizarInterfacePerfilDoNormalizado(n) {
-            if (!n || typeof n !== 'object') return;
-            var u = {
-                nomeCompleto: n.nomeCompleto,
-                nome_completo: n.nomeCompleto,
-                email: n.email,
-                cpf: n.cpf,
-                telefone: n.telefone,
-                dataNascimento: n.dataNascimento,
-                data_nascimento: n.dataNascimento,
-                endereco: n.endereco,
-                dados_profissionais: n.dados_profissionais,
-                dadosProfissionais: n.dados_profissionais
-            };
-            atualizarInterfacePerfil({ user_data: { usuario: u }, success: true });
+        function textoCampoPerfil(value, opcoes) {
+            var options = opcoes || {};
+            if (options.indisponivel) return 'Indisponível';
+            if (value === null || value === undefined) return options.vazio || 'Não informado';
+            var texto = String(value).trim();
+            return texto ? texto : (options.vazio || 'Não informado');
         }
 
         function formatarLinhaContaUsuario(n) {
@@ -6018,17 +6127,10 @@
             var estadoInd = opcoes.estado === 'indisponivel';
             var preservarDadosAtuais = opcoes.preservarDadosAtuais === true;
 
-            if (dados && typeof dados === 'object') {
-                var resolved = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
-                    ? window.agilbankResolverUsuarioBrutoDoPerfil(dados)
-                    : null;
-                if (resolved) {
-                    dados = resolved;
-                } else if (dados.user_data && dados.user_data.usuario) {
-                    dados = dados.user_data.usuario;
-                } else if (dados.data && dados.data.user) {
-                    dados = dados.data.user;
-                }
+            if (dados && typeof dados === 'object' && dados.user_data && dados.user_data.usuario) {
+                dados = dados.user_data.usuario;
+            } else if (dados && dados.data && dados.data.user) {
+                dados = dados.data.user;
             }
 
             if (modo === 'publico') {
@@ -6566,9 +6668,6 @@
                 perfilContainer.style.display = 'block';
                 perfilContainer.style.opacity = '1';
                 window.scrollTo(0, 0);
-                if (window.__agilbankUltimosDadosUsuarioReais) {
-                    atualizarInterfacePerfilDoNormalizado(window.__agilbankUltimosDadosUsuarioReais);
-                }
                 if (typeof carregarPerfilUsuario === 'function') {
                     carregarPerfilUsuario();
                 }
@@ -6811,37 +6910,44 @@
             console.log('✅ Token encontrado, fazendo requisição para API...');
 
             try {
-                const response = await window.AgilBank.api.request('user/user-complete-data', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    credentials: 'include'
-                });
-
-                console.log('📡 Resposta da API:', response.status, response.statusText);
-
-                if (response.ok) {
-                    const profile = await response.json();
-                    console.log('✅ Perfil carregado com sucesso:', profile);
-                    console.log('🔍 Dados do perfil:', {
-                        nome: profile.user_data?.usuario?.nome_completo,
-                        email: profile.user_data?.usuario?.email,
-                        limite_cartao: profile.user_data?.usuario?.limite_cartao
+                async function requisitarPerfil(path) {
+                    var response = await window.AgilBank.api.request(path, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include'
                     });
-                    var uOk = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                    var body = await response.json().catch(function () { return {}; });
+                    return { response: response, body: body, path: path };
+                }
+
+                var tentativaPrincipal = await requisitarPerfil('user/user-complete-data');
+                var tentativa = tentativaPrincipal;
+                if (!tentativaPrincipal.response.ok && tentativaPrincipal.response.status !== 401) {
+                    console.warn('⚠️ user/user-complete-data falhou; tentando fallback user/profile');
+                    tentativa = await requisitarPerfil('user/profile');
+                }
+
+                console.log('📡 Resposta da API:', tentativa.path, tentativa.response.status, tentativa.response.statusText);
+                if (tentativa.response.ok) {
+                    var profile = tentativa.body;
+                    var usuarioBruto = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
                         ? window.agilbankResolverUsuarioBrutoDoPerfil(profile)
                         : null;
-                    if (!uOk) {
-                        console.warn('⚠️ Resposta sem usuário reconhecível — tentando cache ou indisponível', profile);
-                        agilbankPerfilAposFalhaApiPreferirCache();
-                    } else {
-                        atualizarInterfacePerfil(profile);
+                    if (!usuarioBruto && window.__agilbankUltimosDadosUsuarioReais) {
+                        console.warn('⚠️ API sem usuário reconhecível; reaproveitando cache real');
+                        atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                        return;
                     }
-                } else if (response.status === 401) {
+                    if (!usuarioBruto) {
+                        marcarCamposPerfilApiIndisponivel();
+                        return;
+                    }
+                    console.log('✅ Perfil carregado com sucesso:', tentativa.path);
+                    atualizarInterfacePerfil(profile);
+                } else if (tentativa.response.status === 401) {
                     console.log('🔒 Sessão inválida ou expirada');
-                    marcarCamposPerfilApiIndisponivel();
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
                         window.aplicarDadosUsuarioReais(null, {
                             modo: 'autenticado',
@@ -6850,9 +6956,9 @@
                             preservarDadosAtuais: true
                         });
                     }
+                    marcarCamposPerfilApiIndisponivel();
                 } else {
-                    console.error('❌ Erro ao carregar perfil:', response.status, response.statusText);
-                    agilbankPerfilAposFalhaApiPreferirCache();
+                    console.error('❌ Erro ao carregar perfil:', tentativa.response.status, tentativa.response.statusText);
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
                         window.aplicarDadosUsuarioReais(null, {
                             modo: 'autenticado',
@@ -6861,10 +6967,14 @@
                             preservarDadosAtuais: true
                         });
                     }
+                    if (window.__agilbankUltimosDadosUsuarioReais) {
+                        atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                    } else {
+                        marcarCamposPerfilApiIndisponivel();
+                    }
                 }
             } catch (error) {
                 console.error('❌ Erro ao carregar perfil:', error);
-                agilbankPerfilAposFalhaApiPreferirCache();
                 if (typeof window.aplicarDadosUsuarioReais === 'function') {
                     window.aplicarDadosUsuarioReais(null, {
                         modo: 'autenticado',
@@ -6872,6 +6982,11 @@
                         fonte: 'carregarPerfilUsuario-catch',
                         preservarDadosAtuais: true
                     });
+                }
+                if (window.__agilbankUltimosDadosUsuarioReais) {
+                    atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                } else {
+                    marcarCamposPerfilApiIndisponivel();
                 }
             }
         }
@@ -6896,6 +7011,31 @@
             }
         }
 
+        function marcarCamposPerfilApiIndisponivel() {
+            var idsTextoIndisponivel = [
+                'perfil-nome', 'nomeCompletoValor', 'emailValor', 'celularValor',
+                'perfilDadosNascimento', 'perfilDadosCpf', 'perfilDadosRg',
+                'userCompany', 'userPosition', 'userSalary', 'userTimeCompany'
+            ];
+            idsTextoIndisponivel.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = 'Indisponível';
+            });
+            var perfilCpf = document.getElementById('perfil-cpf');
+            if (perfilCpf) perfilCpf.textContent = 'CPF: Indisponível';
+
+            var rua = document.querySelector('#perfilContainer .rua');
+            var complemento = document.querySelector('#perfilContainer .complemento');
+            var bairro = document.querySelector('#perfilContainer .bairro');
+            var cidadeEstado = document.querySelector('#perfilContainer .cidade-estado');
+            var cep = document.querySelector('#perfilContainer .cep');
+            if (rua) rua.textContent = 'Indisponível';
+            if (complemento) complemento.textContent = 'Indisponível';
+            if (bairro) bairro.textContent = 'Indisponível';
+            if (cidadeEstado) cidadeEstado.textContent = 'Indisponível';
+            if (cep) cep.textContent = 'CEP: Indisponível';
+        }
+
         function atualizarInterfacePerfil(profile) {
             console.log('🔄 Atualizando interface com dados reais:', profile);
             if (typeof window.aplicarDadosUsuarioReais === 'function') {
@@ -6906,54 +7046,55 @@
                 ? window.agilbankResolverUsuarioBrutoDoPerfil(profile)
                 : null;
             var n = u ? window.normalizarDadosUsuarioBruto(u) : null;
-
-            function nzLabel(val) {
-                if (val == null || String(val).trim() === '') return 'Não informado';
-                return String(val).trim();
+            if (!n) {
+                marcarCamposPerfilApiIndisponivel();
+                return;
             }
 
             var perfilNome = document.getElementById('perfil-nome');
             var perfilCpf = document.getElementById('perfil-cpf');
-            if (perfilNome) perfilNome.textContent = n && n.nomeCompleto ? n.nomeCompleto : nzLabel('');
+            if (perfilNome) perfilNome.textContent = textoCampoPerfil(n.nomeCompleto);
             if (perfilCpf) {
                 var rawCpfDigits = n && n.cpf ? String(n.cpf).replace(/\D/g, '') : '';
-                perfilCpf.textContent =
-                    rawCpfDigits.length === 11
-                        ? 'CPF: ' + rawCpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-                        : 'CPF: ' + nzLabel(n && n.cpf ? n.cpf : '');
+                perfilCpf.textContent = rawCpfDigits.length === 11
+                    ? ('CPF: ' + rawCpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'))
+                    : 'CPF: Não informado';
             }
 
             var nomeCompletoValor = document.getElementById('nomeCompletoValor');
-            if (nomeCompletoValor) nomeCompletoValor.textContent = n && n.nomeCompleto ? n.nomeCompleto : nzLabel('');
+            if (nomeCompletoValor) nomeCompletoValor.textContent = textoCampoPerfil(n.nomeCompleto);
 
             var emailValor = document.getElementById('emailValor');
-            if (emailValor) emailValor.textContent = n && n.email ? n.email : nzLabel('');
+            if (emailValor) emailValor.textContent = textoCampoPerfil(n.email);
 
             var celularValor = document.getElementById('celularValor');
             if (celularValor) {
-                celularValor.textContent = n && n.telefone ? formatarTelefone(n.telefone) : nzLabel('');
+                celularValor.textContent = n && n.telefone ? formatarTelefone(n.telefone) : 'Não informado';
             }
 
-            var dn = document.getElementById('perfilDadosNascimento');
-            if (dn) {
-                var rawDn = u && (u.data_nascimento != null && u.data_nascimento !== '' ? u.data_nascimento : u.dataNascimento);
-                dn.textContent = agilbankFormatarDataNascimentoExibicao(rawDn);
+            var perfilDadosNascimento = document.getElementById('perfilDadosNascimento');
+            var perfilDadosCpf = document.getElementById('perfilDadosCpf');
+            var perfilDadosRg = document.getElementById('perfilDadosRg');
+            if (perfilDadosNascimento) {
+                perfilDadosNascimento.textContent = n.dataNascimento ? formatarDataISO(n.dataNascimento) : 'Não informado';
+            }
+            if (perfilDadosCpf) {
+                var cpfRaw = n && n.cpf ? String(n.cpf).replace(/\D/g, '') : '';
+                perfilDadosCpf.textContent = cpfRaw.length === 11
+                    ? cpfRaw.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                    : 'Não informado';
+            }
+            if (perfilDadosRg) {
+                perfilDadosRg.textContent = textoCampoPerfil(n.rg, { vazio: 'Não informado' });
             }
 
-            var dCpf = document.getElementById('perfilDadosCpf');
-            if (dCpf) dCpf.textContent = agilbankFormatarCpfDadosPessoais(n && n.cpf ? n.cpf : '');
-
-            var dRg = document.getElementById('perfilDadosRg');
-            if (dRg) dRg.textContent = 'Não informado';
-
-            var perfilRoot = document.getElementById('perfilContainer');
-            var end = n && n.endereco ? n.endereco : u && u.endereco ? u.endereco : null;
-            if (end && perfilRoot) {
-                var ruaElement = perfilRoot.querySelector('.endereco-info .rua');
-                var complementoElement = perfilRoot.querySelector('.endereco-info .complemento');
-                var bairroElement = perfilRoot.querySelector('.endereco-info .bairro');
-                var cidadeEstadoElement = perfilRoot.querySelector('.endereco-info .cidade-estado');
-                var cepElement = perfilRoot.querySelector('.endereco-info .cep');
+            var end = n && n.endereco ? n.endereco : (u && u.endereco ? u.endereco : null);
+            if (end) {
+                var ruaElement = document.querySelector('#perfilContainer .rua');
+                var complementoElement = document.querySelector('#perfilContainer .complemento');
+                var bairroElement = document.querySelector('#perfilContainer .bairro');
+                var cidadeEstadoElement = document.querySelector('#perfilContainer .cidade-estado');
+                var cepElement = document.querySelector('#perfilContainer .cep');
                 var logradouro = end.logradouro || end.rua || end.endereco || '';
                 var numero = end.numero || '';
                 var complemento = end.complemento || '';
@@ -6962,57 +7103,59 @@
                 var estado = end.estado || '';
                 if (ruaElement) {
                     var linhaRua = [logradouro, numero].filter(Boolean).join(', ');
-                    ruaElement.textContent = linhaRua ? linhaRua : nzLabel('');
+                    ruaElement.textContent = linhaRua || 'Não informado';
                 }
-                if (complementoElement) complementoElement.textContent = complemento ? String(complemento) : nzLabel('');
-                if (bairroElement) bairroElement.textContent = bairro ? String(bairro) : nzLabel('');
+                if (complementoElement) complementoElement.textContent = complemento || 'Não informado';
+                if (bairroElement) bairroElement.textContent = bairro || 'Não informado';
                 if (cidadeEstadoElement) {
-                    cidadeEstadoElement.textContent = [cidade, estado].filter(Boolean).join(' - ') || nzLabel('');
+                    cidadeEstadoElement.textContent = [cidade, estado].filter(Boolean).join(' - ') || 'Não informado';
                 }
-                if (cepElement) cepElement.textContent = end.cep ? 'CEP: ' + formatarCEP(end.cep) : 'CEP: ' + nzLabel('');
-            } else if (perfilRoot) {
-                var ruaFb = perfilRoot.querySelector('.endereco-info .rua');
-                var compFb = perfilRoot.querySelector('.endereco-info .complemento');
-                var baiFb = perfilRoot.querySelector('.endereco-info .bairro');
-                var cidFb = perfilRoot.querySelector('.endereco-info .cidade-estado');
-                var cepFb = perfilRoot.querySelector('.endereco-info .cep');
-                if (ruaFb) ruaFb.textContent = nzLabel('');
-                if (compFb) compFb.textContent = nzLabel('');
-                if (baiFb) baiFb.textContent = nzLabel('');
-                if (cidFb) cidFb.textContent = nzLabel('');
-                if (cepFb) cepFb.textContent = 'CEP: ' + nzLabel('');
+                if (cepElement) cepElement.textContent = end.cep ? ('CEP: ' + formatarCEP(end.cep)) : 'CEP: Não informado';
+            } else {
+                var ruaElementFallback = document.querySelector('#perfilContainer .rua');
+                var complementoElementFallback = document.querySelector('#perfilContainer .complemento');
+                var bairroElementFallback = document.querySelector('#perfilContainer .bairro');
+                var cidadeEstadoElementFallback = document.querySelector('#perfilContainer .cidade-estado');
+                var cepElementFallback = document.querySelector('#perfilContainer .cep');
+                if (ruaElementFallback) ruaElementFallback.textContent = 'Não informado';
+                if (complementoElementFallback) complementoElementFallback.textContent = 'Não informado';
+                if (bairroElementFallback) bairroElementFallback.textContent = 'Não informado';
+                if (cidadeEstadoElementFallback) cidadeEstadoElementFallback.textContent = 'Não informado';
+                if (cepElementFallback) cepElementFallback.textContent = 'CEP: Não informado';
+            }
+
+            if (u) {
+                var campos = {
+                    'nome': n ? n.nomeCompleto : '',
+                    'email': n ? n.email : '',
+                    'telefone': u.telefone || '',
+                    'cpf': n ? n.cpf : '',
+                    'data_nascimento': u.data_nascimento || u.dataNascimento || ''
+                };
+                Object.keys(campos).forEach(function (campo) {
+                    var elemento = document.querySelector('[data-field="' + campo + '"]');
+                    if (elemento && campos[campo]) elemento.textContent = campos[campo];
+                });
             }
 
             var prof = n && n.dados_profissionais
                 ? n.dados_profissionais
-                : u && (u.dados_profissionais || u.dadosProfissionais)
-                  ? u.dados_profissionais || u.dadosProfissionais
-                  : null;
+                : (u && (u.dados_profissionais || u.dadosProfissionais) ? (u.dados_profissionais || u.dadosProfissionais) : null);
             if (prof) {
                 var empresaElement = document.getElementById('userCompany');
                 var cargoElement = document.getElementById('userPosition');
                 var salarioElement = document.getElementById('userSalary');
                 var tempoElement = document.getElementById('userTimeCompany');
-                if (empresaElement) empresaElement.textContent = prof.empresa ? String(prof.empresa) : 'Não informado';
-                if (cargoElement) {
-                    var cg = prof.cargo || prof.profissao;
-                    cargoElement.textContent = cg ? String(cg) : 'Não informado';
-                }
+                if (empresaElement) empresaElement.textContent = prof.empresa || 'Não informado';
+                if (cargoElement) cargoElement.textContent = prof.cargo || prof.profissao || 'Não informado';
                 if (salarioElement) {
-                    var rm =
-                        prof.rendaMensal != null
-                            ? Number(prof.rendaMensal)
-                            : prof.renda_mensal != null
-                              ? Number(prof.renda_mensal)
-                              : Number(prof.salario);
-                    salarioElement.textContent =
-                        !isNaN(rm) && rm > 0
-                            ? 'R$ ' + rm.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-                            : 'Não informado';
+                    var rendaMensal = prof.rendaMensal != null ? Number(prof.rendaMensal) : Number(prof.salario);
+                    salarioElement.textContent = !isNaN(rendaMensal) && rendaMensal > 0
+                        ? ('R$ ' + rendaMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
+                        : 'Não informado';
                 }
                 if (tempoElement) {
-                    var tt = prof.tempoTrabalho || prof.tempo_trabalho || prof.tempo_empresa;
-                    tempoElement.textContent = tt ? String(tt) : 'Não informado';
+                    tempoElement.textContent = prof.tempoTrabalho || prof.tempo_trabalho || prof.tempo_empresa || 'Não informado';
                 }
             } else {
                 var empresaFallback = document.getElementById('userCompany');
@@ -7027,6 +7170,11 @@
 
             console.log('✅ Interface do perfil atualizada com dados reais do banco');
         }
+
+        window.atualizarInterfacePerfilDoNormalizado = function atualizarInterfacePerfilDoNormalizado(dadosNormalizados) {
+            if (!dadosNormalizados || typeof dadosNormalizados !== 'object') return;
+            atualizarInterfacePerfil(dadosNormalizados);
+        };
 
         // Função para formatar telefone
         function formatarTelefone(telefone) {
@@ -7058,6 +7206,13 @@
             }
             
             return cep; // Retornar original se não conseguir formatar
+        }
+
+        function formatarDataISO(dataISO) {
+            if (!dataISO) return '';
+            var data = new Date(dataISO);
+            if (isNaN(data.getTime())) return String(dataISO);
+            return data.toLocaleDateString('pt-BR');
         }
 
         // Função para salvar configurações
@@ -7622,7 +7777,7 @@
             if (typeof window.agilbankWizardTryBack === 'function' && window.agilbankWizardTryBack()) {
                 return;
             }
-            const formularioCartao = document.querySelector('.formulario-cartao');
+            const formularioCartao = document.getElementById('cartaoWizardForm');
             const progressContainer = document.getElementById('progressContainer');
             const vencimentoContainer = document.getElementById('vencimentoContainer');
             const aprovacaoContainer = document.getElementById('aprovacaoContainer');
@@ -7686,7 +7841,7 @@
                 notification.style.display = 'none';
                 extratoContainer.style.display = 'none';
                 pixContainer.style.opacity = '1';
-                pixContainer.style.transform = 'translateX(0)';
+                pixContainer.style.transform = 'none';
                 window.scrollTo(0, 0);
                 atualizarDataHora(); // Adicionando chamada da função
             });
@@ -8184,12 +8339,12 @@
 
         // Função para iniciar leitura de QR Code
         function iniciarLeituraQR() {
-            alert('Funcionalidade de leitura de QR Code será implementada em breve. Por enquanto, você pode usar o PIX Copia e Cola.');
+            mostrarAgilbankAviso('Funcionalidade de leitura de QR Code será implementada em breve. Por enquanto, você pode usar o PIX Copia e Cola.');
         }
 
         // Função para processar QR Code
         function processarQRCode() {
-            alert('Processando pagamento via QR Code...');
+            mostrarAgilbankAviso('Processando pagamento via QR Code...');
             fecharModalQRCode();
         }
 
@@ -8198,20 +8353,14 @@
             const codigoPix = document.getElementById('codigoPixColado').value;
             
             if (!codigoPix) {
-                alert('Por favor, cole o código PIX primeiro.');
+                mostrarAgilbankAviso('Por favor, cole o código PIX primeiro.');
                 return;
             }
-
-            // Simular processamento do código PIX
             const resultado = document.getElementById('pixCopiaColaResult');
-            resultado.style.display = 'block';
-            
-            // Extrair informações do código PIX (simulação)
-            document.getElementById('pixValor').textContent = 'R$ 50,00';
-            document.getElementById('pixDescricao').textContent = 'Pagamento via PIX';
-            document.getElementById('pixDestinatario').textContent = 'João Silva';
-            
-            alert('Código PIX processado com sucesso!');
+            if (resultado) {
+                resultado.style.display = 'none';
+            }
+            mostrarAgilbankAviso('Funcionalidade Copia e Cola indisponível no backend atual. Use Enviar PIX.');
         }
 
         // Função para copiar PIX (já existente no boleto)
@@ -8220,10 +8369,10 @@
             
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(codigoPix).then(() => {
-                    alert('Código PIX copiado para a área de transferência!');
+                    mostrarAgilbankAviso('Código PIX copiado para a área de transferência!');
                 }).catch(err => {
                     console.error('Erro ao copiar: ', err);
-                    alert('Erro ao copiar o código PIX.');
+                    mostrarAgilbankAviso('Erro ao copiar o código PIX.');
                 });
             } else {
                 // Fallback para navegadores mais antigos
@@ -8233,7 +8382,7 @@
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                alert('Código PIX copiado para a área de transferência!');
+                mostrarAgilbankAviso('Código PIX copiado para a área de transferência!');
             }
         }
 
@@ -8243,6 +8392,35 @@
         };
 
         // ===== FUNÇÕES PIX - INTEGRAÇÃO COM BACKEND =====
+
+        function fecharAgilbankAviso() {
+            var overlay = document.getElementById('agilbankAlertOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('show');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function mostrarAgilbankAviso(mensagem, titulo) {
+            var overlay = document.getElementById('agilbankAlertOverlay');
+            var msg = document.getElementById('agilbankAlertMessage');
+            var title = document.getElementById('agilbankAlertTitle');
+
+            if (!overlay || !msg || !title) {
+                window.alert(mensagem);
+                return;
+            }
+
+            title.textContent = titulo || 'AgilBank';
+            msg.textContent = mensagem || '';
+            overlay.classList.add('show');
+            overlay.setAttribute('aria-hidden', 'false');
+
+            var ok = overlay.querySelector('.agilbank-alert-ok');
+            if (ok) ok.focus();
+        }
+
+        window.fecharAgilbankAviso = fecharAgilbankAviso;
+        window.agilbankAviso = mostrarAgilbankAviso;
         
         // Funções de fechamento dos modais PIX
         function fecharModalChavePix() {
@@ -8289,12 +8467,71 @@
             return fallback || 'Erro desconhecido';
         }
 
+        function parsePixValor(valor) {
+            var texto = String(valor || '').trim();
+            if (!texto) return NaN;
+
+            texto = texto.replace(/[^\d,.-]/g, '');
+            if (texto.indexOf(',') >= 0) {
+                texto = texto.replace(/\./g, '').replace(',', '.');
+            }
+
+            return Number(texto);
+        }
+
+        function formatarTelefonePixPorDigitos(digitos) {
+            var tel = String(digitos || '').replace(/\D/g, '');
+            if (tel.indexOf('55') === 0 && tel.length > 11) {
+                tel = tel.slice(2);
+            }
+
+            if (tel.length === 10) {
+                return '(' + tel.slice(0, 2) + ') ' + tel.slice(2, 6) + '-' + tel.slice(6);
+            }
+
+            if (tel.length === 11) {
+                return '(' + tel.slice(0, 2) + ') ' + tel.slice(2, 7) + '-' + tel.slice(7);
+            }
+
+            return null;
+        }
+
+        function normalizarChavePix(valor, tipo) {
+            var chave = String(valor || '').trim();
+            var digitos = chave.replace(/\D/g, '');
+
+            if (tipo === 'cpf' || (!tipo && digitos.length === 11 && !chave.includes('+') && !chave.includes('('))) {
+                return digitos;
+            }
+
+            if (tipo === 'telefone') {
+                return formatarTelefonePixPorDigitos(digitos) || chave;
+            }
+
+            if (!tipo) {
+                var telefone = formatarTelefonePixPorDigitos(digitos);
+                if (telefone && (chave.includes('+') || chave.includes('(') || digitos.length === 10)) {
+                    return telefone;
+                }
+            }
+
+            return chave;
+        }
+
+        function gerarPixIdempotencyKey() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+
+            return 'pix-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+        }
+
         // Carregar dados PIX (saldo, limites)
         async function carregarDadosPix() {
             try {
                 const token = getAuthToken();
                 if (!token) {
-                    alert('Faça login para acessar o PIX');
+                    mostrarAgilbankAviso('Faça login para acessar o PIX');
                     fecharModalEnviarPix();
                     return;
                 }
@@ -8319,12 +8556,12 @@
                         maximumFractionDigits: 2
                     });
                 } else {
-                    alert(pixApiMessage(raw, 'Erro ao carregar dados PIX'));
+                    mostrarAgilbankAviso(pixApiMessage(raw, 'Erro ao carregar dados PIX'));
                     fecharModalEnviarPix();
                 }
             } catch (error) {
                 console.error('Erro ao carregar dados PIX:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+                mostrarAgilbankAviso('Erro de conexão. Verifique se o servidor está rodando.');
                 fecharModalEnviarPix();
             }
         }
@@ -8334,7 +8571,7 @@
             try {
                 const token = getAuthToken();
                 if (!token) {
-                    alert('Faça login para acessar o PIX');
+                    mostrarAgilbankAviso('Faça login para acessar o PIX');
                     fecharModalReceberPix();
                     return;
                 }
@@ -8370,12 +8607,12 @@
                         }
                     }
                 } else {
-                    alert(pixApiMessage(raw, 'Erro ao carregar chaves PIX'));
+                    mostrarAgilbankAviso(pixApiMessage(raw, 'Erro ao carregar chaves PIX'));
                     fecharModalReceberPix();
                 }
             } catch (error) {
                 console.error('Erro ao carregar chaves PIX:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+                mostrarAgilbankAviso('Erro de conexão. Verifique se o servidor está rodando.');
                 fecharModalReceberPix();
             }
         }
@@ -8385,7 +8622,7 @@
             try {
                 const token = getAuthToken();
                 if (!token) {
-                    alert('Faça login para acessar o PIX');
+                    mostrarAgilbankAviso('Faça login para acessar o PIX');
                     fecharModalLimitesPix();
                     return;
                 }
@@ -8417,114 +8654,69 @@
                     document.getElementById('progressDiario').style.width = Math.min(pctD, 100) + '%';
                     document.getElementById('progressMensal').style.width = Math.min(pctM, 100) + '%';
                 } else {
-                    alert(pixApiMessage(raw, 'Erro ao carregar limites PIX'));
+                    mostrarAgilbankAviso(pixApiMessage(raw, 'Erro ao carregar limites PIX'));
                     fecharModalLimitesPix();
                 }
             } catch (error) {
                 console.error('Erro ao carregar limites PIX:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+                mostrarAgilbankAviso('Erro de conexão. Verifique se o servidor está rodando.');
                 fecharModalLimitesPix();
             }
         }
 
         // Validar chave PIX
         async function validarChavePix() {
-            const chavePix = document.getElementById('chavePixDestino').value;
+            const chavePix = normalizarChavePix(document.getElementById('chavePixDestino').value);
             if (!chavePix) {
-                alert('Digite uma chave PIX para validar');
+                mostrarAgilbankAviso('Digite uma chave PIX para validar');
                 return;
             }
 
-            try {
-                const token = getAuthToken();
-                if (!token) {
-                    alert('Faça login para validar chave PIX');
-                    return;
-                }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
+            const cpfRegex = /^\d{11}$/;
+            const randomKeyRegex = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
-                const response = await fetch(`${AGILBANK_API_BASE}/pix/validate`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ chavePix })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.valida) {
-                        alert(`Chave válida!\nNome: ${data.nome}\nBanco: ${data.banco}`);
-                    } else {
-                        alert('Chave PIX não encontrada ou inválida');
-                    }
-                } else {
-                    alert('Erro ao validar chave PIX');
-                }
-            } catch (error) {
-                console.error('Erro ao validar chave PIX:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+            if (emailRegex.test(chavePix) || phoneRegex.test(chavePix) || cpfRegex.test(chavePix) || randomKeyRegex.test(chavePix)) {
+                mostrarAgilbankAviso('Formato de chave PIX válido. A existência da chave será confirmada ao enviar.');
+            } else {
+                mostrarAgilbankAviso('Formato de chave PIX inválido. Use CPF com 11 dígitos, e-mail, telefone no formato (XX) XXXXX-XXXX ou chave aleatória.');
             }
         }
 
         // Gerar QR Code PIX
         async function gerarQRCodePix() {
-            const valor = prompt('Digite o valor para o QR Code PIX:');
-            if (!valor) return;
-
-            try {
-                const token = getAuthToken();
-                if (!token) {
-                    alert('Faça login para gerar QR Code PIX');
-                    return;
-                }
-
-                const response = await fetch(`${AGILBANK_API_BASE}/pix/qr-code`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ valor })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('qrCodePix').src = data.qrCode;
-                    alert('QR Code gerado com sucesso!');
-                } else {
-                    alert('Erro ao gerar QR Code PIX');
-                }
-            } catch (error) {
-                console.error('Erro ao gerar QR Code:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+            const token = getAuthToken();
+            if (!token) {
+                mostrarAgilbankAviso('Faça login para acessar o PIX');
+                return;
             }
+            mostrarAgilbankAviso('Funcionalidade de QR Code indisponível no backend atual.');
         }
 
         // Função para cadastrar chave PIX
         async function cadastrarChavePix() {
             const tipo = document.getElementById('tipoChave').value;
-            const valor = document.getElementById('valorChave').value;
+            const valor = normalizarChavePix(document.getElementById('valorChave').value, tipo);
             
             if (!tipo || !valor) {
-                alert('Preencha todos os campos');
+                mostrarAgilbankAviso('Preencha todos os campos');
                 return;
             }
 
             // Validação básica dos campos
             if (tipo === 'cpf' && !/^\d{11}$/.test(valor)) {
-                alert('CPF deve ter 11 dígitos');
+                mostrarAgilbankAviso('CPF deve ter 11 dígitos');
                 return;
             }
             
             if (tipo === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
-                alert('Digite um e-mail válido');
+                mostrarAgilbankAviso('Digite um e-mail válido');
                 return;
             }
             
-            if (tipo === 'telefone' && !/^\+55\d{10,11}$/.test(valor)) {
-                alert('Telefone deve ter formato +55XXXXXXXXXXX');
+            if (tipo === 'telefone' && !/^\(\d{2}\)\s\d{4,5}-\d{4}$/.test(valor)) {
+                mostrarAgilbankAviso('Telefone deve ter formato (XX) XXXXX-XXXX');
                 return;
             }
 
@@ -8533,7 +8725,7 @@
             try {
                 const token = getAuthToken();
                 if (!token) {
-                    alert('Faça login para cadastrar chave PIX');
+                    mostrarAgilbankAviso('Faça login para cadastrar chave PIX');
                     fecharModalChavePix();
                     return;
                 }
@@ -8548,43 +8740,50 @@
                 });
 
                 if (response.ok) {
-                    alert('Chave PIX cadastrada com sucesso!');
+                    mostrarAgilbankAviso('Chave PIX cadastrada com sucesso!');
                     fecharModalChavePix();
                     carregarChavesPix();
                 } else {
                     var errBody = await response.json().catch(function () { return {}; });
-                    alert(pixApiMessage(errBody, 'Erro ao cadastrar chave PIX'));
+                    mostrarAgilbankAviso(pixApiMessage(errBody, 'Erro ao cadastrar chave PIX'));
                 }
             } catch (error) {
                 console.error('Erro ao cadastrar chave PIX:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+                mostrarAgilbankAviso('Erro de conexão. Verifique se o servidor está rodando.');
             }
         }
 
         // Função para enviar PIX
         async function enviarPix() {
-            const chavePix = document.getElementById('chavePixDestino').value;
+            if (window.agilbankPixEnvioEmAndamento) {
+                mostrarAgilbankAviso('Seu PIX já está sendo enviado. Aguarde a confirmação.');
+                return;
+            }
+
+            const chavePix = normalizarChavePix(document.getElementById('chavePixDestino').value);
             const valor = document.getElementById('valorPix').value;
-            const descricao = document.getElementById('descricaoPix').value;
+            const descricao = document.getElementById('descricaoPix').value.trim();
             
             if (!chavePix || !valor) {
-                alert('Preencha a chave PIX e o valor');
+                mostrarAgilbankAviso('Preencha a chave PIX e o valor');
                 return;
             }
 
             // Validação básica do valor
-            const valorNum = parseFloat(valor.replace(',', '.'));
+            const valorNum = parsePixValor(valor);
             if (isNaN(valorNum) || valorNum <= 0) {
-                alert('Digite um valor válido');
+                mostrarAgilbankAviso('Digite um valor válido');
                 return;
             }
 
-            const pixData = { chavePix, valor, descricao };
+            const idempotencyKey = gerarPixIdempotencyKey();
+            const pixData = { chavePix, valor: valorNum, descricao, idempotencyKey };
 
             try {
+                window.agilbankPixEnvioEmAndamento = true;
                 const token = getAuthToken();
                 if (!token) {
-                    alert('Faça login para enviar PIX');
+                    mostrarAgilbankAviso('Faça login para enviar PIX');
                     fecharModalEnviarPix();
                     return;
                 }
@@ -8593,6 +8792,7 @@
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
+                        'Idempotency-Key': idempotencyKey,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(pixData)
@@ -8613,7 +8813,7 @@
                         }));
                     }
                     var detalhe = linhas.join('\n');
-                    alert(msg + (detalhe ? '\n\n' + detalhe : ''));
+                    mostrarAgilbankAviso(msg + (detalhe ? '\n\n' + detalhe : ''));
                     fecharModalEnviarPix();
                     if (typeof carregarPerfilUsuario === 'function') {
                         carregarPerfilUsuario();
@@ -8623,11 +8823,13 @@
                     }
                 } else {
                     var errSend = await response.json().catch(function () { return {}; });
-                    alert(pixApiMessage(errSend, 'Erro ao enviar PIX'));
+                    mostrarAgilbankAviso(pixApiMessage(errSend, 'Erro ao enviar PIX'));
                 }
             } catch (error) {
                 console.error('Erro ao enviar PIX:', error);
-                alert('Erro de conexão. Verifique se o servidor está rodando.');
+                mostrarAgilbankAviso('Erro de conexão. Verifique se o servidor está rodando.');
+            } finally {
+                window.agilbankPixEnvioEmAndamento = false;
             }
         }
 

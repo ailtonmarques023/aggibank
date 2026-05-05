@@ -24,6 +24,14 @@ const { recordAudit } = require('../utils/auditLog');
 const router = express.Router();
 const CPF_LOGIN_REGEX = /^\d{11}$/;
 
+/** Cooldown por usuário (memória; em cluster usar Redis ou campo no banco). */
+const resendVerificationCooldown = new Map();
+
+function resendVerificationMinIntervalMs() {
+  if (process.env.NODE_ENV === 'test') return 0;
+  return parseInt(process.env.RESEND_VERIFICATION_COOLDOWN_MS, 10) || 90 * 1000;
+}
+
 const FORGOT_PASSWORD_PUBLIC_MESSAGE =
   'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado.';
 
@@ -254,7 +262,10 @@ router.post('/register', validateUserRegistration, async (req, res) => {
           }
         }),
       ).catch((emailError) => {
-        logger.warn('Erro ao enviar email de verificação:', emailError);
+        logger.warn(emailError, {
+          context: 'register-verification-email',
+          to: email,
+        });
       });
     });
 
@@ -805,6 +816,86 @@ router.post('/reset-password', validateResetPassword, async (req, res) => {
     });
   } catch (error) {
     logger.error('Erro em reset-password:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+/**
+ * Usuário autenticado mas ainda não verificado: gera novo token e reenvia o e-mail de boas-vindas.
+ * Não usa requireVerification (justamente para quem ainda não verificou).
+ */
+router.post('/resend-verification-email', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.isVerificado) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sua conta já está verificada.',
+        code: 'ALREADY_VERIFIED',
+      });
+    }
+
+    const minMs = resendVerificationMinIntervalMs();
+    const now = Date.now();
+    const last = resendVerificationCooldown.get(req.user.id);
+    if (minMs > 0 && last != null && now - last < minMs) {
+      const waitSec = Math.ceil((minMs - (now - last)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Aguarde ${waitSec} segundos antes de pedir outro e-mail de verificação.`,
+        code: 'RESEND_RATE_LIMIT',
+      });
+    }
+
+    const tokenVerificacao = crypto.randomBytes(32).toString('hex');
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { tokenVerificacao },
+    });
+
+    resendVerificationCooldown.set(req.user.id, now);
+
+    try {
+      await sendEmail({
+        to: req.user.email,
+        subject: 'Bem-vindo ao AgilBank - Verifique sua conta',
+        template: 'welcome',
+        data: {
+          nome: req.user.nomeCompleto,
+          token: tokenVerificacao,
+          numeroConta: `${req.user.numeroConta}-${req.user.digitoConta}`,
+          agencia: req.user.agencia,
+        },
+      });
+    } catch (emailError) {
+      logger.warn(emailError, {
+        context: 'resend-verification-email',
+        userId: req.user.id,
+      });
+      const errMsg = emailError && emailError.message ? String(emailError.message) : '';
+      const smtpNotConfigured = errMsg === 'SMTP_NOT_CONFIGURED';
+      return res.status(503).json({
+        success: false,
+        message: smtpNotConfigured
+          ? 'O servidor não está configurado para enviar e-mail (SMTP). Quem administra o backend precisa preencher SMTP_HOST, SMTP_USER e SMTP_PASS no .env.'
+          : 'Não foi possível enviar o e-mail no momento. Se o problema continuar, verifique com o suporte ou tente mais tarde.',
+        code: smtpNotConfigured ? 'EMAIL_SMTP_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
+      });
+    }
+
+    logger.banking('verification_email_resent', req.user.id, { email: req.user.email });
+
+    return res.json({
+      success: true,
+      message:
+        'Enviamos um novo e-mail de verificação para o endereço cadastrado. Confira também a pasta de spam.',
+    });
+  } catch (error) {
+    logger.error('Erro em resend-verification-email:', error);
     return res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',

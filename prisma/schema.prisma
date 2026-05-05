@@ -33,6 +33,7 @@ model User {
   boletos             Boleto[]
   campanhas           campanhas[]
   cartoes             Cartao[]
+  cartoesVirtuais     CartaoVirtual[]
   chavesPix           ChavePix[]
   configuracoes       ConfiguracoesUsuario?
   dadosProfissionais  DadosProfissionais?
@@ -117,8 +118,32 @@ model Cartao {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cartoesVirtuais     CartaoVirtual[]
 
   @@map("cartoes")
+}
+
+model CartaoVirtual {
+  id            String   @id @default(cuid())
+  cartaoId      String
+  userId        String
+  maskedNumber  String
+  last4         String   @db.VarChar(4)
+  validade      String
+  bandeira      String
+  cardToken     String   @unique
+  cvvHash       String
+  status        String   @default("ativo")
+  dataBloqueio  DateTime?
+  dataCancelado DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  cartao        Cartao   @relation(fields: [cartaoId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cartaoId])
+  @@index([userId])
+  @@map("cartoes_virtuais")
 }
 
 model Emprestimo {

@@ -154,10 +154,23 @@ const logCriticalOperation = (operation, userId, amount, details = {}) => {
   }, `Operação crítica: ${operation} - Usuário: ${userId} - Valor: R$ ${amount}`);
 };
 
+// Não usar `...logger`: métodos do Pino perdem o `this` e quebram (ex.: this[writeSym] is not a function).
 module.exports = {
-  ...logger,
   ...loggers,
+  fatal: logger.fatal.bind(logger),
+  warn: logger.warn.bind(logger),
+  info: logger.info.bind(logger),
+  debug: logger.debug.bind(logger),
+  trace: logger.trace.bind(logger),
+  silent: logger.silent.bind(logger),
+  child: logger.child.bind(logger),
+  level: logger.level,
+  levels: logger.levels,
   requestLogger,
   logUncaughtError,
   logCriticalOperation,
 };
+
+if (typeof logger.flush === 'function') {
+  module.exports.flush = logger.flush.bind(logger);
+}
