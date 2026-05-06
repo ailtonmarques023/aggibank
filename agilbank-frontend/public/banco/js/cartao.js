@@ -96,6 +96,8 @@ function agilbankWizardPinSyncHidden() {
     var s = '';
     inputs.forEach(function (inp) {
         s += String(inp.value || '').replace(/\D/g, '').slice(0, 1);
+        var square = inp.closest ? inp.closest('.password-square') : null;
+        if (square) square.classList.toggle('filled', Boolean(inp.value));
     });
     hidden.value = s.slice(0, 4);
 }

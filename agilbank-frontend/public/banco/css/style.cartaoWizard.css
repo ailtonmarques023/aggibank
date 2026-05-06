@@ -532,8 +532,9 @@ body.agilbank-error-modal-wizard
     border-radius: 6px;
     background: transparent;
     box-shadow: none;
+    position: relative;
     transition: box-shadow 0.15s ease;
-    visibility: hidden;
+    visibility: visible;
 }
 
 #cartaoSolicitacaoFlow .cartao-wizard-pin-container .password-square:focus-within {
@@ -542,6 +543,8 @@ body.agilbank-error-modal-wizard
 }
 
 #cartaoSolicitacaoFlow .cartao-wizard-pin-container .password-square input {
+    position: relative;
+    z-index: 1;
     width: 36px;
     height: 36px;
     padding: 0;
@@ -555,14 +558,28 @@ body.agilbank-error-modal-wizard
     border-radius: 5px;
     box-shadow: inset 0 0 0 1.44px rgba(0, 102, 179, 0.2);
     background: #fff;
-    color: rgba(0, 0, 0, 1);
-    text-shadow: none;
+    color: transparent !important;
+    text-shadow: none !important;
     caret-color: #0066b3;
     visibility: visible;
 }
 
+#cartaoSolicitacaoFlow .cartao-wizard-pin-container .password-square.filled::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #000000;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    pointer-events: none;
+}
+
 #cartaoPin0 {
-    color: rgba(0, 0, 0, 1);
+    color: transparent !important;
     font-size: 20px;
 }
 
