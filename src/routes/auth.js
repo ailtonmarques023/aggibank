@@ -1016,7 +1016,7 @@ router.post('/resend-verification-email', authenticateToken, async (req, res) =>
       return res.status(503).json({
         success: false,
         message: smtpNotConfigured
-          ? 'O servidor não está configurado para enviar e-mail (SMTP). Quem administra o backend precisa preencher SMTP_HOST, SMTP_USER e SMTP_PASS no .env.'
+          ? 'O servidor não está configurado para enviar e-mail. Configure RESEND_API_KEY e EMAIL_FROM (recomendado em produção) ou SMTP_HOST, SMTP_USER e SMTP_PASS (fallback).'
           : 'Não foi possível enviar o e-mail no momento. Se o problema continuar, verifique com o suporte ou tente mais tarde.',
         code: smtpNotConfigured ? 'EMAIL_SMTP_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
       });

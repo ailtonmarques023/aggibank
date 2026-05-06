@@ -1,0 +1,113 @@
+---
+description: Regra obrigatoria para propor tecnologias mais robustas antes de implementar
+alwaysApply: true
+---
+
+# AGILBANK TECHNOLOGY DECISION RULE
+
+## Principio obrigatorio
+
+O agente deve agir como projetista senior do AgilBank.
+
+Antes de implementar ou corrigir um fluxo critico, o agente deve avaliar se a tecnologia ja existente no projeto e a melhor escolha para o ambiente real.
+
+Se existir uma tecnologia mais robusta, mais estavel ou mais adequada para producao, o agente deve informar isso antes de seguir pelo caminho antigo.
+
+Nao e aceitavel continuar uma solucao fragil apenas porque ela ja existe no codigo.
+
+## Obrigacao antes de implementar
+
+Antes de implementar, corrigir ou aprovar qualquer fluxo critico, responder:
+
+1. Qual tecnologia o projeto esta usando hoje?
+2. Essa tecnologia e a melhor para Vercel + Railway + producao?
+3. Existe uma opcao mais moderna, estavel ou facil de operar?
+4. Quais riscos existem se mantivermos a tecnologia atual?
+5. Qual opcao o agente recomenda como projetista senior?
+
+Se houver opcao melhor, o agente deve oferecer a alternativa e pedir confirmacao antes de consolidar a arquitetura.
+
+## Regra de escolha tecnica
+
+- Preferir tecnologias com API clara, boa observabilidade, suporte a deploy cloud e baixa chance de falha operacional.
+- Evitar solucoes que dependam de configuracao fragil, portas bloqueaveis, TLS dificil, credenciais dispersas ou comportamento diferente entre local e producao.
+- Nao validar uma decisao tecnica apenas porque funcionou em teste local.
+- Toda escolha deve considerar o ambiente real: frontend na Vercel, backend na Railway, banco remoto e usuarios reais.
+
+## Exemplo obrigatorio: envio de e-mail
+
+Para envio de e-mails transacionais do AgilBank, a escolha padrao deve ser **API HTTPS**, nao SMTP.
+
+Exemplos:
+
+- verificacao de conta
+- reset de senha
+- alertas de seguranca
+- confirmacoes de operacao
+- notificacoes criticas de conta
+
+Em ambiente Vercel + Railway:
+
+- Em ambiente Vercel + Railway, implementar envio de e-mail por API HTTPS.
+- Provedor preferencial: Resend API.
+- Alternativas aceitaveis: SendGrid API, Brevo API, Mailgun API ou outro provedor com API HTTPS oficial.
+- SMTP nao deve ser escolhido como primeira opcao para fluxo critico de usuario.
+
+SMTP pode funcionar, mas e mais fragil nesse ambiente porque depende de host, porta, usuario, senha, TLS e liberacao de conexao SMTP. API HTTPS tende a ser mais estavel, rastreavel e facil de depurar.
+
+## Quando uma tecnologia inferior pode ser usada
+
+Uma tecnologia menos robusta so pode ser usada quando houver exigencia explicita do projeto, empresa ou infraestrutura.
+
+Se uma opcao mais fragil for proposta, a resposta deve justificar:
+
+- por que a opcao melhor nao atende
+- quais riscos permanecem
+- como esses riscos serao mitigados
+- quais variaveis de ambiente serao necessarias
+- como o fluxo sera testado em producao
+
+Sem essa justificativa, a decisao deve ser reprovada.
+
+## Variaveis esperadas para API HTTPS
+
+Ao usar Resend API, configurar no backend/deploy:
+
+- `RESEND_API_KEY`
+- `EMAIL_FROM`
+- `FRONTEND_URL`
+
+Nao exigir `SMTP_HOST`, `SMTP_USER` ou `SMTP_PASS` no fluxo principal quando a arquitetura escolhida for API HTTPS.
+
+## Criterios de aprovacao
+
+Um fluxo de e-mail so pode ser marcado como pronto quando:
+
+- o backend envia o e-mail por API HTTPS em ambiente real
+- o link gerado usa `FRONTEND_URL` correto
+- o provedor retorna sucesso ou erro rastreavel
+- falhas de envio aparecem com mensagem clara para o usuario/admin
+- o teste cobre pelo menos envio, recebimento e clique no link
+
+## Bloqueio obrigatorio
+
+Reprovar qualquer implementacao que:
+
+- mantenha tecnologia fragil por conveniencia sem oferecer alternativa melhor
+- escolha SMTP por conveniencia sem analisar API HTTPS
+- dependa de variaveis SMTP ausentes no Railway
+- declare o fluxo pronto apenas porque funcionou localmente
+- ignore diferenca entre localhost, Vercel e Railway
+- esconda erro de provedor como erro generico
+
+## Protocolo para agentes
+
+Antes de alterar qualquer integracao critica no AgilBank, responder:
+
+1. Qual tecnologia sera usada?
+2. Existe alternativa melhor para producao?
+3. Por que essa opcao e a melhor para Vercel + Railway?
+4. Quais variaveis de ambiente sao necessarias?
+5. Como sera validado em producao?
+
+Se a resposta nao avaliar alternativas melhores, a decisao deve ser revisada antes de implementar.

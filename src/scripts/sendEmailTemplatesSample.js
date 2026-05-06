@@ -4,7 +4,7 @@
  *   node src/scripts/sendEmailTemplatesSample.js seu@email.com
  *   TEST_EMAIL_TO=seu@email.com node src/scripts/sendEmailTemplatesSample.js
  *
- * Requer .env com SMTP_HOST, SMTP_USER, SMTP_PASS (e opcionalmente FRONTEND_URL, EMAIL_FROM).
+ * Requer .env com RESEND_API_KEY + EMAIL_FROM (ou SMTP_HOST, SMTP_USER, SMTP_PASS) e opcionalmente FRONTEND_URL.
  */
 require('dotenv').config();
 

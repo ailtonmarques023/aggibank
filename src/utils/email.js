@@ -1,5 +1,8 @@
+const axios = require('axios');
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
+
+const RESEND_API_URL = 'https://api.resend.com/emails';
 
 /**
  * Base URL do front onde ficam confirmar-email.html e reset-password.html (pasta /banco).
@@ -444,11 +447,110 @@ const emailTemplates = {
   },
 };
 
+function isResendConfigured() {
+  const key = process.env.RESEND_API_KEY && String(process.env.RESEND_API_KEY).trim();
+  return Boolean(key);
+}
+
+/** Endereço remetente (Resend exige domínio verificado; fallback SMTP_USER). */
+function getFromEmailRaw() {
+  const from = process.env.EMAIL_FROM && String(process.env.EMAIL_FROM).trim();
+  if (from) return from;
+  const user = process.env.SMTP_USER && String(process.env.SMTP_USER).trim();
+  return user || '';
+}
+
+function isResendReady() {
+  return isResendConfigured() && Boolean(getFromEmailRaw());
+}
+
 function isSmtpConfigured() {
   const host = process.env.SMTP_HOST && String(process.env.SMTP_HOST).trim();
   const user = process.env.SMTP_USER && String(process.env.SMTP_USER).trim();
   const pass = process.env.SMTP_PASS && String(process.env.SMTP_PASS).trim();
   return Boolean(host && user && pass);
+}
+
+/** Resend (produção/Railway) ou SMTP (local/fallback). */
+function isEmailProviderConfigured() {
+  return isResendReady() || isSmtpConfigured();
+}
+
+function buildMimeFromHeader() {
+  const name = process.env.EMAIL_FROM_NAME || 'AgilBank';
+  const addr = getFromEmailRaw();
+  if (!addr) return null;
+  return `"${name}" <${addr}>`;
+}
+
+/**
+ * Envio via Resend HTTP API (evita bloqueio de SMTP outbound em alguns PaaS).
+ * Não logar corpo da requisição nem cabeçalhos com API key.
+ */
+async function sendViaResend({ to, finalSubject, html, textPart }) {
+  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
+  const from = buildMimeFromHeader();
+  if (!from) {
+    throw new Error('RESEND_REQUIRES_EMAIL_FROM');
+  }
+
+  const payload = {
+    from,
+    to: Array.isArray(to) ? to : [to],
+    subject: finalSubject,
+  };
+  if (html && String(html).trim() !== '') {
+    payload.html = html;
+  }
+  if (textPart && String(textPart).trim() !== '') {
+    payload.text = textPart;
+  }
+  if (!payload.html && !payload.text) {
+    throw new Error('RESEND_REQUIRES_HTML_OR_TEXT');
+  }
+
+  let response;
+  try {
+    response = await axios.post(RESEND_API_URL, payload, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+      validateStatus: () => true,
+    });
+  } catch (err) {
+    logger.error(err, {
+      context: 'sendEmail',
+      provider: 'resend',
+      phase: 'network',
+      to,
+      subject: finalSubject,
+    });
+    throw err;
+  }
+
+  if (response.status >= 200 && response.status < 300) {
+    const id = response.data && response.data.id ? response.data.id : null;
+    return { messageId: id || undefined };
+  }
+
+  const apiMsg =
+    response.data && typeof response.data === 'object'
+      ? response.data.message || response.data.name || JSON.stringify(response.data)
+      : String(response.data || '');
+  const err = new Error(`RESEND_API_ERROR_${response.status}`);
+  err.resendStatus = response.status;
+  err.resendMessage = typeof apiMsg === 'string' ? apiMsg : String(apiMsg);
+  logger.error(err, {
+    context: 'sendEmail',
+    provider: 'resend',
+    to,
+    subject: finalSubject,
+    httpStatus: response.status,
+    resendMessage: err.resendMessage,
+  });
+  throw err;
 }
 
 function resolveSubject(passedSubject, templateSubject) {
@@ -461,14 +563,12 @@ function resolveSubject(passedSubject, templateSubject) {
 const sendEmail = async ({ to, subject, html, text, template, data = {} }) => {
   let emailContent;
   try {
-    if (!isSmtpConfigured()) {
+    if (!isEmailProviderConfigured()) {
       const msg =
-        'E-mail não enviado: SMTP não configurado. No projeto, copie env.example para .env e preencha SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e EMAIL_FROM (veja README.md).';
+        'E-mail não enviado: configure RESEND_API_KEY + EMAIL_FROM (produção) ou SMTP_HOST/SMTP_USER/SMTP_PASS (fallback local). Veja env.example.';
       logger.warn(msg);
       throw new Error('SMTP_NOT_CONFIGURED');
     }
-
-    const transporter = buildSmtpTransport();
 
     if (template && emailTemplates[template]) {
       emailContent = emailTemplates[template](data);
@@ -478,16 +578,47 @@ const sendEmail = async ({ to, subject, html, text, template, data = {} }) => {
 
     const finalSubject = resolveSubject(subject, emailContent.subject);
 
+    let textPart = '';
+    if (emailContent.text && String(emailContent.text).trim() !== '') {
+      textPart = emailContent.text;
+    } else if (text && String(text).trim() !== '') {
+      textPart = text;
+    }
+
+    if (isResendReady()) {
+      const result = await sendViaResend({
+        to,
+        finalSubject,
+        html: emailContent.html,
+        textPart: textPart || undefined,
+      });
+
+      logger.info(
+        {
+          to,
+          subject: finalSubject,
+          messageId: result.messageId,
+          provider: 'resend',
+        },
+        'Email enviado com sucesso',
+      );
+
+      return {
+        success: true,
+        messageId: result.messageId,
+      };
+    }
+
+    const transporter = buildSmtpTransport();
+
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'AgilBank'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: buildMimeFromHeader() || `"${process.env.EMAIL_FROM_NAME || 'AgilBank'}" <${process.env.SMTP_USER}>`,
       to,
       subject: finalSubject,
       html: emailContent.html,
     };
-    if (emailContent.text && String(emailContent.text).trim() !== '') {
-      mailOptions.text = emailContent.text;
-    } else if (text && String(text).trim() !== '') {
-      mailOptions.text = text;
+    if (textPart) {
+      mailOptions.text = textPart;
     }
 
     const result = await transporter.sendMail(mailOptions);
@@ -497,6 +628,7 @@ const sendEmail = async ({ to, subject, html, text, template, data = {} }) => {
         to,
         subject: finalSubject,
         messageId: result.messageId,
+        provider: 'smtp',
       },
       'Email enviado com sucesso',
     );
@@ -560,8 +692,12 @@ const sendCardNotification = async (userData, cardData) => {
 
 const testEmailConfiguration = async () => {
   try {
+    if (isResendReady()) {
+      logger.info('Configuração de e-mail: Resend (RESEND_API_KEY + remetente) presente — envio real não testado aqui.');
+      return true;
+    }
     if (!isSmtpConfigured()) {
-      logger.warn('testEmailConfiguration: SMTP não configurado (SMTP_HOST/SMTP_USER/SMTP_PASS).');
+      logger.warn('testEmailConfiguration: nem Resend nem SMTP configurados.');
       return false;
     }
     const transporter = buildSmtpTransport();
