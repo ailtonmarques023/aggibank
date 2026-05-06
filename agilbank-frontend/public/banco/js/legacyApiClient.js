@@ -2,8 +2,8 @@
     'use strict';
 
     const root = window.AgilBank = window.AgilBank || {};
-    /** Fallback se agilbankApiBase.js não carregar (deve coincidir com PORT do .env; env.example = 5000). */
-    const DEFAULT_API_BASE = 'http://localhost:5000/api';
+    /** Fallback se agilbankApiBase.js não carregar (deve coincidir com PORT do .env do backend). */
+    const DEFAULT_API_BASE = 'http://localhost:3001/api';
 
     function normalizeBaseUrl(baseUrl) {
         return String(baseUrl || DEFAULT_API_BASE).replace(/\/+$/, '');

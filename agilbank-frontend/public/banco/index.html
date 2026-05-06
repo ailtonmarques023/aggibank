@@ -4159,6 +4159,12 @@
                             <input type="checkbox" id="termosCheck" />
                             <span>Li e aceito os termos de solicitação do cartão e o uso dos dados conforme descrito acima.</span>
                         </label>
+                        <div id="progressContainer" style="display:none;margin-top:16px;padding:16px 18px;text-align:left;background:#eef6fc;border:1px solid #d9e8f4;border-radius:8px;">
+                            <p style="margin:0 0 12px;color:#253646;font-size:0.95rem;">Enviando solicitação…</p>
+                            <div style="width:100%;height:10px;background:#dde5eb;border-radius:6px;overflow:hidden;">
+                                <div id="progressFill" style="height:100%;width:0%;background:#0066b3;transition:width 0.12s linear;"></div>
+                            </div>
+                        </div>
                     </div>
                     <!-- 7 Resultado -->
                     <div class="cartao-wizard-step" data-step="7" id="cartaoWizardResultado">
@@ -4171,12 +4177,6 @@
                 <div class="cartao-wizard-nav" id="cartaoWizardNav">
                     <button type="button" class="cartao-wizard-btn-secondary" id="cartaoWizardPrev">Voltar</button>
                     <button type="button" class="cartao-wizard-btn-primary" id="cartaoWizardNext">Continuar</button>
-                </div>
-            </div>
-            <div id="progressContainer" style="display: none; padding: 24px; text-align: center;">
-                <p style="margin-bottom:12px;">Enviando solicitação…</p>
-                <div style="width: 100%; height: 10px; background: #e0e0e0; border-radius: 6px; overflow: hidden;">
-                    <div id="progressFill" style="height: 100%; width: 0%; background: #0066b3; transition: width 0.12s linear;"></div>
                 </div>
             </div>
             <div id="vencimentoContainer" style="display:none; padding:16px;">

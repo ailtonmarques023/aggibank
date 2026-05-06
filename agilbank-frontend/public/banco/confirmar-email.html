@@ -266,21 +266,58 @@
         var email = urlParams.get('email');
         var token = urlParams.get('token');
 
+        function getVerifyEmailApiBases() {
+            var bases = [];
+            var primary = typeof window.getAgilbankApiBase === 'function'
+                ? window.getAgilbankApiBase()
+                : 'http://127.0.0.1:3001/api';
+            bases.push(primary);
+
+            var isLocalFront = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            var railwayBase = 'https://aggibank-production.up.railway.app/api';
+            if (isLocalFront && primary.replace(/\/+$/, '') !== railwayBase) {
+                bases.push(railwayBase);
+            }
+
+            return bases.map(function (base) {
+                return String(base || '').replace(/\/+$/, '');
+            }).filter(Boolean);
+        }
+
+        function postVerifyEmail(apiBase) {
+            return fetch(apiBase + '/auth/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: token })
+            }).then(function (res) {
+                return res.json().then(function (data) {
+                    if (res.status >= 500) {
+                        throw new Error((data && (data.message || data.code)) || 'SERVER_ERROR');
+                    }
+                    return { res: res, data: data };
+                });
+            });
+        }
+
+        function verifyEmailWithFallback(apiBases) {
+            var index = 0;
+            function next() {
+                return postVerifyEmail(apiBases[index]).catch(function (error) {
+                    index += 1;
+                    if (index < apiBases.length) {
+                        return next();
+                    }
+                    throw error;
+                });
+            }
+            return next();
+        }
+
         if (!token) {
             showError('Link inválido: falta o token de verificação.');
         } else {
             (function verifyEmail() {
-                var url = (typeof window.getAgilbankApiBase === 'function' ? window.getAgilbankApiBase() : 'http://localhost:5000/api').replace(/\/$/, '') + '/auth/verify-email';
-                fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: token })
-                })
-                    .then(function (res) {
-                        return res.json().then(function (data) {
-                            return { res: res, data: data };
-                        });
-                    })
+                verifyEmailWithFallback(getVerifyEmailApiBases())
                     .then(function (r) {
                         if (r.res.ok && r.data && r.data.success) {
                             showPanel('panelSuccess');

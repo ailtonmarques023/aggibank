@@ -1,16 +1,16 @@
 /**
  * URL base da API AgilBank (termina em /api).
  * Ordem de precedência:
- * 1) window.AGILBANK_API_BASE — URL completa (ex.: http://127.0.0.1:5000/api)
+ * 1) window.AGILBANK_API_BASE — URL completa (ex.: http://127.0.0.1:3001/api)
  * 2) localhost/127.0.0.1 — http://<host>:<porta>/api com AGILBANK_API_PORT ou localStorage AGILBANK_API_PORT ou porta padrão
  * 3) demais hosts — mesmo origin + /api (útil atrás de reverse proxy)
  *
- * A porta padrão deve coincidir com PORT no .env do backend (env.example usa 5000).
+ * A porta padrão deve coincidir com PORT no .env do backend.
  */
 (function initAgilbankApiBase(window) {
   'use strict';
 
-  var DEFAULT_PORT = '5000';
+  var DEFAULT_PORT = '3001';
 
   function getAgilbankApiBase() {
     if (window.AGILBANK_API_BASE && typeof window.AGILBANK_API_BASE === 'string') {

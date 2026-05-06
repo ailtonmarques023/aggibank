@@ -1570,7 +1570,7 @@ async function enviarSolicitacao() {
     if (!dadosCartao) return; // Se houver campos vazios, interrompe o processo
 
     var wizRoot = document.getElementById('cartaoWizardRoot');
-    if (wizRoot) wizRoot.style.display = 'none';
+    if (wizRoot) wizRoot.style.display = 'block';
     var wNav = document.getElementById('cartaoWizardNav');
     if (wNav) wNav.style.display = 'none';
     var pcMain = document.getElementById('progressContainer');
