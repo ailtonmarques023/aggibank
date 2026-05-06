@@ -1,7 +1,11 @@
 import axios from 'axios';
 import { clearStoredAuth, getStoredAuth } from '../utils/authStorage';
 
-const apiBaseURL = import.meta.env.VITE_API_URL || '/api';
+/** Deve ser a URL do backend (Railway), não o host do front (Vercel). */
+const RAILWAY_API_DEFAULT = 'https://aggibank-production.up.railway.app/api';
+const apiBaseURL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '/api' : RAILWAY_API_DEFAULT);
 
 const api = axios.create({
   baseURL: apiBaseURL,
