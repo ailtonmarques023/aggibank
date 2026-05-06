@@ -316,7 +316,11 @@ function agilbankFecharSolicitacaoCartao() {
 
 async function agilbankWizardHydratePerfil() {
     var token = getCartaoAuthToken();
-    if (!token || !window.AgilBank || !window.AgilBank.api) return;
+    if (!window.AgilBank || !window.AgilBank.api) return;
+    if (!token) {
+        console.warn('agilbankWizardHydratePerfil: sem JWT (getCartaoAuthToken vazio). Faça login para hidratar o perfil.');
+        return;
+    }
     var nome = '';
     var email = '';
     var cpf = '';
@@ -360,11 +364,17 @@ async function agilbankWizardHydratePerfil() {
             }
         } else {
             hydrateErro = true;
-            console.warn('agilbankWizardHydratePerfil: falha no GET user/user-complete-data', {
+            var warnPayload = {
                 status: response.status,
                 endpoint: 'user/user-complete-data',
-                hasBearer: !!token
-            });
+                hasBearer: !!token,
+                tokenLen: token ? String(token).length : 0
+            };
+            if (response.status === 401) {
+                warnPayload.hint =
+                    'JWT inválido, expirado ou emitido por outro backend. Limpe storage, faça login de novo na mesma API (AGILBANK_API_BASE / Railway).';
+            }
+            console.warn('agilbankWizardHydratePerfil: falha no GET user/user-complete-data', warnPayload);
         }
     } catch (err) {
         hydrateErro = true;
@@ -593,20 +603,32 @@ function agilbankWizardAplicarResultadoPosPost(cartoes) {
 
 window.agilbankWizardTryBack = agilbankWizardTryBack;
 
+/** Remove espaços e prefixo "Bearer " se alguém gravou o header inteiro no storage. */
+function agilbankNormalizeBearerToken(raw) {
+    if (raw == null) return null;
+    var s = String(raw).trim();
+    if (!s) return null;
+    var m = s.match(/^Bearer\s+(.+)$/i);
+    if (m) return m[1].trim();
+    return s;
+}
+
 function getCartaoAuthToken() {
+    var raw = null;
     if (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.getToken === 'function') {
-        var t = window.AgilBank.auth.getToken();
-        if (t) return t;
+        raw = window.AgilBank.auth.getToken();
     }
-    return (
-        sessionStorage.getItem('govbr_token') ||
-        localStorage.getItem('govbr_token') ||
-        sessionStorage.getItem('agilbank_token') ||
-        localStorage.getItem('agilbank_token') ||
-        sessionStorage.getItem('token') ||
-        localStorage.getItem('token') ||
-        null
-    );
+    if (!raw) {
+        raw =
+            sessionStorage.getItem('govbr_token') ||
+            localStorage.getItem('govbr_token') ||
+            sessionStorage.getItem('agilbank_token') ||
+            localStorage.getItem('agilbank_token') ||
+            sessionStorage.getItem('token') ||
+            localStorage.getItem('token') ||
+            null;
+    }
+    return agilbankNormalizeBearerToken(raw);
 }
 
 function clampLimiteCartao(valor) {
