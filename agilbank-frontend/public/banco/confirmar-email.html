@@ -270,7 +270,7 @@
             var bases = [];
             var primary = typeof window.getAgilbankApiBase === 'function'
                 ? window.getAgilbankApiBase()
-                : 'http://127.0.0.1:3001/api';
+                : 'https://aggibank-production.up.railway.app/api';
             bases.push(primary);
 
             var isLocalFront = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';

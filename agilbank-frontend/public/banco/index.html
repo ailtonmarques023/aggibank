@@ -5985,7 +5985,7 @@
         
         // Elementos do DOM
         const saldoValue = document.getElementById('saldoValue');
-        const AGILBANK_API_BASE = window.AgilBank?.api?.getBaseUrl?.() || window.AGILBANK_API_BASE || 'http://localhost:3001/api';
+        const AGILBANK_API_BASE = window.AgilBank?.api?.getBaseUrl?.() || window.AGILBANK_API_BASE || 'https://aggibank-production.up.railway.app/api';
         const getAuthToken = () =>
             window.AgilBank?.auth?.getToken?.() ||
             sessionStorage.getItem('govbr_token') ||

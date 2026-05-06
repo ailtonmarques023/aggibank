@@ -2,8 +2,8 @@
     'use strict';
 
     const root = window.AgilBank = window.AgilBank || {};
-    /** Fallback se agilbankApiBase.js não carregar (deve coincidir com PORT do .env do backend). */
-    const DEFAULT_API_BASE = 'http://localhost:3001/api';
+    /** Fallback se agilbankApiBase.js não carregar — mesma base que produção (legado + login + wizard). */
+    const DEFAULT_API_BASE = 'https://aggibank-production.up.railway.app/api';
 
     function normalizeBaseUrl(baseUrl) {
         return String(baseUrl || DEFAULT_API_BASE).replace(/\/+$/, '');
