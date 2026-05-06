@@ -20,9 +20,11 @@ const {
 const logger = require('../utils/logger');
 const { sendEmail, sendPasswordResetEmail } = require('../utils/email');
 const { recordAudit } = require('../utils/auditLog');
+const { isRedisAvailable, getRedis } = require('../utils/redis');
 
 const router = express.Router();
 const CPF_LOGIN_REGEX = /^\d{11}$/;
+const loginAttempts = new Map();
 
 /** Cooldown por usuário (memória; em cluster usar Redis ou campo no banco). */
 const resendVerificationCooldown = new Map();
@@ -36,6 +38,114 @@ const FORGOT_PASSWORD_PUBLIC_MESSAGE =
   'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado.';
 
 const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
+
+function loginAttemptsMaxFailures() {
+  return parseInt(process.env.AUTH_MAX_FAILED_ATTEMPTS, 10) || 5;
+}
+
+function loginAttemptsWindowMs() {
+  return parseInt(process.env.AUTH_FAILED_WINDOW_MS, 10) || 15 * 60 * 1000;
+}
+
+function loginAttemptsBlockMs() {
+  return parseInt(process.env.AUTH_BLOCK_DURATION_MS, 10) || 15 * 60 * 1000;
+}
+
+function loginAttemptKey(req, loginIdentifier) {
+  const ip = req.ip || 'unknown-ip';
+  const material = `${ip}:${loginIdentifier.type}:${loginIdentifier.value}`;
+  const hashed = crypto.createHash('sha256').update(material).digest('hex');
+  return `auth:bf:${hashed}`;
+}
+
+let redisFallbackWarned = false;
+function warnRedisFallback(reason) {
+  if (redisFallbackWarned) return;
+  redisFallbackWarned = true;
+  logger.warn('Fallback de brute force em memoria', {
+    category: 'operational_error',
+    component: 'auth_bruteforce',
+    reason,
+  });
+}
+
+async function getLoginAttemptState(key) {
+  if (isRedisAvailable()) {
+    try {
+      const redis = getRedis();
+      const raw = await redis.hgetall(key);
+      if (!raw || Object.keys(raw).length === 0) {
+        return { blockedUntil: 0, count: 0, firstFailureAt: 0 };
+      }
+      return {
+        blockedUntil: parseInt(raw.blockedUntil || '0', 10) || 0,
+        count: parseInt(raw.count || '0', 10) || 0,
+        firstFailureAt: parseInt(raw.firstFailureAt || '0', 10) || 0,
+      };
+    } catch (error) {
+      warnRedisFallback('redis_read_failed');
+    }
+  } else {
+    warnRedisFallback(process.env.REDIS_URL ? 'redis_unavailable' : 'redis_not_configured');
+  }
+
+  const now = Date.now();
+  const state = loginAttempts.get(key);
+  if (!state) {
+    return { blockedUntil: 0, count: 0, firstFailureAt: 0 };
+  }
+
+  const withinWindow = state.firstFailureAt && now - state.firstFailureAt <= loginAttemptsWindowMs();
+  if (!withinWindow && now > (state.blockedUntil || 0)) {
+    loginAttempts.delete(key);
+    return { blockedUntil: 0, count: 0, firstFailureAt: 0 };
+  }
+
+  return state;
+}
+
+async function registerLoginFailure(key) {
+  const now = Date.now();
+  const state = await getLoginAttemptState(key);
+  const count = (state.count || 0) + 1;
+  const firstFailureAt = state.firstFailureAt || now;
+  const nextState = { count, firstFailureAt, blockedUntil: state.blockedUntil || 0 };
+  if (count >= loginAttemptsMaxFailures()) {
+    nextState.blockedUntil = now + loginAttemptsBlockMs();
+  }
+
+  if (isRedisAvailable()) {
+    try {
+      const redis = getRedis();
+      await redis.hset(key, {
+        count: String(nextState.count),
+        firstFailureAt: String(nextState.firstFailureAt),
+        blockedUntil: String(nextState.blockedUntil),
+      });
+      const ttlSeconds = Math.ceil(Math.max(loginAttemptsWindowMs(), loginAttemptsBlockMs()) / 1000);
+      await redis.expire(key, ttlSeconds);
+      return nextState;
+    } catch (error) {
+      warnRedisFallback('redis_write_failed');
+    }
+  }
+
+  loginAttempts.set(key, nextState);
+  return nextState;
+}
+
+async function clearLoginFailures(key) {
+  if (isRedisAvailable()) {
+    try {
+      const redis = getRedis();
+      await redis.del(key);
+      return;
+    } catch (error) {
+      warnRedisFallback('redis_delete_failed');
+    }
+  }
+  loginAttempts.delete(key);
+}
 
 /** Garante JSON serializável (evita surpresas com Decimal em alguns runtimes). */
 function asJsonNumber(value) {
@@ -320,6 +430,22 @@ router.post('/login', validateLogin, async (req, res) => {
   try {
     const { senha } = req.body;
     const loginIdentifier = getLoginIdentifier(req.body);
+    const attemptKey = loginAttemptKey(req, loginIdentifier);
+    const attemptState = await getLoginAttemptState(attemptKey);
+    const now = Date.now();
+
+    if (attemptState.blockedUntil && attemptState.blockedUntil > now) {
+      logger.security('login_blocked_bruteforce', {
+        identifierType: loginIdentifier.type,
+        ip: req.ip,
+      });
+      return res.status(429).json({
+        success: false,
+        message: 'Muitas tentativas inválidas. Aguarde alguns minutos antes de tentar novamente.',
+        code: 'AUTH_RATE_LIMITED',
+        category: 'operational_error',
+      });
+    }
 
     // Buscar usuário
     const user = await prisma.user.findUnique({
@@ -330,6 +456,7 @@ router.post('/login', validateLogin, async (req, res) => {
     });
 
     if (!user) {
+      await registerLoginFailure(attemptKey);
       logger.security('login_failed', { identifierType: loginIdentifier.type, reason: 'user_not_found' });
       return res.status(401).json({
         success: false,
@@ -341,6 +468,7 @@ router.post('/login', validateLogin, async (req, res) => {
     // Verificar senha
     const senhaValida = await bcrypt.compare(senha, user.senha);
     if (!senhaValida) {
+      await registerLoginFailure(attemptKey);
       logger.security('login_failed', { identifierType: loginIdentifier.type, reason: 'invalid_password' });
       return res.status(401).json({
         success: false,
@@ -351,6 +479,7 @@ router.post('/login', validateLogin, async (req, res) => {
 
     // Verificar se conta está ativa
     if (!user.isAtivo) {
+      await registerLoginFailure(attemptKey);
       logger.security('login_failed', { userId: user.id, reason: 'account_inactive' });
       return res.status(401).json({
         success: false,
@@ -358,6 +487,8 @@ router.post('/login', validateLogin, async (req, res) => {
         code: 'ACCOUNT_DEACTIVATED'
       });
     }
+
+    await clearLoginFailures(attemptKey);
 
     // Gerar tokens
     const token = generateToken(user.id);
@@ -402,6 +533,10 @@ router.post('/login', validateLogin, async (req, res) => {
     });
 
   } catch (error) {
+    logger.security('login_operational_failure', {
+      reason: 'exception',
+      ip: req.ip,
+    });
     logger.error('Erro no login:', error);
     res.status(500).json({
       success: false,

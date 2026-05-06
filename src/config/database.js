@@ -8,11 +8,21 @@ const prisma = new PrismaClient({
 
 // Event listeners para monitoramento (simplificado)
 prisma.$on('error', (e) => {
-  console.error('Erro do Prisma:', e);
+  logger.warn({
+    category: 'operational_error',
+    component: 'prisma',
+    event: 'prisma_error',
+    error: e,
+  }, 'Erro do Prisma');
 });
 
 prisma.$on('warn', (e) => {
-  console.warn('Warning do Prisma:', e);
+  logger.warn({
+    category: 'operational_error',
+    component: 'prisma',
+    event: 'prisma_warn',
+    details: e,
+  }, 'Warning do Prisma');
 });
 
 // Função para conectar ao banco de dados
@@ -113,18 +123,27 @@ const cleanTestData = async () => {
   }
 };
 
-// Graceful shutdown
-process.on('beforeExit', async () => {
-  await disconnectDatabase();
-});
+// Graceful shutdown sem loop recursivo no beforeExit
+let isDisconnecting = false;
+const safeDisconnectDatabase = async () => {
+  if (isDisconnecting) return;
+  isDisconnecting = true;
+  try {
+    await disconnectDatabase();
+  } catch (error) {
+    logger.error('Erro no safe disconnect do banco de dados:', error);
+  } finally {
+    isDisconnecting = false;
+  }
+};
 
 process.on('SIGINT', async () => {
-  await disconnectDatabase();
+  await safeDisconnectDatabase();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  await disconnectDatabase();
+  await safeDisconnectDatabase();
   process.exit(0);
 });
 

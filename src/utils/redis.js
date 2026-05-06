@@ -16,17 +16,23 @@ const redisConfig = {
   retryDelayOnClusterDown: 300,
   enableOfflineQueue: false,
   maxLoadingTimeout: 5000,
+  retryStrategy: () => null,
 };
-
-// Se tiver URL do Redis, usar ela
-if (process.env.REDIS_URL) {
-  redisConfig.url = process.env.REDIS_URL;
-}
 
 // Função para conectar ao Redis
 const connectRedis = async () => {
   try {
-    redis = new Redis(redisConfig);
+    if (process.env.REDIS_URL) {
+      redis = new Redis(process.env.REDIS_URL, {
+        lazyConnect: true,
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 5000,
+        retryStrategy: () => null,
+      });
+    } else {
+      redis = new Redis(redisConfig);
+    }
     
     // Event listeners
     redis.on('connect', () => {
@@ -56,6 +62,12 @@ const connectRedis = async () => {
     return redis;
   } catch (error) {
     console.error('❌ Erro ao conectar com Redis:', error);
+    if (redis) {
+      try {
+        redis.disconnect();
+      } catch (_) {}
+      redis = null;
+    }
     throw error;
   }
 };
@@ -74,7 +86,7 @@ const disconnectRedis = async () => {
 
 // Função para verificar se Redis está disponível
 const isRedisAvailable = () => {
-  return redis && redis.status === 'ready';
+  return !!(redis && redis.status === 'ready');
 };
 
 // Função para obter instância do Redis

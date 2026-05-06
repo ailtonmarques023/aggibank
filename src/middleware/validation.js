@@ -46,7 +46,9 @@ const handleValidationErrors = (req, res, next) => {
       value: redactValidationValue(error.path, error.value)
     }));
     
-    console.warn('Erro de validação:', {
+    logger.warn('Erro de validação:', {
+      requestId: req.requestId,
+      category: 'contract_error',
       errors: loggedErrors,
       url: req.url,
       method: req.method,

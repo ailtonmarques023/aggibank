@@ -74,7 +74,14 @@ const authenticateToken = async (req, res, next) => {
     next();
 
   } catch (error) {
-    logger.error('Erro na autenticação:', error);
+    logger.error('Erro na autenticação:', {
+      requestId: req.requestId,
+      category: 'operational_error',
+      error: error && error.message ? error.message : String(error || ''),
+      code: error && error.name ? error.name : 'AUTH_UNKNOWN_ERROR',
+      url: req.url,
+      method: req.method,
+    });
     
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
