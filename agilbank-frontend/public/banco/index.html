@@ -6134,6 +6134,10 @@
             }
 
             if (modo === 'publico') {
+                if (opcoes.forcarModoPublico !== true && window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
+                    console.warn('⚠️ Ignorando troca para modo público para preservar dados reais já carregados.', opcoes.fonte || 'fonte-desconhecida');
+                    return;
+                }
                 saldoReal = null;
                 window.__agilbankHeaderTemDadosReais = false;
                 window.__agilbankUltimosDadosUsuarioReais = null;
@@ -7003,6 +7007,10 @@
                         preservarDadosAtuais: true
                     });
                 }
+                return;
+            }
+            if (window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
+                console.warn('⚠️ Sem token no momento, mantendo último header real para evitar piscar/zerar UI.');
                 return;
             }
             console.log('🔄 Estado público (deslogado): placeholders neutros');
@@ -11408,6 +11416,10 @@
             console.log('🔧 FORÇANDO ATUALIZAÇÃO DOS DADOS DO HEADER...');
             var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
+                if (window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
+                    console.warn('⚠️ forceUpdateHeaderData sem token; preservando dados atuais do header.');
+                    return;
+                }
                 if (typeof window.aplicarDadosUsuarioReais === 'function') {
                     window.aplicarDadosUsuarioReais(null, { modo: 'publico', fonte: 'forceUpdateHeaderData' });
                 }

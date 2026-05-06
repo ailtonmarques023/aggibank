@@ -322,6 +322,8 @@ async function agilbankWizardHydratePerfil() {
     var cpf = '';
     var tel = '';
     var end = { rua: '', bairro: '', cidade: '', estado: '', cep: '' };
+    var hydrateErro = false;
+    var backendEnderecoRecebido = false;
 
     function aplicarNormalizado(n) {
         if (!n) return;
@@ -352,30 +354,49 @@ async function agilbankWizardHydratePerfil() {
             });
             var u = agilbankWizardExtractUsuario(profile);
             var n = u && typeof window.normalizarDadosUsuarioBruto === 'function' ? window.normalizarDadosUsuarioBruto(u) : null;
-            if (n) aplicarNormalizado(n);
+            if (n) {
+                aplicarNormalizado(n);
+                backendEnderecoRecebido = !!(n.endereco && typeof n.endereco === 'object');
+            }
         } else {
-            console.warn('agilbankWizardHydratePerfil: GET user-complete-data', response.status);
+            hydrateErro = true;
+            console.warn('agilbankWizardHydratePerfil: falha no GET user/user-complete-data', {
+                status: response.status,
+                endpoint: 'user/user-complete-data',
+                hasBearer: !!token
+            });
         }
     } catch (err) {
-        console.warn('agilbankWizardHydratePerfil', err);
+        hydrateErro = true;
+        console.warn('agilbankWizardHydratePerfil: excecao ao hidratar perfil', {
+            endpoint: 'user/user-complete-data',
+            hasBearer: !!token,
+            error: err && err.message ? err.message : String(err || '')
+        });
     }
 
-    function setTxt(id, v) {
+    function setTxt(id, v, fallbackTexto) {
         var el = document.getElementById(id);
-        if (el) el.textContent = agilbankWizardDisplayNz(v);
+        if (!el) return;
+        if (fallbackTexto && (v == null || String(v).trim() === '')) {
+            el.textContent = fallbackTexto;
+            return;
+        }
+        el.textContent = agilbankWizardDisplayNz(v);
     }
     setTxt('wizDispNome', nome);
     setTxt('wizDispEmail', email);
     setTxt('wizDispCpf', cpf);
     setTxt('wizDispTel', tel);
 
-    setTxt('wizDispRua', end.rua);
-    setTxt('wizDispBairro', end.bairro);
+    var fallbackEndereco = hydrateErro && !backendEnderecoRecebido ? 'Erro ao carregar' : '';
+    setTxt('wizDispRua', end.rua, fallbackEndereco);
+    setTxt('wizDispBairro', end.bairro, fallbackEndereco);
     var cidadeUf = [end.cidade, end.estado].filter(function (x) {
         return x && String(x).trim();
     }).join(' / ');
-    setTxt('wizDispCidadeUf', cidadeUf);
-    setTxt('wizDispCep', end.cep);
+    setTxt('wizDispCidadeUf', cidadeUf, fallbackEndereco);
+    setTxt('wizDispCep', end.cep, fallbackEndereco);
 
     function setHid(id, v) {
         var el = document.getElementById(id);
