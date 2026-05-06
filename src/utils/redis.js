@@ -55,7 +55,10 @@ const connectRedis = async () => {
       console.log('🔄 Reconectando ao Redis...');
     });
     
-    // Testar conexão
+    // Com lazyConnect + enableOfflineQueue:false, comandos antes de connect() falham.
+    if (redis.status === 'wait' || redis.status === 'end') {
+      await redis.connect();
+    }
     await redis.ping();
     console.log('✅ Teste de conexão com Redis bem-sucedido');
     
