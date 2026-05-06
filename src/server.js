@@ -31,11 +31,22 @@ const hasRedisUrl = !!(process.env.REDIS_URL && String(process.env.REDIS_URL).tr
 
 function parseAllowedCorsOrigins() {
   const raw = String(process.env.CORS_ORIGIN || '').trim();
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map((v) => v.trim())
-    .filter(Boolean);
+  const list = raw
+    ? raw
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean)
+    : [];
+  const fe = String(process.env.FRONTEND_URL || '').trim();
+  if (fe) {
+    try {
+      const origin = new URL(fe).origin;
+      if (origin && !list.includes(origin)) list.push(origin);
+    } catch (_) {
+      /* ignore FRONTEND_URL inválida */
+    }
+  }
+  return list;
 }
 
 function isCorsAllowedOrigin(origin, allowedOrigins) {
@@ -56,15 +67,21 @@ app.use(helmet({
   },
 }));
 
-const allowedCorsOrigins = parseAllowedCorsOrigins();
 const isProduction = process.env.NODE_ENV === 'production';
 
 // CORS com endurecimento em producao e flexibilidade em dev
+// Origens lidas por requisição para refletir env atual após deploy/alteração de variáveis.
 app.use(cors({
   origin(origin, callback) {
     if (!isProduction) return callback(null, true);
+    const allowedCorsOrigins = parseAllowedCorsOrigins();
     if (isCorsAllowedOrigin(origin, allowedCorsOrigins)) return callback(null, true);
-    return callback(new Error('CORS origin not allowed'));
+    logger.warn('CORS origin não permitido', {
+      category: 'contract_error',
+      component: 'cors',
+      origin: origin || null,
+    });
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
