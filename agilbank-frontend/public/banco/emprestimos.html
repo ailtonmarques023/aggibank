@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+  <title>AgilBank | Emprestimos</title>
+  <link rel="stylesheet" href="./css/style.emprestimos.css">
+</head>
+<body class="ab-emprestimos-page">
+  <div class="ab-emp-app" id="abEmpApp">
+    <header class="ab-emp-header">
+      <div>
+        <p class="ab-emp-kicker">AgilBank</p>
+        <h1>Modulo de Emprestimos</h1>
+      </div>
+      <span class="ab-emp-pill" id="abEmpStatePill">loading</span>
+    </header>
+
+    <main class="ab-emp-content">
+      <section class="ab-emp-card">
+        <h2>Resumo</h2>
+        <p>
+          Fluxo conectado a API real para validar elegibilidade, simular valores e registrar solicitacoes com status oficial.
+        </p>
+      </section>
+
+      <section class="ab-emp-card">
+        <h2>Elegibilidade</h2>
+        <p id="abEmpEligibilityText">Aguardando validacao de dados para elegibilidade inicial.</p>
+      </section>
+
+      <section class="ab-emp-card">
+        <h2>Simulacao</h2>
+        <div class="ab-emp-grid">
+          <label class="ab-emp-field">
+            Valor solicitado (R$)
+            <input id="abEmpValor" name="valor" type="number" min="0" step="0.01" placeholder="Ex.: 1500.00" required>
+          </label>
+          <label class="ab-emp-field">
+            Parcelas
+            <input id="abEmpParcelas" name="parcelas" type="number" min="1" max="48" step="1" placeholder="Ex.: 12" required>
+          </label>
+        </div>
+        <button class="ab-emp-btn ab-emp-btn-secondary" id="abEmpSimularBtn" type="button">Calcular simulacao</button>
+        <div class="ab-emp-feedback" id="abEmpSimulacaoResultado">
+          Sem simulacao calculada.
+        </div>
+      </section>
+
+      <section class="ab-emp-card">
+        <h2>Formulario de solicitacao</h2>
+        <form id="abEmpForm" novalidate>
+          <label class="ab-emp-field">
+            Finalidade
+            <select id="abEmpFinalidade" name="finalidade" required>
+              <option value="">Selecione</option>
+              <option value="reforma">Reforma</option>
+              <option value="educacao">Educacao</option>
+              <option value="emergencia">Emergencia</option>
+              <option value="organizacao-financeira">Organizacao financeira</option>
+            </select>
+          </label>
+          <button class="ab-emp-btn" id="abEmpEnviarBtn" type="submit">Enviar para analise</button>
+        </form>
+        <p class="ab-emp-note">
+          O envio cria proposta real para analise. Nenhuma aprovacao ou liberacao de dinheiro e feita automaticamente.
+        </p>
+      </section>
+
+      <section class="ab-emp-card">
+        <h2>Historico</h2>
+        <ul id="abEmpHistorico" class="ab-emp-history-list">
+          <li class="ab-emp-history-empty">Nenhuma solicitacao encontrada.</li>
+        </ul>
+      </section>
+
+      <section class="ab-emp-card ab-emp-card-state" id="abEmpStatusBox" aria-live="polite">
+        <p id="abEmpStatusText">Carregando modulo...</p>
+        <div class="ab-emp-status-actions">
+          <button class="ab-emp-btn ab-emp-btn-secondary" id="abEmpRetryBtn" type="button" hidden>
+            Tentar novamente
+          </button>
+          <button class="ab-emp-btn" id="abEmpLoginBtn" type="button" hidden>
+            Ir para login
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="ab-emp-footer">
+    <button type="button">Inicio</button>
+    <button type="button" class="is-active">Emprestimos</button>
+    <button type="button">Perfil</button>
+  </footer>
+
+  <script src="./js/agilbankApiBase.js"></script>
+  <script src="./js/emprestimos.js" defer></script>
+</body>
+</html>

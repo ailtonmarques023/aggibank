@@ -1,10 +1,16 @@
 const express = require('express');
-const { authenticateToken, requireVerification, logCriticalOperation } = require('../middleware/auth');
+const {
+  authenticateToken,
+  requireVerification,
+  requireInternalApiKey,
+  logCriticalOperation
+} = require('../middleware/auth');
 const { validateLoanRequest } = require('../middleware/validation');
 const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
 
 const router = express.Router();
+const LOAN_NOT_ELIGIBLE_MESSAGE = 'No momento, você ainda não está elegível para solicitar crédito pessoal.';
 
 // Aplicar autenticação em todas as rotas
 router.use(authenticateToken);
@@ -78,6 +84,16 @@ router.get('/', async (req, res) => {
 router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), async (req, res) => {
   try {
     const { valorSolicitado, prazoMeses } = req.body;
+    const eligibility = getLoanEligibility(req.user.scoreCredito);
+
+    if (!eligibility.isElegivel) {
+      return res.status(403).json({
+        success: false,
+        error: 'LOAN_NOT_ELIGIBLE',
+        code: 'LOAN_NOT_ELIGIBLE',
+        message: LOAN_NOT_ELIGIBLE_MESSAGE
+      });
+    }
 
     // Verificar se usuário já tem empréstimo pendente
     const emprestimoPendente = await prisma.emprestimo.findFirst({
@@ -162,7 +178,11 @@ router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), asyn
  *       200:
  *         description: Empréstimo aprovado com sucesso
  */
-router.post('/:id/approve', logCriticalOperation('loan_approval'), async (req, res) => {
+router.post(
+  '/:id/approve',
+  requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'),
+  logCriticalOperation('loan_approval'),
+  async (req, res) => {
   try {
     const { id } = req.params;
     const { valorAprovado } = req.body;
@@ -170,7 +190,6 @@ router.post('/:id/approve', logCriticalOperation('loan_approval'), async (req, r
     const emprestimo = await prisma.emprestimo.findFirst({
       where: {
         id,
-        userId: req.user.id,
         status: 'pendente'
       }
     });
@@ -183,24 +202,48 @@ router.post('/:id/approve', logCriticalOperation('loan_approval'), async (req, r
       });
     }
 
+    const valorCredito = valorAprovado === undefined || valorAprovado === null
+      ? Number(emprestimo.valorSolicitado)
+      : Number(valorAprovado);
+
+    if (!Number.isFinite(valorCredito) || valorCredito <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'valorAprovado deve ser um número positivo',
+        code: 'INVALID_APPROVAL_VALUE'
+      });
+    }
+
     // Executar transação para aprovar empréstimo
     const resultado = await transaction(async (prisma) => {
+      const contaDono = await prisma.user.findUnique({
+        where: { id: emprestimo.userId },
+        select: { saldoAtual: true }
+      });
+
+      if (!contaDono) {
+        throw new Error('LOAN_OWNER_NOT_FOUND');
+      }
+
       // Atualizar empréstimo
       const emprestimoAtualizado = await prisma.emprestimo.update({
         where: { id },
         data: {
           status: 'aprovado',
-          valorAprovado: valorAprovado || emprestimo.valorSolicitado,
+          valorAprovado: valorCredito,
           dataAprovacao: new Date()
         }
       });
 
-      // Creditar valor na conta do usuário
+      const saldoAnterior = Number(contaDono.saldoAtual);
+      const saldoAtual = saldoAnterior + valorCredito;
+
+      // Creditar valor na conta dona do empréstimo
       await prisma.user.update({
-        where: { id: req.user.id },
+        where: { id: emprestimo.userId },
         data: {
           saldoAtual: {
-            increment: valorAprovado || emprestimo.valorSolicitado
+            increment: valorCredito
           }
         }
       });
@@ -208,12 +251,12 @@ router.post('/:id/approve', logCriticalOperation('loan_approval'), async (req, r
       // Registrar movimentação
       await prisma.movimentacao.create({
         data: {
-          userId: req.user.id,
+          userId: emprestimo.userId,
           tipo: 'credito',
           descricao: 'Empréstimo aprovado',
-          valor: valorAprovado || emprestimo.valorSolicitado,
-          saldoAnterior: req.user.saldoAtual,
-          saldoAtual: req.user.saldoAtual + (valorAprovado || emprestimo.valorSolicitado),
+          valor: valorCredito,
+          saldoAnterior,
+          saldoAtual,
           categoria: 'emprestimo'
         }
       });
@@ -221,8 +264,9 @@ router.post('/:id/approve', logCriticalOperation('loan_approval'), async (req, r
       return emprestimoAtualizado;
     });
 
-    logger.criticalOperation('loan_approved', req.user.id, valorAprovado || emprestimo.valorSolicitado, {
+    logger.criticalOperation('loan_approved', req.user.id, valorCredito, {
       emprestimoId: id,
+      loanOwnerId: emprestimo.userId,
       prazoMeses: emprestimo.prazoMeses
     });
 
@@ -260,14 +304,13 @@ router.post('/:id/approve', logCriticalOperation('loan_approval'), async (req, r
  *       200:
  *         description: Empréstimo rejeitado com sucesso
  */
-router.post('/:id/reject', async (req, res) => {
+router.post('/:id/reject', requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'), async (req, res) => {
   try {
     const { id } = req.params;
 
     const emprestimo = await prisma.emprestimo.findFirst({
       where: {
         id,
-        userId: req.user.id,
         status: 'pendente'
       }
     });
@@ -387,18 +430,16 @@ router.post('/simulate', async (req, res) => {
  */
 router.get('/eligibility', async (req, res) => {
   try {
-    const scoreCredito = req.user.scoreCredito;
-    const isElegivel = scoreCredito >= 600;
-    const limiteMaximo = calculateMaxLoanAmount(scoreCredito);
+    const eligibility = getLoanEligibility(req.user.scoreCredito);
 
     res.json({
       success: true,
       message: 'Elegibilidade verificada com sucesso',
       data: {
-        isElegivel,
-        scoreCredito,
-        limiteMaximo,
-        taxaJuros: calculateInterestRate(scoreCredito)
+        isElegivel: eligibility.isElegivel,
+        scoreCredito: eligibility.scoreCredito,
+        limiteMaximo: eligibility.limiteMaximo,
+        taxaJuros: eligibility.taxaJuros
       }
     });
 
@@ -432,6 +473,17 @@ function calculateMaxLoanAmount(scoreCredito) {
   if (scoreCredito >= 700) return 30000;
   if (scoreCredito >= 600) return 15000;
   return 5000;
+}
+
+function getLoanEligibility(scoreCredito) {
+  const normalizedScore = Number(scoreCredito) || 0;
+
+  return {
+    isElegivel: normalizedScore >= 600,
+    scoreCredito: normalizedScore,
+    limiteMaximo: calculateMaxLoanAmount(normalizedScore),
+    taxaJuros: calculateInterestRate(normalizedScore)
+  };
 }
 
 module.exports = router;
