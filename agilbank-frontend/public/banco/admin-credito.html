@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+  <title>AgilBank | Painel interno — Crédito</title>
+  <link rel="stylesheet" href="./css/style.admin-credito.css">
+</head>
+<body class="ab-ac-page">
+  <div class="ab-ac-app" id="abAcApp">
+    <header class="ab-ac-header">
+      <div>
+        <p class="ab-ac-kicker">AgilBank · Área restrita</p>
+        <h1>Painel — Crédito pessoal</h1>
+        <p class="ab-ac-note">Acesso apenas para operadores autorizados. Nenhuma chave interna é usada nesta página.</p>
+      </div>
+      <span class="ab-ac-pill" id="abAcStatePill">carregando</span>
+    </header>
+
+    <div class="ab-ac-toolbar">
+      <button type="button" class="ab-ac-btn ab-ac-btn-secondary" id="abAcRefreshBtn">Atualizar fila</button>
+      <a class="ab-ac-btn ab-ac-btn-secondary" href="../index.html" style="text-decoration:none;display:inline-block;">Login cliente</a>
+    </div>
+
+    <div id="abAcError" class="ab-ac-alert ab-ac-hidden" role="alert"></div>
+
+    <main class="ab-ac-content">
+      <section class="ab-ac-card">
+        <h2>Propostas pendentes</h2>
+        <ul class="ab-ac-list" id="abAcList"></ul>
+        <p class="ab-ac-list-empty ab-ac-hidden" id="abAcListEmpty">Nenhuma proposta pendente no momento.</p>
+      </section>
+
+      <section class="ab-ac-card ab-ac-hidden" id="abAcDetailSection">
+        <h2>Detalhe da proposta</h2>
+        <div class="ab-ac-detail-grid" id="abAcDetail"></div>
+        <div class="ab-ac-detail-actions" id="abAcDetailActions"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="ab-ac-overlay ab-ac-hidden" id="abAcModal" aria-hidden="true">
+    <div class="ab-ac-modal" role="dialog" aria-modal="true" aria-labelledby="abAcModalTitle">
+      <h3 id="abAcModalTitle">Confirmação</h3>
+      <p id="abAcModalText"></p>
+      <div class="ab-ac-modal-actions">
+        <button type="button" class="ab-ac-btn ab-ac-btn-secondary" id="abAcModalCancel">Cancelar</button>
+        <button type="button" class="ab-ac-btn" id="abAcModalConfirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/agilbankApiBase.js"></script>
+  <script src="./js/admin-credito.js" defer></script>
+</body>
+</html>

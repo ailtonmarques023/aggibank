@@ -54,11 +54,16 @@ JWT_SECRET=your-super-secret-jwt-key-here
 JWT_EXPIRES_IN=24h
 JWT_REFRESH_EXPIRES_IN=7d
 
-# Configurações de Email
-SMTP_HOST=smtp.gmail.com
+# E-mail — produção (Vercel + Railway): prefira Resend (HTTPS); ver env.example
+RESEND_API_KEY=
+EMAIL_FROM=
+EMAIL_FROM_NAME=AgilBank
+FRONTEND_URL=http://127.0.0.1:5173
+# Fallback local/dev (Nodemailer) — em muitos PaaS a saída SMTP 587 é bloqueada
+SMTP_HOST=
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
+SMTP_USER=
+SMTP_PASS=
 ```
 
 4. **Configure o banco de dados**
@@ -101,11 +106,11 @@ npm run test:watch
 npm test -- --coverage
 ```
 
-## 📧 E-mail (SMTP) e templates transacionais
+## 📧 E-mail (Resend / SMTP legado) e templates transacionais
 
-O envio usa **Nodemailer** (`src/utils/email.js`) e exige no `.env` pelo menos: `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (e opcionalmente `SMTP_PORT`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `FRONTEND_URL` para links `/banco/confirmar-email.html` e `reset-password.html`).
+O envio está em **`src/utils/email.js`**: com **`RESEND_API_KEY`** + remetente (**`EMAIL_FROM`**, ou `SMTP_USER` se `EMAIL_FROM` vazio) o backend usa **Resend via HTTPS**; caso contrário usa **Nodemailer + `SMTP_*`** (adequado a **dev/local**; em Railway a saída SMTP costuma ser **bloqueada** — preferir Resend em produção). Detalhes: `env.example` e `docs/AGILBANK-EMAIL-PROVIDER-RULE.md`.
 
-**Verificar conexão SMTP (sem enviar mensagem):**
+**Checar configuração (Resend: presença de variáveis; SMTP: `verify()` quando for o caminho ativo):**
 
 ```bash
 node -e "require('dotenv').config(); const { testEmailConfiguration } = require('./src/utils/email'); testEmailConfiguration().then(ok => { process.exit(ok ? 0 : 1); });"
@@ -122,7 +127,7 @@ npm run email:templates-demo -- seu@email.com
 
 Cada mensagem usa dados fictícios (tokens aleatórios só para preencher o layout); links de verificação/redefinição apontam para `FRONTEND_URL` do `.env`.
 
-Templates oficiais: `welcome`, `passwordReset`, `transactionNotification`, `cardNotification` (HTML + texto simples, rodapé de segurança). Falhas de SMTP **não** devem impedir cadastro (201), PIX ou aprovação de cartão — erros são registrados em log, sem expor `SMTP_PASS`.
+Templates oficiais: `welcome`, `passwordReset`, `transactionNotification`, `cardNotification` (HTML + texto simples, rodapé de segurança). Falhas do **provedor de e-mail** (Resend ou SMTP) **não** devem impedir cadastro (201), PIX ou aprovação de cartão onde o código assim definiu — erros são registrados em log, sem expor segredos (`RESEND_API_KEY`, `SMTP_PASS`).
 
 ## 📁 Estrutura do Projeto
 
@@ -228,9 +233,16 @@ NODE_ENV=production
 PORT=5000
 DATABASE_URL=postgresql://...
 JWT_SECRET=super-secret-key
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
+# E-mail transacional (produção): Resend + domínio verificado
+RESEND_API_KEY=re_...
+EMAIL_FROM=noreply@seudominio.com
+EMAIL_FROM_NAME=AgilBank
+FRONTEND_URL=https://seu-frontend.vercel.app
+# SMTP legado opcional em produção: defina explicitamente (rede deve permitir 587)
+# ALLOW_EMAIL_SMTP_FALLBACK=true
+# SMTP_HOST=...
+# SMTP_USER=...
+# SMTP_PASS=...
 ```
 
 ### Docker (Opcional)

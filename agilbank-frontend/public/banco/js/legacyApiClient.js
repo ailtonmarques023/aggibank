@@ -45,7 +45,33 @@
 
         delete requestOptions.auth;
 
-        return window.fetch(buildUrl(path), Object.assign({}, requestOptions, { headers }));
+        return window
+            .fetch(buildUrl(path), Object.assign({}, requestOptions, { headers }))
+            .then(function (response) {
+                if (response.status !== 403) {
+                    return response;
+                }
+                return response
+                    .clone()
+                    .json()
+                    .then(function (data) {
+                        if (
+                            data &&
+                            data.code === 'ACCOUNT_NOT_VERIFIED' &&
+                            typeof window.agilbankOnAccountNotVerified === 'function'
+                        ) {
+                            try {
+                                window.agilbankOnAccountNotVerified(data);
+                            } catch (e) {
+                                console.warn('agilbankOnAccountNotVerified:', e);
+                            }
+                        }
+                        return response;
+                    })
+                    .catch(function () {
+                        return response;
+                    });
+            });
     }
 
     root.api = Object.assign({}, root.api, {

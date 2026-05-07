@@ -119,6 +119,39 @@ const requireVerification = (req, res, next) => {
   next();
 };
 
+/**
+ * Painel interno de crédito (Fase 4B): operadores autorizados por e-mail em
+ * CREDIT_PANEL_OPERATOR_EMAILS (lista separada por vírgulas, servidor apenas).
+ * Não substitui RBAC completo; evita expor ADMIN_API_KEY no navegador.
+ */
+const requireCreditPanelOperator = (req, res, next) => {
+  const raw = process.env.CREDIT_PANEL_OPERATOR_EMAILS || '';
+  const normalizedRaw = String(raw).trim();
+  if (!normalizedRaw) {
+    return res.status(503).json({
+      success: false,
+      message: 'Painel de crédito não configurado no servidor',
+      code: 'INTERNAL_OPERATION_UNAVAILABLE',
+    });
+  }
+
+  const allowed = normalizedRaw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  const email = String(req.user.email || '').trim().toLowerCase();
+
+  if (!allowed.includes(email)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Acesso restrito ao painel de crédito',
+      code: 'ADMIN_ACCESS_DENIED',
+    });
+  }
+
+  next();
+};
+
 // Middleware para verificar permissões específicas
 const requirePermission = (permission) => {
   return (req, res, next) => {
@@ -288,6 +321,7 @@ const optionalAuth = async (req, res, next) => {
 module.exports = {
   authenticateToken,
   requireVerification,
+  requireCreditPanelOperator,
   requirePermission,
   requireOwnershipOrAdmin,
   requireInternalApiKey,

@@ -125,6 +125,24 @@ class LoginSystem {
 
     init() {
         console.log('🚀 Inicializando LoginSystem...');
+        var self = this;
+        window.agilbankOnAccountNotVerified = function () {
+            if (!self.userData) {
+                try {
+                    var raw =
+                        sessionStorage.getItem('govbr_user') ||
+                        sessionStorage.getItem('agilbank_user') ||
+                        localStorage.getItem('govbr_user') ||
+                        localStorage.getItem('agilbank_user');
+                    if (raw) {
+                        self.userData = JSON.parse(raw);
+                    }
+                } catch (e) {
+                    console.warn('agilbankOnAccountNotVerified: não foi possível ler usuário da sessão', e);
+                }
+            }
+            self.showVerificationRequiredGate(self.userData);
+        };
         this.checkLoginStatus();
         this.bindEvents();
         this.setupValidation();
@@ -163,7 +181,11 @@ class LoginSystem {
                 }
 
                 this.updateUserHeader(this.userData);
-                this.showMainApp();
+                if (this.userData && this.userData.isVerificado === false) {
+                    this.showVerificationRequiredGate(this.userData);
+                } else {
+                    this.showMainApp();
+                }
             } catch (error) {
                 console.error('Erro ao verificar status do login:', error);
                 this.logout();
@@ -177,7 +199,153 @@ class LoginSystem {
         window.location.replace('/login');
     }
 
+    hideVerificationGate() {
+        var gate = document.getElementById('agilbankVerificationGate');
+        if (gate) {
+            gate.style.display = 'none';
+            gate.innerHTML = '';
+        }
+        var form = document.getElementById('loginForm');
+        if (form) {
+            form.style.display = '';
+        }
+        document.querySelectorAll('.login-divider, .login-social').forEach(function (el) {
+            if (el) {
+                el.style.display = '';
+            }
+        });
+        var footer = document.querySelector('.login-footer');
+        if (footer) {
+            footer.style.display = '';
+        }
+    }
+
+    showVerificationRequiredGate(user) {
+        this.hideLoading();
+        var ud = user || this.userData || {};
+        var mainApp = document.getElementById('mainApp');
+        if (mainApp) {
+            mainApp.style.display = 'none';
+        }
+        var loginContainer = document.getElementById('loginContainer');
+        if (loginContainer) {
+            loginContainer.style.display = 'flex';
+        }
+
+        var form = document.getElementById('loginForm');
+        if (form) {
+            form.style.display = 'none';
+        }
+        document.querySelectorAll('.login-divider, .login-social').forEach(function (el) {
+            if (el) {
+                el.style.display = 'none';
+            }
+        });
+        var footer = document.querySelector('.login-footer');
+        if (footer) {
+            footer.style.display = 'none';
+        }
+
+        var card = document.querySelector('#loginContainer .login-card');
+        if (!card) {
+            return;
+        }
+
+        var gate = document.getElementById('agilbankVerificationGate');
+        if (!gate) {
+            gate = document.createElement('div');
+            gate.id = 'agilbankVerificationGate';
+            gate.setAttribute('role', 'status');
+            card.appendChild(gate);
+        }
+
+        var email =
+            (ud && (ud.email || ud.mail)) ||
+            (document.getElementById('loginEmail') && document.getElementById('loginEmail').value) ||
+            '';
+
+        var confirmarHref = 'confirmar-email.html';
+        var self = this;
+
+        gate.style.display = 'block';
+        gate.innerHTML =
+            '<div class="login-header"><div class="logo-container"><div class="agilbank-logo-text">' +
+            '<span class="logo-agil">Agil</span><span class="logo-bank">Bank</span></div></div>' +
+            '<p class="login-subtitle">Verificação de e-mail necessária</p></div>' +
+            '<div class="login-error-message" id="agilVerifyGateErr" style="display:none;margin-bottom:12px;"></div>' +
+            '<p class="login-footer-text" style="text-align:left;line-height:1.5;margin:0 0 16px;">' +
+            'Esta conta ainda <strong>não está verificada</strong>. Confira o link enviado para ' +
+            '<strong id="agilVerifyEmailDisp"></strong> ou use o botão abaixo para reenviar o e-mail de verificação.' +
+            '</p>' +
+            '<p class="login-footer-text" style="text-align:left;font-size:13px;margin:0 0 16px;">' +
+            'Se você já clicou no link, abra <a href="' +
+            confirmarHref +
+            '" class="login-footer-link">confirmar e-mail</a> ou aguarde alguns instantes e tente entrar de novo.' +
+            '</p>' +
+            '<button type="button" class="login-btn" id="agilVerifyResendBtn">Reenviar e-mail de verificação</button>' +
+            '<button type="button" class="login-btn" id="agilVerifyLogoutBtn" ' +
+            'style="margin-top:12px;background:#6c757d;">Sair</button>';
+
+        var disp = gate.querySelector('#agilVerifyEmailDisp');
+        if (disp) {
+            disp.textContent = email || 'seu e-mail cadastrado';
+        }
+
+        var errEl = gate.querySelector('#agilVerifyGateErr');
+        var resendBtn = gate.querySelector('#agilVerifyResendBtn');
+        if (resendBtn) {
+            resendBtn.onclick = function () {
+                if (errEl) {
+                    errEl.style.display = 'none';
+                    errEl.textContent = '';
+                }
+                if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                    if (errEl) {
+                        errEl.textContent = 'Cliente de API indisponível. Recarregue a página.';
+                        errEl.style.display = 'block';
+                    }
+                    return;
+                }
+                resendBtn.disabled = true;
+                var prev = resendBtn.textContent;
+                resendBtn.textContent = 'Enviando...';
+                if (typeof agilbankTryResendVerificationEmail === 'function') {
+                    agilbankTryResendVerificationEmail().then(function (r) {
+                        resendBtn.disabled = false;
+                        resendBtn.textContent = prev;
+                        if (errEl) {
+                            errEl.style.display = 'block';
+                            errEl.textContent = window.agilbankMessageForResendVerificationResult
+                                ? window.agilbankMessageForResendVerificationResult(r)
+                                : (r.data && r.data.message) || 'Não foi possível reenviar.';
+                            if (r.ok && r.data && r.data.success) {
+                                errEl.style.color = '#0d6efd';
+                            } else {
+                                errEl.style.color = '#c0392b';
+                            }
+                        }
+                    });
+                } else {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = prev;
+                    if (errEl) {
+                        errEl.textContent = 'Função de reenvio indisponível. Recarregue a página.';
+                        errEl.style.display = 'block';
+                    }
+                }
+            };
+        }
+
+        var outBtn = gate.querySelector('#agilVerifyLogoutBtn');
+        if (outBtn) {
+            outBtn.onclick = function () {
+                self.logout();
+            };
+        }
+    }
+
     showMainApp() {
+        this.hideVerificationGate();
         console.log('🔄 Mostrando aplicação principal...');
         
         const loginContainer = document.getElementById('loginContainer');
@@ -293,8 +461,6 @@ class LoginSystem {
             return;
         }
 
-        console.log('🔧 Configurando quadrados de senha...');
-
         // Configurar cada input individual
         squares.forEach((input, index) => {
             // Limitar a 1 dígito
@@ -326,7 +492,6 @@ class LoginSystem {
             });
         }
 
-        console.log('✅ Quadrados de senha configurados!');
     }
 
     updateHiddenPassword() {
@@ -339,9 +504,6 @@ class LoginSystem {
         });
         
         passwordInput.value = senha;
-        console.log('🔑 Senha atualizada:', senha);
-        console.log('🔑 Tamanho da senha:', senha.length);
-        console.log('🔑 Valores dos quadrados:', Array.from(squares).map(s => s.value));
     }
 
 
@@ -404,13 +566,6 @@ class LoginSystem {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
         const rememberMe = document.getElementById('rememberMe').checked;
-
-        // 🔍 DEBUG: Verificar se a senha está sendo coletada corretamente
-        console.log('🔍 DEBUG LOGIN:');
-        console.log('  Email:', email);
-        console.log('  Senha:', password);
-        console.log('  Tamanho da senha:', password.length);
-        console.log('  Senha é string:', typeof password);
 
         // Validar campos
         const emailValid = this.validateField(document.getElementById('loginEmail'));
@@ -483,8 +638,12 @@ class LoginSystem {
 
                 this.hideLoading();
                 this.updateUserHeader(this.userData);
-                this.showMainApp();
-                this.showSuccessMessage();
+                if (user && user.isVerificado === false) {
+                    this.showVerificationRequiredGate(user);
+                } else {
+                    this.showMainApp();
+                    this.showSuccessMessage();
+                }
             } else {
                 this.hideLoading();
                 this.showError(

@@ -60,6 +60,7 @@ describe('Auth Routes', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain('registrado com sucesso');
       expect(response.body.data.user.email).toBe(userData.email);
+      expect(response.body.data.verificationEmail).toMatchObject({ status: 'sent' });
       expect(response.body.data.user.senha).toBeUndefined();
       expect(response.body.data.user.tokenVerificacao).toBeUndefined();
       expect(response.body.data.user.token).toBeUndefined();
@@ -181,9 +182,10 @@ describe('Auth Routes', () => {
       expect(response.body.data.user.configuracoes).toMatchObject({
         idioma: 'pt-BR',
       });
+      expect(response.body.data.verificationEmail).toMatchObject({ status: 'sent' });
     });
 
-    it('retorna 201 mesmo quando envio de email falha (assincrono)', async () => {
+    it('retorna 201 com verificationEmail.failed quando envio de email falha', async () => {
       const userData = {
         nomeCompleto: 'João Silva',
         email: 'joao@test.com',
@@ -223,8 +225,58 @@ describe('Auth Routes', () => {
         .expect(201);
 
       expect(response.body.success).toBe(true);
+      expect(response.body.data.verificationEmail).toMatchObject({
+        status: 'failed',
+        code: 'EMAIL_SEND_FAILED',
+      });
 
-      await new Promise((resolve) => setImmediate(resolve));
+      expect(sendEmail).toHaveBeenCalled();
+    });
+
+    it('retorna 201 com verificationEmail.not_configured quando provedor ausente', async () => {
+      const userData = {
+        nomeCompleto: 'João Silva',
+        email: 'joao@test.com',
+        cpf: '12345678901',
+        telefone: '(11) 99999-9999',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      sendEmail.mockImplementation(() => Promise.reject(new Error('EMAIL_PROVIDER_NOT_CONFIGURED')));
+
+      prisma.user.create.mockResolvedValue({
+        id: 'user-id',
+        ...userData,
+        tokenVerificacao: 'verification-token',
+        saldoAtual: 0,
+        limiteCartao: null,
+        limitePixDiario: 1000,
+        limitePixMensal: 10000,
+        scoreCredito: 0,
+        numeroConta: '123456',
+        digitoConta: '78',
+        agencia: '0001',
+        isAtivo: true,
+        isVerificado: false,
+        dataVerificacao: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        endereco: null,
+        dadosProfissionais: null,
+        configuracoes: {},
+      });
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      expect(response.body.data.verificationEmail).toMatchObject({
+        status: 'not_configured',
+        code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
+      });
+
       expect(sendEmail).toHaveBeenCalled();
     });
 
@@ -714,7 +766,21 @@ describe('Auth Routes', () => {
       );
     });
 
-    it('returns 503 EMAIL_SEND_FAILED when SMTP fails', async () => {
+    it('returns 503 EMAIL_PROVIDER_NOT_CONFIGURED when provider not configured', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...global.testUser, isVerificado: false });
+      prisma.user.update.mockResolvedValue({});
+      sendEmail.mockRejectedValue(new Error('EMAIL_PROVIDER_NOT_CONFIGURED'));
+
+      const response = await request(app)
+        .post('/api/auth/resend-verification-email')
+        .set('Authorization', `Bearer ${global.testToken}`)
+        .send({})
+        .expect(503);
+
+      expect(response.body.code).toBe('EMAIL_PROVIDER_NOT_CONFIGURED');
+    });
+
+    it('returns 503 EMAIL_SEND_FAILED when send fails', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...global.testUser, isVerificado: false });
       prisma.user.update.mockResolvedValue({});
       sendEmail.mockRejectedValue(new Error('SMTP indisponível'));

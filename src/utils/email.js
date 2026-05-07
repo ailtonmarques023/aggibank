@@ -452,7 +452,7 @@ function isResendConfigured() {
   return Boolean(key);
 }
 
-/** Endereço remetente (Resend exige domínio verificado; fallback SMTP_USER). */
+/** Remetente: prioriza EMAIL_FROM; fora de produção aceita SMTP_USER como compatibilidade local. */
 function getFromEmailRaw() {
   const from = process.env.EMAIL_FROM && String(process.env.EMAIL_FROM).trim();
   if (from) return from;
@@ -460,8 +460,17 @@ function getFromEmailRaw() {
   return user || '';
 }
 
+/**
+ * Resend oficial: API key + remetente utilizável.
+ * Em produção exige EMAIL_FROM explícito (domínio verificado no Resend); não usar só SMTP_USER como remetente.
+ */
 function isResendReady() {
-  return isResendConfigured() && Boolean(getFromEmailRaw());
+  if (!isResendConfigured()) return false;
+  if (process.env.NODE_ENV === 'production') {
+    const from = process.env.EMAIL_FROM && String(process.env.EMAIL_FROM).trim();
+    return Boolean(from);
+  }
+  return Boolean(getFromEmailRaw());
 }
 
 function isSmtpConfigured() {
@@ -471,9 +480,21 @@ function isSmtpConfigured() {
   return Boolean(host && user && pass);
 }
 
-/** Resend (produção/Railway) ou SMTP (local/fallback). */
+/**
+ * SMTP/Nodemailer é legado. Em produção só é elegível com opt-in explícito (rede muitas vezes bloqueia saída 587).
+ * Fora de produção permanece permitido por padrão para desenvolvimento local.
+ */
+function isSmtpFallbackAllowed() {
+  if (process.env.NODE_ENV === 'production') {
+    const v = String(process.env.ALLOW_EMAIL_SMTP_FALLBACK || '').trim().toLowerCase();
+    return v === 'true' || v === '1' || v === 'yes';
+  }
+  return true;
+}
+
+/** Provedor disponível: Resend (oficial) ou SMTP apenas quando explicitamente permitido. */
 function isEmailProviderConfigured() {
-  return isResendReady() || isSmtpConfigured();
+  return isResendReady() || (isSmtpConfigured() && isSmtpFallbackAllowed());
 }
 
 function buildMimeFromHeader() {
@@ -565,9 +586,9 @@ const sendEmail = async ({ to, subject, html, text, template, data = {} }) => {
   try {
     if (!isEmailProviderConfigured()) {
       const msg =
-        'E-mail não enviado: configure RESEND_API_KEY + EMAIL_FROM (produção) ou SMTP_HOST/SMTP_USER/SMTP_PASS (fallback local). Veja env.example.';
+        'E-mail não enviado: configure RESEND_API_KEY e EMAIL_FROM (produção/Railway) ou, para SMTP legado, SMTP_* e em produção também ALLOW_EMAIL_SMTP_FALLBACK=true. Veja env.example.';
       logger.warn(msg);
-      throw new Error('SMTP_NOT_CONFIGURED');
+      throw new Error('EMAIL_PROVIDER_NOT_CONFIGURED');
     }
 
     if (template && emailTemplates[template]) {
@@ -700,6 +721,12 @@ const testEmailConfiguration = async () => {
       logger.warn('testEmailConfiguration: nem Resend nem SMTP configurados.');
       return false;
     }
+    if (!isSmtpFallbackAllowed()) {
+      logger.warn(
+        'testEmailConfiguration: SMTP configurado porém fallback desabilitado neste ambiente (defina ALLOW_EMAIL_SMTP_FALLBACK=true se for intencional).',
+      );
+      return false;
+    }
     const transporter = buildSmtpTransport();
     await transporter.verify();
     logger.info('Configuração de email verificada com sucesso (SMTP verify).');
@@ -717,4 +744,7 @@ module.exports = {
   sendTransactionNotification,
   sendCardNotification,
   testEmailConfiguration,
+  isResendReady,
+  isSmtpFallbackAllowed,
+  isEmailProviderConfigured,
 };

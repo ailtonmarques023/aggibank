@@ -96,7 +96,7 @@ async function main() {
   }
 
   if (process.exitCode === 1) {
-    console.error('\nVerifique SMTP no .env e tente de novo.');
+    console.error('\nVerifique RESEND_API_KEY + EMAIL_FROM ou SMTP no .env (e em produção ALLOW_EMAIL_SMTP_FALLBACK se usar Nodemailer).');
   } else {
     console.log(`\nConcluído. Confira a caixa de entrada (e spam) de ${to}`);
   }

@@ -39,6 +39,16 @@ const FORGOT_PASSWORD_PUBLIC_MESSAGE =
 
 const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
 
+/** Resposta alinhada ao contrato de erro de envio (Resend oficial; SMTP legado opcional). */
+function emailProviderMisconfiguredMessage() {
+  return 'O servidor não está configurado para enviar e-mail. Em produção configure RESEND_API_KEY e EMAIL_FROM (domínio verificado no Resend). SMTP legado exige ALLOW_EMAIL_SMTP_FALLBACK=true apenas se a infraestrutura permitir saída SMTP.';
+}
+
+function isEmailProviderNotConfiguredError(err) {
+  const msg = err && err.message ? String(err.message) : '';
+  return msg === 'EMAIL_PROVIDER_NOT_CONFIGURED' || msg === 'SMTP_NOT_CONFIGURED';
+}
+
 function loginAttemptsMaxFailures() {
   return parseInt(process.env.AUTH_MAX_FAILED_ATTEMPTS, 10) || 5;
 }
@@ -348,35 +358,45 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       numeroConta: `${numeroConta}-${digitoConta}`,
     });
 
+    let verificationEmail = { status: 'sent' };
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Bem-vindo ao AgilBank - Verifique sua conta',
+        template: 'welcome',
+        data: {
+          nome: nomeCompleto,
+          token: tokenVerificacao,
+          numeroConta: `${numeroConta}-${digitoConta}`,
+          agencia,
+        },
+      });
+    } catch (emailError) {
+      if (isEmailProviderNotConfiguredError(emailError)) {
+        verificationEmail = {
+          status: 'not_configured',
+          code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
+        };
+      } else {
+        verificationEmail = {
+          status: 'failed',
+          code: 'EMAIL_SEND_FAILED',
+        };
+      }
+      logger.warn(emailError, {
+        context: 'register-verification-email',
+        to: email,
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: 'Usuário registrado com sucesso. Verifique seu email para ativar a conta.',
       data: {
         user: publicUser,
-        message: 'Verifique seu email para ativar sua conta'
-      }
-    });
-
-    // Não bloquear nem falhar a resposta HTTP por SMTP lento/indisponível
-    setImmediate(() => {
-      Promise.resolve(
-        sendEmail({
-          to: email,
-          subject: 'Bem-vindo ao AgilBank - Verifique sua conta',
-          template: 'welcome',
-          data: {
-            nome: nomeCompleto,
-            token: tokenVerificacao,
-            numeroConta: `${numeroConta}-${digitoConta}`,
-            agencia,
-          }
-        }),
-      ).catch((emailError) => {
-        logger.warn(emailError, {
-          context: 'register-verification-email',
-          to: email,
-        });
-      });
+        message: 'Verifique seu email para ativar sua conta',
+        verificationEmail,
+      },
     });
 
   } catch (error) {
@@ -807,7 +827,12 @@ router.post('/forgot-password', validateForgotPassword, async (req, res) => {
         token: plainToken,
       });
     } catch (emailError) {
-      logger.warn('Erro ao enviar e-mail de redefinição de senha:', emailError);
+      logger.warn(emailError, {
+        context: 'forgot-password-send',
+        userId: user.id,
+        emailSendFailed: true,
+        providerNotConfigured: isEmailProviderNotConfiguredError(emailError),
+      });
     }
 
     logger.banking('password_reset_requested', user.id, { email: user.email });
@@ -1011,14 +1036,13 @@ router.post('/resend-verification-email', authenticateToken, async (req, res) =>
         context: 'resend-verification-email',
         userId: req.user.id,
       });
-      const errMsg = emailError && emailError.message ? String(emailError.message) : '';
-      const smtpNotConfigured = errMsg === 'SMTP_NOT_CONFIGURED';
+      const providerNotConfigured = isEmailProviderNotConfiguredError(emailError);
       return res.status(503).json({
         success: false,
-        message: smtpNotConfigured
-          ? 'O servidor não está configurado para enviar e-mail. Configure RESEND_API_KEY e EMAIL_FROM (recomendado em produção) ou SMTP_HOST, SMTP_USER e SMTP_PASS (fallback).'
+        message: providerNotConfigured
+          ? emailProviderMisconfiguredMessage()
           : 'Não foi possível enviar o e-mail no momento. Se o problema continuar, verifique com o suporte ou tente mais tarde.',
-        code: smtpNotConfigured ? 'EMAIL_SMTP_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
+        code: providerNotConfigured ? 'EMAIL_PROVIDER_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
       });
     }
 

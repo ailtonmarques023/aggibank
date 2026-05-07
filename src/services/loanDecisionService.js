@@ -65,6 +65,61 @@ async function getLoanById(id) {
   });
 }
 
+const borrowerSelect = {
+  id: true,
+  nomeCompleto: true,
+  email: true,
+};
+
+function withBorrower(row) {
+  if (!row) return null;
+  const { user, ...rest } = row;
+  return { ...rest, borrower: user || null };
+}
+
+async function listLoansByStatusWithBorrower(status = 'pendente') {
+  const rows = await prisma.emprestimo.findMany({
+    where: { status },
+    orderBy: { dataSolicitacao: 'asc' },
+    select: {
+      id: true,
+      userId: true,
+      valorSolicitado: true,
+      valorAprovado: true,
+      prazoMeses: true,
+      taxaJuros: true,
+      valorParcela: true,
+      status: true,
+      dataSolicitacao: true,
+      dataAprovacao: true,
+      dataQuitacao: true,
+      user: { select: borrowerSelect },
+    },
+  });
+  return rows.map(withBorrower);
+}
+
+async function getLoanByIdWithBorrower(id) {
+  const row = await prisma.emprestimo.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      userId: true,
+      valorSolicitado: true,
+      valorAprovado: true,
+      prazoMeses: true,
+      taxaJuros: true,
+      valorParcela: true,
+      status: true,
+      dataSolicitacao: true,
+      dataAprovacao: true,
+      dataQuitacao: true,
+      user: { select: borrowerSelect },
+    },
+  });
+  return withBorrower(row);
+}
+
 async function approveLoanDecision({ loanId, valorAprovado, actorId, actorMeta = {} }) {
   const emprestimo = await prisma.emprestimo.findUnique({ where: { id: loanId } });
 
@@ -200,7 +255,9 @@ async function rejectLoanDecision({ loanId, actorId, actorMeta = {} }) {
 module.exports = {
   LoanDecisionError,
   listLoansByStatus,
+  listLoansByStatusWithBorrower,
   getLoanById,
+  getLoanByIdWithBorrower,
   approveLoanDecision,
   rejectLoanDecision,
 };

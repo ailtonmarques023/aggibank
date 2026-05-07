@@ -1783,6 +1783,52 @@ function agilbankTryResendVerificationEmail() {
 }
 
 /**
+ * Mensagem honesta para o usuário após POST /api/auth/resend-verification-email (inclui 503 e códigos do contrato).
+ * @param {{ ok: boolean, status: number, data: object }} r
+ * @returns {string}
+ */
+function agilbankMessageForResendVerificationResult(r) {
+    if (!r || typeof r !== 'object') {
+        return 'Não foi possível concluir o reenvio. Tente novamente.';
+    }
+    if (r.ok && r.data && r.data.success) {
+        return (
+            (r.data.message || 'Se o servidor conseguiu enviar, confira sua caixa de entrada e o spam.') +
+            ' Após verificar, você pode atualizar a página ou entrar novamente.'
+        );
+    }
+    var code = r.data && r.data.code;
+    var msg = (r.data && (r.data.message || r.data.error)) || '';
+    if (r.status === 503) {
+        if (code === 'EMAIL_PROVIDER_NOT_CONFIGURED') {
+            return (
+                'O envio automático de e-mails não está disponível no servidor no momento. ' +
+                'Tente mais tarde ou entre em contato com o suporte. (EMAIL_PROVIDER_NOT_CONFIGURED)'
+            );
+        }
+        if (code === 'EMAIL_SEND_FAILED') {
+            return (
+                (msg || 'Não foi possível enviar o e-mail de verificação.') +
+                ' Tente novamente em alguns minutos. (EMAIL_SEND_FAILED)'
+            );
+        }
+        return (msg || 'Serviço de e-mail temporariamente indisponível.') + ' (HTTP 503)';
+    }
+    if (code === 'ALREADY_VERIFIED') {
+        return msg || 'Esta conta já está verificada. Atualize a página ou faça login novamente.';
+    }
+    if (code === 'RESEND_RATE_LIMIT') {
+        return msg || 'Muitas tentativas de reenvio. Aguarde e tente novamente.';
+    }
+    if (msg) {
+        return code ? msg + ' (' + code + ')' : msg;
+    }
+    return 'Não foi possível reenviar o e-mail de verificação.' + (r.status ? ' (HTTP ' + r.status + ')' : '');
+}
+
+window.agilbankMessageForResendVerificationResult = agilbankMessageForResendVerificationResult;
+
+/**
  * Mostra modal de erro personalizado
  * Overlay acima do wizard de cartao (z-index 999998) para nao deixar o formulario visivel "por tras".
  * @param {string} title
@@ -1870,27 +1916,11 @@ function showErrorModal(title, message, opts) {
                 btnResend.disabled = false;
                 btnResend.textContent = textoOriginal;
                 var p = modal.querySelector('#agilErrMsg');
+                if (!p) return;
+                var texto = agilbankMessageForResendVerificationResult(r);
+                p.textContent = texto;
                 if (r.ok && r.data && r.data.success) {
-                    if (p) {
-                        p.textContent =
-                            (r.data.message || 'Confira sua caixa de entrada e o spam.') +
-                            ' Depois de verificar o e-mail, tente enviar a solicitação novamente.';
-                    }
                     btnResend.style.display = 'none';
-                } else if (p) {
-                    var msg =
-                        (r.data && r.data.message) ||
-                        (r.data && r.data.error) ||
-                        '';
-                    if (!msg) {
-                        msg =
-                            'Não foi possível enviar o e-mail.' +
-                            (r.status ? ' (HTTP ' + r.status + ')' : '') +
-                            (r.data && r.data.code ? ' Código: ' + r.data.code + '.' : '');
-                    } else if (r.data && r.data.code) {
-                        msg += ' (' + r.data.code + ')';
-                    }
-                    p.textContent = msg;
                 }
             });
         };

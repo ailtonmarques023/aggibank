@@ -361,35 +361,22 @@ class FormularioConta {
             
             this.updateLoadingStep(1, 'completed');
             this.updateLoadingStep(2, 'active');
-            console.log('📊 Dados coletados:', formData);
             
-            // Passo 2: Criar usuário no banco de dados
+            // Passo 2: Criar usuário no banco (POST /api/auth/register — verificationEmail vem em data.verificationEmail)
             const userResult = await this.createUserInDatabase(formData);
-            console.log('✅ Usuário criado no banco:', userResult);
             
             this.updateLoadingStep(2, 'completed');
             this.updateLoadingStep(3, 'active');
-            
-            // Passo 3: Enviar email de confirmação
-            try {
-                const emailResult = await this.sendConfirmationEmail(formData.email, userResult.userId);
-                console.log('📧 Email de confirmação enviado:', emailResult);
-            } catch (emailError) {
-                console.warn('⚠️ Erro ao enviar email (continuando):', emailError);
-                // Continua mesmo se o email falhar
-            }
-            
+
+            // Passo 3: apenas refletir o estado retornado pelo servidor (sem segunda chamada de e-mail)
             this.updateLoadingStep(3, 'completed');
             this.updateLoadingStep(4, 'active');
-            
-            // Passo 4: Finalizar
+
             setTimeout(() => {
                 this.updateLoadingStep(4, 'completed');
                 setTimeout(() => {
-                    console.log('🎯 Finalizando processo - escondendo loading...');
                     this.hideLoading();
-                    console.log('🎯 Mostrando mensagem de sucesso...');
-                    this.showEmailConfirmationMessage(formData.email);
+                    this.showEmailConfirmationMessage(formData.email, userResult.verificationEmail);
                 }, 1000);
             }, 500);
             
@@ -401,14 +388,9 @@ class FormularioConta {
     }
     
     collectFormData() {
-        // Debug da senha
         const senhaElement = document.getElementById('contaSenha');
         const senhaValue = senhaElement?.value || '';
-        console.log('🔍 DEBUG SENHA:');
-        console.log('  Elemento:', senhaElement);
-        console.log('  Valor:', senhaValue);
-        console.log('  Tamanho:', senhaValue.length);
-        
+
         return {
             // Dados pessoais (IDs do index: contaNomeCompleto / contaDataNascimento; página legada: contaNome / contaDataNasc)
             nome: document.getElementById('contaNomeCompleto')?.value || document.getElementById('contaNome')?.value || '',
@@ -461,13 +443,10 @@ class FormularioConta {
     }
     
     validateFormData(data) {
-        console.log('🔍 Validando dados do formulário:', data);
-        
         const required = ['nome', 'cpf', 'email', 'telefone', 'dataNascimento', 'senha', 'cep', 'endereco', 'numero', 'bairro', 'cidade', 'estado', 'profissao', 'renda'];
         
         for (const field of required) {
             const value = data[field];
-            console.log(`🔍 Campo ${field}:`, value);
             
             if (!value || (typeof value === 'string' && value.trim() === '')) {
                 console.error(`❌ Campo obrigatório vazio: ${field}`);
@@ -615,13 +594,17 @@ class FormularioConta {
                 throw new Error(this.parseRegisterErrorBody(result));
             }
 
-            console.log('✅ Usuário criado no banco:', result);
+            const verificationEmail =
+                inner.verificationEmail && typeof inner.verificationEmail === 'object'
+                    ? inner.verificationEmail
+                    : null;
 
             return {
                 userId: userId,
                 status: 'created',
                 message: result.message || 'Usuário criado com sucesso no banco de dados',
-                data: result
+                data: result,
+                verificationEmail: verificationEmail
             };
         } catch (error) {
             console.error('❌ Erro ao criar usuário:', error);
@@ -629,10 +612,9 @@ class FormularioConta {
         }
     }
 
-    async sendConfirmationEmail(email, userId) {
+    async sendConfirmationEmail() {
         console.info(
-            '[FormularioConta] E-mail de verificação já enviado pelo backend em POST /api/auth/register; não há segunda chamada (email/confirmacao).',
-            { email: email, userId: userId }
+            '[FormularioConta] E-mail de verificação é tratado apenas em POST /api/auth/register (verificationEmail).'
         );
         return { success: true, skipped: true };
     }
@@ -642,10 +624,57 @@ class FormularioConta {
         return localStorage.getItem('authToken') || 'anonymous';
     }
     
-    showEmailConfirmationMessage(email) {
-        console.log('📧 showEmailConfirmationMessage chamada com email:', email);
-        
-        // Mostrar mensagem de sucesso com instruções sobre o email
+    showEmailConfirmationMessage(email, verificationEmail) {
+        var ve = verificationEmail && typeof verificationEmail === 'object' ? verificationEmail : null;
+        var status = ve && ve.status ? String(ve.status) : 'unknown';
+        var iconClass = 'fa-check-circle';
+        var iconColor = '#28a745';
+        var title = 'Conta criada com sucesso';
+        var bodyHtml = '';
+
+        if (status === 'sent') {
+            bodyHtml =
+                '<p class="conta-success-text">O servidor registrou o envio do e-mail de verificação para:</p>' +
+                '<div class="conta-email-highlight">' +
+                String(email || '').replace(/</g, '') +
+                '</div>' +
+                '<p class="conta-success-instructions">Confira a caixa de entrada e o spam e clique no link para ativar a conta. ' +
+                'Se precisar, após entrar no app você pode usar <strong>Reenviar e-mail de verificação</strong>.</p>';
+        } else if (status === 'failed') {
+            iconClass = 'fa-exclamation-triangle';
+            iconColor = '#fd7e14';
+            title = 'Conta criada — e-mail não enviado';
+            var c = ve.code ? ' (' + String(ve.code) + ')' : '';
+            bodyHtml =
+                '<p class="conta-success-text">Sua conta foi criada, mas o servidor <strong>não conseguiu enviar</strong> o e-mail de verificação agora' +
+                c +
+                '.</p>' +
+                '<div class="conta-email-highlight">' +
+                String(email || '').replace(/</g, '') +
+                '</div>' +
+                '<p class="conta-success-instructions">Faça login com sua senha. Na tela de verificação, use <strong>Reenviar e-mail</strong> ou fale com o suporte se o problema continuar.</p>';
+        } else if (status === 'not_configured') {
+            iconClass = 'fa-exclamation-triangle';
+            iconColor = '#fd7e14';
+            title = 'Conta criada — envio de e-mail indisponível';
+            bodyHtml =
+                '<p class="conta-success-text">Sua conta foi criada, mas o envio automático de e-mails <strong>não está configurado</strong> no ambiente no momento.</p>' +
+                '<div class="conta-email-highlight">' +
+                String(email || '').replace(/</g, '') +
+                '</div>' +
+                '<p class="conta-success-instructions">Quando o e-mail estiver ativo no servidor, você poderá usar o reenvio após entrar. Se for urgente, contate o suporte.</p>';
+        } else {
+            iconClass = 'fa-info-circle';
+            iconColor = '#0d6efd';
+            title = 'Conta criada';
+            bodyHtml =
+                '<p class="conta-success-text">Sua conta foi registrada. O servidor não informou o estado do envio do e-mail de verificação.</p>' +
+                '<div class="conta-email-highlight">' +
+                String(email || '').replace(/</g, '') +
+                '</div>' +
+                '<p class="conta-success-instructions">Se você receber o e-mail, confirme o link. Caso contrário, após entrar, tente <strong>Reenviar e-mail de verificação</strong>.</p>';
+        }
+
         const successMessage = `
             <div class="conta-content">
                 <div class="conta-header">
@@ -657,27 +686,25 @@ class FormularioConta {
                 
                 <div class="conta-form-container">
                     <div class="conta-success-message">
-                        <div class="conta-success-icon">
-                            <i class="fas fa-check-circle"></i>
+                        <div class="conta-success-icon" style="color:${iconColor}">
+                            <i class="fas ${iconClass}"></i>
                         </div>
-                        <h2>Conta Criada com Sucesso!</h2>
-                        <p class="conta-success-text">Enviamos um email de confirmação para:</p>
-                        <div class="conta-email-highlight">${email}</div>
-                        <p class="conta-success-instructions">Verifique sua caixa de entrada e clique no link de confirmação para ativar sua conta.</p>
+                        <h2>${title}</h2>
+                        ${bodyHtml}
                         <p class="conta-spam-warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>Importante:</strong> Se não encontrar o email, verifique também sua caixa de spam/lixo eletrônico.
+                            <i class="fas fa-shield-alt"></i>
+                            <strong>Segurança:</strong> A conta só fica plenamente ativa após a verificação do e-mail exigida pelo servidor.
                         </p>
                         
                         <div class="conta-success-actions">
-                            <button class="conta-login-btn" onclick="window.location.href='../index.bancogov.html'">
-                                Entrar
+                            <button type="button" class="conta-login-btn" id="agilContaPosIrLogin">
+                                Ir para o login
                             </button>
                         </div>
                         
                         <div class="conta-redirect-countdown">
                             <i class="fas fa-clock"></i>
-                            Redirecionando automaticamente em <span id="redirectTimer">10</span> segundos...
+                            Redirecionando para o login em <span id="redirectTimer">10</span> segundos...
                         </div>
                     </div>
                 </div>
@@ -686,14 +713,15 @@ class FormularioConta {
         
         // Substituir o conteúdo do formulário
         const formContainer = document.querySelector('#contaContainer');
-        console.log('🔍 formContainer encontrado:', formContainer);
-        
+
         if (formContainer) {
-            console.log('✅ Substituindo conteúdo do formulário...');
             formContainer.innerHTML = successMessage;
-            
-            // Iniciar contador regressivo para redirecionamento
-            console.log('⏰ Iniciando contador de redirecionamento...');
+            var btnLogin = document.getElementById('agilContaPosIrLogin');
+            if (btnLogin) {
+                btnLogin.addEventListener('click', function () {
+                    window.location.href = 'index.html';
+                });
+            }
             this.startRedirectCountdown();
         } else {
             console.error('❌ formContainer não encontrado!');
@@ -701,24 +729,19 @@ class FormularioConta {
     }
     
     startRedirectCountdown() {
-        console.log('⏰ startRedirectCountdown iniciado');
         let countdown = 10;
         const timerElement = document.getElementById('redirectTimer');
-        console.log('🔍 timerElement encontrado:', timerElement);
-        
+
         const countdownInterval = setInterval(() => {
             countdown--;
-            console.log('⏰ Contador:', countdown);
-            
+
             if (timerElement) {
                 timerElement.textContent = countdown;
             }
-            
+
             if (countdown <= 0) {
                 clearInterval(countdownInterval);
-                console.log('🚀 Redirecionando para login...');
-               // Redirecionar para a tela de login
-               window.location.href = '../index.bancogov.html';
+                window.location.href = 'index.html';
             }
         }, 1000);
     }
@@ -752,7 +775,7 @@ class FormularioConta {
                     </div>
                     <div class="conta-loading-step" id="step3">
                         <i class="fas fa-envelope"></i>
-                        Enviando email de confirmação
+                        Registrando verificação por e-mail (servidor)
                     </div>
                     <div class="conta-loading-step" id="step4">
                         <i class="fas fa-check"></i>
