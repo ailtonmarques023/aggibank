@@ -12,6 +12,7 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     process.env.LOAN_DECISION_INTERNAL_KEY = INTERNAL_LOAN_KEY;
     prisma.user.findUnique.mockResolvedValue({ ...global.testUser, scoreCredito: 750, saldoAtual: 1000 });
     prisma.emprestimo.findFirst.mockResolvedValue(null);
+    prisma.emprestimo.findUnique.mockResolvedValue(null);
     prisma.emprestimo.create.mockImplementation(async ({ data }) => ({
       id: 'loan-1',
       ...data,
@@ -20,6 +21,7 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       dataQuitacao: null,
     }));
     prisma.emprestimo.findMany.mockResolvedValue([]);
+    prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(async (callback) => callback(prisma));
   });
 
@@ -173,22 +175,27 @@ describe('Loans API — elegibilidade e decisao segura', () => {
   });
 
   it('aprova proposta pendente com chave interna e credita somente dono do emprestimo', async () => {
-    prisma.emprestimo.findFirst.mockResolvedValue({
-      id: 'loan-approve-1',
-      userId: 'loan-owner-1',
-      valorSolicitado: 1500,
-      prazoMeses: 6,
-      status: 'pendente',
-    });
+    prisma.emprestimo.findUnique
+      .mockResolvedValueOnce({
+        id: 'loan-approve-1',
+        userId: 'loan-owner-1',
+        valorSolicitado: 1500,
+        prazoMeses: 6,
+        status: 'pendente',
+      })
+      .mockResolvedValueOnce({
+        id: 'loan-approve-1',
+        userId: 'loan-owner-1',
+        valorSolicitado: 1500,
+        valorAprovado: 1200,
+        prazoMeses: 6,
+        status: 'aprovado',
+        dataAprovacao: new Date('2026-05-07T15:10:00.000Z'),
+      });
     prisma.user.findUnique
       .mockResolvedValueOnce({ ...global.testUser, scoreCredito: 750, saldoAtual: 1000 })
       .mockResolvedValueOnce({ saldoAtual: 2300 });
-    prisma.emprestimo.update.mockResolvedValue({
-      id: 'loan-approve-1',
-      status: 'aprovado',
-      valorAprovado: 1200,
-      dataAprovacao: new Date('2026-05-07T15:10:00.000Z'),
-    });
+    prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
     prisma.movimentacao.create.mockResolvedValue({});
 
@@ -217,5 +224,29 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         }),
       }),
     );
+  });
+
+  it('bloqueia reprocessamento de emprestimo ja decidido com erro de negocio', async () => {
+    prisma.emprestimo.findUnique.mockResolvedValue({
+      id: 'loan-approve-1',
+      userId: 'loan-owner-1',
+      valorSolicitado: 1500,
+      prazoMeses: 6,
+      status: 'aprovado',
+      valorAprovado: 1200,
+      dataAprovacao: new Date('2026-05-07T15:10:00.000Z'),
+    });
+
+    const response = await request(app)
+      .post('/api/loans/loan-approve-1/approve')
+      .set('Authorization', BEARER)
+      .set('x-internal-key', INTERNAL_LOAN_KEY)
+      .send({ valorAprovado: 1200 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_ALREADY_DECIDED');
+    expect(prisma.emprestimo.updateMany).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.movimentacao.create).not.toHaveBeenCalled();
   });
 });

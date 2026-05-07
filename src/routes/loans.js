@@ -187,18 +187,21 @@ router.post(
     const { id } = req.params;
     const { valorAprovado } = req.body;
 
-    const emprestimo = await prisma.emprestimo.findFirst({
-      where: {
-        id,
-        status: 'pendente'
-      }
-    });
+    const emprestimo = await prisma.emprestimo.findUnique({ where: { id } });
 
     if (!emprestimo) {
       return res.status(404).json({
         success: false,
-        message: 'Empréstimo não encontrado ou já processado',
+        message: 'Empréstimo não encontrado',
         code: 'LOAN_NOT_FOUND'
+      });
+    }
+
+    if (emprestimo.status !== 'pendente') {
+      return res.status(400).json({
+        success: false,
+        message: 'Empréstimo já foi processado',
+        code: 'LOAN_ALREADY_DECIDED'
       });
     }
 
@@ -215,8 +218,8 @@ router.post(
     }
 
     // Executar transação para aprovar empréstimo
-    const resultado = await transaction(async (prisma) => {
-      const contaDono = await prisma.user.findUnique({
+    const resultado = await transaction(async (prismaTx) => {
+      const contaDono = await prismaTx.user.findUnique({
         where: { id: emprestimo.userId },
         select: { saldoAtual: true }
       });
@@ -226,8 +229,8 @@ router.post(
       }
 
       // Atualizar empréstimo
-      const emprestimoAtualizado = await prisma.emprestimo.update({
-        where: { id },
+      const emprestimoAtualizado = await prismaTx.emprestimo.updateMany({
+        where: { id, status: 'pendente' },
         data: {
           status: 'aprovado',
           valorAprovado: valorCredito,
@@ -235,11 +238,15 @@ router.post(
         }
       });
 
+      if (emprestimoAtualizado.count !== 1) {
+        throw new Error('LOAN_ALREADY_DECIDED');
+      }
+
       const saldoAnterior = Number(contaDono.saldoAtual);
       const saldoAtual = saldoAnterior + valorCredito;
 
       // Creditar valor na conta dona do empréstimo
-      await prisma.user.update({
+      await prismaTx.user.update({
         where: { id: emprestimo.userId },
         data: {
           saldoAtual: {
@@ -249,7 +256,7 @@ router.post(
       });
 
       // Registrar movimentação
-      await prisma.movimentacao.create({
+      await prismaTx.movimentacao.create({
         data: {
           userId: emprestimo.userId,
           tipo: 'credito',
@@ -261,10 +268,10 @@ router.post(
         }
       });
 
-      return emprestimoAtualizado;
+      return prismaTx.emprestimo.findUnique({ where: { id } });
     });
 
-    logger.criticalOperation('loan_approved', req.user.id, valorCredito, {
+    logger.logCriticalOperation('loan_approved', req.user.id, valorCredito, {
       emprestimoId: id,
       loanOwnerId: emprestimo.userId,
       prazoMeses: emprestimo.prazoMeses
@@ -277,6 +284,14 @@ router.post(
     });
 
   } catch (error) {
+    if (error.message === 'LOAN_ALREADY_DECIDED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Empréstimo já foi processado',
+        code: 'LOAN_ALREADY_DECIDED'
+      });
+    }
+
     logger.error('Erro ao aprovar empréstimo:', error);
     res.status(500).json({
       success: false,
