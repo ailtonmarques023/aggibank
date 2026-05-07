@@ -16,6 +16,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const cardRoutes = require('./routes/cards');
 const loanRoutes = require('./routes/loans');
+const adminLoanRoutes = require('./routes/adminLoans');
 const pixRoutes = require('./routes/pix');
 const boletoRoutes = require('./routes/boletos');
 const notificationRoutes = require('./routes/notifications');
@@ -338,6 +339,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/usuarios', userRoutes); // Alias para compatibilidade com frontend
 app.use('/api/cards', cardRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/api/admin/loans', adminLoanRoutes);
 app.use('/api/pix', pixRoutes);
 app.use('/api/boletos', boletoRoutes);
 app.use('/api/notifications', notificationRoutes);

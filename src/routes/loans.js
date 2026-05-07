@@ -6,8 +6,13 @@ const {
   logCriticalOperation
 } = require('../middleware/auth');
 const { validateLoanRequest } = require('../middleware/validation');
-const { prisma, transaction } = require('../config/database');
+const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
+const {
+  LoanDecisionError,
+  approveLoanDecision,
+  rejectLoanDecision,
+} = require('../services/loanDecisionService');
 
 const router = express.Router();
 const LOAN_NOT_ELIGIBLE_MESSAGE = 'No momento, você ainda não está elegível para solicitar crédito pessoal.';
@@ -185,96 +190,14 @@ router.post(
   async (req, res) => {
   try {
     const { id } = req.params;
-    const { valorAprovado } = req.body;
-
-    const emprestimo = await prisma.emprestimo.findUnique({ where: { id } });
-
-    if (!emprestimo) {
-      return res.status(404).json({
-        success: false,
-        message: 'Empréstimo não encontrado',
-        code: 'LOAN_NOT_FOUND'
-      });
-    }
-
-    if (emprestimo.status !== 'pendente') {
-      return res.status(400).json({
-        success: false,
-        message: 'Empréstimo já foi processado',
-        code: 'LOAN_ALREADY_DECIDED'
-      });
-    }
-
-    const valorCredito = valorAprovado === undefined || valorAprovado === null
-      ? Number(emprestimo.valorSolicitado)
-      : Number(valorAprovado);
-
-    if (!Number.isFinite(valorCredito) || valorCredito <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'valorAprovado deve ser um número positivo',
-        code: 'INVALID_APPROVAL_VALUE'
-      });
-    }
-
-    // Executar transação para aprovar empréstimo
-    const resultado = await transaction(async (prismaTx) => {
-      const contaDono = await prismaTx.user.findUnique({
-        where: { id: emprestimo.userId },
-        select: { saldoAtual: true }
-      });
-
-      if (!contaDono) {
-        throw new Error('LOAN_OWNER_NOT_FOUND');
-      }
-
-      // Atualizar empréstimo
-      const emprestimoAtualizado = await prismaTx.emprestimo.updateMany({
-        where: { id, status: 'pendente' },
-        data: {
-          status: 'aprovado',
-          valorAprovado: valorCredito,
-          dataAprovacao: new Date()
-        }
-      });
-
-      if (emprestimoAtualizado.count !== 1) {
-        throw new Error('LOAN_ALREADY_DECIDED');
-      }
-
-      const saldoAnterior = Number(contaDono.saldoAtual);
-      const saldoAtual = saldoAnterior + valorCredito;
-
-      // Creditar valor na conta dona do empréstimo
-      await prismaTx.user.update({
-        where: { id: emprestimo.userId },
-        data: {
-          saldoAtual: {
-            increment: valorCredito
-          }
-        }
-      });
-
-      // Registrar movimentação
-      await prismaTx.movimentacao.create({
-        data: {
-          userId: emprestimo.userId,
-          tipo: 'credito',
-          descricao: 'Empréstimo aprovado',
-          valor: valorCredito,
-          saldoAnterior,
-          saldoAtual,
-          categoria: 'emprestimo'
-        }
-      });
-
-      return prismaTx.emprestimo.findUnique({ where: { id } });
-    });
-
-    logger.logCriticalOperation('loan_approved', req.user.id, valorCredito, {
-      emprestimoId: id,
-      loanOwnerId: emprestimo.userId,
-      prazoMeses: emprestimo.prazoMeses
+    const resultado = await approveLoanDecision({
+      loanId: id,
+      valorAprovado: req.body && req.body.valorAprovado,
+      actorId: req.user.id,
+      actorMeta: {
+        source: 'legacy_loans_route',
+        requestId: req.requestId || null,
+      },
     });
 
     res.json({
@@ -284,11 +207,11 @@ router.post(
     });
 
   } catch (error) {
-    if (error.message === 'LOAN_ALREADY_DECIDED') {
-      return res.status(400).json({
+    if (error instanceof LoanDecisionError) {
+      return res.status(error.status).json({
         success: false,
-        message: 'Empréstimo já foi processado',
-        code: 'LOAN_ALREADY_DECIDED'
+        message: error.message,
+        code: error.code
       });
     }
 
@@ -322,30 +245,13 @@ router.post(
 router.post('/:id/reject', requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'), async (req, res) => {
   try {
     const { id } = req.params;
-
-    const emprestimo = await prisma.emprestimo.findFirst({
-      where: {
-        id,
-        status: 'pendente'
-      }
-    });
-
-    if (!emprestimo) {
-      return res.status(404).json({
-        success: false,
-        message: 'Empréstimo não encontrado ou já processado',
-        code: 'LOAN_NOT_FOUND'
-      });
-    }
-
-    const emprestimoAtualizado = await prisma.emprestimo.update({
-      where: { id },
-      data: { status: 'rejeitado' }
-    });
-
-    logger.banking('loan_rejected', req.user.id, {
-      emprestimoId: id,
-      valorSolicitado: emprestimo.valorSolicitado
+    const emprestimoAtualizado = await rejectLoanDecision({
+      loanId: id,
+      actorId: req.user.id,
+      actorMeta: {
+        source: 'legacy_loans_route',
+        requestId: req.requestId || null,
+      },
     });
 
     res.json({
@@ -355,6 +261,14 @@ router.post('/:id/reject', requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'), 
     });
 
   } catch (error) {
+    if (error instanceof LoanDecisionError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+        code: error.code
+      });
+    }
+
     logger.error('Erro ao rejeitar empréstimo:', error);
     res.status(500).json({
       success: false,
