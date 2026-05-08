@@ -52,6 +52,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
     prisma.user.findUnique.mockResolvedValue(authUser({ scoreCredito: 750 }));
     prisma.cartao.findFirst.mockResolvedValue(null);
     prisma.cartao.findMany.mockResolvedValue([]);
+    prisma.cardShipment.findMany.mockResolvedValue([]);
     process.env.CARD_APPROVAL_INTERNAL_KEY = INTERNAL_APPROVE_KEY;
     prisma.cartao.create.mockImplementation(async ({ data }) => ({
       id: 'cartao-test-id',

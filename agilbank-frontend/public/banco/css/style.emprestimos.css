@@ -40,8 +40,8 @@
   background: var(--ab-blue);
   color: #fff;
   border-radius: 16px;
-  min-height: 76px;
-  padding: 12px;
+  min-height: 72px;
+  padding: 10px 12px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -52,8 +52,25 @@
 .ab-emp-topbar-leading {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-start;
   flex-shrink: 0;
+}
+
+.ab-emp-topbar-trailing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.ab-emp-topbar-title-wrap {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
 }
 
 .ab-emp-icon-btn {
@@ -73,34 +90,67 @@
   box-shadow: 0 1px 2px rgba(0, 40, 80, 0.08);
 }
 
-.ab-emp-icon-btn--compact {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
+/* Topo do módulo: botões discretos sobre fundo azul (sem bola branca grande) */
+.ab-emp-icon-btn--topbar {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: none;
+  font-size: 16px;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 
-.ab-emp-icon-btn--close {
-  color: var(--ab-blue-strong);
+.ab-emp-icon-btn--topbar:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.ab-emp-icon-btn--topbar:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.ab-emp-icon-btn--topbar:active {
+  transform: scale(0.96);
+}
+
+.ab-emp-icon-btn--topbar.ab-emp-icon-btn--close {
+  color: #fff;
+}
+
+.ab-emp-icon-arrow {
+  display: block;
+  font-size: 17px;
+  line-height: 1;
+  margin-left: -1px;
 }
 
 .ab-emp-close-glyph {
   display: block;
-  font-size: 22px;
-  font-weight: 300;
+  font-size: 18px;
+  font-weight: 400;
   line-height: 1;
-  margin-top: -2px;
+  margin-top: -1px;
 }
 
 .ab-emp-topbar-kicker {
   margin: 0;
   font-size: 11px;
   opacity: 0.9;
+  line-height: 1.2;
 }
 
 .ab-emp-topbar-title {
-  margin: 2px 0 0;
-  font-size: 18px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .ab-emp-state-pill {
@@ -111,6 +161,16 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: lowercase;
+}
+
+.ab-emp-state-pill--in-topbar {
+  margin-top: 4px;
+  padding: 3px 8px;
+  font-size: 10px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ab-emp-main {

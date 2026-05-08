@@ -874,6 +874,9 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
     }
 }
 
+/** Taxa oficial de emissão + frete do cartão físico (espelha backend). */
+var AGILBANK_TAXA_CARTAO_FISICO = 39.9;
+
 function agilbankShipmentFormatMoney(amount) {
     var n = Number(amount);
     if (!isFinite(n)) return 'Indisponível';
@@ -899,44 +902,114 @@ function agilbankShipmentAddressText(addressSnapshot) {
     return parts.length ? parts.join(' - ') : 'Endereço não informado pela API.';
 }
 
+/** Só exibe código de rastreamento quando o backend já registrou remessa/rastreio real. */
+function agilbankRastreioDeveExibir(shipment) {
+    if (!shipment || !shipment.trackingCode || !String(shipment.trackingCode).trim()) return false;
+    var st = String(shipment.status || '').toUpperCase();
+    return (
+        st === 'REMESSA_CRIADA' ||
+        st === 'POSTADO' ||
+        st === 'EM_TRANSITO' ||
+        st === 'SAIU_PARA_ENTREGA' ||
+        st === 'AGUARDANDO_DESBLOQUEIO' ||
+        st === 'DESBLOQUEADO'
+    );
+}
+
+function agilbankShipmentIdempotencyKey() {
+    if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+    }
+    return 'agil-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+}
+
+function agilbankBuildDeliverySnapshotFromEndereco(endereco) {
+    if (!endereco || typeof endereco !== 'object') return null;
+    var cepDigits = String(endereco.cep || '').replace(/\D/g, '');
+    if (cepDigits.length !== 8) return null;
+    var cep = cepDigits.slice(0, 5) + '-' + cepDigits.slice(5);
+    var logradouro = String(endereco.logradouro || '').trim();
+    var numero = String(endereco.numero != null ? endereco.numero : '').trim();
+    var bairro = String(endereco.bairro || '').trim();
+    var cidade = String(endereco.cidade || '').trim();
+    var estado = String(endereco.estado || '')
+        .trim()
+        .toUpperCase()
+        .slice(0, 2);
+    if (logradouro.length < 3 || !numero || bairro.length < 2 || cidade.length < 2 || estado.length !== 2) return null;
+    return {
+        cep: cep,
+        logradouro: logradouro,
+        numero: numero,
+        bairro: bairro,
+        cidade: cidade,
+        estado: estado,
+        complemento: endereco.complemento ? String(endereco.complemento).trim().slice(0, 120) : undefined
+    };
+}
+
+function agilbankStatusEntregaLimparAcoes() {
+    var host = document.getElementById('statusEntregaActionsHost');
+    if (!host) return;
+    host.innerHTML = '';
+    host.style.display = 'none';
+}
+
 function agilbankShipmentStatusMeta(status) {
     var s = String(status || '').trim().toUpperCase();
     var map = {
         AGUARDANDO_COBRANCA: {
-            title: 'Em análise',
-            description: 'Aguardando confirmação da cobrança do frete para iniciar o fluxo logístico.'
+            title: 'Aguardando pagamento',
+            description:
+                'Taxa de emissão e frete (R$ 39,90) pendente. O limite do cartão pode estar aprovado; o cartão físico só entra em produção após o pagamento confirmado no saldo.'
         },
         COBRANCA_CONFIRMADA: {
-            title: 'Frete cobrado',
-            description: 'Taxa de frete confirmada. Preparando o cartão físico para produção.'
+            title: 'Pagamento confirmado',
+            description: 'Pagamento da taxa registrado. Etapa financeira concluída; a produção segue no fluxo logístico.'
         },
         EM_PRODUCAO: {
             title: 'Em produção',
-            description: 'Seu cartão está em produção e seguirá para postagem após a finalização.'
+            description: 'Cartão físico em produção. A remessa e o rastreamento aparecem quando a logística registrar dados reais (sem simulação).'
+        },
+        REMESSA_CRIADA: {
+            title: 'Remessa criada',
+            description: 'Remessa registrada com transportadora. Acompanhe o rastreamento oficial abaixo quando houver código válido.'
         },
         POSTADO: {
             title: 'Postado',
-            description: 'Cartão postado pela transportadora. O rastreio foi liberado.'
+            description: 'Objeto postado. Utilize o rastreamento informado pela transportadora.'
         },
         EM_TRANSITO: {
             title: 'Em trânsito',
-            description: 'Cartão em trânsito para o endereço cadastrado.'
+            description: 'Remessa em trânsito para o endereço de entrega.'
         },
         SAIU_PARA_ENTREGA: {
             title: 'Saiu para entrega',
-            description: 'O cartão saiu para entrega e deve chegar no endereço informado.'
+            description: 'Saiu para entrega no endereço cadastrado.'
         },
         ENTREGUE: {
             title: 'Entregue',
-            description: 'Entrega concluída com sucesso para o titular.'
+            description: 'Entrega confirmada pela operação logística.'
+        },
+        AGUARDANDO_DESBLOQUEIO: {
+            title: 'Aguardando desbloqueio',
+            description: 'Cartão entregue. Confirme os últimos 4 dígitos e desbloqueie o cartão físico no app.'
+        },
+        DESBLOQUEADO: {
+            title: 'Desbloqueado',
+            description: 'Cartão físico desbloqueado pelo titular após a entrega.'
         },
         FALHA_ENTREGA: {
-            title: 'Falha na entrega',
-            description: 'A transportadora informou falha na tentativa de entrega. Aguarde próxima atualização.'
+            title: 'Falha de entrega',
+            description: 'Falha na entrega informada pela transportadora. Aguarde atualização ou contate o suporte.'
         },
         DEVOLVIDO: {
-            title: 'Falha na entrega',
-            description: 'A remessa foi devolvida. Entre em contato com o suporte para nova emissão.'
+            title: 'Devolvido',
+            description: 'Remessa devolvida. Entre em contato com o suporte para nova emissão, se aplicável.'
+        },
+        CANCELADO: {
+            title: 'Cancelado',
+            description: 'Remessa cancelada. Não há rastreamento ativo para este envio.'
         }
     };
     return map[s] || {
@@ -971,6 +1044,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     var timelineError = payload.timelineError || '';
 
     if (uiState === 'loading') {
+        agilbankStatusEntregaLimparAcoes();
         host.innerHTML =
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
             '<h4>Carregando status</h4>' +
@@ -983,6 +1057,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     }
 
     if (uiState === 'em_analise') {
+        agilbankStatusEntregaLimparAcoes();
         host.innerHTML =
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
             '<h4>Em análise</h4>' +
@@ -995,6 +1070,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     }
 
     if (uiState === 'falha' || uiState === 'timeout') {
+        agilbankStatusEntregaLimparAcoes();
         var msg = payload.message || 'Falha ao consultar status de entrega.';
         host.innerHTML =
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
@@ -1010,12 +1086,13 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     if (uiState === 'sem_dados') {
         host.innerHTML =
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
-            '<h4>Sem dados de entrega</h4>' +
-            '<p>Não existe remessa registrada para este cartão no backend.</p>' +
-            '<small>Aguardando criação de shipment</small></div></div>';
-        if (l1) l1.textContent = 'Frete: sem dados';
-        if (l2) l2.textContent = 'Status logístico: sem dados';
-        if (end) end.textContent = 'Endereço de entrega: sem dados.';
+            '<h4>Nenhuma remessa ainda</h4>' +
+            '<p>O limite do cartão pode estar aprovado, mas o cartão físico só entra em produção após o pagamento da taxa de emissão e frete (R$ 39,90) com saldo disponível.</p>' +
+            '<small>Estado financeiro (taxa) e logístico são tratados separadamente pela API</small></div></div>';
+        if (l1) l1.textContent = 'Taxa: ' + agilbankShipmentFormatMoney(AGILBANK_TAXA_CARTAO_FISICO) + ' (pendente de pagamento)';
+        if (l2) l2.textContent = 'Logística: só inicia após confirmação do pagamento no backend';
+        if (end) end.textContent = 'Endereço: será o do seu perfil no momento do pagamento.';
+        agilbankStatusEntregaMountAcoes(c, { mode: 'pay' });
         return;
     }
 
@@ -1024,35 +1101,70 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
         'AGUARDANDO_COBRANCA',
         'COBRANCA_CONFIRMADA',
         'EM_PRODUCAO',
+        'REMESSA_CRIADA',
         'POSTADO',
         'EM_TRANSITO',
         'SAIU_PARA_ENTREGA',
-        'ENTREGUE'
+        'ENTREGUE',
+        'AGUARDANDO_DESBLOQUEIO',
+        'DESBLOQUEADO'
     ];
     var currentStatus = String(shipment && shipment.status ? shipment.status : '').toUpperCase();
-    var currentIndex = statusOrder.indexOf(currentStatus);
+    var failureStates = ['FALHA_ENTREGA', 'DEVOLVIDO', 'CANCELADO'];
+    var isFailure = failureStates.indexOf(currentStatus) >= 0;
+    var currentIndex = isFailure ? -1 : statusOrder.indexOf(currentStatus);
     host.innerHTML = '';
 
-    if (!timeline.length) {
-        host.innerHTML =
+    if (isFailure) {
+        host.innerHTML +=
+            '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
+            '<h4>' +
+            currentMeta.title +
+            '</h4>' +
+            '<p>' +
+            currentMeta.description +
+            '</p>' +
+            '<small>Sem previsão automática de nova tentativa</small></div></div>';
+    }
+
+    var timelineSorted = timeline
+        .slice()
+        .sort(function (a, b) {
+            return new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime();
+        });
+
+    if (!timelineSorted.length && !isFailure) {
+        host.innerHTML +=
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
             '<h4>Timeline vazia</h4>' +
             '<p>A remessa existe, porém ainda não há eventos logísticos para exibir.</p>' +
-            '<small>Status atual: ' + currentMeta.title + '</small></div></div>';
+            '<small>Status atual: ' +
+            currentMeta.title +
+            '</small></div></div>';
     } else {
-        timeline.forEach(function (ev) {
-            var idx = statusOrder.indexOf(String(ev && ev.shipmentStatus ? ev.shipmentStatus : '').toUpperCase());
+        timelineSorted.forEach(function (ev) {
+            var evSt = String(ev && ev.shipmentStatus ? ev.shipmentStatus : '').toUpperCase();
+            var idx = statusOrder.indexOf(evSt);
             var klass = 'status-item';
-            if (idx >= 0 && currentIndex >= 0 && idx < currentIndex) klass += ' completed';
-            if ((idx >= 0 && idx === currentIndex) || idx < 0) klass += ' active';
+            if (!isFailure && idx >= 0 && currentIndex >= 0 && idx < currentIndex) klass += ' completed';
+            if (!isFailure && ((idx >= 0 && idx === currentIndex) || idx < 0)) klass += ' active';
+            if (isFailure) klass += ' completed';
             var label = agilbankShipmentTimelineLabelByEvent(ev);
             var description = ev && ev.description ? String(ev.description) : agilbankShipmentStatusMeta(ev && ev.shipmentStatus).description;
             var whenTxt = agilbankShipmentFormatDate(ev && ev.eventAt);
             host.innerHTML +=
-                '<div class="' + klass + '"><div class="status-dot"></div><div class="status-content">' +
-                '<h4>' + label + '</h4>' +
-                '<p>' + description + '</p>' +
-                '<small>' + whenTxt + '</small></div></div>';
+                '<div class="' +
+                klass +
+                '"><div class="status-dot"></div><div class="status-content">' +
+                '<h4>' +
+                label +
+                '</h4>' +
+                '<p>' +
+                description +
+                '</p>' +
+                '<small>' +
+                whenTxt +
+                '</small></div></div>';
         });
     }
 
@@ -1060,18 +1172,229 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
         host.innerHTML +=
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
             '<h4>Falha parcial</h4>' +
-            '<p>' + timelineError + '</p>' +
+            '<p>' +
+            timelineError +
+            '</p>' +
             '<small>Exibindo dados disponíveis de shipment</small></div></div>';
     }
 
     var fee = agilbankShipmentFormatMoney(shipment && shipment.shippingFeeAmount);
     var feeStatus = shipment && shipment.shippingFeeStatus ? String(shipment.shippingFeeStatus) : 'indisponível';
-    var tracking = shipment && shipment.trackingCode ? String(shipment.trackingCode) : 'indisponível';
-    var carrier = shipment && shipment.carrierName ? String(shipment.carrierName) : 'indisponível';
+    var tracking = '—';
+    if (agilbankRastreioDeveExibir(shipment)) {
+        tracking = shipment && shipment.trackingCode ? String(shipment.trackingCode) : '—';
+    } else if (shipment && shipment.trackingCode && String(shipment.trackingCode).trim()) {
+        tracking = '(código recebido, aguardando estágio logístico válido na API)';
+    } else {
+        tracking = 'indisponível até registro real de remessa/rastreio';
+    }
+    var carrier = shipment && shipment.carrierName ? String(shipment.carrierName) : 'indisponível até dados da transportadora';
     var eta = shipment && shipment.estimatedDeliveryAt ? agilbankShipmentFormatDate(shipment.estimatedDeliveryAt) : 'Indisponível';
-    if (l1) l1.textContent = 'Frete: ' + fee + ' (' + feeStatus + ')';
-    if (l2) l2.textContent = 'Status: ' + currentMeta.title + ' | Rastreio: ' + tracking + ' | Transportadora: ' + carrier + ' | Previsão: ' + eta;
+    if (l1) {
+        l1.textContent =
+            'Taxa emissão + frete: ' + fee + ' | Situação financeira da taxa: ' + feeStatus;
+    }
+    if (l2) {
+        l2.textContent =
+            'Logística: ' +
+            currentMeta.title +
+            ' | Rastreio: ' +
+            tracking +
+            ' | Transportadora: ' +
+            carrier +
+            ' | Previsão: ' +
+            eta;
+    }
     if (end) end.textContent = agilbankShipmentAddressText(shipment && shipment.addressSnapshot);
+
+    var feeStU = String(shipment && shipment.shippingFeeStatus ? shipment.shippingFeeStatus : '').toUpperCase();
+    var precisaPagar =
+        currentStatus === 'AGUARDANDO_COBRANCA' && (feeStU === 'PENDENTE' || feeStU === 'RECUSADO');
+    if (precisaPagar) {
+        agilbankStatusEntregaMountAcoes(c, { mode: 'pay' });
+    } else if (currentStatus === 'AGUARDANDO_DESBLOQUEIO') {
+        agilbankStatusEntregaMountAcoes(c, { mode: 'unlock' });
+    } else {
+        agilbankStatusEntregaLimparAcoes();
+    }
+}
+
+function agilbankStatusEntregaMountAcoes(card, options) {
+    var host = document.getElementById('statusEntregaActionsHost');
+    if (!host || !card || !card.id) return;
+    var mode = options && options.mode ? options.mode : 'none';
+    if (mode === 'none') {
+        host.innerHTML = '';
+        host.style.display = 'none';
+        return;
+    }
+    host.style.display = 'block';
+    if (mode === 'pay') {
+        host.innerHTML =
+            '<div style="border-top:1px solid rgba(0,0,0,0.08);padding-top:12px;">' +
+            '<p style="margin:0 0 8px;font-size:14px;line-height:1.4;">Taxa oficial: <strong>' +
+            agilbankShipmentFormatMoney(AGILBANK_TAXA_CARTAO_FISICO) +
+            '</strong> (débito no saldo; aparece no extrato como movimentação vinculada à remessa).</p>' +
+            '<label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.35;margin:0 0 12px;">' +
+            '<input type="checkbox" id="statusEntregaAceiteCobranca" style="margin-top:3px;" />' +
+            '<span>Li e aceito pagar a taxa de emissão e frete no meu saldo AgilBank para iniciar a produção do cartão físico.</span></label>' +
+            '<button type="button" class="action-button" id="statusEntregaBtnPagar">Pagar taxa e iniciar envio</button></div>';
+        var btn = document.getElementById('statusEntregaBtnPagar');
+        if (btn) {
+            btn.onclick = function () {
+                agilbankExecutarPagamentoTaxaCartaoFisico(card, btn);
+            };
+        }
+        return;
+    }
+    if (mode === 'unlock') {
+        host.innerHTML =
+            '<div style="border-top:1px solid rgba(0,0,0,0.08);padding-top:12px;">' +
+            '<p style="margin:0 0 8px;font-size:14px;">Informe os <strong>4 últimos dígitos</strong> do cartão físico que você recebeu:</p>' +
+            '<input type="text" inputmode="numeric" maxlength="4" id="statusEntregaUnlockLast4" placeholder="••••" ' +
+            'style="max-width:140px;padding:10px;border-radius:8px;border:1px solid #ccc;margin:0 0 12px;display:block;" />' +
+            '<button type="button" class="action-button" id="statusEntregaBtnUnlock">Confirmar e desbloquear cartão físico</button></div>';
+        var ub = document.getElementById('statusEntregaBtnUnlock');
+        if (ub) {
+            ub.onclick = function () {
+                agilbankExecutarUnlockCartaoFisico(card, ub);
+            };
+        }
+    }
+}
+
+async function agilbankExecutarPagamentoTaxaCartaoFisico(card, button) {
+    var chk = document.getElementById('statusEntregaAceiteCobranca');
+    if (!chk || !chk.checked) {
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Aceite necessário', 'Marque a caixa para aceitar a cobrança da taxa de emissão e frete.');
+        }
+        return;
+    }
+    var token = getCartaoAuthToken();
+    if (!token || !window.AgilBank || !window.AgilBank.api) {
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Sessão', 'Faça login novamente.');
+        }
+        return;
+    }
+    try {
+        agilbankSetBtnLoading(button, true, 'Debitando...');
+        var resProfile = await window.AgilBank.api.request('user/user-complete-data', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            credentials: 'include'
+        });
+        var bodyProfile = await resProfile.json().catch(function () {
+            return {};
+        });
+        var usuario =
+            (bodyProfile.user_data && bodyProfile.user_data.usuario) ||
+            (bodyProfile.data && bodyProfile.data.user) ||
+            null;
+        var endereco = usuario ? usuario.endereco : null;
+        var snap = agilbankBuildDeliverySnapshotFromEndereco(endereco);
+        if (!snap) {
+            if (typeof showErrorModal === 'function') {
+                showErrorModal(
+                    'Endereço incompleto',
+                    'Complete seu endereço no perfil (CEP, logradouro, número, bairro, cidade e UF) para o envio do cartão físico.'
+                );
+            }
+            return;
+        }
+        var idem = agilbankShipmentIdempotencyKey();
+        var payResult = await agilbankRequestCards(
+            'cards/' + card.id + '/shipment',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idempotencyKey: idem,
+                    deliveryAddressSnapshot: snap,
+                    reason: 'Taxa emissão e frete cartão físico — app AgilBank'
+                })
+            },
+            20000
+        );
+        if (payResult.response.status === 402) {
+            var fin = payResult.body && payResult.body.data && payResult.body.data.financial;
+            var saldoTxt = fin && isFinite(Number(fin.saldoAtual)) ? agilbankShipmentFormatMoney(fin.saldoAtual) : '';
+            if (typeof showErrorModal === 'function') {
+                showErrorModal(
+                    'Saldo insuficiente',
+                    (payResult.body && payResult.body.message) ||
+                        ('Saldo insuficiente para debitar R$ 39,90. Adicione saldo e tente novamente.' +
+                            (saldoTxt ? ' Saldo atual: ' + saldoTxt + '.' : ''))
+                );
+            }
+            await agilbankCartaoAcaoStatus();
+            return;
+        }
+        if (!payResult.response.ok) {
+            var msg = (payResult.body && payResult.body.message) || 'Não foi possível concluir o pagamento.';
+            if (typeof showErrorModal === 'function') {
+                showErrorModal('Pagamento', msg);
+            }
+            await agilbankCartaoAcaoStatus();
+            return;
+        }
+        if (typeof showErrorModal === 'function') {
+            showErrorModal(
+                'Pagamento confirmado',
+                (payResult.body && payResult.body.message) ||
+                    'Taxa debitada. A produção e a logística seguem conforme eventos reais no sistema.'
+            );
+        }
+        if (typeof agilbankRefreshPainelCartoes === 'function') await agilbankRefreshPainelCartoes();
+        await agilbankCartaoAcaoStatus();
+    } catch (error) {
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Erro', (error && error.message) || 'Falha de conexão.');
+        }
+    } finally {
+        agilbankSetBtnLoading(button, false);
+    }
+}
+
+async function agilbankExecutarUnlockCartaoFisico(card, button) {
+    var inp = document.getElementById('statusEntregaUnlockLast4');
+    var digits = inp && inp.value ? String(inp.value).replace(/\D/g, '').slice(0, 4) : '';
+    if (digits.length !== 4) {
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Validação', 'Informe exatamente os 4 dígitos finais do cartão recebido.');
+        }
+        return;
+    }
+    try {
+        agilbankSetBtnLoading(button, true, 'Desbloqueando...');
+        var result = await agilbankRequestCards(
+            'cards/' + card.id + '/shipment/unlock',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ last4: digits })
+            },
+            18000
+        );
+        if (!result.response.ok) {
+            if (typeof showErrorModal === 'function') {
+                showErrorModal('Desbloqueio', (result.body && result.body.message) || 'Não foi possível desbloquear o cartão físico.');
+            }
+            await agilbankCartaoAcaoStatus();
+            return;
+        }
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Sucesso', (result.body && result.body.message) || 'Cartão físico desbloqueado.');
+        }
+        await agilbankCartaoAcaoStatus();
+    } catch (error) {
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Erro', (error && error.message) || 'Falha de conexão.');
+        }
+    } finally {
+        agilbankSetBtnLoading(button, false);
+    }
 }
 
 function agilbankMensagemErroVirtual(res, body, fallback) {

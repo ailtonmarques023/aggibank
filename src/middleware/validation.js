@@ -640,12 +640,16 @@ const validateInternalShipmentEvent = [
       'AGUARDANDO_COBRANCA',
       'COBRANCA_CONFIRMADA',
       'EM_PRODUCAO',
+      'REMESSA_CRIADA',
       'POSTADO',
       'EM_TRANSITO',
       'SAIU_PARA_ENTREGA',
       'ENTREGUE',
+      'AGUARDANDO_DESBLOQUEIO',
+      'DESBLOQUEADO',
       'FALHA_ENTREGA',
       'DEVOLVIDO',
+      'CANCELADO',
     ])
     .withMessage('status inválido'),
   body('eventAt')
@@ -801,6 +805,25 @@ const validatePasswordChange = [
   handleValidationErrors
 ];
 
+const validateShipmentPhysicalUnlock = [
+  param('id')
+    .isString()
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('ID de cartão inválido'),
+  body('last4')
+    .isString()
+    .trim()
+    .matches(/^\d{4}$/)
+    .withMessage('last4 deve ter exatamente 4 dígitos'),
+  body('idempotencyKey')
+    .optional()
+    .isString()
+    .trim()
+    .matches(/^[a-zA-Z0-9._:-]{8,120}$/)
+    .withMessage('idempotencyKey inválido'),
+  handleValidationErrors
+];
+
 // Validações para endereço
 const validateAddress = [
   body('cep')
@@ -848,6 +871,7 @@ module.exports = {
   validateCardRequest,
   validateCardShipmentCreate,
   validateShipmentTimelineQuery,
+  validateShipmentPhysicalUnlock,
   validateInternalShipmentEvent,
   validateLoanRequest,
   validateBoletoPayment,

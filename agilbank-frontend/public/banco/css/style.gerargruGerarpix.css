@@ -176,3 +176,134 @@
     .nav-btn:hover {
         background-color: #002244;
     }
+
+/* Cobranças AgilBank — lista e guia (dados reais via API) */
+.agilbank-cobrancas-muted {
+    color: #5a6f85;
+    font-size: 14px;
+    margin: 8px 0;
+}
+
+.agilbank-cobrancas-error {
+    color: #b42318;
+    font-size: 14px;
+    margin: 8px 0;
+}
+
+.agilbank-cobrancas-ul {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+}
+
+.agilbank-cobranca-item {
+    border: 1px solid #d3e1ef;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #f8fafc;
+}
+
+.agilbank-cobranca-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.agilbank-cobranca-item-title {
+    color: #003366;
+    font-size: 15px;
+}
+
+.agilbank-cobranca-item-status {
+    font-size: 12px;
+    text-transform: capitalize;
+    color: #0066b3;
+    font-weight: 600;
+}
+
+.agilbank-cobranca-item-meta {
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 4px;
+}
+
+.agilbank-cobranca-ver-guia {
+    margin-top: 10px;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    background: #0066b3;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.agilbank-cobranca-ver-guia:hover {
+    background: #005294;
+}
+
+.agilbank-cobrancas-back {
+    border: none;
+    background: transparent;
+    color: #0066b3;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 0 10px;
+    margin-bottom: 4px;
+}
+
+.agilbank-cobrancas-pix-aviso {
+    font-size: 14px;
+    color: #1e3550;
+    margin: 10px 0;
+}
+
+.agilbank-cobrancas-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #003366;
+    margin-bottom: 6px;
+}
+
+.agilbank-cobranca-pix-result {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #d3e1ef;
+    background: #f3f7fb;
+}
+
+.agilbank-cobranca-pix-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.agilbank-cobranca-pix-input {
+    flex: 1 1 200px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #d3e1ef;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.agilbank-cobranca-pix-copy {
+    border: none;
+    border-radius: 8px;
+    background: #0d9488;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.agilbank-cobranca-pix-copy:hover {
+    background: #0f766e;
+}

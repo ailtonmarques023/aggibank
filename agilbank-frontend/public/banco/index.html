@@ -4322,6 +4322,8 @@
 
         <div class="status-timeline" id="statusEntregaTimelineHost"></div>
 
+        <div id="statusEntregaActionsHost" class="status-entrega-actions" style="display: none; padding: 0 16px 16px;"></div>
+
         <div class="status-info" id="statusEntregaInfoHost">
             <div class="status-info-item">
                 <h4>Informações da Entrega</h4>
@@ -4841,55 +4843,79 @@
     <div class="container-gerar-boleto-pix" id="containerGerarBoletoPix">
         <div class="header-gru">
                 <div class="logo-text">
-                    <h1>GRU</h1>
-                    <span>Guia de Recolhimento da União</span>
+                    <h1>Cobranças</h1>
+                    <span>Produtos AgilBank — guia de pagamento</span>
                 </div>
             <div class="welcome-text">
                 <span>Seja bem-vindo,</span>
                 <span class="username" id="gruWelcomeUsuario">—</span>
             </div>
-            <div class="nav-buttons">
-                <button class="nav-btn">Gerar GRU</button>
-                <button class="nav-btn">Minhas GRUs</button>
+            <div class="nav-buttons" style="display:none;" aria-hidden="true">
+                <button type="button" class="nav-btn" disabled>Gerar GRU</button>
+                <button type="button" class="nav-btn" disabled>Minhas GRUs</button>
             </div>
         </div>
         <div class="content-gerar-boleto-pix">
-            <h2>Gerar Boleto ou Pix</h2>
-            <div class="info-pagamento">
+            <div id="agilbankCobrancasStepList" class="agilbank-cobrancas-step">
+                <p id="agilbankCobrancasLoading" class="agilbank-cobrancas-muted" style="display:none;">Carregando cobranças...</p>
+                <p id="agilbankCobrancasError" class="agilbank-cobrancas-error" style="display:none;"></p>
+                <p id="agilbankCobrancasEmpty" class="agilbank-cobrancas-muted" style="display:none;">Você não possui cobranças pendentes.</p>
+                <ul id="agilbankCobrancasList" class="agilbank-cobrancas-ul" style="display:none;" role="list"></ul>
+            </div>
+            <div id="agilbankCobrancasStepDetalhe" class="agilbank-cobrancas-step" style="display:none;">
+                <button type="button" id="agilbankCobrancaVoltarLista" class="agilbank-cobrancas-back">← Voltar às cobranças</button>
+                <h2 id="agilbankCobrancaTituloSecao">Dados da cobrança</h2>
+            </div>
+            <h2 id="agilbankCobrancaTituloLegacy" style="display:none;">Gerar Boleto ou Pix</h2>
+            <div class="info-pagamento" id="agilbankCobrancaInfoPagamento">
+                <div class="detalhe-pagamento">
+                    <span class="label">Produto:</span>
+                    <span class="valor" id="cobrancaValorProduto">Não informado</span>
+                </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Número do Protocolo:</span>
-                    <span class="valor">Indisponível</span>
+                    <span class="valor" id="cobrancaValorProtocolo">Não informado</span>
                 </div>
                 <div class="detalhe-pagamento">
-                    <span class="label">Situação da Solicitação:</span>
-                    <span class="valor">Indisponível</span>
+                    <span class="label">Situação:</span>
+                    <span class="valor" id="cobrancaValorSituacao">Não informado</span>
                 </div>
                 <div class="detalhe-pagamento">
-                    <span class="label">Data da Solicitação:</span>
-                    <span class="valor">Indisponível</span>
+                    <span class="label">Data da solicitação:</span>
+                    <span class="valor" id="cobrancaValorDataSol">Não informado</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">CPF:</span>
-                    <span class="valor">Indisponível</span>
+                    <span class="valor" id="cobrancaValorCpf">Não informado</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Nome:</span>
-                    <span class="valor">Indisponível</span>
+                    <span class="valor" id="cobrancaValorNome">Não informado</span>
                 </div>
                 <div class="detalhe-pagamento">
                     <span class="label">Valor:</span>
-                    <span class="valor">Indisponível</span>
+                    <span class="valor" id="cobrancaValorValor">Não informado</span>
                 </div>
             </div>
-            <div class="acoes-pagamento">
-                <button class="btn-gerar-boleto" onclick="levarboletoContainer()">
+            <p id="agilbankCobrancaPixAviso" class="agilbank-cobrancas-pix-aviso" style="display:none;"></p>
+            <div class="acoes-pagamento" id="agilbankCobrancaAcoes">
+                <button type="button" class="btn-gerar-boleto" id="agilbankCobrancaBtnBoleto" onclick="agilbankCobrancaGerarBoleto()">
                     <i class="fas fa-barcode"></i>
                     Gerar Boleto
                 </button>
-                <button class="btn-gerar-pix">
+                <button type="button" class="btn-gerar-pix" id="agilbankCobrancaBtnPix">
                     <i class="fas fa-qrcode"></i>
                     Gerar Pix
                 </button>
+            </div>
+            <div id="agilbankCobrancaPixResult" class="agilbank-cobranca-pix-result" style="display:none;">
+                <p class="agilbank-cobrancas-pix-aviso" id="agilbankCobrancaPixResultMsg">Use a chave Pix abaixo para realizar o pagamento.</p>
+                <label class="agilbank-cobrancas-label" for="agilbankCobrancaPixChave">Chave Pix (recebedor)</label>
+                <div class="agilbank-cobranca-pix-row">
+                    <input type="text" readonly class="agilbank-cobranca-pix-input" id="agilbankCobrancaPixChave" value="" autocomplete="off">
+                    <button type="button" class="agilbank-cobranca-pix-copy" id="agilbankCobrancaCopiarChave">Copiar chave Pix</button>
+                </div>
+                <p class="agilbank-cobrancas-muted" style="margin-top:8px;font-size:12px;">Não há QR Code dinâmico nesta etapa. O pagamento deve ser confirmado pelo banco após a transferência.</p>
             </div>
             <div class="observacao">
                 <p>* O prazo para processamento é de até 24 horas úteis</p>
@@ -8261,8 +8287,247 @@
         }
         document.getElementById('containerGerarBoletoPix').style.display = 'block';
         window.scrollTo(0, 0);
+        if (typeof window.agilbankCobrancasRefresh === 'function') {
+            window.agilbankCobrancasRefresh();
+        }
     });
     }
+
+    (function agilbankCobrancasUi() {
+        var selectedChargeId = null;
+
+        function cobFmtMoney(n) {
+            var x = Number(n);
+            if (!isFinite(x)) return 'Não informado';
+            return 'R$ ' + x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function cobFmtData(iso) {
+            if (!iso) return 'Não informado';
+            try {
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) return 'Não informado';
+                return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return 'Não informado';
+            }
+        }
+
+        function cobSet(id, text) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var t = text == null || String(text).trim() === '' ? 'Não informado' : String(text);
+            el.textContent = t;
+        }
+
+        function cobShow(elid, show) {
+            var el = document.getElementById(elid);
+            if (el) el.style.display = show ? '' : 'none';
+        }
+
+        async function cobApiGet(path) {
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                throw new Error('API indisponível. Faça login novamente.');
+            }
+            var res = await window.AgilBank.api.request(path, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            var body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                var msg = (body && body.message) ? body.message : 'Erro ao consultar cobranças';
+                throw new Error(msg);
+            }
+            return body;
+        }
+
+        async function cobApiPost(path) {
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                throw new Error('API indisponível. Faça login novamente.');
+            }
+            var res = await window.AgilBank.api.request(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            var body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                var msg = (body && body.message) ? body.message : 'Erro ao gerar Pix';
+                throw new Error(msg);
+            }
+            return body;
+        }
+
+        function cobResetPixUi() {
+            cobShow('agilbankCobrancaPixResult', false);
+            var inp = document.getElementById('agilbankCobrancaPixChave');
+            if (inp) inp.value = '';
+            cobShow('agilbankCobrancaPixAviso', false);
+        }
+
+        function cobMostrarLista() {
+            selectedChargeId = null;
+            cobResetPixUi();
+            cobShow('agilbankCobrancasStepList', true);
+            cobShow('agilbankCobrancasStepDetalhe', false);
+            cobShow('agilbankCobrancaInfoPagamento', false);
+            cobShow('agilbankCobrancaAcoes', false);
+        }
+
+        function cobMostrarDetalhe() {
+            cobShow('agilbankCobrancasStepList', false);
+            cobShow('agilbankCobrancasStepDetalhe', true);
+            cobShow('agilbankCobrancaInfoPagamento', true);
+            cobShow('agilbankCobrancaAcoes', true);
+        }
+
+        function cobRenderList(charges) {
+            var ul = document.getElementById('agilbankCobrancasList');
+            if (!ul) return;
+            ul.innerHTML = '';
+            charges.forEach(function (c) {
+                var li = document.createElement('li');
+                li.className = 'agilbank-cobranca-item';
+                var st = String(c.status || '').toLowerCase();
+                li.innerHTML =
+                    '<div class="agilbank-cobranca-item-head">' +
+                    '<strong class="agilbank-cobranca-item-title">' +
+                    String(c.title || 'Cobrança').replace(/</g, '&lt;') +
+                    '</strong>' +
+                    '<span class="agilbank-cobranca-item-status">' +
+                    String(st || '—').replace(/</g, '&lt;') +
+                    '</span></div>' +
+                    '<div class="agilbank-cobranca-item-meta">' +
+                    String(c.product || '').replace(/</g, '&lt;') +
+                    ' · ' +
+                    cobFmtMoney(c.amount) +
+                    '</div>' +
+                    '<div class="agilbank-cobranca-item-meta">' +
+                    cobFmtData(c.createdAt) +
+                    '</div>' +
+                    '<button type="button" class="agilbank-cobranca-ver-guia" data-charge-id="' +
+                    String(c.id).replace(/"/g, '') +
+                    '">Ver guia</button>';
+                ul.appendChild(li);
+            });
+            ul.querySelectorAll('.agilbank-cobranca-ver-guia').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-charge-id');
+                    if (id) void cobAbrirGuia(id);
+                });
+            });
+        }
+
+        async function cobAbrirGuia(chargeId) {
+            selectedChargeId = chargeId;
+            cobResetPixUi();
+            try {
+                var body = await cobApiGet('charges/' + encodeURIComponent(chargeId));
+                var d = body.data || {};
+                var ch = d.charge || {};
+                var u = d.user || {};
+                cobMostrarDetalhe();
+                cobSet('cobrancaValorProduto', ch.product || '');
+                cobSet('cobrancaValorProtocolo', ch.protocol || '');
+                cobSet('cobrancaValorSituacao', ch.status || '');
+                cobSet('cobrancaValorDataSol', cobFmtData(ch.createdAt));
+                cobSet('cobrancaValorCpf', u.cpf || '');
+                cobSet('cobrancaValorNome', u.name || '');
+                cobSet('cobrancaValorValor', cobFmtMoney(ch.amount));
+                var btnPix = document.getElementById('agilbankCobrancaBtnPix');
+                if (btnPix) {
+                    btnPix.disabled = ch.canPayPix === false;
+                }
+            } catch (err) {
+                console.error('cobAbrirGuia:', err);
+                alert((err && err.message) || 'Não foi possível carregar a cobrança.');
+                cobMostrarLista();
+            }
+        }
+
+        async function cobGerarPix() {
+            if (!selectedChargeId) {
+                alert('Selecione uma cobrança e abra a guia antes de gerar Pix.');
+                return;
+            }
+            try {
+                var body = await cobApiPost('charges/' + encodeURIComponent(selectedChargeId) + '/pix');
+                var d = body.data || {};
+                var key = d.pixKey || '';
+                var msg = d.message || 'Use a chave Pix abaixo para realizar o pagamento.';
+                var msgEl = document.getElementById('agilbankCobrancaPixResultMsg');
+                if (msgEl) msgEl.textContent = msg;
+                var inp = document.getElementById('agilbankCobrancaPixChave');
+                if (inp) inp.value = key;
+                cobShow('agilbankCobrancaPixResult', true);
+            } catch (err) {
+                console.error('cobGerarPix:', err);
+                alert((err && err.message) || 'Não foi possível obter dados Pix.');
+            }
+        }
+
+        window.agilbankCobrancaGerarBoleto = function () {
+            if (selectedChargeId) {
+                alert('Para cobranças de produtos AgilBank, utilize o Pix. O boleto modelo GRU não se aplica a este débito.');
+                return;
+            }
+            levarboletoContainer();
+        };
+
+        window.agilbankCobrancasRefresh = async function () {
+            cobMostrarLista();
+            cobShow('agilbankCobrancasLoading', true);
+            cobShow('agilbankCobrancasError', false);
+            cobShow('agilbankCobrancasEmpty', false);
+            cobShow('agilbankCobrancasList', false);
+            try {
+                var body = await cobApiGet('charges');
+                var charges = (body.data && body.data.charges) || [];
+                cobShow('agilbankCobrancasLoading', false);
+                if (!charges.length) {
+                    cobShow('agilbankCobrancasEmpty', true);
+                    return;
+                }
+                cobRenderList(charges);
+                cobShow('agilbankCobrancasList', true);
+            } catch (err) {
+                console.warn('agilbankCobrancasRefresh:', err);
+                cobShow('agilbankCobrancasLoading', false);
+                var er = document.getElementById('agilbankCobrancasError');
+                if (er) {
+                    er.textContent = (err && err.message) ? String(err.message) : 'Não foi possível carregar as cobranças.';
+                    er.style.display = '';
+                }
+                cobShow('agilbankCobrancasEmpty', true);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var voltar = document.getElementById('agilbankCobrancaVoltarLista');
+            if (voltar) voltar.addEventListener('click', cobMostrarLista);
+            var btnPix = document.getElementById('agilbankCobrancaBtnPix');
+            if (btnPix) btnPix.addEventListener('click', function () { void cobGerarPix(); });
+            var copiar = document.getElementById('agilbankCobrancaCopiarChave');
+            if (copiar) {
+                copiar.addEventListener('click', function () {
+                    var inp = document.getElementById('agilbankCobrancaPixChave');
+                    if (!inp || !inp.value) return;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(inp.value).then(function () {
+                            alert('Chave Pix copiada.');
+                        }).catch(function () {
+                            inp.select();
+                            document.execCommand('copy');
+                            alert('Chave Pix copiada.');
+                        });
+                    } else {
+                        inp.select();
+                        document.execCommand('copy');
+                        alert('Chave Pix copiada.');
+                    }
+                });
+            }
+        });
+    })();
 
     // funcao para gerar boleto
     function levarboletoContainer() {
