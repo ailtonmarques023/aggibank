@@ -862,34 +862,204 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
     }
 }
 
-function agilbankRenderStatusEntregaParaCartao(c) {
+function agilbankShipmentFormatMoney(amount) {
+    var n = Number(amount);
+    if (!isFinite(n)) return 'Indisponível';
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function agilbankShipmentFormatDate(iso) {
+    if (!iso) return 'Indisponível';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Indisponível';
+    return d.toLocaleString('pt-BR');
+}
+
+function agilbankShipmentAddressText(addressSnapshot) {
+    var a = addressSnapshot && typeof addressSnapshot === 'object' ? addressSnapshot : null;
+    if (!a) return 'Endereço não informado pela API.';
+    var logradouro = [a.logradouro, a.numero].filter(function (x) { return x && String(x).trim(); }).join(', ');
+    if (a.complemento && String(a.complemento).trim()) {
+        logradouro = logradouro ? logradouro + ' - ' + a.complemento : String(a.complemento).trim();
+    }
+    var cidadeUf = [a.cidade, a.estado].filter(function (x) { return x && String(x).trim(); }).join('/');
+    var parts = [logradouro, a.bairro, cidadeUf, a.cep].filter(function (x) { return x && String(x).trim(); });
+    return parts.length ? parts.join(' - ') : 'Endereço não informado pela API.';
+}
+
+function agilbankShipmentStatusMeta(status) {
+    var s = String(status || '').trim().toUpperCase();
+    var map = {
+        AGUARDANDO_COBRANCA: {
+            title: 'Em análise',
+            description: 'Aguardando confirmação da cobrança do frete para iniciar o fluxo logístico.'
+        },
+        COBRANCA_CONFIRMADA: {
+            title: 'Frete cobrado',
+            description: 'Taxa de frete confirmada. Preparando o cartão físico para produção.'
+        },
+        EM_PRODUCAO: {
+            title: 'Em produção',
+            description: 'Seu cartão está em produção e seguirá para postagem após a finalização.'
+        },
+        POSTADO: {
+            title: 'Postado',
+            description: 'Cartão postado pela transportadora. O rastreio foi liberado.'
+        },
+        EM_TRANSITO: {
+            title: 'Em trânsito',
+            description: 'Cartão em trânsito para o endereço cadastrado.'
+        },
+        SAIU_PARA_ENTREGA: {
+            title: 'Saiu para entrega',
+            description: 'O cartão saiu para entrega e deve chegar no endereço informado.'
+        },
+        ENTREGUE: {
+            title: 'Entregue',
+            description: 'Entrega concluída com sucesso para o titular.'
+        },
+        FALHA_ENTREGA: {
+            title: 'Falha na entrega',
+            description: 'A transportadora informou falha na tentativa de entrega. Aguarde próxima atualização.'
+        },
+        DEVOLVIDO: {
+            title: 'Falha na entrega',
+            description: 'A remessa foi devolvida. Entre em contato com o suporte para nova emissão.'
+        }
+    };
+    return map[s] || {
+        title: 'Sem dados',
+        description: 'A API não retornou um status logístico reconhecido para este cartão.'
+    };
+}
+
+function agilbankShipmentTimelineLabelByEvent(ev) {
+    var type = String(ev && ev.eventType ? ev.eventType : '').toUpperCase();
+    if (type === 'SHIPMENT_CREATED') return 'Em análise';
+    if (type === 'FRETE_COBRADO') return 'Frete cobrado';
+    if (type === 'FRETE_RECUSADO') return 'Falha na cobrança do frete';
+    if (type === 'STATUS_ATUALIZADO') {
+        var meta = agilbankShipmentStatusMeta(ev && ev.shipmentStatus);
+        return meta.title;
+    }
+    var fallback = agilbankShipmentStatusMeta(ev && ev.shipmentStatus);
+    return fallback.title;
+}
+
+function agilbankRenderStatusEntregaParaCartao(c, state) {
     var host = document.getElementById('statusEntregaTimelineHost');
     var l1 = document.getElementById('statusEntregaLinha1');
     var l2 = document.getElementById('statusEntregaLinha2');
     var end = document.getElementById('enderecoEntrega');
     if (!host) return;
+    var payload = state && typeof state === 'object' ? state : {};
+    var uiState = payload.uiState || 'sem_dados';
+    var shipment = payload.shipment || null;
+    var timeline = Array.isArray(payload.timeline) ? payload.timeline : [];
+    var timelineError = payload.timelineError || '';
 
-    var pendente = c && !agilbankStatusCartaoAtivo(c);
-    if (pendente) {
+    if (uiState === 'loading') {
         host.innerHTML =
             '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
-            '<h4>Em análise</h4>' +
-            '<p>Seu pedido de cartão ainda está em análise. Não há dados de entrega disponíveis neste momento.</p>' +
-            '<small>Status: pendente</small></div></div>';
-        if (l1) l1.textContent = 'Rastreio: indisponível';
-        if (l2) l2.textContent = 'Transportadora: indisponível';
-        if (end) end.textContent = 'Endereço de entrega: indisponível até aprovação do cartão.';
+            '<h4>Carregando status</h4>' +
+            '<p>Consultando frete e rastreamento no backend...</p>' +
+            '<small>Aguarde alguns segundos</small></div></div>';
+        if (l1) l1.textContent = 'Frete: carregando...';
+        if (l2) l2.textContent = 'Status logístico: carregando...';
+        if (end) end.textContent = 'Endereço de entrega: carregando...';
         return;
     }
 
-    host.innerHTML =
-        '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
-        '<h4>Status de entrega</h4>' +
-        '<p>Status de entrega ainda não disponível pelo aplicativo. Quando houver dados no sistema, eles aparecerão aqui.</p>' +
-        '<small>Sem previsão registrada na API</small></div></div>';
-    if (l1) l1.textContent = 'Rastreio: indisponível';
-    if (l2) l2.textContent = 'Transportadora: indisponível';
-    if (end) end.textContent = 'Endereço de entrega: indisponível (não informado pela API).';
+    if (uiState === 'em_analise') {
+        host.innerHTML =
+            '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
+            '<h4>Em análise</h4>' +
+            '<p>Seu cartão ainda está em análise. A entrega só inicia após aprovação e criação da remessa no backend.</p>' +
+            '<small>Status do cartão: pendente</small></div></div>';
+        if (l1) l1.textContent = 'Frete: não iniciado';
+        if (l2) l2.textContent = 'Status logístico: em análise';
+        if (end) end.textContent = 'Endereço de entrega: disponível após criação da remessa.';
+        return;
+    }
+
+    if (uiState === 'falha' || uiState === 'timeout') {
+        var msg = payload.message || 'Falha ao consultar status de entrega.';
+        host.innerHTML =
+            '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
+            '<h4>Falha ao carregar</h4>' +
+            '<p>' + msg + '</p>' +
+            '<small>Tente novamente em instantes</small></div></div>';
+        if (l1) l1.textContent = 'Frete: indisponível';
+        if (l2) l2.textContent = 'Status logístico: falha';
+        if (end) end.textContent = 'Endereço de entrega: indisponível.';
+        return;
+    }
+
+    if (uiState === 'sem_dados') {
+        host.innerHTML =
+            '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
+            '<h4>Sem dados de entrega</h4>' +
+            '<p>Não existe remessa registrada para este cartão no backend.</p>' +
+            '<small>Aguardando criação de shipment</small></div></div>';
+        if (l1) l1.textContent = 'Frete: sem dados';
+        if (l2) l2.textContent = 'Status logístico: sem dados';
+        if (end) end.textContent = 'Endereço de entrega: sem dados.';
+        return;
+    }
+
+    var currentMeta = agilbankShipmentStatusMeta(shipment && shipment.status);
+    var statusOrder = [
+        'AGUARDANDO_COBRANCA',
+        'COBRANCA_CONFIRMADA',
+        'EM_PRODUCAO',
+        'POSTADO',
+        'EM_TRANSITO',
+        'SAIU_PARA_ENTREGA',
+        'ENTREGUE'
+    ];
+    var currentStatus = String(shipment && shipment.status ? shipment.status : '').toUpperCase();
+    var currentIndex = statusOrder.indexOf(currentStatus);
+    host.innerHTML = '';
+
+    if (!timeline.length) {
+        host.innerHTML =
+            '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
+            '<h4>Timeline vazia</h4>' +
+            '<p>A remessa existe, porém ainda não há eventos logísticos para exibir.</p>' +
+            '<small>Status atual: ' + currentMeta.title + '</small></div></div>';
+    } else {
+        timeline.forEach(function (ev) {
+            var idx = statusOrder.indexOf(String(ev && ev.shipmentStatus ? ev.shipmentStatus : '').toUpperCase());
+            var klass = 'status-item';
+            if (idx >= 0 && currentIndex >= 0 && idx < currentIndex) klass += ' completed';
+            if ((idx >= 0 && idx === currentIndex) || idx < 0) klass += ' active';
+            var label = agilbankShipmentTimelineLabelByEvent(ev);
+            var description = ev && ev.description ? String(ev.description) : agilbankShipmentStatusMeta(ev && ev.shipmentStatus).description;
+            var whenTxt = agilbankShipmentFormatDate(ev && ev.eventAt);
+            host.innerHTML +=
+                '<div class="' + klass + '"><div class="status-dot"></div><div class="status-content">' +
+                '<h4>' + label + '</h4>' +
+                '<p>' + description + '</p>' +
+                '<small>' + whenTxt + '</small></div></div>';
+        });
+    }
+
+    if (timelineError) {
+        host.innerHTML +=
+            '<div class="status-item active"><div class="status-dot"></div><div class="status-content">' +
+            '<h4>Falha parcial</h4>' +
+            '<p>' + timelineError + '</p>' +
+            '<small>Exibindo dados disponíveis de shipment</small></div></div>';
+    }
+
+    var fee = agilbankShipmentFormatMoney(shipment && shipment.shippingFeeAmount);
+    var feeStatus = shipment && shipment.shippingFeeStatus ? String(shipment.shippingFeeStatus) : 'indisponível';
+    var tracking = shipment && shipment.trackingCode ? String(shipment.trackingCode) : 'indisponível';
+    var carrier = shipment && shipment.carrierName ? String(shipment.carrierName) : 'indisponível';
+    var eta = shipment && shipment.estimatedDeliveryAt ? agilbankShipmentFormatDate(shipment.estimatedDeliveryAt) : 'Indisponível';
+    if (l1) l1.textContent = 'Frete: ' + fee + ' (' + feeStatus + ')';
+    if (l2) l2.textContent = 'Status: ' + currentMeta.title + ' | Rastreio: ' + tracking + ' | Transportadora: ' + carrier + ' | Previsão: ' + eta;
+    if (end) end.textContent = agilbankShipmentAddressText(shipment && shipment.addressSnapshot);
 }
 
 function agilbankMensagemErroVirtual(res, body, fallback) {
@@ -1004,7 +1174,7 @@ function agilbankAtualizarBotoesPainelCartoes() {
     }
 
     var ok = agilbankStatusCartaoAtivo(c);
-    setDis(bSt, true);
+    setDis(bSt, false);
     setDis(bVer, !ok);
     setDis(bFi, !ok);
     setDis(bVi, !ok);
@@ -1035,9 +1205,97 @@ function agilbankPainelCartoesBindAcoes() {
     });
 }
 
-function agilbankCartaoAcaoStatus() {
-    if (typeof showErrorModal === 'function') {
-        showErrorModal('Indisponível no momento', 'Status de entrega ainda não disponível.');
+async function agilbankCartaoAcaoStatus() {
+    var c = agilbankGetCartaoSelecionado();
+    if (!c || !c.id) {
+        if (typeof showErrorModal === 'function') {
+            showErrorModal('Status de entrega', 'Nenhum cartão selecionado para consultar entrega.');
+        }
+        return;
+    }
+
+    if (typeof ocultarTodosContainers === 'function') {
+        ocultarTodosContainers();
+    }
+    var hostContainer = document.getElementById('statusEntregaContainer');
+    if (hostContainer) hostContainer.style.display = 'block';
+    if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+
+    agilbankRenderStatusEntregaParaCartao(c, { uiState: 'loading' });
+    var btnStatus = document.getElementById('cartaoAcaoStatus');
+    agilbankSetBtnLoading(btnStatus, true, 'Consultando...');
+    try {
+        if (!agilbankStatusCartaoAtivo(c)) {
+            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'em_analise' });
+            return;
+        }
+        var shipmentResult = await agilbankRequestCards('cards/' + c.id + '/shipment', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        }, 12000);
+        if (!shipmentResult.response.ok) {
+            var code = shipmentResult.body && shipmentResult.body.code ? String(shipmentResult.body.code) : '';
+            if (shipmentResult.response.status === 401) {
+                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'falha', message: 'Sessão expirada. Faça login novamente para consultar a entrega.' });
+                return;
+            }
+            if (shipmentResult.response.status === 403) {
+                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'falha', message: 'Permissão negada para consultar esta entrega.' });
+                return;
+            }
+            if (shipmentResult.response.status === 404 && code === 'SHIPMENT_NOT_FOUND') {
+                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'sem_dados' });
+                return;
+            }
+            if (shipmentResult.response.status === 422 || code === 'VALIDATION_ERROR') {
+                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'falha', message: 'Falha de validação ao consultar a remessa.' });
+                return;
+            }
+            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'falha', message: (shipmentResult.body && shipmentResult.body.message) || 'Erro interno ao consultar status de entrega.' });
+            return;
+        }
+
+        var shipment = shipmentResult.body && shipmentResult.body.data ? shipmentResult.body.data.shipment : null;
+        if (!shipment) {
+            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'sem_dados' });
+            return;
+        }
+
+        var timeline = shipmentResult.body && shipmentResult.body.data && Array.isArray(shipmentResult.body.data.timeline)
+            ? shipmentResult.body.data.timeline
+            : [];
+        var timelineError = '';
+        try {
+            var timelineResult = await agilbankRequestCards('cards/' + c.id + '/shipment/timeline?page=1&limit=20', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            }, 12000);
+            if (timelineResult.response.ok) {
+                var timelineApi = timelineResult.body && timelineResult.body.data && Array.isArray(timelineResult.body.data.timeline)
+                    ? timelineResult.body.data.timeline
+                    : [];
+                timeline = timelineApi;
+            } else {
+                timelineError = 'Não foi possível carregar a timeline completa. Os dados atuais de shipment foram mantidos.';
+            }
+        } catch (timelineErr) {
+            timelineError = (timelineErr && timelineErr.message) || 'Falha de conexão ao carregar timeline.';
+        }
+
+        agilbankRenderStatusEntregaParaCartao(c, {
+            uiState: timeline.length ? 'sucesso' : 'vazio',
+            shipment: shipment,
+            timeline: timeline,
+            timelineError: timelineError
+        });
+    } catch (error) {
+        var isTimeout = error && String(error.message || '').toLowerCase().indexOf('tempo de resposta esgotado') >= 0;
+        agilbankRenderStatusEntregaParaCartao(c, {
+            uiState: isTimeout ? 'timeout' : 'falha',
+            message: (error && error.message) || 'Falha de conexão ao consultar entrega.'
+        });
+    } finally {
+        agilbankSetBtnLoading(btnStatus, false);
     }
 }
 

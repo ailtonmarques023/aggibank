@@ -2,37 +2,79 @@
   "use strict";
 
   const LOGIN_PATH = "../index.html";
+  const HOME_PATH = "./index.html";
   const REQUEST_TIMEOUT_MS = 12000;
   const TOKEN_KEYS = ["agilbank_token", "govbr_token", "token"];
+  const DEFAULT_PRAZOS = [6, 12, 18, 24];
 
   class EmprestimosModule {
     constructor(documentRef) {
       this.document = documentRef;
-      this.currentState = "loading";
-      this.elements = this.getElements();
       this.apiBase =
         typeof window.getAgilbankApiBase === "function"
           ? window.getAgilbankApiBase()
           : null;
-      this.isEligible = null;
+
+      this.state = {
+        currentStep: "loading",
+        isEligible: null,
+        eligibility: null,
+        history: [],
+        selectedValue: 0,
+        selectedPrazo: null,
+        simulation: null,
+        insuranceChoice: null
+      };
+
+      this.elements = this.getElements();
     }
 
     getElements() {
       return {
-        app: this.document.getElementById("abEmpApp"),
+        shell: this.document.getElementById("abEmpShell"),
         statePill: this.document.getElementById("abEmpStatePill"),
-        eligibilityText: this.document.getElementById("abEmpEligibilityText"),
-        simulacaoResultado: this.document.getElementById("abEmpSimulacaoResultado"),
         statusText: this.document.getElementById("abEmpStatusText"),
-        historico: this.document.getElementById("abEmpHistorico"),
-        valor: this.document.getElementById("abEmpValor"),
-        parcelas: this.document.getElementById("abEmpParcelas"),
-        finalidade: this.document.getElementById("abEmpFinalidade"),
-        simularBtn: this.document.getElementById("abEmpSimularBtn"),
-        enviarBtn: this.document.getElementById("abEmpEnviarBtn"),
-        form: this.document.getElementById("abEmpForm"),
         retryBtn: this.document.getElementById("abEmpRetryBtn"),
         loginBtn: this.document.getElementById("abEmpLoginBtn"),
+        backBtn: this.document.getElementById("abEmpBackBtn"),
+        topbarTitle: this.document.querySelector(".ab-emp-topbar-title"),
+
+        stepLoading: this.document.getElementById("abEmpStepLoading"),
+        stepBlocked: this.document.getElementById("abEmpStepBlocked"),
+        stepValue: this.document.getElementById("abEmpStepValue"),
+        stepInstallments: this.document.getElementById("abEmpStepInstallments"),
+        stepInsurance: this.document.getElementById("abEmpStepInsurance"),
+        stepReview: this.document.getElementById("abEmpStepReview"),
+        stepSubmitted: this.document.getElementById("abEmpStepSubmitted"),
+        stepHistory: this.document.getElementById("abEmpStepHistory"),
+
+        blockedReason: this.document.getElementById("abEmpBlockedReason"),
+        backHomeBlockedBtn: this.document.getElementById("abEmpBackHomeBlockedBtn"),
+
+        valueBig: this.document.getElementById("abEmpValueBig"),
+        valueLimitText: this.document.getElementById("abEmpValueLimitText"),
+        valueInput: this.document.getElementById("abEmpValorInput"),
+        valueError: this.document.getElementById("abEmpValueError"),
+        continueValueBtn: this.document.getElementById("abEmpContinueValueBtn"),
+
+        requestedValueText: this.document.getElementById("abEmpRequestedValueText"),
+        prazoChips: this.document.getElementById("abEmpPrazoChips"),
+        simulationCard: this.document.getElementById("abEmpSimulationCard"),
+        improveOfferBtn: this.document.getElementById("abEmpImproveOfferBtn"),
+        simulationError: this.document.getElementById("abEmpSimulationError"),
+        continueInstallmentsBtn: this.document.getElementById("abEmpContinueInstallmentsBtn"),
+
+        insuranceOptions: Array.from(this.document.querySelectorAll("[data-insurance]")),
+        insuranceError: this.document.getElementById("abEmpInsuranceError"),
+        continueInsuranceBtn: this.document.getElementById("abEmpContinueInsuranceBtn"),
+
+        reviewList: this.document.getElementById("abEmpReviewList"),
+        reviewMetricsCard: this.document.getElementById("abEmpReviewMetricsCard"),
+        submitProposalBtn: this.document.getElementById("abEmpSubmitProposalBtn"),
+
+        goHistoryBtn: this.document.getElementById("abEmpGoHistoryBtn"),
+        historyCards: this.document.getElementById("abEmpHistoryCards"),
+
         navInicioBtn: this.document.getElementById("abEmpNavInicio"),
         navPerfilBtn: this.document.getElementById("abEmpNavPerfil")
       };
@@ -40,15 +82,29 @@
 
     async init() {
       this.bindEvents();
-      this.setState("loading", "Carregando modulo de emprestimos...");
+      this.showStep("loading");
       await this.bootstrapData();
     }
 
     bindEvents() {
-      this.elements.simularBtn.addEventListener("click", () => this.handleSimulacao());
-      this.elements.form.addEventListener("submit", (event) => this.handleSubmit(event));
       this.elements.retryBtn.addEventListener("click", () => this.bootstrapData());
       this.elements.loginBtn.addEventListener("click", () => this.redirectToLogin());
+      this.elements.backBtn.addEventListener("click", () => this.handleBack());
+      this.elements.backHomeBlockedBtn.addEventListener("click", () => this.redirectToHome());
+      this.elements.valueInput.addEventListener("input", () => this.onValueInput());
+      this.elements.continueValueBtn.addEventListener("click", () => this.handleContinueValue());
+      this.elements.continueInstallmentsBtn.addEventListener("click", () => this.goToStep("insurance"));
+      if (this.elements.improveOfferBtn) {
+        this.elements.improveOfferBtn.addEventListener("click", () => this.goToStep("value"));
+      }
+      this.elements.continueInsuranceBtn.addEventListener("click", () => this.handleContinueInsurance());
+      this.elements.submitProposalBtn.addEventListener("click", () => this.handleSubmitProposal());
+      this.elements.goHistoryBtn.addEventListener("click", () => this.goToStep("history"));
+
+      this.elements.insuranceOptions.forEach((btn) => {
+        btn.addEventListener("click", () => this.selectInsurance(btn.dataset.insurance || ""));
+      });
+
       if (this.elements.navInicioBtn) {
         this.elements.navInicioBtn.addEventListener("click", () => this.redirectToHome());
       }
@@ -57,25 +113,16 @@
       }
     }
 
-    setState(nextState, statusMessage, actions = {}) {
-      this.currentState = nextState;
-      this.elements.app.className = `ab-emp-app ab-emp-state-${nextState}`;
-      this.elements.statePill.textContent = nextState;
-      this.elements.statusText.textContent = statusMessage;
-      this.elements.retryBtn.hidden = !actions.retry;
-      this.elements.loginBtn.hidden = !actions.login;
-    }
-
     async bootstrapData() {
-      this.setState("loading", "Validando sessao e carregando informacoes de emprestimos...");
+      this.setLoadingState("Validando sessao e carregando dados...");
 
       const token = this.getToken();
       if (!token) {
-        this.handleKnownError({ kind: "not-authenticated", detail: "Sessao nao encontrada." });
+        this.setErrorState("Sessao nao encontrada. Faca login novamente.", { showLogin: true });
         return;
       }
 
-      const [eligibilityResult, historicoResult] = await Promise.all([
+      const [eligibilityResult, historyResult] = await Promise.all([
         this.requestLoan("loans/eligibility"),
         this.requestLoan("loans")
       ]);
@@ -84,121 +131,238 @@
         this.handleKnownError(eligibilityResult.error);
         return;
       }
-
-      if (!historicoResult.ok) {
-        this.handleKnownError(historicoResult.error);
+      if (!historyResult.ok) {
+        this.handleKnownError(historyResult.error);
         return;
       }
 
-      this.renderEligibility(eligibilityResult.data);
-      this.renderHistorico(historicoResult.data);
+      if (!this.isValidEligibility(eligibilityResult.data)) {
+        this.setErrorState("Resposta de elegibilidade veio incompleta.", { showRetry: true });
+        return;
+      }
+
+      this.state.eligibility = eligibilityResult.data;
+      this.state.isEligible = Boolean(eligibilityResult.data.isElegivel);
+      this.state.history = this.extractHistory(historyResult.data);
+      this.renderHistory();
+
+      if (!this.state.isEligible) {
+        this.elements.blockedReason.textContent =
+          "No momento, sua conta ainda nao possui elegibilidade para solicitar credito pessoal. Continue usando o AgilBank e tente novamente em outro momento.";
+        this.showStep("blocked");
+        return;
+      }
+
+      const limiteMaximo = this.getLimiteMaximo();
+      this.elements.valueLimitText.textContent = `Peça ate R$ ${this.formatMoney(limiteMaximo)}`;
+      this.showStep("value");
+      this.onValueInput();
     }
 
-    renderEligibility(payload) {
-      if (!payload || typeof payload !== "object" || typeof payload.isElegivel !== "boolean") {
-        this.handleKnownError({
-          kind: "invalid-response",
-          detail: "Resposta de elegibilidade veio incompleta."
-        });
-        return;
-      }
-
-      if (!payload.isElegivel) {
-        this.isEligible = false;
-        this.elements.enviarBtn.disabled = true;
-        this.elements.simularBtn.disabled = true;
-        this.elements.eligibilityText.textContent =
-          "Voce ainda nao esta elegivel para solicitar credito pessoal. Continue usando sua conta para melhorar seu relacionamento com o AgilBank.";
-        this.elements.simulacaoResultado.textContent =
-          "Sem elegibilidade no momento. Simulacao e envio de proposta permanecem bloqueados.";
-        this.setState("historico-vazio", "Conta sem elegibilidade para enviar proposta neste momento.");
-        return;
-      }
-
-      this.isEligible = true;
-      this.elements.enviarBtn.disabled = false;
-      this.elements.simularBtn.disabled = false;
-      const taxa = this.formatMoney(payload.taxaJuros);
-      const limite = this.formatMoney(payload.limiteMaximo);
-      this.elements.eligibilityText.textContent =
-        `Elegivel para analise. Limite de referencia: R$ ${limite}. Taxa inicial estimada: ${taxa}% ao mes.`;
+    getLimiteMaximo() {
+      const payload = this.state.eligibility || {};
+      const limite = Number(payload.limiteMaximo);
+      return Number.isFinite(limite) && limite > 0 ? limite : 0;
     }
 
-    async handleSimulacao() {
-      try {
-        const valor = Number(this.elements.valor.value);
-        const parcelas = Number(this.elements.parcelas.value);
-
-        if (!Number.isFinite(valor) || !Number.isFinite(parcelas) || valor <= 0 || parcelas <= 0) {
-          this.setState("erro", "Erro de validacao: informe valor e parcelas maiores que zero.");
-          this.elements.simulacaoResultado.textContent = "Simulacao invalida. Revise os campos.";
-          return;
-        }
-
-        this.setState("loading", "Consultando simulacao na API...");
-        const simulationResult = await this.requestLoan("loans/simulate", {
-          method: "POST",
-          body: JSON.stringify({ valor, prazoMeses: parcelas })
-        });
-
-        if (!simulationResult.ok) {
-          this.handleKnownError(simulationResult.error);
-          return;
-        }
-
-        const data = simulationResult.data;
-        if (!data || !Number.isFinite(Number(data.valorParcela))) {
-          this.handleKnownError({
-            kind: "invalid-response",
-            detail: "Simulacao veio sem valor de parcela valido."
-          });
-          return;
-        }
-
-        this.setState("simulacao", "Simulacao recebida da API para apoio de decisao.");
-        this.elements.simulacaoResultado.textContent =
-          `Estimativa: ${this.formatInteger(data.prazoMeses)}x de R$ ${this.formatMoney(data.valorParcela)}. ` +
-          "Resultado nao representa aprovacao nem liberacao imediata.";
-      } catch (error) {
-        this.handleKnownError({ kind: "internal", detail: "Falha inesperada na simulacao." });
-      }
+    onValueInput() {
+      const raw = Number(this.elements.valueInput.value);
+      const value = Number.isFinite(raw) ? raw : 0;
+      this.elements.valueBig.textContent = `R$ ${this.formatMoney(value)}`;
+      this.elements.valueError.textContent = "";
     }
 
-    async handleSubmit(event) {
-      event.preventDefault();
+    handleContinueValue() {
+      const value = Number(this.elements.valueInput.value);
+      const limiteMaximo = this.getLimiteMaximo();
 
-      const valor = Number(this.elements.valor.value);
-      const parcelas = Number(this.elements.parcelas.value);
-      const finalidade = this.elements.finalidade.value;
-
-      if (!finalidade || !Number.isFinite(valor) || !Number.isFinite(parcelas) || valor <= 0 || parcelas <= 0) {
-        this.setState(
-          "erro",
-          "Erro de validacao: preencha valor, parcelas e finalidade para seguir."
-        );
+      if (!Number.isFinite(value) || value <= 0) {
+        this.elements.valueError.textContent = "Informe um valor maior que zero para continuar.";
+        return;
+      }
+      if (limiteMaximo > 0 && value > limiteMaximo) {
+        this.elements.valueError.textContent = `Valor acima do limite permitido (R$ ${this.formatMoney(limiteMaximo)}).`;
         return;
       }
 
-      if (this.isEligible === false) {
-        this.handleKnownError({
-          kind: "not-eligible",
-          detail:
-            "Voce ainda nao esta elegivel para solicitar credito pessoal. Continue usando sua conta para melhorar seu relacionamento com o AgilBank."
-        });
+      this.state.selectedValue = Math.round(value * 100) / 100;
+      this.state.selectedPrazo = null;
+      this.state.simulation = null;
+      this.elements.requestedValueText.textContent = `Valor solicitado: R$ ${this.formatMoney(this.state.selectedValue)}`;
+      this.renderPrazoChips();
+      this.elements.simulationCard.innerHTML = '<p class="ab-emp-muted">Selecione um prazo para simular na API.</p>';
+      this.elements.continueInstallmentsBtn.disabled = true;
+      this.goToStep("installments");
+    }
+
+    renderPrazoChips() {
+      this.elements.prazoChips.innerHTML = "";
+      DEFAULT_PRAZOS.forEach((prazo) => {
+        const btn = this.document.createElement("button");
+        btn.type = "button";
+        btn.className = "ab-emp-chip";
+        btn.textContent = `${prazo}x`;
+        btn.addEventListener("click", () => this.simulateForPrazo(prazo, btn));
+        this.elements.prazoChips.appendChild(btn);
+      });
+    }
+
+    async simulateForPrazo(prazo, buttonEl) {
+      if (!this.state.isEligible) {
+        this.elements.simulationError.textContent = "Simulacao indisponivel para conta nao elegivel.";
         return;
       }
-
-      this.elements.enviarBtn.disabled = true;
-      this.elements.simularBtn.disabled = true;
-      this.setState(
-        "em-analise",
-        "Enviando solicitacao para analise..."
+      this.elements.simulationError.textContent = "";
+      this.elements.continueInstallmentsBtn.disabled = true;
+      Array.from(this.elements.prazoChips.querySelectorAll(".ab-emp-chip")).forEach((chip) =>
+        chip.classList.remove("is-active")
       );
+      if (buttonEl) buttonEl.classList.add("is-active");
+
+      this.elements.simulationCard.innerHTML = '<p class="ab-emp-muted">Consultando simulacao real...</p>';
+      const result = await this.requestLoan("loans/simulate", {
+        method: "POST",
+        body: JSON.stringify({
+          valor: this.state.selectedValue,
+          prazoMeses: prazo
+        })
+      });
+
+      if (!result.ok) {
+        this.handleSimulationError(result.error);
+        return;
+      }
+      if (!this.isValidSimulation(result.data)) {
+        this.elements.simulationError.textContent = "A API retornou simulacao incompleta. Tente outro prazo.";
+        return;
+      }
+
+      this.state.selectedPrazo = prazo;
+      this.state.simulation = result.data;
+      this.renderSimulationCard();
+      this.elements.continueInstallmentsBtn.disabled = false;
+    }
+
+    renderSimulationCard() {
+      const sim = this.state.simulation || {};
+      const prazo = Number(sim.prazoMeses || this.state.selectedPrazo || 0);
+      const parcela = Number(sim.valorParcela || 0);
+      const total = this.resolveSimulationTotal(sim, parcela, prazo);
+
+      this.elements.simulationCard.innerHTML =
+        `<div class="ab-emp-sim-main">` +
+        `<strong>${this.formatInteger(prazo)}x R$ ${this.formatMoney(parcela)}</strong>` +
+        `<span>R$ ${this.formatMoney(total)}</span>` +
+        `</div>` +
+        `<div class="ab-emp-sim-sub">` +
+        `<span>Total estimado</span>` +
+        `<span>Simulacao real da API</span>` +
+        `</div>`;
+    }
+
+    resolveSimulationTotal(simulation, parcela, prazo) {
+      const candidates = [simulation.totalPagar, simulation.valorTotal, simulation.total, simulation.totalEmprestado];
+      for (let i = 0; i < candidates.length; i += 1) {
+        const n = Number(candidates[i]);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      if (Number.isFinite(parcela) && Number.isFinite(prazo)) {
+        return parcela * prazo;
+      }
+      return 0;
+    }
+
+    selectInsurance(choice) {
+      if (choice !== "com" && choice !== "sem") return;
+      this.state.insuranceChoice = choice;
+      this.elements.insuranceError.textContent = "";
+      this.elements.insuranceOptions.forEach((btn) => {
+        btn.classList.toggle("is-selected", btn.dataset.insurance === choice);
+      });
+      this.elements.continueInsuranceBtn.disabled = false;
+    }
+
+    handleContinueInsurance() {
+      if (!this.state.insuranceChoice) {
+        this.elements.insuranceError.textContent = "Escolha uma opcao para continuar.";
+        return;
+      }
+      this.renderReview();
+      this.goToStep("review");
+    }
+
+    renderReview() {
+      const sim = this.state.simulation || {};
+      const prazo = Number(sim.prazoMeses || this.state.selectedPrazo || 0);
+      const parcela = Number(sim.valorParcela || 0);
+      const total = this.resolveSimulationTotal(sim, parcela, prazo);
+
+      const fields = [
+        ["Voce solicita", `R$ ${this.formatMoney(this.state.selectedValue)}`],
+        ["Parcelas", `${this.formatInteger(prazo)}x de R$ ${this.formatMoney(parcela)}`],
+        ["Total estimado", `R$ ${this.formatMoney(total)}`],
+        ["Taxa de juros", this.formatPercent(sim.taxaJuros)],
+        ["Seguro", this.state.insuranceChoice === "com" ? "Com seguro (opcional, nao enviado ao backend)" : "Sem seguro"]
+      ];
+
+      const optionalApiFields = [
+        ["CET mensal", sim.cetMensal],
+        ["CET anual", sim.cetAnual],
+        ["IOF", sim.iof]
+      ];
+      optionalApiFields.forEach(([label, value]) => {
+        if (value != null && value !== "") {
+          fields.push([label, this.formatDynamic(value)]);
+        }
+      });
+
+      this.elements.reviewList.innerHTML = fields
+        .map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`)
+        .join("");
+
+      const metrics = [];
+      if (sim.taxaJuros != null && sim.taxaJuros !== "") {
+        metrics.push(["Juros mensais", this.formatPercent(sim.taxaJuros)]);
+      }
+      if (sim.cetMensal != null && sim.cetMensal !== "") {
+        metrics.push(["CET mensal", this.formatDynamic(sim.cetMensal)]);
+      }
+      if (sim.cetAnual != null && sim.cetAnual !== "") {
+        metrics.push(["CET anual", this.formatDynamic(sim.cetAnual)]);
+      }
+      if (sim.iof != null && sim.iof !== "") {
+        metrics.push(["IOF", this.formatDynamic(sim.iof)]);
+      }
+      if (metrics.length) {
+        this.elements.reviewMetricsCard.innerHTML =
+          `<h3>Detalhes financeiros retornados pela API</h3>` +
+          metrics.map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("");
+      } else {
+        this.elements.reviewMetricsCard.innerHTML =
+          `<h3>Detalhes financeiros</h3><p class="ab-emp-muted">CET e IOF nao foram retornados na simulacao atual da API.</p>`;
+      }
+    }
+
+    async handleSubmitProposal() {
+      if (!this.state.isEligible) {
+        this.setErrorState("Conta sem elegibilidade. Nao e possivel enviar proposta.", { showRetry: false });
+        return;
+      }
+      if (!this.state.selectedValue || !this.state.selectedPrazo) {
+        this.setErrorState("Dados da proposta incompletos. Refaça a simulacao.", { showRetry: false });
+        return;
+      }
+
+      this.elements.submitProposalBtn.disabled = true;
+      this.elements.submitProposalBtn.textContent = "Enviando...";
 
       try {
         const createResult = await this.requestLoan("loans", {
           method: "POST",
-          body: JSON.stringify({ valorSolicitado: valor, prazoMeses: parcelas })
+          body: JSON.stringify({
+            valorSolicitado: this.state.selectedValue,
+            prazoMeses: this.state.selectedPrazo
+          })
         });
 
         if (!createResult.ok) {
@@ -206,19 +370,165 @@
           return;
         }
 
-        this.setState(
-          "em-analise",
-          "Solicitacao enviada com sucesso para analise. Aguarde atualizacao de status no historico."
-        );
-
-        const historyRefresh = await this.requestLoan("loans");
-        if (historyRefresh.ok) {
-          this.renderHistorico(historyRefresh.data);
+        const historyResult = await this.requestLoan("loans");
+        if (historyResult.ok) {
+          this.state.history = this.extractHistory(historyResult.data);
+          this.renderHistory();
         }
+        this.goToStep("submitted");
       } finally {
-        this.elements.enviarBtn.disabled = false;
-        this.elements.simularBtn.disabled = false;
+        this.elements.submitProposalBtn.disabled = false;
+        this.elements.submitProposalBtn.textContent = "Enviar proposta para analise";
       }
+    }
+
+    extractHistory(payload) {
+      if (!payload || !Array.isArray(payload.emprestimos)) {
+        return [];
+      }
+      return payload.emprestimos.slice();
+    }
+
+    renderHistory() {
+      const list = this.state.history || [];
+      if (!list.length) {
+        this.elements.historyCards.innerHTML =
+          '<div class="ab-emp-card"><p class="ab-emp-muted">Voce ainda nao possui solicitacoes de credito registradas.</p></div>';
+        return;
+      }
+
+      this.elements.historyCards.innerHTML = list
+        .map((item) => this.renderHistoryCard(item))
+        .join("");
+    }
+
+    renderHistoryCard(item) {
+      const valor = Number(item && item.valorSolicitado);
+      const prazo = Number(item && item.prazoMeses);
+      const status = String((item && item.status) || "pendente").toLowerCase();
+      const classeStatus = this.mapStatusClass(status);
+      const dataSolicitacao = this.formatDate(item && item.dataSolicitacao);
+      const totalEstimado = Number(item && (item.valorTotal || item.totalPagar || item.total));
+
+      return (
+        `<article class="ab-emp-card ab-emp-history-card">` +
+        `<div class="ab-emp-history-top">` +
+        `<strong>R$ ${this.formatMoney(valor)}</strong>` +
+        `<span class="ab-emp-status ${classeStatus}">${status}</span>` +
+        `</div>` +
+        `<p>Parcelas: ${this.formatInteger(prazo)}x</p>` +
+        `<p>Data: ${dataSolicitacao}</p>` +
+        `${Number.isFinite(totalEstimado) && totalEstimado > 0 ? `<p>Total estimado: R$ ${this.formatMoney(totalEstimado)}</p>` : ""}` +
+        `</article>`
+      );
+    }
+
+    mapStatusClass(status) {
+      if (status === "aprovado" || status === "approved") return "is-approved";
+      if (status === "rejeitado" || status === "rejected") return "is-rejected";
+      return "is-pending";
+    }
+
+    handleBack() {
+      const step = this.state.currentStep;
+      if (step === "value" || step === "blocked" || step === "loading") {
+        this.redirectToHome();
+        return;
+      }
+      if (step === "installments") this.goToStep("value");
+      else if (step === "insurance") this.goToStep("installments");
+      else if (step === "review") this.goToStep("insurance");
+      else if (step === "submitted") this.goToStep("history");
+      else if (step === "history") this.goToStep("value");
+      else this.redirectToHome();
+    }
+
+    goToStep(step) {
+      if (step === "value" && !this.state.isEligible) {
+        this.showStep("blocked");
+        return;
+      }
+      this.showStep(step);
+    }
+
+    showStep(step) {
+      const map = {
+        loading: this.elements.stepLoading,
+        blocked: this.elements.stepBlocked,
+        value: this.elements.stepValue,
+        installments: this.elements.stepInstallments,
+        insurance: this.elements.stepInsurance,
+        review: this.elements.stepReview,
+        submitted: this.elements.stepSubmitted,
+        history: this.elements.stepHistory
+      };
+
+      Object.keys(map).forEach((key) => {
+        const el = map[key];
+        if (el) {
+          el.classList.toggle("ab-emp-step-active", key === step);
+        }
+      });
+      this.state.currentStep = step;
+      this.elements.statePill.textContent = step;
+      this.elements.topbarTitle.textContent = step === "history" ? "Historico de propostas" : "Credito pessoal";
+    }
+
+    setLoadingState(message) {
+      this.elements.statusText.textContent = message;
+      this.elements.retryBtn.hidden = true;
+      this.elements.loginBtn.hidden = true;
+      this.showStep("loading");
+    }
+
+    setErrorState(message, opts = {}) {
+      this.elements.statusText.textContent = message;
+      this.elements.retryBtn.hidden = !opts.showRetry;
+      this.elements.loginBtn.hidden = !opts.showLogin;
+      this.showStep("loading");
+      this.elements.statePill.textContent = "erro";
+    }
+
+    handleSimulationError(error) {
+      const mapped = this.errorToText(error);
+      this.elements.simulationError.textContent = mapped;
+      this.elements.simulationCard.innerHTML = '<p class="ab-emp-muted">Nao foi possivel gerar simulacao agora.</p>';
+      this.elements.continueInstallmentsBtn.disabled = true;
+    }
+
+    handleKnownError(error) {
+      const kind = (error && error.kind) || "internal";
+      const message = this.errorToText(error);
+      if (kind === "not-eligible") {
+        this.state.isEligible = false;
+        this.elements.blockedReason.textContent = message;
+        this.showStep("blocked");
+        return;
+      }
+      if (kind === "not-authenticated") {
+        this.setErrorState(message, { showLogin: true });
+        return;
+      }
+      this.setErrorState(message, { showRetry: true });
+    }
+
+    errorToText(error) {
+      const kind = (error && error.kind) || "internal";
+      const detail = (error && error.detail) || "Nao foi possivel concluir a operacao.";
+      if (kind === "not-eligible") {
+        return "No momento, sua conta ainda nao possui elegibilidade para solicitar credito pessoal. Continue usando o AgilBank e tente novamente em outro momento.";
+      }
+      if (kind === "validation") return `Erro de validacao: ${detail}`;
+      return detail;
+    }
+
+    isValidEligibility(payload) {
+      return payload && typeof payload === "object" && typeof payload.isElegivel === "boolean";
+    }
+
+    isValidSimulation(payload) {
+      if (!payload || typeof payload !== "object") return false;
+      return Number.isFinite(Number(payload.valorParcela)) && Number.isFinite(Number(payload.prazoMeses));
     }
 
     async requestLoan(path, options = {}) {
@@ -263,7 +573,6 @@
             error: { kind: "invalid-response", detail: "Resposta nao possui payload esperado." }
           };
         }
-
         return { ok: true, data: body.data };
       } catch (error) {
         if (error && error.name === "AbortError") {
@@ -272,7 +581,6 @@
             error: { kind: "connection-timeout", detail: "Tempo limite atingido na comunicacao." }
           };
         }
-
         return {
           ok: false,
           error: { kind: "connection-timeout", detail: "Falha de conexao com a API." }
@@ -292,52 +600,21 @@
 
     mapHttpError(status, body) {
       if (status === 401) {
-        return {
-          kind: "not-authenticated",
-          detail: "Sessao invalida ou expirada. Faca login novamente."
-        };
+        return { kind: "not-authenticated", detail: "Sessao invalida ou expirada. Faca login novamente." };
       }
-
       if (status === 403) {
-        if (this.hasLoanNotEligibleCode(body)) {
-          return {
-            kind: "not-eligible",
-            detail:
-              "Voce ainda nao esta elegivel para solicitar credito pessoal. Continue usando sua conta para melhorar seu relacionamento com o AgilBank."
-          };
+        if (this.hasLoanNotEligibleCode(body) || this.hasAccountNotVerifiedCode(body)) {
+          return { kind: "not-eligible", detail: "Conta sem elegibilidade para esta operacao." };
         }
-
-        return {
-          kind: "forbidden",
-          detail: "Operacao indisponivel para o perfil atual."
-        };
+        return { kind: "forbidden", detail: "Operacao indisponivel para o perfil atual." };
       }
-
       if (status === 400) {
-        if (this.hasLoanNotEligibleCode(body)) {
-          return {
-            kind: "not-eligible",
-            detail:
-              "Voce ainda nao esta elegivel para solicitar credito pessoal. Continue usando sua conta para melhorar seu relacionamento com o AgilBank."
-          };
-        }
-        return {
-          kind: "validation",
-          detail: this.extractValidationMessage(body)
-        };
+        return { kind: "validation", detail: this.extractValidationMessage(body) };
       }
-
       if (status >= 500) {
-        return {
-          kind: "internal",
-          detail: "Servico indisponivel no momento. Tente novamente em instantes."
-        };
+        return { kind: "internal", detail: "Servico indisponivel no momento. Tente novamente em instantes." };
       }
-
-      return {
-        kind: "internal",
-        detail: "Nao foi possivel concluir a operacao. Tente novamente."
-      };
+      return { kind: "internal", detail: "Nao foi possivel concluir a operacao. Tente novamente." };
     }
 
     extractValidationMessage(body) {
@@ -346,8 +623,7 @@
           .map((errorItem) => `${errorItem.field || "campo"}: ${errorItem.message || "valor invalido"}`)
           .join(" | ");
       }
-
-      return "Revise valor, prazo e campos obrigatorios antes de continuar.";
+      return (body && (body.message || body.error)) || "Revise valor e prazo antes de continuar.";
     }
 
     hasLoanNotEligibleCode(body) {
@@ -360,151 +636,57 @@
       );
     }
 
-    handleKnownError(error) {
-      const kind = (error && error.kind) || "internal";
-      const detail = (error && error.detail) || "Falha inesperada.";
-
-      if (kind === "not-authenticated") {
-        this.setState("erro", detail, { login: true });
-        this.elements.historico.innerHTML =
-          '<li class="ab-emp-history-empty">Sessao expirada. Faca login para consultar historico.</li>';
-        return;
-      }
-
-      if (kind === "forbidden") {
-        this.setState("erro", detail, { retry: false });
-        return;
-      }
-
-      if (kind === "not-eligible") {
-        this.isEligible = false;
-        this.elements.enviarBtn.disabled = true;
-        this.elements.simularBtn.disabled = true;
-        this.setState("historico-vazio", detail);
-        this.elements.simulacaoResultado.textContent =
-          "Sem elegibilidade no momento. Simulacao e envio de proposta permanecem bloqueados.";
-        return;
-      }
-
-      if (kind === "connection-timeout") {
-        this.setState("erro", `${detail} Voce pode tentar novamente.`, { retry: true });
-        return;
-      }
-
-      if (kind === "invalid-response") {
-        this.setState("erro", "Falha controlada ao processar resposta da API.", { retry: true });
-        this.elements.simulacaoResultado.textContent =
-          "Os dados recebidos vieram incompletos. Tente novamente em instantes.";
-        return;
-      }
-
-      if (kind === "validation") {
-        this.setState("erro", `Erro de validacao: ${detail}`);
-        return;
-      }
-
-      this.setState("erro", detail, { retry: true });
+    hasAccountNotVerifiedCode(body) {
+      return Boolean(
+        body &&
+          (body.error === "ACCOUNT_NOT_VERIFIED" ||
+            body.code === "ACCOUNT_NOT_VERIFIED" ||
+            body?.data?.error === "ACCOUNT_NOT_VERIFIED" ||
+            body?.data?.code === "ACCOUNT_NOT_VERIFIED")
+      );
     }
 
-    renderHistorico(payload) {
-      const emprestimos = payload && Array.isArray(payload.emprestimos) ? payload.emprestimos : null;
-
-      if (!emprestimos) {
-        this.handleKnownError({
-          kind: "invalid-response",
-          detail: "Historico retornou estrutura invalida."
-        });
-        return;
+    getToken() {
+      for (let i = 0; i < TOKEN_KEYS.length; i += 1) {
+        const key = TOKEN_KEYS[i];
+        const sessionValue = window.sessionStorage.getItem(key);
+        if (sessionValue) return sessionValue;
+        const localValue = window.localStorage.getItem(key);
+        if (localValue) return localValue;
       }
-
-      if (!emprestimos.length) {
-        this.elements.historico.innerHTML =
-          '<li class="ab-emp-history-empty">Voce ainda nao possui solicitacoes de emprestimo registradas.</li>';
-        this.setState("historico-vazio", "Historico vazio confirmado pela API.");
-        return;
-      }
-
-      const items = emprestimos
-        .map((item) => {
-          const statusInfo = this.getLoanStatusInfo(item && item.status);
-          const valor = this.formatMoney(item && item.valorSolicitado);
-          const prazo = this.formatInteger(item && item.prazoMeses);
-          return (
-            `<li class="ab-emp-history-item">` +
-            `<strong>R$ ${valor} em ${prazo} meses - status: ${statusInfo.label}</strong><br>` +
-            `${statusInfo.message}` +
-            `</li>`
-          );
-        })
-        .join("");
-
-      this.elements.historico.innerHTML = items;
-      this.setState("em-analise", "Historico carregado com dados reais da API.");
-    }
-
-    getLoanStatusInfo(statusRaw) {
-      const normalized = statusRaw ? String(statusRaw).toLowerCase() : "";
-
-      if (normalized === "aprovado" || normalized === "approved") {
-        return {
-          label: "APROVADO",
-          message:
-            "Sua proposta foi aprovada. Confira os detalhes antes de qualquer proxima etapa."
-        };
-      }
-
-      if (normalized === "rejeitado" || normalized === "rejected") {
-        return {
-          label: "REJEITADO",
-          message: "No momento, sua proposta nao foi aprovada."
-        };
-      }
-
-      if (normalized === "pendente" || normalized === "pending" || !normalized) {
-        return {
-          label: "PENDENTE",
-          message: "Sua proposta foi enviada e esta em analise."
-        };
-      }
-
-      return {
-        label: String(statusRaw).toUpperCase(),
-        message: "Status retornado pela API. Acompanhe atualizacoes no historico."
-      };
+      return null;
     }
 
     formatMoney(value) {
       const numeric = Number(value);
-      if (!Number.isFinite(numeric)) {
-        return "0,00";
-      }
+      if (!Number.isFinite(numeric)) return "0,00";
+      return numeric.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-      return numeric.toFixed(2).replace(".", ",");
+    formatPercent(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return "Nao informado";
+      return `${numeric.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
     }
 
     formatInteger(value) {
       const numeric = Number(value);
-      if (!Number.isFinite(numeric)) {
-        return "0";
-      }
-
+      if (!Number.isFinite(numeric)) return "0";
       return String(Math.trunc(numeric));
     }
 
-    getToken() {
-      for (const key of TOKEN_KEYS) {
-        const sessionValue = window.sessionStorage.getItem(key);
-        if (sessionValue) {
-          return sessionValue;
-        }
-
-        const localValue = window.localStorage.getItem(key);
-        if (localValue) {
-          return localValue;
-        }
+    formatDynamic(value) {
+      if (typeof value === "number") {
+        return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
+      return String(value);
+    }
 
-      return null;
+    formatDate(rawDate) {
+      if (!rawDate) return "Nao informado";
+      const d = new Date(rawDate);
+      if (Number.isNaN(d.getTime())) return String(rawDate);
+      return d.toLocaleString("pt-BR");
     }
 
     redirectToLogin() {
@@ -512,26 +694,23 @@
     }
 
     redirectToHome() {
-      window.location.assign("./index.html");
+      window.location.assign(HOME_PATH);
     }
 
     redirectToProfile() {
       try {
         window.sessionStorage.setItem("agilbank_open_profile", "1");
       } catch (error) {
-        // Ignore storage errors and still navigate.
+        // Ignore storage issues and continue navigation.
       }
-      window.location.assign("./index.html");
+      window.location.assign(HOME_PATH);
     }
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     const module = new EmprestimosModule(document);
     module.init().catch(() => {
-      module.handleKnownError({
-        kind: "internal",
-        detail: "Falha inesperada ao iniciar o modulo de emprestimos."
-      });
+      module.setErrorState("Falha inesperada ao iniciar o modulo de emprestimos.", { showRetry: true });
     });
   });
 })();

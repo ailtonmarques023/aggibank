@@ -2238,7 +2238,7 @@
 
                         <!-- Título -->
                         <h1 id="agilTitle" class="agil-title">Cartão + Crédito Pessoal</h1>
-                        <h2 class="agil-subtitle">aprovado 🚀</h2>
+                        <h2 class="agil-subtitle">oferta disponivel</h2>
 
                         <!-- Subtítulo -->
                         <p class="agil-lead">Receba seu cartão virtual agora e aproveite até 45 dias para começar a pagar.</p>
@@ -2251,7 +2251,7 @@
                             </li>
                             <li>
                                 <span class="agil-bullet"></span>
-                                Cartão virtual pronto na hora
+                                Cartão virtual com análise
                             </li>
                             <li>
                                 <span class="agil-bullet"></span>
@@ -2421,12 +2421,21 @@
                 </div>
                 <h3>Cartão</h3>
             </div>
-            <div class="service-item" onclick="creditoContainer()">
+            <div class="service-item" onclick="activateCredito()">
                 <div class="icon-container">
                     <i class="fa-solid fa-money-bill-wave"></i>
                 </div>
-                <h3>Crédito Pessoal</h3>
+                <h3>Empréstimos</h3>
             </div>
+        </div>
+        <div style="background:#fff;border:1px solid #d8e5f2;border-radius:14px;padding:14px;margin:14px 0;box-shadow:0 2px 8px rgba(0,102,179,0.08);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+                <h3 style="margin:0;color:#1e3550;">Empréstimos</h3>
+                <button type="button" onclick="activateCredito()" style="border:none;background:transparent;color:#0066b3;font-weight:700;cursor:pointer;">Consultar →</button>
+            </div>
+            <p style="margin:0 0 10px;color:#1e3550;font-weight:700;">Crédito pessoal para sua conta</p>
+            <p style="margin:0 0 12px;color:#5a6f85;">Consulte opções disponíveis para sua conta.</p>
+            <button type="button" onclick="activateCredito()" style="border:none;border-radius:10px;background:#0066b3;color:#fff;padding:10px 16px;font-weight:700;cursor:pointer;">Simular</button>
         </div>
         <!-- banner para pedir cartão container -->
         <div class="cartao-container" onclick="openDynamicCardForm()">
@@ -2531,12 +2540,12 @@
                         <img src="https://i.postimg.cc/q7Wbr4tF/4.png" alt="Ícone Dinheiro">
                     </div>
                     <div class="vantagem-texto">
-                        <h3>Dinheiro na hora</h3>
-                        <p>Você contrata e o valor entra direto na sua conta.</p>
+                        <h3>Solicitação com análise real</h3>
+                        <p>Sua proposta é enviada para análise antes de qualquer decisão.</p>
                     </div>
                 </div>
                  <!--button simulaçao de credito-->
-                 <button class="simulacao-credito" onclick="levarParaChatContainer()">SIMULAR CREDITO</button>
+                 <button class="simulacao-credito" onclick="activateCredito()">Simular</button>
              <br>
             </div>
         </div>  
@@ -3469,7 +3478,7 @@
             <div class="emprestimo-concedido-container" id="emprestimoConcedidoContainer" style="display: none;">
                 <div class="emprestimo-concedido-header">
                     <h2>Empréstimo Concedido</h2>
-                    <p>Parabéns! Seu empréstimo foi aprovado e liberado.</p>
+                    <p>Sua solicitação foi registrada para análise. Acompanhe o status no módulo de empréstimos.</p>
                 </div>
 
                 <div class="emprestimo-concedido-info">
@@ -6314,11 +6323,7 @@
         }
         // Função para mostrar o container de crédito
         function creditoContainer() {
-            mostrarAnimacaoGovBr(() => {
-                ocultarTodosContainers();
-                document.getElementById('creditoContainer').style.display = 'block';
-                window.scrollTo(0, 0);
-            });
+            window.location.assign('emprestimos.html');
         }
 
         function voltarParaPrincipal() {
@@ -8954,11 +8959,7 @@
 
     // função para levar para chatContainer
     function levarParaChatContainer() {
-        ocultarTodosContainers();
-        mostrarAnimacaoGovBr(() => {
-            document.getElementById('chatContainer').style.display = 'block';
-            window.scrollTo(0, 0);
-        });
+        window.location.assign('emprestimos.html');
     }   
 
     // ===== FUNCIONALIDADES DO MODAL AGILBANK =====
@@ -10619,7 +10620,7 @@
 
         // Função para mostrar mais informações
         function showMoreInfo() {
-            alert('📋 DETALHES DA OFERTA:\n\n💳 CARTÃO DE CRÉDITO:\n• Limite pré-aprovado\n• Cartão virtual pronto na hora\n• Sem burocracia\n\n💰 CRÉDITO PESSOAL:\n• Dinheiro rápido na conta\n• Aprovação em minutos\n• Até 45 dias para começar a pagar\n\n⏰ OFERTA VÁLIDA POR 24H');
+            window.location.assign('emprestimos.html');
         }
 
         // Função para abrir o módulo real de crédito pessoal

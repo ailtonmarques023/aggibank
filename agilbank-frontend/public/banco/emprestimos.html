@@ -8,83 +8,134 @@
   <link rel="stylesheet" href="./css/style.emprestimos.css">
 </head>
 <body class="ab-emprestimos-page">
-  <div class="ab-emp-app" id="abEmpApp">
-    <header class="ab-emp-header">
-      <div>
-        <p class="ab-emp-kicker">AgilBank</p>
-        <h1>Modulo de Emprestimos</h1>
+  <div class="ab-emp-shell" id="abEmpShell">
+    <header class="ab-emp-topbar">
+      <button type="button" class="ab-emp-icon-btn" id="abEmpBackBtn" aria-label="Voltar">&#8592;</button>
+      <div class="ab-emp-topbar-title-wrap">
+        <p class="ab-emp-topbar-kicker">AgilBank</p>
+        <h1 class="ab-emp-topbar-title">Credito pessoal</h1>
       </div>
-      <span class="ab-emp-pill" id="abEmpStatePill">loading</span>
+      <span class="ab-emp-state-pill" id="abEmpStatePill">loading</span>
     </header>
 
-    <main class="ab-emp-content">
-      <section class="ab-emp-card">
-        <h2>Resumo</h2>
-        <p>
-          Fluxo conectado a API real para validar elegibilidade, simular valores e registrar solicitacoes com status oficial.
-        </p>
-      </section>
-
-      <section class="ab-emp-card">
-        <h2>Elegibilidade</h2>
-        <p id="abEmpEligibilityText">Aguardando validacao de dados para elegibilidade inicial.</p>
-      </section>
-
-      <section class="ab-emp-card">
-        <h2>Simulacao</h2>
-        <div class="ab-emp-grid">
-          <label class="ab-emp-field">
-            Valor solicitado (R$)
-            <input id="abEmpValor" name="valor" type="number" min="0" step="0.01" placeholder="Ex.: 1500.00" required>
-          </label>
-          <label class="ab-emp-field">
-            Parcelas
-            <input id="abEmpParcelas" name="parcelas" type="number" min="1" max="48" step="1" placeholder="Ex.: 12" required>
-          </label>
-        </div>
-        <button class="ab-emp-btn ab-emp-btn-secondary" id="abEmpSimularBtn" type="button">Calcular simulacao</button>
-        <div class="ab-emp-feedback" id="abEmpSimulacaoResultado">
-          Sem simulacao calculada.
+    <main class="ab-emp-main" id="abEmpMain">
+      <section class="ab-emp-step ab-emp-step-active" id="abEmpStepLoading">
+        <div class="ab-emp-card ab-emp-center">
+          <div class="ab-emp-spinner" aria-hidden="true"></div>
+          <h2>Preparando seu modulo de emprestimos</h2>
+          <p id="abEmpStatusText">Carregando elegibilidade e historico...</p>
+          <div class="ab-emp-inline-actions">
+            <button class="ab-emp-btn ab-emp-btn-secondary" id="abEmpRetryBtn" type="button" hidden>Tentar novamente</button>
+            <button class="ab-emp-btn" id="abEmpLoginBtn" type="button" hidden>Ir para login</button>
+          </div>
         </div>
       </section>
 
-      <section class="ab-emp-card">
-        <h2>Formulario de solicitacao</h2>
-        <form id="abEmpForm" novalidate>
-          <label class="ab-emp-field">
-            Finalidade
-            <select id="abEmpFinalidade" name="finalidade" required>
-              <option value="">Selecione</option>
-              <option value="reforma">Reforma</option>
-              <option value="educacao">Educacao</option>
-              <option value="emergencia">Emergencia</option>
-              <option value="organizacao-financeira">Organizacao financeira</option>
-            </select>
-          </label>
-          <button class="ab-emp-btn" id="abEmpEnviarBtn" type="submit">Enviar para analise</button>
-        </form>
-        <p class="ab-emp-note">
-          O envio cria proposta real para analise. Nenhuma aprovacao ou liberacao de dinheiro e feita automaticamente.
-        </p>
-      </section>
-
-      <section class="ab-emp-card">
-        <h2>Historico</h2>
-        <ul id="abEmpHistorico" class="ab-emp-history-list">
-          <li class="ab-emp-history-empty">Nenhuma solicitacao encontrada.</li>
-        </ul>
-      </section>
-
-      <section class="ab-emp-card ab-emp-card-state" id="abEmpStatusBox" aria-live="polite">
-        <p id="abEmpStatusText">Carregando modulo...</p>
-        <div class="ab-emp-status-actions">
-          <button class="ab-emp-btn ab-emp-btn-secondary" id="abEmpRetryBtn" type="button" hidden>
-            Tentar novamente
-          </button>
-          <button class="ab-emp-btn" id="abEmpLoginBtn" type="button" hidden>
-            Ir para login
-          </button>
+      <section class="ab-emp-step" id="abEmpStepBlocked">
+        <div class="ab-emp-card">
+          <h2>Credito pessoal ainda indisponivel</h2>
+          <p id="abEmpBlockedReason">
+            No momento, sua conta ainda nao possui elegibilidade para solicitar credito pessoal. Continue usando o AgilBank e tente novamente em outro momento.
+          </p>
         </div>
+        <div class="ab-emp-card">
+          <h3>Como melhorar sua elegibilidade</h3>
+          <ul class="ab-emp-list">
+            <li>Mantenha sua conta verificada.</li>
+            <li>Movimente sua conta com frequencia.</li>
+            <li>Mantenha seus dados atualizados.</li>
+            <li>Use os servicos do AgilBank.</li>
+            <li>Acompanhe novas analises.</li>
+          </ul>
+        </div>
+        <button class="ab-emp-btn ab-emp-btn-block" id="abEmpBackHomeBlockedBtn" type="button">Voltar para inicio</button>
+      </section>
+
+      <section class="ab-emp-step" id="abEmpStepValue">
+        <div class="ab-emp-card ab-emp-card-emphasis">
+          <h2>Insira o valor</h2>
+          <p class="ab-emp-muted">Peça somente o valor necessario para sua proposta.</p>
+          <p class="ab-emp-value-big" id="abEmpValueBig">R$ 0,00</p>
+          <p class="ab-emp-muted" id="abEmpValueLimitText">Peça ate R$ 0,00</p>
+          <label class="ab-emp-label" for="abEmpValorInput">Valor solicitado (R$)</label>
+          <input id="abEmpValorInput" type="number" min="0" step="0.01" placeholder="Ex.: 301.00" inputmode="decimal">
+          <p class="ab-emp-error" id="abEmpValueError"></p>
+          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpContinueValueBtn" type="button">Continuar</button>
+        </div>
+      </section>
+
+      <section class="ab-emp-step" id="abEmpStepInstallments">
+        <div class="ab-emp-card">
+          <h2>Escolha o numero de parcelas</h2>
+          <p class="ab-emp-muted" id="abEmpRequestedValueText">Valor solicitado: R$ 0,00</p>
+          <div class="ab-emp-chip-row" id="abEmpPrazoChips"></div>
+          <div class="ab-emp-sim-card" id="abEmpSimulationCard">
+            <p class="ab-emp-muted">Selecione um prazo para simular na API.</p>
+          </div>
+          <div class="ab-emp-suggestion-card">
+            <strong>Se você quer menos parcelas, peça um valor menor.</strong>
+          </div>
+          <button type="button" class="ab-emp-link-card" id="abEmpImproveOfferBtn">Melhorar minha proposta</button>
+          <p class="ab-emp-error" id="abEmpSimulationError"></p>
+          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpContinueInstallmentsBtn" type="button" disabled>Continuar</button>
+        </div>
+      </section>
+
+      <section class="ab-emp-step" id="abEmpStepInsurance">
+        <div class="ab-emp-card">
+          <h2>Proteja sua proposta</h2>
+          <div class="ab-emp-insurance-info">
+            <p>Suas parcelas em dia se voce perder o emprego ou sofrer um acidente.</p>
+            <button type="button" class="ab-emp-inline-link">Mais detalhes</button>
+          </div>
+          <p class="ab-emp-muted">
+            Voce pode seguir sem seguro. Essa escolha nao altera sua elegibilidade.
+          </p>
+          <div class="ab-emp-option-list">
+            <button type="button" class="ab-emp-option" data-insurance="com">
+              <span class="ab-emp-recommended">Recomendado</span>
+              <span>Com seguro</span>
+              <small>Opcional no fluxo atual (sem envio ao backend)</small>
+            </button>
+            <button type="button" class="ab-emp-option" data-insurance="sem">
+              <span>Sem seguro</span>
+              <small>Disponivel sem bloquear a proposta</small>
+            </button>
+          </div>
+          <p class="ab-emp-error" id="abEmpInsuranceError"></p>
+          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpContinueInsuranceBtn" type="button" disabled>Revisar detalhes</button>
+        </div>
+      </section>
+
+      <section class="ab-emp-step" id="abEmpStepReview">
+        <div class="ab-emp-card">
+          <h2>Revise sua proposta</h2>
+          <dl class="ab-emp-review-list" id="abEmpReviewList"></dl>
+        </div>
+        <div class="ab-emp-card" id="abEmpReviewMetricsCard"></div>
+        <div class="ab-emp-card">
+          <p class="ab-emp-note-strong">
+            Esta solicitacao esta sujeita a analise. Nenhum valor e liberado automaticamente.
+          </p>
+          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpSubmitProposalBtn" type="button">Enviar proposta para analise</button>
+        </div>
+      </section>
+
+      <section class="ab-emp-step" id="abEmpStepSubmitted">
+        <div class="ab-emp-card ab-emp-center">
+          <h2>Proposta enviada para analise</h2>
+          <p>Sua solicitacao foi registrada com sucesso. Voce pode acompanhar o status no historico.</p>
+          <div class="ab-emp-status-chip">Status: Pendente</div>
+          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpGoHistoryBtn" type="button">Ver historico</button>
+        </div>
+      </section>
+
+      <section class="ab-emp-step" id="abEmpStepHistory">
+        <div class="ab-emp-card">
+          <h2>Historico de propostas</h2>
+          <p class="ab-emp-muted">Acompanhe o status das suas solicitacoes registradas no backend.</p>
+        </div>
+        <div id="abEmpHistoryCards"></div>
       </section>
     </main>
   </div>
