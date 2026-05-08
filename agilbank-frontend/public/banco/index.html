@@ -6328,6 +6328,7 @@
                 alert('Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
                 return;
             }
+            window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = true;
             showCartaoGerenciamento();
             if (typeof window.agilbankRefreshPainelCartoes === 'function') {
                 try {
@@ -11333,8 +11334,8 @@
                         return agilbankModalIsRelevantLoan(row);
                     });
 
-                console.log('[cards real]', cardsWrap.body);
-                console.log('[loans real]', loansWrap.body);
+                console.log('[agilModal] cards raw:', cardsWrap.body);
+                console.log('[agilModal] loans raw:', loansWrap.body);
                 console.log('[agilModal] normalized cards:', apiCartoes);
                 console.log('[agilModal] normalized loans:', emprestimos);
                 console.log('[agilModal] hasCard:', hasCard);
@@ -11507,8 +11508,8 @@
         console.log('- debugCardFlow() - Verificar problemas do fluxo');
         console.log('- forceUpdateLimitAfterApproval() - Forçar atualização do limite');
         console.log('- updateCardLimitEverywhere(valor) - Atualizar limite manualmente');
-        console.log('- forceShowUserLimit() - sincronizar limite com perfil (debug manual)');
-        console.log('- forceUpdateHeaderData() - atualizar header (debug manual)');
+        console.log('- forceShowUserLimit() - EXIBIR LIMITE DO USUÁRIO');
+        console.log('- forceUpdateHeaderData() - ATUALIZAR DADOS DO HEADER COM DADOS REAIS');
         
 
         // Função para verificar e exibir limite automaticamente
@@ -11542,7 +11543,7 @@
                         console.log('✅ Limite exibido automaticamente');
                     }
                 } else {
-                    console.log('[perfil] Sem limite_cartao declarado no perfil (use GET /api/cards para status da solicitação).');
+                    console.log('⚠️ Usuário não tem limite de cartão');
                 }
             })
             .catch(error => {
@@ -11585,7 +11586,7 @@
 
         // Função para forçar exibição do limite (baseado nos dados do banco)
         function forceShowUserLimit() {
-            console.log('[cartão] Sincronizando limite exibido com perfil (user-complete-data)...');
+            console.log('🔧 FORÇANDO EXIBIÇÃO DO LIMITE DO USUÁRIO...');
             
             // Limite real do usuário ailton (ID 41) do banco de dados
             // Buscar limite real do usuário (sem valor fixo)
@@ -11614,7 +11615,7 @@
 
         // Função para forçar atualização dos dados do header
         function forceUpdateHeaderData() {
-            console.log('[header] Atualizando dados do header...');
+            console.log('🔧 FORÇANDO ATUALIZAÇÃO DOS DADOS DO HEADER...');
             var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 if (window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
@@ -11764,20 +11765,41 @@
             });
         }
 
-        // Após carga: limite no header e perfil — sem forçar modal nem sobrescrever estado com fluxo de teste antigo
-        setTimeout(function () {
+        // Auto-executar verificação de limite ao carregar a página
+        setTimeout(() => {
             checkAndShowLimit();
-            setTimeout(function () {
-                forceUpdateHeaderData();
-                if (typeof carregarPerfilUsuario === 'function') {
-                    carregarPerfilUsuario();
-                }
-            }, 800);
+            // Se não conseguir carregar do servidor, usar dados do banco
+            setTimeout(() => {
+                forceShowUserLimit();
+                forceUpdateHeaderData(); // Atualizar dados do header
+                
+                // HABILITADO - Buscar dados automaticamente
+                console.log('✅ Busca de dados em tempo real habilitada');
+                carregarPerfilUsuario();
+            }, 1000);
         }, 1000);
-
-        /** Desativado: antes abria #agilModal via DOM ignorando GET /api/cards e /api/loans. Use forceModal() para teste com regras reais. */
+        
+        // EXIBIR MODAL AUTOMATICAMENTE - MÚLTIPLAS TENTATIVAS
         function tentarExibirModal() {
-            console.warn('[agilModal] tentarExibirModal desativado. Use window.forceModal() para abrir com copy baseada na API.');
+            console.log('🔍 Tentativa de exibir modal...');
+            const modal = document.getElementById('agilModal');
+            if (modal) {
+                console.log('✅ Modal encontrado!');
+                modal.style.setProperty('display', 'block', 'important');
+                modal.style.setProperty('position', 'fixed', 'important');
+                modal.style.setProperty('top', '0', 'important');
+                modal.style.setProperty('left', '0', 'important');
+                modal.style.setProperty('width', '100vw', 'important');
+                modal.style.setProperty('height', '100vh', 'important');
+                modal.style.setProperty('z-index', '999999', 'important');
+                modal.style.setProperty('background', 'rgba(0,0,0,0.8)', 'important');
+                modal.setAttribute('aria-hidden', 'false');
+                console.log('✅ Modal forçado a aparecer!');
+                return true;
+            } else {
+                console.log('❌ Modal não encontrado!');
+                return false;
+            }
         }
         
         // Modal será exibido apenas após login bem-sucedido
@@ -11911,8 +11933,17 @@
             };
         }
         
+        // TESTE MANUAL - Expor função globalmente
         window.showAgilModal = showAgilModal;
         window.tentarExibirModal = tentarExibirModal;
+        console.log('🔧 Funções expostas globalmente para teste');
+        
+        // TESTE IMEDIATO - Forçar modal agora
+        console.log('🚀 TESTE IMEDIATO - Forçando modal...');
+        setTimeout(() => {
+            console.log('🔧 Executando teste imediato...');
+            tentarExibirModal();
+        }, 2000);
     </script>
 </body>
 </html>
