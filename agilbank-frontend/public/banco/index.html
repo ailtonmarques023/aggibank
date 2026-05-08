@@ -10466,6 +10466,22 @@
             }, 100);
         }
     });
+    
+    // Permite abrir perfil ao voltar do módulo de empréstimos.
+    window.addEventListener('load', function() {
+        try {
+            var shouldOpenProfile = sessionStorage.getItem('agilbank_open_profile') === '1';
+            if (!shouldOpenProfile) return;
+            sessionStorage.removeItem('agilbank_open_profile');
+            setTimeout(function() {
+                if (typeof irParaPerfil === 'function') {
+                    irParaPerfil();
+                }
+            }, 250);
+        } catch (e) {
+            // Ignore storage access issues.
+        }
+    });
     // ===== MENU DO USUÁRIO =====
     document.addEventListener('DOMContentLoaded', function() {
         // Configurar botão de esqueci senha

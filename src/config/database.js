@@ -108,6 +108,8 @@ const cleanTestData = async () => {
       prisma.transacaoPix.deleteMany(),
       prisma.notificacao.deleteMany(),
       prisma.movimentacao.deleteMany(),
+      prisma.cardShipmentEvent.deleteMany(),
+      prisma.cardShipment.deleteMany(),
       prisma.emprestimo.deleteMany(),
       prisma.cartao.deleteMany(),
       prisma.configuracoesUsuario.deleteMany(),

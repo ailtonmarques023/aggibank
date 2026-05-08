@@ -2,7 +2,11 @@ const crypto = require('crypto');
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken, requireVerification, requireInternalApiKey } = require('../middleware/auth');
-const { validateCardRequest } = require('../middleware/validation');
+const {
+  validateCardRequest,
+  validateCardShipmentCreate,
+  validateShipmentTimelineQuery
+} = require('../middleware/validation');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const { sendCardNotification } = require('../utils/email');
@@ -11,6 +15,16 @@ const { recordAudit } = require('../utils/auditLog');
 const router = express.Router();
 
 const SCHEMA_SOLICITACAO = 1;
+const SHIPPING_FEE_BRL = 39.90;
+const OPEN_SHIPMENT_STATUSES = [
+  'AGUARDANDO_COBRANCA',
+  'COBRANCA_CONFIRMADA',
+  'EM_PRODUCAO',
+  'POSTADO',
+  'EM_TRANSITO',
+  'SAIU_PARA_ENTREGA',
+  'FALHA_ENTREGA',
+];
 
 /** Resposta API: sem token interno, sem snapshot de solicitacao nem metadados LGPD persistidos. */
 function publicCard(cartao) {
@@ -46,6 +60,55 @@ function trimStr(v, max) {
   const s = String(v).trim();
   if (s === '') return undefined;
   return s.length > max ? s.slice(0, max) : s;
+}
+
+function asMoneyNumber(value) {
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  return Number(value);
+}
+
+function roundMoney(value) {
+  return Math.round(Number(value) * 100) / 100;
+}
+
+function sanitizeAddressSnapshot(address) {
+  return {
+    cep: String(address.cep || '').trim(),
+    logradouro: String(address.logradouro || '').trim(),
+    numero: String(address.numero || '').trim(),
+    complemento: address.complemento ? String(address.complemento).trim() : null,
+    bairro: String(address.bairro || '').trim(),
+    cidade: String(address.cidade || '').trim(),
+    estado: String(address.estado || '').trim().toUpperCase(),
+  };
+}
+
+function publicShipment(shipment) {
+  if (!shipment) return null;
+  return {
+    id: shipment.id,
+    cardId: shipment.cardId,
+    userId: shipment.userId,
+    status: shipment.status,
+    shippingFeeAmount: shipment.shippingFeeAmount,
+    shippingFeeStatus: shipment.shippingFeeStatus,
+    shippingFeeMovementId: shipment.shippingFeeMovementId,
+    carrierCode: shipment.carrierCode,
+    carrierName: shipment.carrierName,
+    trackingCode: shipment.trackingCode,
+    trackingUrl: shipment.trackingUrl,
+    estimatedDeliveryAt: shipment.estimatedDeliveryAt,
+    postedAt: shipment.postedAt,
+    deliveredAt: shipment.deliveredAt,
+    returnedAt: shipment.returnedAt,
+    deliveryAttempts: shipment.deliveryAttempts,
+    isSecondIssue: shipment.isSecondIssue,
+    originShipmentId: shipment.originShipmentId,
+    addressSnapshot: shipment.addressSnapshot,
+    createdAt: shipment.createdAt,
+    updatedAt: shipment.updatedAt,
+  };
 }
 
 /**
@@ -930,6 +993,376 @@ router.post('/:id/virtual/unblock', async (req, res) => {
   } catch (error) {
     logger.error('Erro ao desbloquear cartão virtual:', error);
     res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { idempotencyKey, deliveryAddressSnapshot, isSecondIssue, originShipmentId, reason } = req.body;
+    const shipmentChargeIdempotencyKey = `card-shipment-charge:${String(idempotencyKey).trim()}`;
+
+    const existingByIdempotency = await prisma.cardShipment.findUnique({
+      where: { idempotencyKeyCharge: shipmentChargeIdempotencyKey },
+      include: {
+        events: { orderBy: { eventAt: 'asc' } }
+      }
+    });
+
+    if (existingByIdempotency) {
+      if (existingByIdempotency.userId !== req.user.id || existingByIdempotency.cardId !== id) {
+        return res.status(409).json({
+          success: false,
+          message: 'Chave de idempotência já utilizada',
+          code: 'IDEMPOTENCY_KEY_CONFLICT'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Remessa já registrada para esta chave de idempotência',
+        data: {
+          shipment: publicShipment(existingByIdempotency),
+          timeline: existingByIdempotency.events,
+          idempotent: true
+        }
+      });
+    }
+
+    const card = await prisma.cartao.findFirst({
+      where: { id, userId: req.user.id }
+    });
+
+    if (!card) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão não encontrado',
+        code: 'CARD_NOT_FOUND'
+      });
+    }
+
+    if (!['aprovado', 'ativo'].includes(card.status)) {
+      return res.status(422).json({
+        success: false,
+        message: 'Cartão ainda não elegível para envio físico',
+        code: 'CARD_NOT_ELIGIBLE'
+      });
+    }
+
+    const openShipment = await prisma.cardShipment.findFirst({
+      where: {
+        cardId: id,
+        userId: req.user.id,
+        status: { in: OPEN_SHIPMENT_STATUSES }
+      }
+    });
+
+    if (openShipment) {
+      return res.status(409).json({
+        success: false,
+        message: 'Já existe uma remessa logística em andamento para este cartão',
+        code: 'SHIPMENT_ALREADY_EXISTS'
+      });
+    }
+
+    const safeAddressSnapshot = sanitizeAddressSnapshot(deliveryAddressSnapshot);
+    const now = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const account = await tx.user.findUnique({
+        where: { id: req.user.id },
+        select: { saldoAtual: true }
+      });
+
+      const saldoAtual = asMoneyNumber(account?.saldoAtual);
+      const saldoAposTarifa = roundMoney(saldoAtual - SHIPPING_FEE_BRL);
+
+      if (saldoAposTarifa < 0) {
+        const shipment = await tx.cardShipment.create({
+          data: {
+            cardId: id,
+            userId: req.user.id,
+            status: 'AGUARDANDO_COBRANCA',
+            shippingFeeAmount: SHIPPING_FEE_BRL,
+            shippingFeeStatus: 'RECUSADO',
+            idempotencyKeyCharge: shipmentChargeIdempotencyKey,
+            addressSnapshot: safeAddressSnapshot,
+            isSecondIssue: Boolean(isSecondIssue),
+            originShipmentId: originShipmentId || null,
+          }
+        });
+
+        const event = await tx.cardShipmentEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            userId: req.user.id,
+            eventType: 'FRETE_RECUSADO',
+            shipmentStatus: 'AGUARDANDO_COBRANCA',
+            eventAt: now,
+            description: 'Frete não cobrado por saldo insuficiente',
+            createdByType: 'USER',
+            createdById: req.user.id
+          }
+        });
+
+        return {
+          shipment,
+          timeline: [event],
+          insufficientBalance: true,
+          balance: {
+            saldoAtual,
+            shippingFeeAmount: SHIPPING_FEE_BRL
+          }
+        };
+      }
+
+      const movement = await tx.movimentacao.create({
+        data: {
+          userId: req.user.id,
+          tipo: 'tarifa',
+          descricao: 'Tarifa de frete cartao fisico',
+          valor: -SHIPPING_FEE_BRL,
+          saldoAnterior: saldoAtual,
+          saldoAtual: saldoAposTarifa,
+          categoria: 'cartao_fisico_frete',
+          referenceType: 'card_shipment',
+          idempotencyKey: shipmentChargeIdempotencyKey
+        }
+      });
+
+      await tx.user.update({
+        where: { id: req.user.id },
+        data: {
+          saldoAtual: saldoAposTarifa
+        }
+      });
+
+      const shipment = await tx.cardShipment.create({
+        data: {
+          cardId: id,
+          userId: req.user.id,
+          status: 'COBRANCA_CONFIRMADA',
+          shippingFeeAmount: SHIPPING_FEE_BRL,
+          shippingFeeStatus: 'DEBITADO',
+          shippingFeeMovementId: movement.id,
+          idempotencyKeyCharge: shipmentChargeIdempotencyKey,
+          addressSnapshot: safeAddressSnapshot,
+          isSecondIssue: Boolean(isSecondIssue),
+          originShipmentId: originShipmentId || null,
+        }
+      });
+
+      await tx.movimentacao.update({
+        where: { id: movement.id },
+        data: { referenceId: shipment.id }
+      });
+
+      const [createdEvent, chargedEvent] = await Promise.all([
+        tx.cardShipmentEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            userId: req.user.id,
+            eventType: 'SHIPMENT_CREATED',
+            shipmentStatus: 'AGUARDANDO_COBRANCA',
+            eventAt: now,
+            description: 'Remessa criada para cartão físico',
+            createdByType: 'USER',
+            createdById: req.user.id
+          }
+        }),
+        tx.cardShipmentEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            userId: req.user.id,
+            eventType: 'FRETE_COBRADO',
+            shipmentStatus: 'COBRANCA_CONFIRMADA',
+            eventAt: now,
+            description: 'Frete debitado com sucesso',
+            createdByType: 'SYSTEM',
+          }
+        })
+      ]);
+
+      return {
+        shipment,
+        timeline: [createdEvent, chargedEvent],
+        insufficientBalance: false,
+        movement
+      };
+    });
+
+    await recordAudit({
+      userId: req.user.id,
+      action: result.insufficientBalance ? 'shipment.freight.charge_failed' : 'shipment.freight.charged',
+      entity: 'CardShipment',
+      entityId: result.shipment.id,
+      metadata: {
+        cardId: id,
+        shippingFeeAmount: SHIPPING_FEE_BRL,
+        shippingFeeStatus: result.shipment.shippingFeeStatus,
+        reason: reason || null
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    if (result.insufficientBalance) {
+      return res.status(402).json({
+        success: false,
+        message: 'Saldo insuficiente para cobrança do frete do cartão físico',
+        code: 'INSUFFICIENT_BALANCE',
+        data: {
+          shipment: publicShipment(result.shipment),
+          timeline: result.timeline,
+          financial: result.balance
+        }
+      });
+    }
+
+    logger.banking('card_shipment_created', req.user.id, {
+      cardId: id,
+      shipmentId: result.shipment.id,
+      shippingFeeAmount: SHIPPING_FEE_BRL
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Remessa de cartão físico criada e frete debitado',
+      data: {
+        shipment: publicShipment(result.shipment),
+        timeline: result.timeline,
+        financial: {
+          movementId: result.movement.id,
+          amount: -SHIPPING_FEE_BRL,
+          category: 'cartao_fisico_frete'
+        }
+      }
+    });
+  } catch (error) {
+    if (error && error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        message: 'Chave de idempotência já utilizada',
+        code: 'IDEMPOTENCY_KEY_CONFLICT'
+      });
+    }
+
+    logger.error('Erro ao criar remessa de cartão físico:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+router.get('/:id/shipment', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const card = await prisma.cartao.findFirst({
+      where: { id, userId: req.user.id },
+      select: { id: true }
+    });
+
+    if (!card) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão não encontrado',
+        code: 'CARD_NOT_FOUND'
+      });
+    }
+
+    const shipment = await prisma.cardShipment.findFirst({
+      where: { cardId: id, userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        events: {
+          orderBy: { eventAt: 'desc' },
+          take: 20
+        }
+      }
+    });
+
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Remessa não encontrada para este cartão',
+        code: 'SHIPMENT_NOT_FOUND'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Status logístico do cartão consultado com sucesso',
+      data: {
+        shipment: publicShipment(shipment),
+        timeline: shipment.events
+      }
+    });
+  } catch (error) {
+    logger.error('Erro ao consultar remessa do cartão:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+router.get('/:id/shipment/timeline', validateShipmentTimelineQuery, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    const shipment = await prisma.cardShipment.findFirst({
+      where: { cardId: id, userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true }
+    });
+
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Remessa não encontrada para este cartão',
+        code: 'SHIPMENT_NOT_FOUND'
+      });
+    }
+
+    const [timeline, total] = await Promise.all([
+      prisma.cardShipmentEvent.findMany({
+        where: { shipmentId: shipment.id },
+        orderBy: { eventAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.cardShipmentEvent.count({
+        where: { shipmentId: shipment.id }
+      })
+    ]);
+
+    return res.json({
+      success: true,
+      message: 'Timeline logística consultada com sucesso',
+      data: {
+        shipmentId: shipment.id,
+        timeline,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Erro ao consultar timeline logística:', error);
+    return res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
       code: 'INTERNAL_ERROR'

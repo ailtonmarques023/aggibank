@@ -32,7 +32,9 @@
         enviarBtn: this.document.getElementById("abEmpEnviarBtn"),
         form: this.document.getElementById("abEmpForm"),
         retryBtn: this.document.getElementById("abEmpRetryBtn"),
-        loginBtn: this.document.getElementById("abEmpLoginBtn")
+        loginBtn: this.document.getElementById("abEmpLoginBtn"),
+        navInicioBtn: this.document.getElementById("abEmpNavInicio"),
+        navPerfilBtn: this.document.getElementById("abEmpNavPerfil")
       };
     }
 
@@ -47,6 +49,12 @@
       this.elements.form.addEventListener("submit", (event) => this.handleSubmit(event));
       this.elements.retryBtn.addEventListener("click", () => this.bootstrapData());
       this.elements.loginBtn.addEventListener("click", () => this.redirectToLogin());
+      if (this.elements.navInicioBtn) {
+        this.elements.navInicioBtn.addEventListener("click", () => this.redirectToHome());
+      }
+      if (this.elements.navPerfilBtn) {
+        this.elements.navPerfilBtn.addEventListener("click", () => this.redirectToProfile());
+      }
     }
 
     setState(nextState, statusMessage, actions = {}) {
@@ -501,6 +509,19 @@
 
     redirectToLogin() {
       window.location.assign(LOGIN_PATH);
+    }
+
+    redirectToHome() {
+      window.location.assign("./index.html");
+    }
+
+    redirectToProfile() {
+      try {
+        window.sessionStorage.setItem("agilbank_open_profile", "1");
+      } catch (error) {
+        // Ignore storage errors and still navigate.
+      }
+      window.location.assign("./index.html");
     }
   }
 

@@ -542,6 +542,151 @@ const validateCardRequest = [
   handleValidationErrors
 ];
 
+const validateCardShipmentCreate = [
+  param('id')
+    .isString()
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('ID de cartão inválido'),
+  body('idempotencyKey')
+    .isString()
+    .trim()
+    .matches(/^[a-zA-Z0-9._:-]{8,120}$/)
+    .withMessage('idempotencyKey inválido'),
+  body('deliveryAddressSnapshot')
+    .isObject()
+    .withMessage('deliveryAddressSnapshot é obrigatório'),
+  body('deliveryAddressSnapshot.cep')
+    .isString()
+    .trim()
+    .isLength({ min: 8, max: 9 })
+    .withMessage('CEP inválido'),
+  body('deliveryAddressSnapshot.logradouro')
+    .isString()
+    .trim()
+    .isLength({ min: 3, max: 200 })
+    .withMessage('logradouro inválido'),
+  body('deliveryAddressSnapshot.numero')
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('numero inválido'),
+  body('deliveryAddressSnapshot.bairro')
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('bairro inválido'),
+  body('deliveryAddressSnapshot.cidade')
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('cidade inválida'),
+  body('deliveryAddressSnapshot.estado')
+    .isString()
+    .trim()
+    .matches(/^[A-Za-z]{2}$/)
+    .withMessage('estado inválido'),
+  body('deliveryAddressSnapshot.complemento')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('complemento inválido'),
+  body('isSecondIssue')
+    .optional()
+    .isBoolean()
+    .withMessage('isSecondIssue deve ser booleano'),
+  body('originShipmentId')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 5, max: 120 })
+    .withMessage('originShipmentId inválido'),
+  body('reason')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 3, max: 280 })
+    .withMessage('reason inválido'),
+  handleValidationErrors
+];
+
+const validateShipmentTimelineQuery = [
+  param('id')
+    .isString()
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('ID de cartão inválido'),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('page inválida'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('limit inválido'),
+  handleValidationErrors
+];
+
+const validateInternalShipmentEvent = [
+  param('shipmentId')
+    .isString()
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('shipmentId inválido'),
+  body('eventType')
+    .isIn(['SHIPMENT_CREATED', 'FRETE_COBRADO', 'FRETE_RECUSADO', 'STATUS_ATUALIZADO'])
+    .withMessage('eventType inválido'),
+  body('status')
+    .optional()
+    .isIn([
+      'AGUARDANDO_COBRANCA',
+      'COBRANCA_CONFIRMADA',
+      'EM_PRODUCAO',
+      'POSTADO',
+      'EM_TRANSITO',
+      'SAIU_PARA_ENTREGA',
+      'ENTREGUE',
+      'FALHA_ENTREGA',
+      'DEVOLVIDO',
+    ])
+    .withMessage('status inválido'),
+  body('eventAt')
+    .optional()
+    .isISO8601()
+    .withMessage('eventAt inválido'),
+  body('carrierCode')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 30 })
+    .withMessage('carrierCode inválido'),
+  body('carrierName')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 80 })
+    .withMessage('carrierName inválido'),
+  body('trackingCode')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 4, max: 60 })
+    .withMessage('trackingCode inválido'),
+  body('trackingUrl')
+    .optional()
+    .isURL()
+    .withMessage('trackingUrl inválida'),
+  body('description')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 280 })
+    .withMessage('description inválida'),
+  body('providerPayload')
+    .optional()
+    .isObject()
+    .withMessage('providerPayload deve ser objeto'),
+  handleValidationErrors
+];
+
 // Validações para empréstimo
 const validateLoanRequest = [
   body('valorSolicitado')
@@ -683,6 +828,9 @@ module.exports = {
   validateProfileUpdate,
   validatePixTransaction,
   validateCardRequest,
+  validateCardShipmentCreate,
+  validateShipmentTimelineQuery,
+  validateInternalShipmentEvent,
   validateLoanRequest,
   validateBoletoPayment,
   validateId,
