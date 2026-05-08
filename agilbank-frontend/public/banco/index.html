@@ -10606,24 +10606,13 @@
             alert('📋 DETALHES DA OFERTA:\n\n💳 CARTÃO DE CRÉDITO:\n• Limite pré-aprovado\n• Cartão virtual pronto na hora\n• Sem burocracia\n\n💰 CRÉDITO PESSOAL:\n• Dinheiro rápido na conta\n• Aprovação em minutos\n• Até 45 dias para começar a pagar\n\n⏰ OFERTA VÁLIDA POR 24H');
         }
 
-        // Função para ativar crédito pessoal
+        // Função para abrir o módulo real de crédito pessoal
         function activateCredito() {
-            // Simular ativação do crédito pessoal
-            alert('💰 Ativando seu Crédito Pessoal...\n\n✅ Proposta de crédito enviada para análise!\n✅ Você receberá uma resposta em até 2 minutos!\n✅ Dinheiro liberado diretamente na sua conta!\n✅ Até 45 dias para começar a pagar!');
-            
             // Fechar modal
             hideAgilModal();
             
-            // Redirecionar para página de crédito pessoal
-            setTimeout(() => {
-                console.log('Redirecionando para página de crédito pessoal...');
-                // Verificar se a função creditoContainer existe e chamá-la
-                if (typeof creditoContainer === 'function') {
-                    creditoContainer();
-                } else {
-                    console.log('Função creditoContainer não encontrada');
-                }
-            }, 1000);
+            // Navegar para o módulo isolado de empréstimos (fluxo novo)
+            window.location.assign('emprestimos.html');
         }
 
         // Event listeners para os botões do modal
