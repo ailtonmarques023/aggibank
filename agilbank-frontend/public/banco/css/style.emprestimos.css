@@ -32,6 +32,10 @@
   flex-direction: column;
 }
 
+.ab-emp-shell.ab-emp-shell--no-footer {
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
 .ab-emp-topbar {
   background: var(--ab-blue);
   color: #fff;
@@ -52,8 +56,13 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  font-size: 18px;
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .ab-emp-topbar-kicker {
@@ -306,17 +315,88 @@
   cursor: pointer;
 }
 
-.ab-emp-insurance-info {
-  border: 1px solid #d9e6f3;
-  border-radius: 12px;
-  padding: 12px;
-  background: #f7fbff;
-  margin-bottom: 10px;
+.ab-emp-insurance-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #dbe7f3;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #f7fbff 0%, #eef5fc 100%);
 }
 
-.ab-emp-insurance-info p {
+.ab-emp-insurance-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ab-emp-insurance-hero-text p {
+  margin: 0 0 8px;
   color: #294b69;
-  margin-bottom: 8px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.ab-emp-insurance-hero-visual {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(0, 102, 179, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ab-blue);
+}
+
+.ab-emp-shield-icon {
+  display: block;
+}
+
+.ab-emp-option-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.ab-emp-option-head-single {
+  justify-content: flex-start;
+}
+
+.ab-emp-insurance-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ab-blue);
+  white-space: nowrap;
+}
+
+.ab-emp-option-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ab-text);
+}
+
+.ab-emp-insurance-terms-notice {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ab-muted);
+}
+
+.ab-emp-pseudo-link {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ab-blue);
+  cursor: default;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .ab-emp-inline-link {
@@ -342,13 +422,6 @@
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
-}
-
-.ab-emp-option span {
-  display: block;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--ab-text);
 }
 
 .ab-emp-recommended {
@@ -470,11 +543,15 @@
   max-width: 480px;
   background: #fff;
   border-top: 1px solid var(--ab-border);
-  padding: 10px 12px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   box-shadow: 0 -2px 8px rgba(15, 39, 65, 0.09);
+}
+
+.ab-emp-footer[hidden] {
+  display: none !important;
 }
 
 .ab-emp-footer button {

@@ -6,6 +6,7 @@
   const REQUEST_TIMEOUT_MS = 12000;
   const TOKEN_KEYS = ["agilbank_token", "govbr_token", "token"];
   const DEFAULT_PRAZOS = [6, 12, 18, 24, 36, 48, 60, 72];
+  const INSURANCE_MONTHLY_LABEL = "R$ 39,90/mês";
 
   class EmprestimosModule {
     constructor(documentRef) {
@@ -34,6 +35,7 @@
     getElements() {
       return {
         shell: this.document.getElementById("abEmpShell"),
+        footer: this.document.getElementById("abEmpFooter"),
         statePill: this.document.getElementById("abEmpStatePill"),
         statusText: this.document.getElementById("abEmpStatusText"),
         retryBtn: this.document.getElementById("abEmpRetryBtn"),
@@ -99,9 +101,15 @@
       this.elements.valueInput.addEventListener("input", () => this.onValueInput());
       this.elements.valueInput.addEventListener("paste", (event) => this.onValuePaste(event));
       this.elements.continueValueBtn.addEventListener("click", () => this.handleContinueValue());
-      this.elements.continueInstallmentsBtn.addEventListener("click", () => this.goToStep("insurance"));
+      this.elements.continueInstallmentsBtn.addEventListener("click", () => {
+        this.clearInsuranceSelection();
+        this.goToStep("insurance");
+      });
       if (this.elements.improveOfferBtn) {
-        this.elements.improveOfferBtn.addEventListener("click", () => this.goToStep("value"));
+        this.elements.improveOfferBtn.addEventListener("click", () => {
+          this.clearInsuranceSelection();
+          this.goToStep("value");
+        });
       }
       this.elements.continueInsuranceBtn.addEventListener("click", () => this.handleContinueInsurance());
       this.elements.submitProposalBtn.addEventListener("click", () => this.handleSubmitProposal());
@@ -129,6 +137,7 @@
           this.redirectToProfile();
         });
       }
+
     }
 
     async bootstrapData() {
@@ -232,6 +241,7 @@
         return;
       }
 
+      this.clearInsuranceSelection();
       this.state.selectedValue = Math.round(value * 100) / 100;
       this.state.selectedPrazo = null;
       this.state.simulation = null;
@@ -363,7 +373,37 @@
       this.elements.insuranceOptions.forEach((btn) => {
         btn.classList.toggle("is-selected", btn.dataset.insurance === choice);
       });
-      this.elements.continueInsuranceBtn.disabled = false;
+      this.syncInsuranceCta();
+    }
+
+    syncInsuranceCta() {
+      const btn = this.elements.continueInsuranceBtn;
+      if (!btn) return;
+      if (!this.state.insuranceChoice) {
+        btn.disabled = true;
+        btn.textContent = "Escolha uma opção";
+        return;
+      }
+      btn.disabled = false;
+      btn.textContent = "Revisar detalhes da proposta";
+    }
+
+    clearInsuranceSelection() {
+      this.state.insuranceChoice = null;
+      this.elements.insuranceOptions.forEach((btn) => btn.classList.remove("is-selected"));
+      this.syncInsuranceCta();
+    }
+
+    updateFooterVisibility(step) {
+      const footer = this.elements.footer;
+      const shell = this.elements.shell;
+      const showFooter = step === "loading" || step === "blocked" || step === "history";
+      if (footer) {
+        footer.hidden = !showFooter;
+      }
+      if (shell) {
+        shell.classList.toggle("ab-emp-shell--no-footer", !showFooter);
+      }
     }
 
     handleContinueInsurance() {
@@ -386,7 +426,12 @@
         ["Parcelas", `${this.formatInteger(prazo)}x de R$ ${this.formatMoney(parcela)}`],
         ["Total estimado", `R$ ${this.formatMoney(total)}`],
         ["Taxa de juros", this.formatPercent(sim.taxaJuros)],
-        ["Seguro", this.state.insuranceChoice === "com" ? "Com seguro (opcional, nao enviado ao backend)" : "Sem seguro"]
+        [
+          "Seguro",
+          this.state.insuranceChoice === "com"
+            ? `Com seguro (${INSURANCE_MONTHLY_LABEL} indicativo, opcional, nao enviado ao backend)`
+            : "Sem seguro"
+        ]
       ];
 
       const optionalApiFields = [
@@ -519,11 +564,19 @@
         this.redirectToHome();
         return;
       }
-      if (step === "installments") this.goToStep("value");
-      else if (step === "insurance") this.goToStep("installments");
+      if (step === "installments") {
+        this.clearInsuranceSelection();
+        this.goToStep("value");
+      } else if (step === "insurance") {
+        this.clearInsuranceSelection();
+        this.goToStep("installments");
+      }
       else if (step === "review") this.goToStep("insurance");
       else if (step === "submitted") this.goToStep("history");
-      else if (step === "history") this.goToStep("value");
+      else if (step === "history") {
+        this.clearInsuranceSelection();
+        this.goToStep("value");
+      }
       else this.redirectToHome();
     }
 
@@ -556,6 +609,10 @@
       this.state.currentStep = step;
       this.elements.statePill.textContent = step;
       this.elements.topbarTitle.textContent = step === "history" ? "Historico de propostas" : "Credito pessoal";
+      this.updateFooterVisibility(step);
+      if (step === "insurance") {
+        this.syncInsuranceCta();
+      }
     }
 
     setLoadingState(message) {

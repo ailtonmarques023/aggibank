@@ -83,10 +83,18 @@
 
       <section class="ab-emp-step" id="abEmpStepInsurance">
         <div class="ab-emp-card">
-          <h2>Proteja sua proposta</h2>
-          <div class="ab-emp-insurance-info">
-            <p>Suas parcelas em dia se voce perder o emprego ou sofrer um acidente.</p>
-            <button type="button" class="ab-emp-inline-link">Mais detalhes</button>
+          <h2>Proteja seu empréstimo</h2>
+          <div class="ab-emp-insurance-hero">
+            <div class="ab-emp-insurance-hero-text">
+              <p>Suas parcelas em dia se você perder o emprego ou sofrer um acidente.</p>
+              <button type="button" class="ab-emp-inline-link" id="abEmpInsuranceDetailsBtn">Mais detalhes</button>
+            </div>
+            <div class="ab-emp-insurance-hero-visual" aria-hidden="true">
+              <svg class="ab-emp-shield-icon" viewBox="0 0 24 24" width="36" height="36" focusable="false">
+                <path fill="currentColor" fill-opacity="0.18" d="M12 2.5 4 5.2v6.3c0 4.8 3.6 9.2 8 10.5 4.4-1.3 8-5.7 8-10.5V5.2L12 2.5z"/>
+                <path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5 4 5.2v6.3c0 4.8 3.6 9.2 8 10.5 4.4-1.3 8-5.7 8-10.5V5.2L12 2.5z"/>
+              </svg>
+            </div>
           </div>
           <p class="ab-emp-muted">
             Voce pode seguir sem seguro. Essa escolha nao altera sua elegibilidade.
@@ -94,16 +102,25 @@
           <div class="ab-emp-option-list">
             <button type="button" class="ab-emp-option" data-insurance="com">
               <span class="ab-emp-recommended">Recomendado</span>
-              <span>Com seguro</span>
-              <small>Opcional no fluxo atual (sem envio ao backend)</small>
+              <span class="ab-emp-option-head">
+                <span class="ab-emp-option-title">Com seguro</span>
+                <span class="ab-emp-insurance-price">R$ 39,90/mês</span>
+              </span>
+              <small>Opcional. Valor indicativo local; nao enviado ao backend.</small>
             </button>
             <button type="button" class="ab-emp-option" data-insurance="sem">
-              <span>Sem seguro</span>
-              <small>Disponivel sem bloquear a proposta</small>
+              <span class="ab-emp-option-head ab-emp-option-head-single">
+                <span class="ab-emp-option-title">Sem seguro</span>
+              </span>
+              <small>Disponivel sem bloquear a proposta.</small>
             </button>
           </div>
+          <p class="ab-emp-insurance-terms-notice">
+            Ao adicionar o Seguro de Empréstimo, você declara que aceita e concorda com os
+            <button type="button" class="ab-emp-pseudo-link" id="abEmpInsuranceTermsBtn">Termos e condições</button>.
+          </p>
           <p class="ab-emp-error" id="abEmpInsuranceError"></p>
-          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpContinueInsuranceBtn" type="button" disabled>Revisar detalhes</button>
+          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpContinueInsuranceBtn" type="button" disabled>Escolha uma opção</button>
         </div>
       </section>
 
@@ -140,7 +157,7 @@
     </main>
   </div>
 
-  <footer class="ab-emp-footer">
+  <footer class="ab-emp-footer" id="abEmpFooter">
     <button type="button" id="abEmpNavInicio">Inicio</button>
     <button type="button" id="abEmpNavEmprestimos" class="is-active">Emprestimos</button>
     <button type="button" id="abEmpNavPerfil">Perfil</button>
