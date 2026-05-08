@@ -20,6 +20,7 @@
         isEligible: null,
         eligibility: null,
         history: [],
+        draftValue: 0,
         selectedValue: 0,
         selectedPrazo: null,
         simulation: null,
@@ -76,12 +77,14 @@
         historyCards: this.document.getElementById("abEmpHistoryCards"),
 
         navInicioBtn: this.document.getElementById("abEmpNavInicio"),
+        navEmprestimosBtn: this.document.getElementById("abEmpNavEmprestimos"),
         navPerfilBtn: this.document.getElementById("abEmpNavPerfil")
       };
     }
 
     async init() {
       this.bindEvents();
+      this.setFooterActive("emprestimos");
       this.showStep("loading");
       await this.bootstrapData();
     }
@@ -106,10 +109,22 @@
       });
 
       if (this.elements.navInicioBtn) {
-        this.elements.navInicioBtn.addEventListener("click", () => this.redirectToHome());
+        this.elements.navInicioBtn.addEventListener("click", () => {
+          this.setFooterActive("inicio");
+          this.redirectToHome();
+        });
+      }
+      if (this.elements.navEmprestimosBtn) {
+        this.elements.navEmprestimosBtn.addEventListener("click", () => {
+          this.setFooterActive("emprestimos");
+          this.goToStep(this.state.currentStep || "value");
+        });
       }
       if (this.elements.navPerfilBtn) {
-        this.elements.navPerfilBtn.addEventListener("click", () => this.redirectToProfile());
+        this.elements.navPerfilBtn.addEventListener("click", () => {
+          this.setFooterActive("perfil");
+          this.redirectToProfile();
+        });
       }
     }
 
@@ -156,6 +171,7 @@
       const limiteMaximo = this.getLimiteMaximo();
       this.elements.valueLimitText.textContent = `Peça ate R$ ${this.formatMoney(limiteMaximo)}`;
       this.showStep("value");
+      this.applyMonetaryMask(this.state.draftValue);
       this.onValueInput();
     }
 
@@ -166,14 +182,16 @@
     }
 
     onValueInput() {
-      const raw = Number(this.elements.valueInput.value);
-      const value = Number.isFinite(raw) ? raw : 0;
+      const rawText = this.elements.valueInput.value;
+      const value = this.parseCurrencyInput(rawText);
+      this.state.draftValue = value;
+      this.applyMonetaryMask(value);
       this.elements.valueBig.textContent = `R$ ${this.formatMoney(value)}`;
       this.elements.valueError.textContent = "";
     }
 
     handleContinueValue() {
-      const value = Number(this.elements.valueInput.value);
+      const value = Number(this.state.draftValue);
       const limiteMaximo = this.getLimiteMaximo();
 
       if (!Number.isFinite(value) || value <= 0) {
@@ -193,6 +211,30 @@
       this.elements.simulationCard.innerHTML = '<p class="ab-emp-muted">Selecione um prazo para simular na API.</p>';
       this.elements.continueInstallmentsBtn.disabled = true;
       this.goToStep("installments");
+    }
+
+    parseCurrencyInput(raw) {
+      const digits = String(raw || "").replace(/\D/g, "");
+      if (!digits) return 0;
+      const numeric = Number(digits);
+      return Number.isFinite(numeric) ? numeric : 0;
+    }
+
+    applyMonetaryMask(value) {
+      const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+      this.elements.valueInput.value = `R$ ${this.formatMoney(safeValue)}`;
+    }
+
+    setFooterActive(activeKey) {
+      const mapping = {
+        inicio: this.elements.navInicioBtn,
+        emprestimos: this.elements.navEmprestimosBtn,
+        perfil: this.elements.navPerfilBtn,
+      };
+      Object.keys(mapping).forEach((key) => {
+        const btn = mapping[key];
+        if (btn) btn.classList.toggle("is-active", key === activeKey);
+      });
     }
 
     renderPrazoChips() {

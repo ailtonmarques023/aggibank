@@ -58,9 +58,9 @@
           <p class="ab-emp-value-big" id="abEmpValueBig">R$ 0,00</p>
           <p class="ab-emp-muted" id="abEmpValueLimitText">Peça ate R$ 0,00</p>
           <label class="ab-emp-label" for="abEmpValorInput">Valor solicitado (R$)</label>
-          <input id="abEmpValorInput" type="number" min="0" step="0.01" placeholder="Ex.: 301.00" inputmode="decimal">
+          <input id="abEmpValorInput" type="text" placeholder="R$ 0,00" inputmode="numeric" autocomplete="off">
           <p class="ab-emp-error" id="abEmpValueError"></p>
-          <button class="ab-emp-btn ab-emp-btn-block" id="abEmpContinueValueBtn" type="button">Continuar</button>
+          <button class="ab-emp-btn ab-emp-btn-block ab-emp-btn-sticky" id="abEmpContinueValueBtn" type="button">Continuar</button>
         </div>
       </section>
 
@@ -142,7 +142,7 @@
 
   <footer class="ab-emp-footer">
     <button type="button" id="abEmpNavInicio">Inicio</button>
-    <button type="button" class="is-active">Emprestimos</button>
+    <button type="button" id="abEmpNavEmprestimos" class="is-active">Emprestimos</button>
     <button type="button" id="abEmpNavPerfil">Perfil</button>
   </footer>
 

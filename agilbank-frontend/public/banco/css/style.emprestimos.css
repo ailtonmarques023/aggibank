@@ -16,7 +16,7 @@
 
 .ab-emprestimos-page {
   margin: 0;
-  background: var(--ab-bg);
+  background: #ffffff;
   color: var(--ab-text);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -26,7 +26,10 @@
   max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
-  padding: 12px 14px 92px;
+  background: #ffffff;
+  padding: 12px 14px calc(92px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
 }
 
 .ab-emp-topbar {
@@ -76,6 +79,7 @@
 
 .ab-emp-main {
   margin-top: 12px;
+  flex: 1;
 }
 
 .ab-emp-step {
@@ -85,6 +89,9 @@
 
 .ab-emp-step-active {
   display: grid;
+  align-content: start;
+  min-height: 100%;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
 }
 
 .ab-emp-card {
@@ -172,6 +179,11 @@
   font-weight: 700;
 }
 
+#abEmpValorInput:focus {
+  outline: 2px solid #9cc8eb;
+  outline-offset: 1px;
+}
+
 .ab-emp-btn {
   border: none;
   border-radius: 12px;
@@ -199,6 +211,12 @@
 .ab-emp-btn-block {
   width: 100%;
   margin-top: 12px;
+}
+
+.ab-emp-btn-sticky {
+  position: sticky;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
 }
 
 .ab-emp-muted {
@@ -472,4 +490,5 @@
   border-color: var(--ab-blue);
   color: var(--ab-blue);
   font-weight: 700;
+  background: var(--ab-blue-soft);
 }
