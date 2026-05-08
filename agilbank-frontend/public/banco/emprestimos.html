@@ -10,7 +10,12 @@
 <body class="ab-emprestimos-page">
   <div class="ab-emp-shell" id="abEmpShell">
     <header class="ab-emp-topbar">
-      <button type="button" class="ab-emp-icon-btn" id="abEmpBackBtn" aria-label="Voltar">&#8592;</button>
+      <div class="ab-emp-topbar-leading">
+        <button type="button" class="ab-emp-icon-btn ab-emp-icon-btn--compact" id="abEmpBackBtn" aria-label="Voltar">&#8592;</button>
+        <button type="button" class="ab-emp-icon-btn ab-emp-icon-btn--compact ab-emp-icon-btn--close" id="abEmpCloseBtn" aria-label="Fechar empréstimos">
+          <span class="ab-emp-close-glyph" aria-hidden="true">&times;</span>
+        </button>
+      </div>
       <div class="ab-emp-topbar-title-wrap">
         <p class="ab-emp-topbar-kicker">AgilBank</p>
         <h1 class="ab-emp-topbar-title">Credito pessoal</h1>
@@ -174,7 +179,6 @@
   <footer class="ab-emp-footer" id="abEmpFooter">
     <button type="button" id="abEmpNavInicio">Inicio</button>
     <button type="button" id="abEmpNavEmprestimos" class="is-active">Emprestimos</button>
-    <button type="button" id="abEmpNavPerfil">Perfil</button>
   </footer>
 
   <script src="./js/agilbankApiBase.js"></script>

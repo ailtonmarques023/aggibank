@@ -42,6 +42,7 @@
         retryBtn: this.document.getElementById("abEmpRetryBtn"),
         loginBtn: this.document.getElementById("abEmpLoginBtn"),
         backBtn: this.document.getElementById("abEmpBackBtn"),
+        closeBtn: this.document.getElementById("abEmpCloseBtn"),
         topbarTitle: this.document.querySelector(".ab-emp-topbar-title"),
 
         stepLoading: this.document.getElementById("abEmpStepLoading"),
@@ -83,8 +84,7 @@
         historyCards: this.document.getElementById("abEmpHistoryCards"),
 
         navInicioBtn: this.document.getElementById("abEmpNavInicio"),
-        navEmprestimosBtn: this.document.getElementById("abEmpNavEmprestimos"),
-        navPerfilBtn: this.document.getElementById("abEmpNavPerfil")
+        navEmprestimosBtn: this.document.getElementById("abEmpNavEmprestimos")
       };
     }
 
@@ -99,6 +99,11 @@
       this.elements.retryBtn.addEventListener("click", () => this.bootstrapData());
       this.elements.loginBtn.addEventListener("click", () => this.redirectToLogin());
       this.elements.backBtn.addEventListener("click", () => this.handleBack());
+      if (this.elements.closeBtn) {
+        this.elements.closeBtn.addEventListener("click", () => {
+          window.location.assign("./index.html");
+        });
+      }
       this.elements.backHomeBlockedBtn.addEventListener("click", () => this.redirectToHome());
       this.elements.valueInput.addEventListener("beforeinput", (event) => this.onValueBeforeInput(event));
       this.elements.valueInput.addEventListener("input", () => this.onValueInput());
@@ -146,12 +151,6 @@
         this.elements.navEmprestimosBtn.addEventListener("click", () => {
           this.setFooterActive("emprestimos");
           this.goToStep(this.state.currentStep || "value");
-        });
-      }
-      if (this.elements.navPerfilBtn) {
-        this.elements.navPerfilBtn.addEventListener("click", () => {
-          this.setFooterActive("perfil");
-          this.redirectToProfile();
         });
       }
 
@@ -290,8 +289,7 @@
     setFooterActive(activeKey) {
       const mapping = {
         inicio: this.elements.navInicioBtn,
-        emprestimos: this.elements.navEmprestimosBtn,
-        perfil: this.elements.navPerfilBtn,
+        emprestimos: this.elements.navEmprestimosBtn
       };
       Object.keys(mapping).forEach((key) => {
         const btn = mapping[key];
@@ -983,15 +981,6 @@
     }
 
     redirectToHome() {
-      window.location.assign(HOME_PATH);
-    }
-
-    redirectToProfile() {
-      try {
-        window.sessionStorage.setItem("agilbank_open_profile", "1");
-      } catch (error) {
-        // Ignore storage issues and continue navigation.
-      }
       window.location.assign(HOME_PATH);
     }
   }
