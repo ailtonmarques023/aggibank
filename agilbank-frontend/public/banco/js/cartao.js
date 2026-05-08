@@ -671,6 +671,9 @@ async function fetchCartoesFromApi() {
         var result = await response.json().catch(function () {
             return {};
         });
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('[cards real]', result);
+        }
         return extrairCartoesDaResposta(result);
     } catch (e) {
         console.warn('fetchCartoesFromApi:', e);

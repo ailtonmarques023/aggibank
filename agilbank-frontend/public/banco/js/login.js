@@ -366,6 +366,11 @@ class LoginSystem {
         }
         
         this.updateUserInfo();
+        if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+            window.agilbankRefreshPainelCartoes().catch(function (e) {
+                console.warn('agilbankRefreshPainelCartoes pós-login:', e);
+            });
+        }
         console.log('✅ Aplicação principal exibida com sucesso');
     }
 
