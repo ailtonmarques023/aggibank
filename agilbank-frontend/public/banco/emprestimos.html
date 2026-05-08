@@ -11,20 +11,16 @@
   <div class="ab-emp-shell" id="abEmpShell">
     <header class="ab-emp-topbar">
       <div class="ab-emp-topbar-leading">
-        <button type="button" class="ab-emp-icon-btn ab-emp-icon-btn--topbar" id="abEmpBackBtn" aria-label="Voltar">
-          <span class="ab-emp-icon-arrow" aria-hidden="true">&#8592;</span>
+        <button type="button" class="ab-emp-icon-btn ab-emp-icon-btn--compact" id="abEmpBackBtn" aria-label="Voltar">&#8592;</button>
+        <button type="button" class="ab-emp-icon-btn ab-emp-icon-btn--compact ab-emp-icon-btn--close" id="abEmpCloseBtn" aria-label="Fechar empréstimos">
+          <span class="ab-emp-close-glyph" aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="ab-emp-topbar-title-wrap">
         <p class="ab-emp-topbar-kicker">AgilBank</p>
-        <h1 class="ab-emp-topbar-title">Seu crédito</h1>
-        <span class="ab-emp-state-pill ab-emp-state-pill--in-topbar" id="abEmpStatePill">loading</span>
+        <h1 class="ab-emp-topbar-title">Credito pessoal</h1>
       </div>
-      <div class="ab-emp-topbar-trailing">
-        <button type="button" class="ab-emp-icon-btn ab-emp-icon-btn--topbar ab-emp-icon-btn--close" id="abEmpCloseBtn" aria-label="Fechar empréstimos">
-          <span class="ab-emp-close-glyph" aria-hidden="true">&times;</span>
-        </button>
-      </div>
+      <span class="ab-emp-state-pill" id="abEmpStatePill">loading</span>
     </header>
 
     <main class="ab-emp-main" id="abEmpMain">

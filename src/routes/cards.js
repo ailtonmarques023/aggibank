@@ -5,8 +5,7 @@ const { authenticateToken, requireVerification, requireInternalApiKey } = requir
 const {
   validateCardRequest,
   validateCardShipmentCreate,
-  validateShipmentTimelineQuery,
-  validateShipmentPhysicalUnlock
+  validateShipmentTimelineQuery
 } = require('../middleware/validation');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
@@ -17,30 +16,15 @@ const router = express.Router();
 
 const SCHEMA_SOLICITACAO = 1;
 const SHIPPING_FEE_BRL = 39.90;
-/** Remessas encerradas com sucesso operacional ou cancelamento definitivo — permite nova emissão apenas com segunda via explícita. */
-const TERMINAL_SHIPMENT_STATUSES = ['DESBLOQUEADO', 'DEVOLVIDO', 'CANCELADO'];
-
-function normalizeLast4Digits(v) {
-  return String(v == null ? '' : v).replace(/\D/g, '').slice(-4);
-}
-
-/** Resumo seguro para lista de cartões (estado físico ≠ estado financeiro do cartão). */
-function publicPhysicalSnapshot(row) {
-  if (!row) return null;
-  const st = String(row.status || '');
-  const trackingAvailable = Boolean(
-    row.trackingCode
-    && ['REMESSA_CRIADA', 'POSTADO', 'EM_TRANSITO', 'SAIU_PARA_ENTREGA', 'AGUARDANDO_DESBLOQUEIO', 'DESBLOQUEADO'].includes(st)
-  );
-  return {
-    shipmentId: row.id,
-    status: row.status,
-    shippingFeeStatus: row.shippingFeeStatus,
-    shippingFeeAmount: row.shippingFeeAmount,
-    trackingAvailable,
-    physicalUnlocked: st === 'DESBLOQUEADO',
-  };
-}
+const OPEN_SHIPMENT_STATUSES = [
+  'AGUARDANDO_COBRANCA',
+  'COBRANCA_CONFIRMADA',
+  'EM_PRODUCAO',
+  'POSTADO',
+  'EM_TRANSITO',
+  'SAIU_PARA_ENTREGA',
+  'FALHA_ENTREGA',
+];
 
 /** Resposta API: sem token interno, sem snapshot de solicitacao nem metadados LGPD persistidos. */
 function publicCard(cartao) {
@@ -282,32 +266,10 @@ router.get('/', async (req, res) => {
       },
     });
 
-    const shipments = await prisma.cardShipment.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        cardId: true,
-        status: true,
-        shippingFeeStatus: true,
-        shippingFeeAmount: true,
-        trackingCode: true,
-      },
-    });
-    const latestShipmentByCard = new Map();
-    for (const s of shipments) {
-      if (!latestShipmentByCard.has(s.cardId)) latestShipmentByCard.set(s.cardId, s);
-    }
-
     res.json({
       success: true,
       message: 'Cartões listados com sucesso',
-      data: {
-        cartoes: cartoes.map((c) => ({
-          ...publicCard(c),
-          physicalShipment: publicPhysicalSnapshot(latestShipmentByCard.get(c.id) || null),
-        })),
-      },
+      data: { cartoes: cartoes.map(publicCard) },
     });
 
   } catch (error) {
@@ -1038,115 +1000,6 @@ router.post('/:id/virtual/unblock', async (req, res) => {
   }
 });
 
-router.post('/:id/shipment/unlock', validateShipmentPhysicalUnlock, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { last4 } = req.body;
-
-    const cartao = await prisma.cartao.findFirst({
-      where: { id, userId: req.user.id },
-      select: { id: true, last4: true, status: true }
-    });
-
-    if (!cartao) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cartão não encontrado',
-        code: 'CARD_NOT_FOUND'
-      });
-    }
-
-    if (normalizeLast4Digits(cartao.last4) !== normalizeLast4Digits(last4)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Os últimos 4 dígitos não conferem com o cartão selecionado',
-        code: 'LAST4_MISMATCH'
-      });
-    }
-
-    const latestDone = await prisma.cardShipment.findFirst({
-      where: {
-        cardId: id,
-        userId: req.user.id,
-        status: 'DESBLOQUEADO'
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (latestDone) {
-      return res.json({
-        success: true,
-        message: 'Cartão físico já estava desbloqueado',
-        data: {
-          shipment: publicShipment(latestDone),
-          idempotent: true
-        }
-      });
-    }
-
-    const shipment = await prisma.cardShipment.findFirst({
-      where: {
-        cardId: id,
-        userId: req.user.id,
-        status: 'AGUARDANDO_DESBLOQUEIO'
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (!shipment) {
-      return res.status(409).json({
-        success: false,
-        message: 'Desbloqueio indisponível: entrega ainda não confirmada ou fluxo logístico incompleto',
-        code: 'SHIPMENT_NOT_READY_FOR_UNLOCK'
-      });
-    }
-
-    const unlockedAt = new Date();
-    const updated = await prisma.$transaction(async (tx) => {
-      const row = await tx.cardShipment.update({
-        where: { id: shipment.id },
-        data: { status: 'DESBLOQUEADO' }
-      });
-      await tx.cardShipmentEvent.create({
-        data: {
-          shipmentId: shipment.id,
-          userId: req.user.id,
-          eventType: 'STATUS_ATUALIZADO',
-          shipmentStatus: 'DESBLOQUEADO',
-          eventAt: unlockedAt,
-          description: 'Titular confirmou os dados e desbloqueou o cartão físico no app.',
-          createdByType: 'USER',
-          createdById: req.user.id
-        }
-      });
-      return row;
-    });
-
-    await recordAudit({
-      userId: req.user.id,
-      action: 'shipment.physical.unlocked',
-      entity: 'CardShipment',
-      entityId: updated.id,
-      metadata: { cardId: id },
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    return res.json({
-      success: true,
-      message: 'Cartão físico desbloqueado com sucesso',
-      data: { shipment: publicShipment(updated) }
-    });
-  } catch (error) {
-    logger.error('Erro ao desbloquear cartão físico:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
-    });
-  }
-});
-
 router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1204,7 +1057,7 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
       where: {
         cardId: id,
         userId: req.user.id,
-        status: { notIn: TERMINAL_SHIPMENT_STATUSES }
+        status: { in: OPEN_SHIPMENT_STATUSES }
       }
     });
 
@@ -1235,7 +1088,7 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
             userId: req.user.id,
             status: 'AGUARDANDO_COBRANCA',
             shippingFeeAmount: SHIPPING_FEE_BRL,
-            shippingFeeStatus: 'PENDENTE',
+            shippingFeeStatus: 'RECUSADO',
             idempotencyKeyCharge: shipmentChargeIdempotencyKey,
             addressSnapshot: safeAddressSnapshot,
             isSecondIssue: Boolean(isSecondIssue),
@@ -1247,11 +1100,10 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
           data: {
             shipmentId: shipment.id,
             userId: req.user.id,
-            eventType: 'STATUS_ATUALIZADO',
+            eventType: 'FRETE_RECUSADO',
             shipmentStatus: 'AGUARDANDO_COBRANCA',
             eventAt: now,
-            description:
-              'Taxa de emissão e frete (R$ 39,90) não debitada: saldo insuficiente. Limite do cartão permanece aprovado; o cartão físico só entra em produção após pagamento.',
+            description: 'Frete não cobrado por saldo insuficiente',
             createdByType: 'USER',
             createdById: req.user.id
           }
@@ -1272,11 +1124,11 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
         data: {
           userId: req.user.id,
           tipo: 'tarifa',
-          descricao: 'Taxa de emissão e frete — cartão físico (R$ 39,90)',
+          descricao: 'Tarifa de frete cartao fisico',
           valor: -SHIPPING_FEE_BRL,
           saldoAnterior: saldoAtual,
           saldoAtual: saldoAposTarifa,
-          categoria: 'cartao_fisico_emissao_frete',
+          categoria: 'cartao_fisico_frete',
           referenceType: 'card_shipment',
           idempotencyKey: shipmentChargeIdempotencyKey
         }
@@ -1293,7 +1145,7 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
         data: {
           cardId: id,
           userId: req.user.id,
-          status: 'EM_PRODUCAO',
+          status: 'COBRANCA_CONFIRMADA',
           shippingFeeAmount: SHIPPING_FEE_BRL,
           shippingFeeStatus: 'DEBITADO',
           shippingFeeMovementId: movement.id,
@@ -1309,34 +1161,35 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
         data: { referenceId: shipment.id }
       });
 
-      const t0 = now;
-      const t1 = new Date(now.getTime() + 1);
-      const chargedEvent = await tx.cardShipmentEvent.create({
-        data: {
-          shipmentId: shipment.id,
-          userId: req.user.id,
-          eventType: 'FRETE_COBRADO',
-          shipmentStatus: 'COBRANCA_CONFIRMADA',
-          eventAt: t0,
-          description: 'Pagamento da taxa de emissão e frete (R$ 39,90) confirmado no saldo da conta.',
-          createdByType: 'SYSTEM',
-        }
-      });
-      const productionEvent = await tx.cardShipmentEvent.create({
-        data: {
-          shipmentId: shipment.id,
-          userId: req.user.id,
-          eventType: 'STATUS_ATUALIZADO',
-          shipmentStatus: 'EM_PRODUCAO',
-          eventAt: t1,
-          description: 'Cartão físico em produção. A remessa e o rastreamento serão criados quando a logística registrar os dados reais.',
-          createdByType: 'SYSTEM',
-        }
-      });
+      const [createdEvent, chargedEvent] = await Promise.all([
+        tx.cardShipmentEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            userId: req.user.id,
+            eventType: 'SHIPMENT_CREATED',
+            shipmentStatus: 'AGUARDANDO_COBRANCA',
+            eventAt: now,
+            description: 'Remessa criada para cartão físico',
+            createdByType: 'USER',
+            createdById: req.user.id
+          }
+        }),
+        tx.cardShipmentEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            userId: req.user.id,
+            eventType: 'FRETE_COBRADO',
+            shipmentStatus: 'COBRANCA_CONFIRMADA',
+            eventAt: now,
+            description: 'Frete debitado com sucesso',
+            createdByType: 'SYSTEM',
+          }
+        })
+      ]);
 
       return {
         shipment,
-        timeline: [chargedEvent, productionEvent],
+        timeline: [createdEvent, chargedEvent],
         insufficientBalance: false,
         movement
       };
@@ -1385,7 +1238,7 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
         financial: {
           movementId: result.movement.id,
           amount: -SHIPPING_FEE_BRL,
-          category: 'cartao_fisico_emissao_frete'
+          category: 'cartao_fisico_frete'
         }
       }
     });

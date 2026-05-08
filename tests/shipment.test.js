@@ -85,20 +85,20 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
       saldoAtual: 960.1,
     });
     prisma.user.update.mockResolvedValue({ id: 'test-user-id', saldoAtual: 960.1 });
-    prisma.cardShipment.create.mockResolvedValue(makeShipment({ status: 'EM_PRODUCAO' }));
+    prisma.cardShipment.create.mockResolvedValue(makeShipment());
     prisma.movimentacao.update.mockResolvedValue({ id: 'mov-1', referenceId: 'shipment-1' });
     prisma.cardShipmentEvent.create
       .mockResolvedValueOnce({
         id: 'ev-1',
         shipmentId: 'shipment-1',
-        eventType: 'FRETE_COBRADO',
-        shipmentStatus: 'COBRANCA_CONFIRMADA',
+        eventType: 'SHIPMENT_CREATED',
+        shipmentStatus: 'AGUARDANDO_COBRANCA',
       })
       .mockResolvedValueOnce({
         id: 'ev-2',
         shipmentId: 'shipment-1',
-        eventType: 'STATUS_ATUALIZADO',
-        shipmentStatus: 'EM_PRODUCAO',
+        eventType: 'FRETE_COBRADO',
+        shipmentStatus: 'COBRANCA_CONFIRMADA',
       });
 
     const res = await request(app)
@@ -112,11 +112,11 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
 
     expect(res.body.success).toBe(true);
     expect(res.body.data.financial.movementId).toBe('mov-1');
-    expect(res.body.data.financial.category).toBe('cartao_fisico_emissao_frete');
-    expect(res.body.data.shipment.status).toBe('EM_PRODUCAO');
+    expect(res.body.data.financial.category).toBe('cartao_fisico_frete');
+    expect(res.body.data.shipment.status).toBe('COBRANCA_CONFIRMADA');
     expect(prisma.movimentacao.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        categoria: 'cartao_fisico_emissao_frete',
+        categoria: 'cartao_fisico_frete',
         valor: -39.9,
       }),
     }));
@@ -153,13 +153,13 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
       .mockResolvedValueOnce({ saldoAtual: 10 });
     prisma.cardShipment.create.mockResolvedValue(makeShipment({
       status: 'AGUARDANDO_COBRANCA',
-      shippingFeeStatus: 'PENDENTE',
+      shippingFeeStatus: 'RECUSADO',
       shippingFeeMovementId: null,
     }));
     prisma.cardShipmentEvent.create.mockResolvedValue({
       id: 'ev-fail',
       shipmentId: 'shipment-1',
-      eventType: 'STATUS_ATUALIZADO',
+      eventType: 'FRETE_RECUSADO',
       shipmentStatus: 'AGUARDANDO_COBRANCA',
     });
 
@@ -173,7 +173,7 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
       .expect(402);
 
     expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
-    expect(res.body.data.shipment.shippingFeeStatus).toBe('PENDENTE');
+    expect(res.body.data.shipment.shippingFeeStatus).toBe('RECUSADO');
     expect(prisma.movimentacao.create).not.toHaveBeenCalled();
   });
 

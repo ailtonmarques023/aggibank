@@ -1141,8 +1141,10 @@
       this.elements.statePill.textContent = step;
       if (step === "history") {
         this.elements.topbarTitle.textContent = "Historico de propostas";
+      } else if (step === "manage") {
+        this.elements.topbarTitle.textContent = "Seu credito";
       } else {
-        this.elements.topbarTitle.textContent = "Seu crédito";
+        this.elements.topbarTitle.textContent = "Credito pessoal";
       }
       this.updateFooterVisibility(step);
       if (step === "insurance") {
