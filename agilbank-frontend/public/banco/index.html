@@ -1713,6 +1713,29 @@
         .agil-logo-accent {
             color: #00C6A7;
         }
+
+        .agil-hero {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 0 12px;
+        }
+
+        .agil-hero-icon {
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+            object-position: center;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 380px) {
+            .agil-hero-icon {
+                width: 64px;
+                height: 64px;
+            }
+        }
         
         .agil-title {
             font-family: 'Poppins', Arial, sans-serif;
@@ -2236,42 +2259,47 @@
                             <span class="agil-logo-text">Agil<span class="agil-logo-accent">Bank</span></span>
                         </div>
 
-                        <!-- Título -->
-                        <h1 id="agilTitle" class="agil-title">Cartão + Crédito Pessoal</h1>
-                        <h2 class="agil-subtitle">oferta disponivel</h2>
+                        <div class="agil-hero">
+                            <img
+                                id="agilHeroIcon"
+                                class="agil-hero-icon"
+                                src="assets/icons/icon-consultar-opcoes.png"
+                                alt=""
+                                width="64"
+                                height="64"
+                                decoding="async"
+                            />
+                        </div>
+
+                        <!-- Título (textos padrão seguros; JS contextualiza após GET /api/cards e /loans) -->
+                        <h1 id="agilTitle" class="agil-title">Cartão e crédito pessoal</h1>
+                        <h2 id="agilSubtitle" class="agil-subtitle" style="display:none;"></h2>
 
                         <!-- Subtítulo -->
-                        <p class="agil-lead">Receba seu cartão virtual agora e aproveite até 45 dias para começar a pagar.</p>
+                        <p id="agilLead" class="agil-lead">Consulte as opções disponíveis para sua conta. Sujeito à análise.</p>
 
                         <!-- Benefícios -->
-                        <ul class="agil-list">
+                        <ul id="agilList" class="agil-list">
                             <li>
                                 <span class="agil-bullet"></span>
-                                Dinheiro rápido na conta
+                                Consulte condições e limites sujeitos à análise.
                             </li>
                             <li>
                                 <span class="agil-bullet"></span>
-                                Cartão virtual com análise
+                                Acompanhe o status das solicitações pelo painel do cartão e do crédito.
                             </li>
                             <li>
                                 <span class="agil-bullet"></span>
-                                Sem burocracia
+                                Informações alinhadas ao seu perfil e à política do banco.
                             </li>
                         </ul>
                     </div>
 
                     <!-- Botões -->
                     <div class="agil-ctas">
-                        <button id="agilActivate" class="btn-primary">Quero meu Cartão</button>
-                        <button id="agilCredito" class="btn-credito">Crédito Pessoal</button>
-                        <button id="agilInfo" class="btn-secondary">Saiba mais</button>
-                    </div>
-
-                    <!-- Botão Salvar -->
-                    <div class="config-save-section">
-                        <button class="btn-save-config" onclick="salvarConfiguracoes()">
-                            <i class="fas fa-save"></i> Salvar Configurações
-                        </button>
+                        <button type="button" id="agilActivate" class="btn-primary" data-agil-action="solicitar-cartao">Solicitar cartão</button>
+                        <button type="button" id="agilCredito" class="btn-credito" data-agil-action="consultar-credito">Consultar crédito</button>
+                        <button type="button" id="agilInfo" class="btn-secondary" style="display:none;" data-agil-action="info-credito">Crédito pessoal</button>
                     </div>
 
                     <!-- Rodapé -->
@@ -10615,28 +10643,273 @@
 
         // Função para ativar proposta (cartão + crédito)
         function activateProposal() {
-            // Fechar modal
             hideAgilModal();
-            
-            // Redirecionar para formulário de solicitação de cartão
-            setTimeout(() => {
-                openDynamicCardForm();
-                // window.location.href = '#cartao'; // ou showCartaoContainer();
-            }, 1000);
+            var btn = document.getElementById('agilActivate');
+            var mode = btn && btn.getAttribute('data-agil-action');
+            setTimeout(function () {
+                if (mode === 'ver-cartao') {
+                    if (typeof showCartaoGerenciamento === 'function') {
+                        showCartaoGerenciamento();
+                    }
+                    return;
+                }
+                if (typeof openDynamicCardForm === 'function') {
+                    openDynamicCardForm();
+                }
+            }, 150);
         }
 
-        // Função para mostrar mais informações
         function showMoreInfo() {
             window.location.assign('emprestimos.html');
         }
 
-        // Função para abrir o módulo real de crédito pessoal
+        // Crédito: sempre módulo real em emprestimos.html (consultar ou acompanhar)
         function activateCredito() {
-            // Fechar modal
             hideAgilModal();
-            
-            // Navegar para o módulo isolado de empréstimos (fluxo novo)
             window.location.assign('emprestimos.html');
+        }
+
+        function agilbankModalNormStatus(s) {
+            return String(s || '').trim().toLowerCase();
+        }
+
+        function agilbankModalIsCartaoRejeitado(status) {
+            var s = agilbankModalNormStatus(status);
+            return s === 'rejeitado' || s === 'rejected' || s === 'negado' || s === 'recusado';
+        }
+
+        function agilbankModalIsCartaoPendente(status) {
+            var s = agilbankModalNormStatus(status);
+            if (!s) return false;
+            if (s === 'pending' || s === 'pendente' || s.indexOf('pendente_') === 0) return true;
+            if (s === 'em_analise' || s === 'em analise' || s === 'analise') return true;
+            return false;
+        }
+
+        /** True se existe cartão/solicitação em andamento (exclui somente rejeitado). */
+        function agilbankModalHasCardPipeline(cartoes) {
+            if (!Array.isArray(cartoes) || !cartoes.length) return false;
+            return cartoes.some(function (c) {
+                return !agilbankModalIsCartaoRejeitado(c && c.status);
+            });
+        }
+
+        /** Empréstimo/proposta em andamento: pendente, aprovado ou bloqueado (rejeitado exclui). */
+        function agilbankModalHasLoanPipeline(emprestimos) {
+            if (!Array.isArray(emprestimos) || !emprestimos.length) return false;
+            return emprestimos.some(function (row) {
+                var st = agilbankModalNormStatus(row && row.status);
+                if (st === 'rejeitado' || st === 'rejected') return false;
+                if (st === 'pendente') return true;
+                if (st === 'aprovado' || st === 'approved') return true;
+                if (st === 'bloqueado') return true;
+                return false;
+            });
+        }
+
+        async function agilbankModalFetchEmprestimos() {
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                return [];
+            }
+            try {
+                var response = await window.AgilBank.api.request('loans', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) return [];
+                var body = await response.json().catch(function () {
+                    return {};
+                });
+                var data = body && body.data;
+                if (!data || !Array.isArray(data.emprestimos)) return [];
+                return data.emprestimos.slice();
+            } catch (e) {
+                console.warn('GET /loans (modal contextual):', e);
+                return [];
+            }
+        }
+
+        function agilModalSetListItems(textos) {
+            var ul = document.getElementById('agilList');
+            if (!ul) return;
+            var arr = Array.isArray(textos) ? textos : [];
+            ul.innerHTML = arr
+                .map(function (t) {
+                    return (
+                        '<li><span class="agil-bullet"></span>' +
+                        String(t).replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+                        '</li>'
+                    );
+                })
+                .join('');
+        }
+
+        /**
+         * Atualiza copy e CTAs do modal conforme GET /api/cards + GET /loans.
+         */
+        function agilModalApplyContext(caseNum, cartoes) {
+            var title = document.getElementById('agilTitle');
+            var sub = document.getElementById('agilSubtitle');
+            var lead = document.getElementById('agilLead');
+            var btnCard = document.getElementById('agilActivate');
+            var btnCred = document.getElementById('agilCredito');
+            var btnInfo = document.getElementById('agilInfo');
+            var heroIcon = document.getElementById('agilHeroIcon');
+            var iconFiles = {
+                1: 'icon-consultar-opcoes.png',
+                2: 'icon-cartao-analise.png',
+                3: 'icon-credito-andamento.png',
+                4: 'icon-produtos.png'
+            };
+            if (heroIcon && iconFiles[caseNum]) {
+                heroIcon.src = 'assets/icons/' + iconFiles[caseNum];
+                heroIcon.alt = '';
+            }
+
+            if (sub) {
+                sub.style.display = 'none';
+                sub.textContent = '';
+            }
+            if (btnInfo) btnInfo.style.display = 'none';
+
+            if (caseNum === 1) {
+                if (title) title.textContent = 'Cartão e crédito pessoal';
+                if (lead) lead.textContent = 'Consulte as opções disponíveis para sua conta. Sujeito à análise.';
+                agilModalSetListItems([
+                    'Consulte condições e prazos sujeitos à análise de crédito.',
+                    'Acompanhe o status de cada solicitação nos painéis de cartão e de crédito.',
+                    'Cada etapa depende da confirmação do banco após a análise.'
+                ]);
+                if (btnCard) {
+                    btnCard.textContent = 'Solicitar cartão';
+                    btnCard.setAttribute('data-agil-action', 'solicitar-cartao');
+                    btnCard.style.display = '';
+                }
+                if (btnCred) {
+                    btnCred.textContent = 'Consultar crédito';
+                    btnCred.setAttribute('data-agil-action', 'consultar-credito');
+                    btnCred.style.display = '';
+                }
+            } else if (caseNum === 2) {
+                var tituloC2 = 'Acompanhe seu cartão';
+                if ((cartoes || []).some(function (c) {
+                    return agilbankModalIsCartaoPendente(c && c.status);
+                })) {
+                    tituloC2 = 'Seu cartão está em análise';
+                }
+                if (title) title.textContent = tituloC2;
+                if (lead) {
+                    lead.textContent =
+                        'Você pode acompanhar o status da sua solicitação de cartão. Crédito pessoal permanece sujeito à análise.';
+                }
+                if (sub) {
+                    sub.style.display = '';
+                    sub.textContent = 'Proposta sujeita à análise';
+                }
+                agilModalSetListItems([
+                    'Use o painel de cartão para ver o andamento da solicitação.',
+                    'Crédito pessoal: consulte opções disponíveis ou acompanhe propostas em análise.'
+                ]);
+                if (btnCard) {
+                    btnCard.textContent = 'Ver cartão';
+                    btnCard.setAttribute('data-agil-action', 'ver-cartao');
+                    btnCard.style.display = '';
+                }
+                if (btnCred) {
+                    btnCred.textContent = 'Consultar crédito';
+                    btnCred.setAttribute('data-agil-action', 'consultar-credito');
+                    btnCred.style.display = '';
+                }
+            } else if (caseNum === 3) {
+                if (title) title.textContent = 'Acompanhe seu crédito pessoal';
+                if (lead) lead.textContent = 'Você já possui uma solicitação de crédito em andamento. Sujeito à análise.';
+                if (sub) {
+                    sub.style.display = '';
+                    sub.textContent = 'Proposta em análise ou em tratamento';
+                }
+                agilModalSetListItems([
+                    'Abra o módulo de crédito para ver status, valores e próximos passos.',
+                    'Cartão: solicite apenas se ainda não houver solicitação em andamento.'
+                ]);
+                if (btnCard) {
+                    btnCard.textContent = 'Solicitar cartão';
+                    btnCard.setAttribute('data-agil-action', 'solicitar-cartao');
+                    btnCard.style.display = '';
+                }
+                if (btnCred) {
+                    btnCred.textContent = 'Ver crédito';
+                    btnCred.setAttribute('data-agil-action', 'ver-credito');
+                    btnCred.style.display = '';
+                }
+            } else {
+                if (title) title.textContent = 'Acompanhe seus produtos';
+                if (lead) {
+                    lead.textContent =
+                        'Você já possui cartão e crédito pessoal em andamento. Use os painéis para acompanhar o status.';
+                }
+                if (sub) {
+                    sub.style.display = '';
+                    sub.textContent = 'Sujeito à análise e condições contratuais';
+                }
+                agilModalSetListItems([
+                    'Cartão: acompanhe etapas e uso no painel de cartão.',
+                    'Crédito: veja sua proposta e próximos passos no módulo de crédito pessoal.'
+                ]);
+                if (btnCard) {
+                    btnCard.textContent = 'Ver cartão';
+                    btnCard.setAttribute('data-agil-action', 'ver-cartao');
+                    btnCard.style.display = '';
+                }
+                if (btnCred) {
+                    btnCred.textContent = 'Ver crédito';
+                    btnCred.setAttribute('data-agil-action', 'ver-credito');
+                    btnCred.style.display = '';
+                }
+            }
+        }
+
+        function agilModalDisplayBlockingOverlay() {
+            var modal = document.getElementById('agilModal');
+            if (!modal) return;
+            var elementsToHide = [
+                'userCardLimit',
+                'opcoesLimiteContainer',
+                'cartaoGerenciamentoContainer',
+                'container',
+                'pixContainer',
+                'notification',
+                'extratoContainer',
+                'perfilContainer',
+                'chatContainer',
+                'emprestimoContainer',
+                'creditoContainer',
+                'contaContainer'
+            ];
+            elementsToHide.forEach(function (id) {
+                var element = document.getElementById(id);
+                if (element) element.style.display = 'none';
+            });
+            modal.style.display = 'block';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.zIndex = '999999';
+            modal.setAttribute('aria-hidden', 'false');
+            var overlay = modal.querySelector('.agil-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.style.position = 'fixed';
+                overlay.style.zIndex = '999999';
+                overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+            }
         }
 
         // Event listeners para os botões do modal
@@ -10644,17 +10917,17 @@
             console.log('🔍 Clique detectado:', e.target);
             
             if (e.target.matches('#agilActivate') || e.target.closest('#agilActivate')) {
-                console.log('💳 Botão "Quero meu Cartão" clicado');
+                console.log('💳 CTA cartão do modal AgilBank');
                 activateProposal();
             }
             
             if (e.target.matches('#agilCredito') || e.target.closest('#agilCredito')) {
-                console.log('💰 Botão "Crédito Pessoal" clicado');
+                console.log('💰 CTA crédito do modal AgilBank');
                 activateCredito();
             }
             
             if (e.target.matches('#agilInfo') || e.target.closest('#agilInfo')) {
-                console.log('ℹ️ Botão "Saiba mais" clicado');
+                console.log('ℹ️ CTA info do modal AgilBank');
                 showMoreInfo();
             }
             
@@ -10680,153 +10953,94 @@
             }
         });
 
-        // Função para carregar dados do usuário e verificar modal
-        async function checkUserCardAndShowModal() {
+        // Carrega perfil + cartões + empréstimos, aplica copy contextual e abre modal só nos casos previstos
+        async function checkUserCardAndShowModal(options) {
+            var forceShow = options && options.forceShow === true;
             try {
-                console.log('🔍 Verificando dados do usuário...');
-                
-                // Verificar se usuário está logado
-                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+                console.log('🔍 Verificando dados do usuário (modal cartão/crédito contextual)...');
+
+                var token =
+                    window.AgilBank?.auth?.getToken?.() ||
+                    (typeof getAuthToken === 'function' ? getAuthToken() : null);
                 if (!token) {
                     console.log('⚠️ Usuário não está logado');
                     return;
                 }
-                
-                // Buscar dados atualizados do servidor
-                const response = await window.AgilBank.api.request('user/user-complete-data', {
+
+                var limiteCartao = 0;
+                var response = await window.AgilBank.api.request('user/user-complete-data', {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        Authorization: 'Bearer ' + token,
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include'
                 });
-                
+
                 if (response.ok) {
-                    const data = await response.json();
-                    const limiteCartao = data.user_data?.usuario?.limite_cartao || 0;
-                    
-                    console.log('🔍 Limite do cartão encontrado:', limiteCartao);
-
-                    var temCartaoApi = false;
-                    if (typeof window.agilbankFetchCartoes === 'function') {
-                        try {
-                            var apiCartoes = await window.agilbankFetchCartoes();
-                            temCartaoApi = Array.isArray(apiCartoes) && apiCartoes.length > 0;
-                            if (temCartaoApi && typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
-                                window.agilbankSetDashboardCardOffersVisible(false);
-                            }
-                        } catch (fetchErr) {
-                            console.warn('GET /api/cards (checagem modal):', fetchErr);
-                        }
-                    }
-
-                    // Modal só se não houver limite na ficha E não houver cartão/solicitação na API
-                    if ((limiteCartao === 0 || !limiteCartao) && !temCartaoApi) {
-                        console.log('✅ Sem cartão (perfil e API) — exibindo modal de propaganda');
-                        
-                        const modal = document.getElementById('agilModal');
-                        if (modal) {
-                            // Ocultar todos os outros elementos que podem estar bloqueando
-                            const elementsToHide = [
-                                'userCardLimit', 'opcoesLimiteContainer', 'cartaoGerenciamentoContainer',
-                                'container', 'pixContainer', 'notification',
-                                'extratoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer',
-                                'creditoContainer', 'contaContainer'
-                            ];
-                            
-                            elementsToHide.forEach(id => {
-                                const element = document.getElementById(id);
-                                if (element) {
-                                    element.style.display = 'none';
-                                }
-                            });
-                            
-                            // Forçar exibição do modal com estilos inline
-                            modal.style.display = 'block';
-                            modal.style.position = 'fixed';
-                            modal.style.top = '0';
-                            modal.style.left = '0';
-                            modal.style.width = '100vw';
-                            modal.style.height = '100vh';
-                            modal.style.zIndex = '999999';
-                            modal.setAttribute('aria-hidden', 'false');
-                            
-                            const overlay = modal.querySelector('.agil-overlay');
-                            if (overlay) {
-                                overlay.style.display = 'flex';
-                                overlay.style.position = 'fixed';
-                                overlay.style.zIndex = '999999';
-                                overlay.style.background = 'rgba(0, 0, 0, 0.7)';
-                                overlay.style.top = '0';
-                                overlay.style.left = '0';
-                                overlay.style.width = '100vw';
-                                overlay.style.height = '100vh';
-                                overlay.style.alignItems = 'center';
-                                overlay.style.justifyContent = 'center';
-                            }
-                        }
-                    } else {
-                        console.log('✅ Usuário já tem cartão (perfil ou API) — NÃO exibindo modal');
-                    }
+                    var data = await response.json();
+                    limiteCartao = (data.user_data && data.user_data.usuario && data.user_data.usuario.limite_cartao) || 0;
+                    console.log('🔍 Limite do cartão (perfil):', limiteCartao);
                 } else {
                     console.error('❌ Erro ao carregar dados do usuário:', response.status);
+                    if (!forceShow) return;
                 }
+
+                var apiCartoes = [];
+                if (typeof window.agilbankFetchCartoes === 'function') {
+                    try {
+                        apiCartoes = await window.agilbankFetchCartoes();
+                    } catch (fetchErr) {
+                        console.warn('GET cards (checagem modal):', fetchErr);
+                    }
+                }
+                var hasCardPipeline = agilbankModalHasCardPipeline(apiCartoes);
+                var emprestimos = await agilbankModalFetchEmprestimos();
+                var hasLoanPipeline = agilbankModalHasLoanPipeline(emprestimos);
+
+                if (hasCardPipeline && typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
+                    window.agilbankSetDashboardCardOffersVisible(false);
+                }
+
+                var caseNum = 1;
+                if (hasCardPipeline && hasLoanPipeline) caseNum = 4;
+                else if (hasCardPipeline) caseNum = 2;
+                else if (hasLoanPipeline) caseNum = 3;
+
+                agilModalApplyContext(caseNum, apiCartoes);
+
+                var podeEntradaSegura =
+                    (limiteCartao === 0 || !limiteCartao) && !hasCardPipeline && !hasLoanPipeline;
+                var abrirAuto = forceShow || caseNum === 2 || caseNum === 3 || (caseNum === 1 && podeEntradaSegura);
+
+                if (caseNum === 4 && !forceShow) {
+                    console.log('✅ Caso 4 — cartão e crédito em andamento: modal não abre automaticamente');
+                    return;
+                }
+
+                if (!abrirAuto) {
+                    console.log('✅ Modal contextual não exibido (regras de perfil/API)', {
+                        caseNum: caseNum,
+                        hasCardPipeline: hasCardPipeline,
+                        hasLoanPipeline: hasLoanPipeline
+                    });
+                    return;
+                }
+
+                console.log('✅ Exibindo modal contextual — caso', caseNum);
+                agilModalDisplayBlockingOverlay();
             } catch (error) {
                 console.error('❌ Erro ao verificar dados do usuário:', error);
             }
         }
         
-        // Verificar modal após 2 segundos
-        setTimeout(() => {
+        setTimeout(function () {
             checkUserCardAndShowModal();
         }, 2000);
-        
-        // Função para forçar modal IMEDIATAMENTE (para teste)
-        window.forceModal = function() {
-            console.log('🧪 Forçando modal para teste...');
-            const modal = document.getElementById('agilModal');
-            if (modal) {
-                // Ocultar todos os outros elementos que podem estar bloqueando
-                const elementsToHide = [
-                    'userCardLimit', 'opcoesLimiteContainer', 'cartaoGerenciamentoContainer',
-                    'container', 'pixContainer', 'notification',
-                    'extratoContainer', 'perfilContainer', 'chatContainer', 'emprestimoContainer',
-                    'creditoContainer', 'contaContainer'
-                ];
-                
-                elementsToHide.forEach(id => {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        element.style.display = 'none';
-                    }
-                });
-                
-                // Forçar exibição do modal
-                modal.style.display = 'block';
-                modal.style.position = 'fixed';
-                modal.style.top = '0';
-                modal.style.left = '0';
-                modal.style.width = '100vw';
-                modal.style.height = '100vh';
-                modal.style.zIndex = '999999';
-                modal.setAttribute('aria-hidden', 'false');
-                
-                const overlay = modal.querySelector('.agil-overlay');
-                if (overlay) {
-                    overlay.style.display = 'flex';
-                    overlay.style.position = 'fixed';
-                    overlay.style.zIndex = '999999';
-                    overlay.style.background = 'rgba(0, 0, 0, 0.7)';
-                    overlay.style.top = '0';
-                    overlay.style.left = '0';
-                    overlay.style.width = '100vw';
-                    overlay.style.height = '100vh';
-                    overlay.style.alignItems = 'center';
-                    overlay.style.justifyContent = 'center';
-                }
-                console.log('✅ Modal forçado a aparecer!');
-            }
+
+        window.forceModal = function () {
+            console.log('🧪 Forçando modal (com copy contextual via API)...');
+            checkUserCardAndShowModal({ forceShow: true });
         };
         
         // Função para simular usuário SEM cartão (para teste)

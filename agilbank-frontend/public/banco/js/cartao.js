@@ -1974,13 +1974,14 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
     var rejeitados = list.filter(function (c) {
         return agilbankStatusIsRejeitado(c && c.status);
     });
-    var ativosAprovados = list.filter(function (c) {
-        return agilbankStatusIsAtivoOuAprovado(c && c.status);
-    });
     var temAtivo = ativos.length > 0;
-    var temAtivoOuAprovado = ativosAprovados.length > 0;
 
-    agilbankSetDashboardCardOffersVisible(!temAtivoOuAprovado);
+    // Ocultar banner/mini-cartão do dashboard quando já existe solicitação ou cartão não rejeitado
+    // (pendente não pode reabrir wizard pela propaganda; só rejeitado volta a ver oferta).
+    var temPipelineNaoRejeitado = list.some(function (c) {
+        return !agilbankStatusIsRejeitado(c && c.status);
+    });
+    agilbankSetDashboardCardOffersVisible(!temPipelineNaoRejeitado);
 
     if (list.length === 0) {
         agilbankSetSolicitacaoWizardMode(abrirSolicitacao);
