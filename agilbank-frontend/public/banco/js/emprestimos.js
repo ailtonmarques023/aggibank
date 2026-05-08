@@ -20,6 +20,7 @@
         isEligible: null,
         eligibility: null,
         history: [],
+        amountDigits: "",
         draftValue: 0,
         selectedValue: 0,
         selectedPrazo: null,
@@ -94,7 +95,9 @@
       this.elements.loginBtn.addEventListener("click", () => this.redirectToLogin());
       this.elements.backBtn.addEventListener("click", () => this.handleBack());
       this.elements.backHomeBlockedBtn.addEventListener("click", () => this.redirectToHome());
+      this.elements.valueInput.addEventListener("beforeinput", (event) => this.onValueBeforeInput(event));
       this.elements.valueInput.addEventListener("input", () => this.onValueInput());
+      this.elements.valueInput.addEventListener("paste", (event) => this.onValuePaste(event));
       this.elements.continueValueBtn.addEventListener("click", () => this.handleContinueValue());
       this.elements.continueInstallmentsBtn.addEventListener("click", () => this.goToStep("insurance"));
       if (this.elements.improveOfferBtn) {
@@ -171,8 +174,7 @@
       const limiteMaximo = this.getLimiteMaximo();
       this.elements.valueLimitText.textContent = `Peça ate R$ ${this.formatMoney(limiteMaximo)}`;
       this.showStep("value");
-      this.applyMonetaryMask(this.state.draftValue);
-      this.onValueInput();
+      this.applyAmountDigits("");
     }
 
     getLimiteMaximo() {
@@ -181,13 +183,40 @@
       return Number.isFinite(limite) && limite > 0 ? limite : 0;
     }
 
+    onValueBeforeInput(event) {
+      const inputType = String(event.inputType || "");
+      const data = String(event.data || "");
+
+      if (inputType.startsWith("insert") || inputType.startsWith("delete")) {
+        event.preventDefault();
+      }
+
+      if (inputType === "deleteContentBackward" || inputType === "deleteContentForward") {
+        this.applyAmountDigits(this.state.amountDigits.slice(0, -1));
+        return;
+      }
+      if (inputType === "insertText") {
+        if (!/\d/.test(data)) return;
+        this.applyAmountDigits(this.state.amountDigits + data.replace(/\D/g, ""));
+        return;
+      }
+      if (inputType === "insertFromPaste") {
+        return;
+      }
+    }
+
+    onValuePaste(event) {
+      event.preventDefault();
+      const pasted = (event.clipboardData && event.clipboardData.getData("text")) || "";
+      this.applyAmountDigits(this.state.amountDigits + String(pasted).replace(/\D/g, ""));
+    }
+
     onValueInput() {
-      const rawText = this.elements.valueInput.value;
-      const value = this.parseCurrencyInput(rawText);
-      this.state.draftValue = value;
-      this.applyMonetaryMask(value);
-      this.elements.valueBig.textContent = `R$ ${this.formatMoney(value)}`;
-      this.elements.valueError.textContent = "";
+      // Fallback for environments where beforeinput is unavailable.
+      const rawText = String(this.elements.valueInput.value || "");
+      const digits = rawText.replace(/\D/g, "");
+      const normalizedDigits = /R\$\s?/.test(rawText) && digits.length > 2 ? digits.slice(0, -2) : digits;
+      this.applyAmountDigits(normalizedDigits);
     }
 
     handleContinueValue() {
@@ -213,16 +242,22 @@
       this.goToStep("installments");
     }
 
-    parseCurrencyInput(raw) {
-      const digits = String(raw || "").replace(/\D/g, "");
-      if (!digits) return 0;
-      const numeric = Number(digits);
-      return Number.isFinite(numeric) ? numeric : 0;
-    }
+    applyAmountDigits(rawDigits) {
+      const digitsOnly = String(rawDigits || "").replace(/\D/g, "");
+      const normalizedDigits = digitsOnly.replace(/^0+/, "");
+      const limiteMaximo = this.getLimiteMaximo();
 
-    applyMonetaryMask(value) {
-      const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
-      this.elements.valueInput.value = `R$ ${this.formatMoney(safeValue)}`;
+      let numericValue = Number(normalizedDigits || 0);
+      if (!Number.isFinite(numericValue)) numericValue = 0;
+      if (limiteMaximo > 0 && numericValue > limiteMaximo) {
+        numericValue = Math.trunc(limiteMaximo);
+      }
+
+      this.state.amountDigits = String(Math.trunc(numericValue));
+      this.state.draftValue = numericValue;
+      this.elements.valueInput.value = `R$ ${this.formatMoney(numericValue)}`;
+      this.elements.valueBig.textContent = `R$ ${this.formatMoney(numericValue)}`;
+      this.elements.valueError.textContent = "";
     }
 
     setFooterActive(activeKey) {
