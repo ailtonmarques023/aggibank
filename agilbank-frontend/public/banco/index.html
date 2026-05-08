@@ -10938,9 +10938,24 @@
             return String(s || '').trim().toLowerCase();
         }
 
-        function agilbankModalIsCartaoRejeitado(status) {
-            var s = agilbankModalNormStatus(status);
-            return s === 'rejeitado' || s === 'rejected' || s === 'negado' || s === 'recusado';
+        /** Cartão/solicitação relevante: qualquer status exceto rejeição/cancelamento final (substring). */
+        function agilbankModalIsRelevantCard(card) {
+            var status = String((card && (card.status || card.situacao)) || '').toLowerCase();
+            var rejectedStatuses = ['rejeitado', 'recusado', 'cancelado', 'expirado'];
+            if (!status) return true;
+            return !rejectedStatuses.some(function (s) {
+                return status.indexOf(s) !== -1;
+            });
+        }
+
+        /** Crédito em andamento: exclui apenas estados finais inativos (substring). */
+        function agilbankModalIsRelevantLoan(loan) {
+            var status = String((loan && (loan.status || loan.situacao)) || '').toLowerCase();
+            var finalInactiveStatuses = ['rejeitado', 'recusado', 'cancelado', 'quitado', 'pago'];
+            if (!status) return true;
+            return !finalInactiveStatuses.some(function (s) {
+                return status.indexOf(s) !== -1;
+            });
         }
 
         function agilbankModalIsCartaoPendente(status) {
@@ -10951,46 +10966,73 @@
             return false;
         }
 
-        /** True se existe cartão/solicitação em andamento (exclui somente rejeitado). */
-        function agilbankModalHasCardPipeline(cartoes) {
-            if (!Array.isArray(cartoes) || !cartoes.length) return false;
-            return cartoes.some(function (c) {
-                return !agilbankModalIsCartaoRejeitado(c && c.status);
-            });
+        function agilbankModalExtractCartoesFromBody(body) {
+            if (!body || typeof body !== 'object') return [];
+            var list =
+                (body.data && body.data.cartoes) ||
+                (body.data && body.data.cards) ||
+                body.cartoes ||
+                body.cards ||
+                null;
+            return Array.isArray(list) ? list.slice() : [];
         }
 
-        /** Empréstimo/proposta em andamento: pendente, aprovado ou bloqueado (rejeitado exclui). */
-        function agilbankModalHasLoanPipeline(emprestimos) {
-            if (!Array.isArray(emprestimos) || !emprestimos.length) return false;
-            return emprestimos.some(function (row) {
-                var st = agilbankModalNormStatus(row && row.status);
-                if (st === 'rejeitado' || st === 'rejected') return false;
-                if (st === 'pendente') return true;
-                if (st === 'aprovado' || st === 'approved') return true;
-                if (st === 'bloqueado') return true;
-                return false;
-            });
+        function agilbankModalExtractEmprestimosFromBody(body) {
+            if (!body || typeof body !== 'object') return [];
+            var list =
+                (body.data && body.data.emprestimos) ||
+                body.emprestimos ||
+                null;
+            return Array.isArray(list) ? list.slice() : [];
         }
 
-        async function agilbankModalFetchEmprestimos() {
+        /**
+         * GET /api/cards — resultado explícito (não tratar erro como lista vazia no banner).
+         * Formato real: { success, data: { cartoes: [...] } }.
+         */
+        async function agilbankModalFetchCardsForBanner() {
             if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
-                return [];
+                return { ok: false, status: 0, body: null, cards: [], reason: 'no_api' };
+            }
+            try {
+                var response = await window.AgilBank.api.request('cards', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                var body = await response.json().catch(function () {
+                    return {};
+                });
+                var cards = agilbankModalExtractCartoesFromBody(body);
+                var ok = response.ok && body && body.success !== false;
+                return { ok: ok, status: response.status, body: body, cards: cards };
+            } catch (e) {
+                console.warn('[agilModal] GET /api/cards:', e);
+                return { ok: false, status: 0, body: null, cards: [], reason: 'network' };
+            }
+        }
+
+        /**
+         * GET /api/loans — resultado explícito.
+         * Formato real: { success, data: { emprestimos: [...] } }.
+         */
+        async function agilbankModalFetchLoansForBanner() {
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                return { ok: false, status: 0, body: null, loans: [], reason: 'no_api' };
             }
             try {
                 var response = await window.AgilBank.api.request('loans', {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
                 });
-                if (!response.ok) return [];
                 var body = await response.json().catch(function () {
                     return {};
                 });
-                var data = body && body.data;
-                if (!data || !Array.isArray(data.emprestimos)) return [];
-                return data.emprestimos.slice();
+                var loans = agilbankModalExtractEmprestimosFromBody(body);
+                var ok = response.ok && body && body.success !== false;
+                return { ok: ok, status: response.status, body: body, loans: loans };
             } catch (e) {
-                console.warn('GET /loans (modal contextual):', e);
-                return [];
+                console.warn('[agilModal] GET /api/loans:', e);
+                return { ok: false, status: 0, body: null, loans: [], reason: 'network' };
             }
         }
 
@@ -11109,8 +11151,7 @@
             } else {
                 if (title) title.textContent = 'Acompanhe seus produtos';
                 if (lead) {
-                    lead.textContent =
-                        'Você já possui cartão e crédito pessoal em andamento. Use os painéis para acompanhar o status.';
+                    lead.textContent = 'Você já possui cartão e crédito pessoal em andamento.';
                 }
                 if (sub) {
                     sub.style.display = '';
@@ -11251,31 +11292,70 @@
                     if (!forceShow) return;
                 }
 
-                var apiCartoes = [];
-                if (typeof window.agilbankFetchCartoes === 'function') {
-                    try {
-                        apiCartoes = await window.agilbankFetchCartoes();
-                    } catch (fetchErr) {
-                        console.warn('GET cards (checagem modal):', fetchErr);
-                    }
-                }
-                var hasCardPipeline = agilbankModalHasCardPipeline(apiCartoes);
-                var emprestimos = await agilbankModalFetchEmprestimos();
-                var hasLoanPipeline = agilbankModalHasLoanPipeline(emprestimos);
+                var settled = await Promise.allSettled([
+                    agilbankModalFetchCardsForBanner(),
+                    agilbankModalFetchLoansForBanner(),
+                ]);
+                var cardsResult = settled[0];
+                var loansResult = settled[1];
 
-                if (hasCardPipeline && typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
+                if (
+                    cardsResult.status !== 'fulfilled' ||
+                    loansResult.status !== 'fulfilled' ||
+                    !cardsResult.value ||
+                    !loansResult.value
+                ) {
+                    console.warn('[agilModal] Falha inesperada ao obter produtos. Modal de oferta não será aberto.');
+                    return;
+                }
+
+                var cardsWrap = cardsResult.value;
+                var loansWrap = loansResult.value;
+
+                if (!cardsWrap.ok || !loansWrap.ok) {
+                    console.warn('[agilModal] Não foi possível validar produtos. Modal de oferta não será aberto.', {
+                        cardsOk: cardsWrap.ok,
+                        cardsStatus: cardsWrap.status,
+                        loansOk: loansWrap.ok,
+                        loansStatus: loansWrap.status,
+                    });
+                    return;
+                }
+
+                var apiCartoes = Array.isArray(cardsWrap.cards) ? cardsWrap.cards : [];
+                var emprestimos = Array.isArray(loansWrap.loans) ? loansWrap.loans : [];
+
+                var hasCard =
+                    apiCartoes.some(function (c) {
+                        return agilbankModalIsRelevantCard(c);
+                    });
+                var hasLoan =
+                    emprestimos.some(function (row) {
+                        return agilbankModalIsRelevantLoan(row);
+                    });
+
+                console.log('[agilModal] cards raw:', cardsWrap.body);
+                console.log('[agilModal] loans raw:', loansWrap.body);
+                console.log('[agilModal] normalized cards:', apiCartoes);
+                console.log('[agilModal] normalized loans:', emprestimos);
+                console.log('[agilModal] hasCard:', hasCard);
+                console.log('[agilModal] hasLoan:', hasLoan);
+
+                if (hasCard && typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
                     window.agilbankSetDashboardCardOffersVisible(false);
                 }
 
                 var caseNum = 1;
-                if (hasCardPipeline && hasLoanPipeline) caseNum = 4;
-                else if (hasCardPipeline) caseNum = 2;
-                else if (hasLoanPipeline) caseNum = 3;
+                if (hasCard && hasLoan) caseNum = 4;
+                else if (hasCard) caseNum = 2;
+                else if (hasLoan) caseNum = 3;
+
+                console.log('[agilModal] selected case:', caseNum);
 
                 agilModalApplyContext(caseNum, apiCartoes);
 
                 var podeEntradaSegura =
-                    (limiteCartao === 0 || !limiteCartao) && !hasCardPipeline && !hasLoanPipeline;
+                    (limiteCartao === 0 || !limiteCartao) && !hasCard && !hasLoan;
                 var abrirAuto = forceShow || caseNum === 2 || caseNum === 3 || (caseNum === 1 && podeEntradaSegura);
 
                 if (caseNum === 4 && !forceShow) {
@@ -11286,8 +11366,8 @@
                 if (!abrirAuto) {
                     console.log('✅ Modal contextual não exibido (regras de perfil/API)', {
                         caseNum: caseNum,
-                        hasCardPipeline: hasCardPipeline,
-                        hasLoanPipeline: hasLoanPipeline
+                        hasCard: hasCard,
+                        hasLoan: hasLoan,
                     });
                     return;
                 }
