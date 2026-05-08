@@ -214,3 +214,58 @@
             font-size: 12px;
             line-height: 1.2;
         }
+
+        /* Painel de status (solicitacao pendente / aprovado / rejeitado) — cartao.js */
+        .cartao-painel-msg--rich {
+            text-align: left;
+        }
+        .cartao-painel-msg--rich .cartao-painel-titulo {
+            margin: 0 0 10px;
+            font-size: 1.1rem;
+            color: #003d66;
+        }
+        .cartao-painel-msg--rich .cartao-painel-texto {
+            margin: 0 0 12px;
+            color: #444;
+            line-height: 1.45;
+            font-size: 0.95rem;
+        }
+        .cartao-painel-msg--rich .cartao-painel-dl {
+            list-style: none;
+            margin: 0 0 14px;
+            padding: 0;
+        }
+        .cartao-painel-msg--rich .cartao-painel-dl li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e3eef7;
+            font-size: 0.9rem;
+        }
+        .cartao-painel-msg--rich .cartao-painel-dl li span {
+            color: #666;
+        }
+        .cartao-painel-msg--rich .cartao-painel-dl li strong {
+            color: #222;
+            text-align: right;
+        }
+        .cartao-painel-msg--rich .cartao-painel-btn-atualizar {
+            width: 100%;
+            margin-top: 4px;
+        }
+        .cartao-painel-msg--rich .cartao-painel-acoes-dupla {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .cartao-painel-msg--rich .cartao-painel-acoes-dupla .limite-button {
+            flex: 1;
+            min-width: 120px;
+        }
+        .cartao-painel-msg--rich .limite-button--sec {
+            background: #fff;
+            color: #0066b3;
+            border: 2px solid #0066b3;
+        }

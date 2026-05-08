@@ -618,6 +618,133 @@
   color: #b93a3a;
 }
 
+.ab-emp-manage-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ab-emp-manage-hero {
+  border: 1px solid var(--ab-border);
+}
+
+.ab-emp-manage-hero--success {
+  border-color: #b8e0c8;
+  background: linear-gradient(180deg, #f4fbf6 0%, #fff 100%);
+}
+
+.ab-emp-manage-hero--muted {
+  border-color: #e8e0e0;
+  background: #fafafa;
+}
+
+.ab-emp-manage-title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  color: var(--ab-text);
+}
+
+.ab-emp-manage-sub {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #294b69;
+}
+
+.ab-emp-manage-lead {
+  margin: 0 0 12px;
+  color: var(--ab-muted);
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.ab-emp-manage-dl {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ab-emp-manage-dl > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 14px;
+  border-bottom: 1px solid #eef2f6;
+  padding-bottom: 8px;
+}
+
+.ab-emp-manage-dl > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ab-emp-manage-dl dt {
+  margin: 0;
+  color: var(--ab-muted);
+  font-weight: 600;
+}
+
+.ab-emp-manage-dl dd {
+  margin: 0;
+  text-align: right;
+  color: var(--ab-text);
+  font-weight: 600;
+}
+
+.ab-emp-manage-alert-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--ab-blue-strong);
+}
+
+.ab-emp-manage-list-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.ab-emp-manage-list-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-emp-manage-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-emp-history-card--featured {
+  border: 2px solid var(--ab-blue);
+  box-shadow: 0 4px 14px rgba(0, 102, 179, 0.12);
+}
+
+.ab-emp-loan-meta {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ab-emp-loan-meta li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #f0f4f8;
+  padding-bottom: 6px;
+}
+
+.ab-emp-loan-meta li:last-child {
+  border-bottom: none;
+}
+
+.ab-emp-loan-meta span:first-child {
+  color: var(--ab-muted);
+  font-weight: 600;
+}
+
 .ab-emp-footer {
   position: fixed;
   bottom: 0;

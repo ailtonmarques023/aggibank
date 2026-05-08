@@ -6268,7 +6268,7 @@
         let saldoReal = null;
 
         // Função para abrir o formulário dinâmico de cartão (GET /api/cards → formulário ou lista real)
-        function openDynamicCardForm() {
+        async function openDynamicCardForm() {
             const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 alert('Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
@@ -6276,6 +6276,13 @@
             }
             window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = true;
             showCartaoGerenciamento();
+            if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+                try {
+                    await window.agilbankRefreshPainelCartoes();
+                } catch (e) {
+                    console.warn('openDynamicCardForm refresh:', e);
+                }
+            }
         }
 
         // Funções de notificação
