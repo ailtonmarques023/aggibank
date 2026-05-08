@@ -15,7 +15,15 @@ const {
 } = require('../services/loanDecisionService');
 
 const router = express.Router();
-const LOAN_NOT_ELIGIBLE_MESSAGE = 'No momento, você ainda não está elegível para solicitar crédito pessoal.';
+const LOAN_NOT_ELIGIBLE_MESSAGE =
+  'No momento, sua renda informada ainda não permite solicitar crédito pessoal.';
+const LOAN_AMOUNT_ABOVE_LIMIT_MESSAGE =
+  'O valor solicitado ultrapassa o limite disponível para sua conta.';
+const LOAN_TERM_ABOVE_LIMIT_MESSAGE =
+  'O prazo solicitado ultrapassa o máximo permitido.';
+const MIN_ELIGIBLE_MONTHLY_INCOME = 1000;
+const INCOME_LIMIT_MULTIPLIER = 4;
+const MAX_LOAN_TERM_MONTHS = 72;
 
 // Aplicar autenticação em todas as rotas
 router.use(authenticateToken);
@@ -89,7 +97,9 @@ router.get('/', async (req, res) => {
 router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), async (req, res) => {
   try {
     const { valorSolicitado, prazoMeses } = req.body;
-    const eligibility = getLoanEligibility(req.user.scoreCredito);
+    const eligibility = await getLoanEligibilityByIncome(req.user.id, req.user.scoreCredito);
+    const valorSolicitadoNumber = Number(valorSolicitado);
+    const prazoMesesNumber = Number(prazoMeses);
 
     if (!eligibility.isElegivel) {
       return res.status(403).json({
@@ -97,6 +107,24 @@ router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), asyn
         error: 'LOAN_NOT_ELIGIBLE',
         code: 'LOAN_NOT_ELIGIBLE',
         message: LOAN_NOT_ELIGIBLE_MESSAGE
+      });
+    }
+
+    if (valorSolicitadoNumber > eligibility.limiteMaximo) {
+      return res.status(400).json({
+        success: false,
+        error: 'LOAN_AMOUNT_ABOVE_LIMIT',
+        code: 'LOAN_AMOUNT_ABOVE_LIMIT',
+        message: LOAN_AMOUNT_ABOVE_LIMIT_MESSAGE
+      });
+    }
+
+    if (prazoMesesNumber > eligibility.prazoMaximo) {
+      return res.status(400).json({
+        success: false,
+        error: 'LOAN_TERM_ABOVE_LIMIT',
+        code: 'LOAN_TERM_ABOVE_LIMIT',
+        message: LOAN_TERM_ABOVE_LIMIT_MESSAGE
       });
     }
 
@@ -117,16 +145,16 @@ router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), asyn
     }
 
     // Calcular taxa de juros baseada no score de crédito
-    const taxaJuros = calculateInterestRate(req.user.scoreCredito);
+    const taxaJuros = eligibility.taxaJuros;
     
     // Calcular valor da parcela
-    const valorParcela = calculateMonthlyPayment(valorSolicitado, taxaJuros, prazoMeses);
+    const valorParcela = calculateMonthlyPayment(valorSolicitadoNumber, taxaJuros, prazoMesesNumber);
 
     const emprestimo = await prisma.emprestimo.create({
       data: {
         userId: req.user.id,
-        valorSolicitado,
-        prazoMeses,
+        valorSolicitado: valorSolicitadoNumber,
+        prazoMeses: prazoMesesNumber,
         taxaJuros,
         valorParcela,
         status: 'pendente'
@@ -307,8 +335,10 @@ router.post('/:id/reject', requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'), 
 router.post('/simulate', async (req, res) => {
   try {
     const { valor, prazoMeses } = req.body;
+    const valorNumber = Number(valor);
+    const prazoMesesNumber = Number(prazoMeses);
 
-    if (!valor || !prazoMeses) {
+    if (!Number.isFinite(valorNumber) || !Number.isFinite(prazoMesesNumber)) {
       return res.status(400).json({
         success: false,
         message: 'Valor e prazo são obrigatórios',
@@ -316,22 +346,54 @@ router.post('/simulate', async (req, res) => {
       });
     }
 
-    const taxaJuros = calculateInterestRate(req.user.scoreCredito);
-    const valorParcela = calculateMonthlyPayment(valor, taxaJuros, prazoMeses);
-    const valorTotal = valorParcela * prazoMeses;
-    const valorJuros = valorTotal - valor;
+    const eligibility = await getLoanEligibilityByIncome(req.user.id, req.user.scoreCredito);
+
+    if (!eligibility.isElegivel) {
+      return res.status(403).json({
+        success: false,
+        error: 'LOAN_NOT_ELIGIBLE',
+        code: 'LOAN_NOT_ELIGIBLE',
+        message: LOAN_NOT_ELIGIBLE_MESSAGE
+      });
+    }
+
+    if (valorNumber > eligibility.limiteMaximo) {
+      return res.status(400).json({
+        success: false,
+        error: 'LOAN_AMOUNT_ABOVE_LIMIT',
+        code: 'LOAN_AMOUNT_ABOVE_LIMIT',
+        message: LOAN_AMOUNT_ABOVE_LIMIT_MESSAGE
+      });
+    }
+
+    if (prazoMesesNumber > eligibility.prazoMaximo) {
+      return res.status(400).json({
+        success: false,
+        error: 'LOAN_TERM_ABOVE_LIMIT',
+        code: 'LOAN_TERM_ABOVE_LIMIT',
+        message: LOAN_TERM_ABOVE_LIMIT_MESSAGE
+      });
+    }
+
+    const taxaJuros = eligibility.taxaJuros;
+    const valorParcela = calculateMonthlyPayment(valorNumber, taxaJuros, prazoMesesNumber);
+    const valorTotal = valorParcela * prazoMesesNumber;
+    const valorJuros = valorTotal - valorNumber;
 
     res.json({
       success: true,
       message: 'Simulação realizada com sucesso',
       data: {
-        valorSolicitado: valor,
-        prazoMeses,
+        valorSolicitado: valorNumber,
+        prazoMeses: prazoMesesNumber,
         taxaJuros,
         valorParcela,
         valorTotal,
         valorJuros,
-        scoreCredito: req.user.scoreCredito
+        scoreCredito: req.user.scoreCredito,
+        limiteMaximo: eligibility.limiteMaximo,
+        prazoMaximo: eligibility.prazoMaximo,
+        rendaMensal: eligibility.rendaMensal
       }
     });
 
@@ -359,15 +421,17 @@ router.post('/simulate', async (req, res) => {
  */
 router.get('/eligibility', async (req, res) => {
   try {
-    const eligibility = getLoanEligibility(req.user.scoreCredito);
+    const eligibility = await getLoanEligibilityByIncome(req.user.id, req.user.scoreCredito);
 
     res.json({
       success: true,
       message: 'Elegibilidade verificada com sucesso',
       data: {
         isElegivel: eligibility.isElegivel,
+        rendaMensal: eligibility.rendaMensal,
         scoreCredito: eligibility.scoreCredito,
         limiteMaximo: eligibility.limiteMaximo,
+        prazoMaximo: eligibility.prazoMaximo,
         taxaJuros: eligibility.taxaJuros
       }
     });
@@ -404,15 +468,37 @@ function calculateMaxLoanAmount(scoreCredito) {
   return 5000;
 }
 
-function getLoanEligibility(scoreCredito) {
+function getLoanEligibilityByIncomeData(rendaMensal, scoreCredito) {
   const normalizedScore = Number(scoreCredito) || 0;
+  const normalizedIncome = Number(rendaMensal) || 0;
+  const isElegivel = normalizedIncome > MIN_ELIGIBLE_MONTHLY_INCOME;
+  const limiteMaximo = isElegivel ? Math.round(normalizedIncome * INCOME_LIMIT_MULTIPLIER * 100) / 100 : 0;
+  const prazoMaximo = isElegivel ? MAX_LOAN_TERM_MONTHS : 0;
 
   return {
-    isElegivel: normalizedScore >= 600,
+    isElegivel,
+    rendaMensal: normalizedIncome,
     scoreCredito: normalizedScore,
-    limiteMaximo: calculateMaxLoanAmount(normalizedScore),
+    limiteMaximo,
+    prazoMaximo,
     taxaJuros: calculateInterestRate(normalizedScore)
   };
+}
+
+async function getLoanEligibilityByIncome(userId, scoreCredito) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      scoreCredito: true,
+      dadosProfissionais: {
+        select: { rendaMensal: true }
+      }
+    }
+  });
+
+  const persistedScore = user && user.scoreCredito != null ? user.scoreCredito : scoreCredito;
+  const rendaMensal = user && user.dadosProfissionais ? user.dadosProfissionais.rendaMensal : null;
+  return getLoanEligibilityByIncomeData(rendaMensal, persistedScore);
 }
 
 module.exports = router;

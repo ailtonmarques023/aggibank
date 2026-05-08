@@ -690,12 +690,12 @@ const validateInternalShipmentEvent = [
 // Validações para empréstimo
 const validateLoanRequest = [
   body('valorSolicitado')
-    .isFloat({ min: 100, max: 100000 })
-    .withMessage('Valor deve estar entre R$ 100,00 e R$ 100.000,00'),
+    .isFloat({ min: 100 })
+    .withMessage('Valor deve ser maior ou igual a R$ 100,00'),
   
   body('prazoMeses')
-    .isInt({ min: 1, max: 60 })
-    .withMessage('Prazo deve estar entre 1 e 60 meses'),
+    .isInt({ min: 1 })
+    .withMessage('Prazo deve ser maior ou igual a 1 mês'),
   
   handleValidationErrors
 ];

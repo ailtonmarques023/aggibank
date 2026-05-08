@@ -5,7 +5,7 @@
   const HOME_PATH = "./index.html";
   const REQUEST_TIMEOUT_MS = 12000;
   const TOKEN_KEYS = ["agilbank_token", "govbr_token", "token"];
-  const DEFAULT_PRAZOS = [6, 12, 18, 24];
+  const DEFAULT_PRAZOS = [6, 12, 18, 24, 36, 48, 60, 72];
 
   class EmprestimosModule {
     constructor(documentRef) {
@@ -148,7 +148,7 @@
 
       if (!this.state.isEligible) {
         this.elements.blockedReason.textContent =
-          "No momento, sua conta ainda nao possui elegibilidade para solicitar credito pessoal. Continue usando o AgilBank e tente novamente em outro momento.";
+          "Para solicitar credito, e necessario ter renda mensal informada acima de R$ 1.000,00.";
         this.showStep("blocked");
         return;
       }
@@ -197,7 +197,14 @@
 
     renderPrazoChips() {
       this.elements.prazoChips.innerHTML = "";
-      DEFAULT_PRAZOS.forEach((prazo) => {
+      const prazoMaximoApi = Number(this.state.eligibility && this.state.eligibility.prazoMaximo);
+      const prazoMaximo = Number.isFinite(prazoMaximoApi) && prazoMaximoApi > 0 ? prazoMaximoApi : 72;
+      const prazos = DEFAULT_PRAZOS.filter((prazo) => prazo <= prazoMaximo);
+      if (!prazos.length && prazoMaximo > 0) {
+        prazos.push(Math.trunc(prazoMaximo));
+      }
+
+      prazos.forEach((prazo) => {
         const btn = this.document.createElement("button");
         btn.type = "button";
         btn.className = "ab-emp-chip";
@@ -516,7 +523,7 @@
       const kind = (error && error.kind) || "internal";
       const detail = (error && error.detail) || "Nao foi possivel concluir a operacao.";
       if (kind === "not-eligible") {
-        return "No momento, sua conta ainda nao possui elegibilidade para solicitar credito pessoal. Continue usando o AgilBank e tente novamente em outro momento.";
+        return "Para solicitar credito, e necessario ter renda mensal informada acima de R$ 1.000,00.";
       }
       if (kind === "validation") return `Erro de validacao: ${detail}`;
       return detail;

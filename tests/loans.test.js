@@ -12,7 +12,13 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     jest.clearAllMocks();
     process.env.LOAN_DECISION_INTERNAL_KEY = INTERNAL_LOAN_KEY;
     process.env.ADMIN_API_KEY = ADMIN_LOAN_KEY;
-    prisma.user.findUnique.mockResolvedValue({ ...global.testUser, scoreCredito: 750, saldoAtual: 1000 });
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      saldoAtual: 1000,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 3000 },
+    });
     prisma.emprestimo.findFirst.mockResolvedValue(null);
     prisma.emprestimo.findUnique.mockResolvedValue(null);
     prisma.emprestimo.create.mockImplementation(async ({ data }) => ({
@@ -107,7 +113,12 @@ describe('Loans API — elegibilidade e decisao segura', () => {
   });
 
   it('mantem bloqueio para usuario inelegivel', async () => {
-    prisma.user.findUnique.mockResolvedValue({ ...global.testUser, scoreCredito: 550 });
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1000 },
+    });
 
     const response = await request(app)
       .post('/api/loans')
@@ -120,7 +131,12 @@ describe('Loans API — elegibilidade e decisao segura', () => {
   });
 
   it('executa fluxo runtime inelegivel: eligibility false e create 403 sem nova proposta no historico', async () => {
-    prisma.user.findUnique.mockResolvedValue({ ...global.testUser, scoreCredito: 550 });
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1000 },
+    });
     prisma.emprestimo.findMany.mockResolvedValue([]);
 
     const eligibilityResponse = await request(app)
@@ -151,6 +167,7 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     prisma.user.findUnique.mockResolvedValue({
       ...global.testUser,
       isVerificado: false,
+      dadosProfissionais: { rendaMensal: 3000 },
     });
 
     const response = await request(app)
@@ -448,5 +465,167 @@ describe('Loans API — elegibilidade e decisao segura', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data.emprestimo.status).toBe('aprovado');
+  });
+
+  it('retorna inelegivel para renda mensal igual a 1000', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1000 },
+    });
+
+    const response = await request(app)
+      .get('/api/loans/eligibility')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(response.body.data).toEqual(
+      expect.objectContaining({
+        isElegivel: false,
+        rendaMensal: 1000,
+        limiteMaximo: 0,
+        prazoMaximo: 0,
+      }),
+    );
+  });
+
+  it('retorna elegivel para renda mensal 1000.01', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1000.01 },
+    });
+
+    const response = await request(app)
+      .get('/api/loans/eligibility')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(response.body.data).toEqual(
+      expect.objectContaining({
+        isElegivel: true,
+        rendaMensal: 1000.01,
+        limiteMaximo: 4000.04,
+        prazoMaximo: 72,
+      }),
+    );
+  });
+
+  it('calcula limite de 4800 para renda 1200', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1200 },
+    });
+
+    const response = await request(app)
+      .get('/api/loans/eligibility')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(response.body.data).toEqual(
+      expect.objectContaining({
+        isElegivel: true,
+        rendaMensal: 1200,
+        limiteMaximo: 4800,
+        prazoMaximo: 72,
+      }),
+    );
+  });
+
+  it('calcula limite de 12000 para renda 3000', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 3000 },
+    });
+
+    const response = await request(app)
+      .get('/api/loans/eligibility')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(response.body.data).toEqual(
+      expect.objectContaining({
+        isElegivel: true,
+        rendaMensal: 3000,
+        limiteMaximo: 12000,
+        prazoMaximo: 72,
+      }),
+    );
+  });
+
+  it('bloqueia simulacao acima do limite de renda x4', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1200 },
+    });
+
+    const response = await request(app)
+      .post('/api/loans/simulate')
+      .set('Authorization', BEARER)
+      .send({ valor: 5000, prazoMeses: 12 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_AMOUNT_ABOVE_LIMIT');
+  });
+
+  it('bloqueia simulacao com prazo acima de 72 meses', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 3000 },
+    });
+
+    const response = await request(app)
+      .post('/api/loans/simulate')
+      .set('Authorization', BEARER)
+      .send({ valor: 2000, prazoMeses: 73 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_TERM_ABOVE_LIMIT');
+  });
+
+  it('bloqueia criacao de proposta com valor acima do limite', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 1200 },
+    });
+
+    const response = await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({ valorSolicitado: 5000, prazoMeses: 12 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_AMOUNT_ABOVE_LIMIT');
+    expect(prisma.emprestimo.create).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia criacao de proposta com prazo acima de 72', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...global.testUser,
+      scoreCredito: 750,
+      isVerificado: true,
+      dadosProfissionais: { rendaMensal: 3000 },
+    });
+
+    const response = await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({ valorSolicitado: 5000, prazoMeses: 73 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_TERM_ABOVE_LIMIT');
+    expect(prisma.emprestimo.create).not.toHaveBeenCalled();
   });
 });
