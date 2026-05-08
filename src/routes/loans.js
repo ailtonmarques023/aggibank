@@ -12,6 +12,9 @@ const {
   LoanDecisionError,
   approveLoanDecision,
   rejectLoanDecision,
+  payLoanInsuranceCharge,
+  releaseLoanFundsAfterGuaranteeApproved,
+  LOAN_INSURANCE_FEE_BRL,
 } = require('../services/loanDecisionService');
 
 const router = express.Router();
@@ -54,6 +57,13 @@ router.get('/', async (req, res) => {
         taxaJuros: true,
         valorParcela: true,
         status: true,
+        insuranceSelected: true,
+        insuranceAmount: true,
+        insuranceTermsAccepted: true,
+        fundsStatus: true,
+        blockedAmount: true,
+        guaranteeStatus: true,
+        insuranceChargeStatus: true,
         dataSolicitacao: true,
         dataAprovacao: true,
         dataQuitacao: true
@@ -97,6 +107,8 @@ router.get('/', async (req, res) => {
 router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), async (req, res) => {
   try {
     const { valorSolicitado, prazoMeses } = req.body;
+    const insuranceSelected = req.body.insuranceSelected === true;
+    const insuranceTermsAccepted = req.body.insuranceTermsAccepted === true;
     const eligibility = await getLoanEligibilityByIncome(req.user.id, req.user.scoreCredito);
     const valorSolicitadoNumber = Number(valorSolicitado);
     const prazoMesesNumber = Number(prazoMeses);
@@ -157,7 +169,11 @@ router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), asyn
         prazoMeses: prazoMesesNumber,
         taxaJuros,
         valorParcela,
-        status: 'pendente'
+        status: 'pendente',
+        insuranceSelected,
+        insuranceTermsAccepted,
+        insuranceAmount: insuranceSelected ? LOAN_INSURANCE_FEE_BRL : null,
+        guaranteeStatus: insuranceSelected ? 'not_required' : 'pending'
       }
     });
 
@@ -270,6 +286,79 @@ router.post(
  *       200:
  *         description: Empréstimo rejeitado com sucesso
  */
+router.post(
+  '/:id/insurance/pay',
+  logCriticalOperation('loan_insurance_pay'),
+  async (req, res) => {
+    try {
+      const emprestimo = await payLoanInsuranceCharge({
+        loanId: req.params.id,
+        userId: req.user.id
+      });
+
+      res.json({
+        success: true,
+        message: 'Seguro do empréstimo quitado e crédito liberado no saldo disponível',
+        data: { emprestimo }
+      });
+    } catch (error) {
+      if (error instanceof LoanDecisionError) {
+        return res.status(error.status).json({
+          success: false,
+          message: error.message,
+          code: error.code
+        });
+      }
+
+      logger.error('Erro ao quitar seguro do empréstimo:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        code: 'INTERNAL_ERROR'
+      });
+    }
+  }
+);
+
+router.post(
+  '/:id/guarantee/approve',
+  requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'),
+  logCriticalOperation('loan_guarantee_release'),
+  async (req, res) => {
+    try {
+      const emprestimo = await releaseLoanFundsAfterGuaranteeApproved({
+        loanId: req.params.id,
+        actorId: req.user ? req.user.id : null,
+        actorMeta: {
+          source: 'loans_internal_route',
+          requestId: req.requestId || null
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Garantia aprovada e crédito liberado no saldo disponível',
+        data: { emprestimo }
+      });
+    } catch (error) {
+      if (error instanceof LoanDecisionError) {
+        return res.status(error.status).json({
+          success: false,
+          message: error.message,
+          code: error.code
+        });
+      }
+
+      logger.error('Erro ao liberar crédito por garantia:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        code: 'INTERNAL_ERROR'
+      });
+    }
+  }
+);
+
 router.post('/:id/reject', requireInternalApiKey('LOAN_DECISION_INTERNAL_KEY'), async (req, res) => {
   try {
     const { id } = req.params;

@@ -16,6 +16,7 @@ model User {
   dataNascimento      DateTime
   senha               String
   saldoAtual          Decimal               @default(0) @db.Decimal(10, 2)
+  saldoBloqueado      Decimal               @default(0) @db.Decimal(10, 2)
   limiteCartao        Decimal?              @db.Decimal(10, 2)
   limitePixDiario     Decimal?              @db.Decimal(10, 2)
   limitePixMensal     Decimal?              @db.Decimal(10, 2)
@@ -38,6 +39,7 @@ model User {
   configuracoes       ConfiguracoesUsuario?
   dadosProfissionais  DadosProfissionais?
   emprestimos         Emprestimo[]
+  loanInsuranceCharges LoanInsuranceCharge[]
   endereco            Endereco?
   gamificacao_usuario gamificacao_usuario?
   movimentacoes       Movimentacao[]
@@ -205,22 +207,46 @@ model CartaoVirtual {
 }
 
 model Emprestimo {
-  id              String    @id @default(cuid())
-  userId          String
-  valorSolicitado Decimal   @db.Decimal(10, 2)
-  valorAprovado   Decimal?  @db.Decimal(10, 2)
-  prazoMeses      Int
-  taxaJuros       Decimal   @db.Decimal(5, 2)
-  valorParcela    Decimal?  @db.Decimal(10, 2)
-  status          String    @default("pendente")
-  dataSolicitacao DateTime  @default(now())
-  dataAprovacao   DateTime?
-  dataQuitacao    DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String    @id @default(cuid())
+  userId                 String
+  valorSolicitado        Decimal   @db.Decimal(10, 2)
+  valorAprovado          Decimal?  @db.Decimal(10, 2)
+  prazoMeses             Int
+  taxaJuros              Decimal   @db.Decimal(5, 2)
+  valorParcela           Decimal?  @db.Decimal(10, 2)
+  status                 String    @default("pendente")
+  insuranceSelected      Boolean   @default(false)
+  insuranceAmount        Decimal?  @db.Decimal(10, 2)
+  insuranceTermsAccepted Boolean   @default(false)
+  fundsStatus            String?
+  blockedAmount          Decimal?  @db.Decimal(10, 2)
+  guaranteeStatus        String    @default("not_required")
+  insuranceChargeStatus  String?
+  dataSolicitacao        DateTime  @default(now())
+  dataAprovacao          DateTime?
+  dataQuitacao           DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insuranceCharge        LoanInsuranceCharge?
 
   @@map("emprestimos")
+}
+
+model LoanInsuranceCharge {
+  id               String    @id @default(cuid())
+  loanId           String    @unique
+  userId           String
+  amount           Decimal   @db.Decimal(10, 2)
+  status           String    @default("pendente")
+  idempotencyKey   String?   @unique
+  createdAt        DateTime  @default(now())
+  paidAt           DateTime?
+  emprestimo       Emprestimo @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("loan_insurance_charges")
 }
 
 model Movimentacao {

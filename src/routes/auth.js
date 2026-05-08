@@ -220,6 +220,7 @@ const toPublicRegisterUser = (user) => ({
   telefone: user.telefone,
   dataNascimento: user.dataNascimento,
   saldoAtual: asJsonNumber(user.saldoAtual),
+  saldoBloqueado: asJsonNumber(user.saldoBloqueado == null ? 0 : user.saldoBloqueado),
   limiteCartao: user.limiteCartao == null ? null : asJsonNumber(user.limiteCartao),
   limitePixDiario: user.limitePixDiario == null ? null : asJsonNumber(user.limitePixDiario),
   limitePixMensal: user.limitePixMensal == null ? null : asJsonNumber(user.limitePixMensal),

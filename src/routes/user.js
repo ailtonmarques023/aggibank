@@ -38,6 +38,7 @@ router.get('/profile', async (req, res) => {
         telefone: true,
         dataNascimento: true,
         saldoAtual: true,
+        saldoBloqueado: true,
         limiteCartao: true,
         limitePixDiario: true,
         limitePixMensal: true,
@@ -349,6 +350,7 @@ router.get('/balance', async (req, res) => {
       where: { id: req.user.id },
       select: {
         saldoAtual: true,
+        saldoBloqueado: true,
         limiteCartao: true,
         limitePixDiario: true,
         limitePixMensal: true
@@ -360,6 +362,7 @@ router.get('/balance', async (req, res) => {
       message: 'Saldo obtido com sucesso',
       data: {
         saldoAtual: user.saldoAtual,
+        saldoBloqueado: user.saldoBloqueado,
         limiteCartao: user.limiteCartao,
         limitePixDiario: user.limitePixDiario,
         limitePixMensal: user.limitePixMensal
@@ -508,6 +511,8 @@ router.get('/user-complete-data', async (req, res) => {
       data_nascimento: user.dataNascimento,
       saldo_atual: toNumber(user.saldoAtual),
       saldoAtual: toNumber(user.saldoAtual),
+      saldo_bloqueado: toNumber(user.saldoBloqueado),
+      saldoBloqueado: toNumber(user.saldoBloqueado),
       limite_cartao: limiteCartaoRaw,
       limiteCartao: limiteCartaoRaw,
       limite_pix_diario: toNumber(user.limitePixDiario),

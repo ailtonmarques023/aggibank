@@ -104,16 +104,27 @@
               <span class="ab-emp-recommended">Recomendado</span>
               <span class="ab-emp-option-head">
                 <span class="ab-emp-option-title">Com seguro</span>
-                <span class="ab-emp-insurance-price">R$ 39,90/mês</span>
+                <span class="ab-emp-insurance-price">R$ 39,90 valor único</span>
               </span>
-              <small>Opcional. Valor indicativo local; nao enviado ao backend.</small>
+              <small>Registrado na proposta. Cobranca apos aprovacao, conforme regras do banco.</small>
             </button>
             <button type="button" class="ab-emp-option" data-insurance="sem">
               <span class="ab-emp-option-head ab-emp-option-head-single">
                 <span class="ab-emp-option-title">Sem seguro</span>
               </span>
-              <small>Disponivel sem bloquear a proposta.</small>
+              <small class="ab-emp-insurance-warning">
+                Sem seguro, o valor aprovado podera ficar bloqueado ate a apresentacao e aprovacao de uma garantia valida.
+              </small>
+              <small class="ab-emp-insurance-warning-sub">
+                Voce podera continuar sem seguro e apresentar uma garantia posteriormente.
+              </small>
             </button>
+          </div>
+          <div class="ab-emp-insurance-terms-wrap" id="abEmpInsuranceTermsWrap" hidden>
+            <label class="ab-emp-checkbox-row">
+              <input type="checkbox" id="abEmpInsuranceTermsCheck" autocomplete="off">
+              <span>Declaro que li e aceito os Termos e condicoes do Seguro de Emprestimo.</span>
+            </label>
           </div>
           <p class="ab-emp-insurance-terms-notice">
             Ao adicionar o Seguro de Empréstimo, você declara que aceita e concorda com os
@@ -133,6 +144,9 @@
         <div class="ab-emp-card">
           <p class="ab-emp-note-strong">
             Esta solicitacao esta sujeita a analise. Nenhum valor e liberado automaticamente.
+          </p>
+          <p class="ab-emp-note-strong ab-emp-note-margin">
+            Nenhum valor fica disponivel para uso antes da aprovacao final e das condicoes de desbloqueio (seguro quitado ou garantia aprovada).
           </p>
           <button class="ab-emp-btn ab-emp-btn-block" id="abEmpSubmitProposalBtn" type="button">Enviar proposta para analise</button>
         </div>

@@ -66,6 +66,15 @@ jest.mock('@prisma/client', () => {
         delete: jest.fn(),
         count: jest.fn(),
       },
+      loanInsuranceCharge: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+        delete: jest.fn(),
+        count: jest.fn(),
+      },
       transacaoPix: {
         findUnique: jest.fn(),
         findMany: jest.fn(),

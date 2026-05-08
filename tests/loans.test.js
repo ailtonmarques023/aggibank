@@ -30,6 +30,15 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     }));
     prisma.emprestimo.findMany.mockResolvedValue([]);
     prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emprestimo.update.mockResolvedValue({});
+    prisma.loanInsuranceCharge.findUnique.mockResolvedValue(null);
+    prisma.loanInsuranceCharge.create.mockResolvedValue({
+      id: 'charge-1',
+      loanId: 'loan-1',
+      amount: 39.9,
+      status: 'pendente',
+    });
+    prisma.loanInsuranceCharge.updateMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(async (callback) => callback(prisma));
   });
 
@@ -49,6 +58,50 @@ describe('Loans API — elegibilidade e decisao segura', () => {
           valorSolicitado: 5000,
           prazoMeses: 12,
           status: 'pendente',
+          insuranceSelected: false,
+          insuranceTermsAccepted: false,
+          guaranteeStatus: 'pending',
+        }),
+      }),
+    );
+  });
+
+  it('rejeita proposta com seguro sem aceite dos termos', async () => {
+    const response = await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({
+        valorSolicitado: 5000,
+        prazoMeses: 12,
+        insuranceSelected: true,
+        insuranceTermsAccepted: false,
+      })
+      .expect(400);
+
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(prisma.emprestimo.create).not.toHaveBeenCalled();
+  });
+
+  it('registra proposta com seguro e termos aceitos', async () => {
+    const response = await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({
+        valorSolicitado: 5000,
+        prazoMeses: 12,
+        insuranceSelected: true,
+        insuranceTermsAccepted: true,
+      })
+      .expect(201);
+
+    expect(response.body.success).toBe(true);
+    expect(prisma.emprestimo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          insuranceSelected: true,
+          insuranceTermsAccepted: true,
+          insuranceAmount: 39.9,
+          guaranteeStatus: 'not_required',
         }),
       }),
     );
@@ -201,6 +254,8 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         valorSolicitado: 1500,
         prazoMeses: 6,
         status: 'pendente',
+        insuranceSelected: false,
+        insuranceTermsAccepted: false,
       })
       .mockResolvedValueOnce({
         id: 'loan-approve-1',
@@ -209,11 +264,23 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         valorAprovado: 1200,
         prazoMeses: 6,
         status: 'aprovado',
+        fundsStatus: 'bloqueado',
+        blockedAmount: 1200,
+        guaranteeStatus: 'pending',
+        insuranceChargeStatus: null,
         dataAprovacao: new Date('2026-05-07T15:10:00.000Z'),
       });
     prisma.user.findUnique
-      .mockResolvedValueOnce({ ...global.testUser, scoreCredito: 750, saldoAtual: 1000 })
-      .mockResolvedValueOnce({ saldoAtual: 2300 });
+      .mockResolvedValueOnce({
+        ...global.testUser,
+        saldoAtual: 1000,
+        saldoBloqueado: 0,
+        isVerificado: true,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 1000,
+        saldoBloqueado: 0,
+      });
     prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
     prisma.movimentacao.create.mockResolvedValue({});
@@ -230,19 +297,103 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'loan-owner-1' },
-        data: { saldoAtual: { increment: 1200 } },
+        data: { saldoBloqueado: { increment: 1200 } },
       }),
     );
     expect(prisma.movimentacao.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           userId: 'loan-owner-1',
+          tipo: 'credito_bloqueado',
           valor: 1200,
-          saldoAnterior: 2300,
-          saldoAtual: 3500,
+          saldoAnterior: 1000,
+          saldoAtual: 1000,
         }),
       }),
     );
+    expect(prisma.loanInsuranceCharge.create).not.toHaveBeenCalled();
+  });
+
+  it('ao aprovar com seguro cria cobranca e mantem credito bloqueado ate pagamento', async () => {
+    prisma.emprestimo.findUnique
+      .mockResolvedValueOnce({
+        id: 'loan-ins-1',
+        userId: 'loan-owner-1',
+        valorSolicitado: 2000,
+        prazoMeses: 12,
+        status: 'pendente',
+        insuranceSelected: true,
+        insuranceTermsAccepted: true,
+      })
+      .mockResolvedValueOnce({
+        id: 'loan-ins-1',
+        userId: 'loan-owner-1',
+        status: 'aprovado',
+        valorAprovado: 2000,
+        fundsStatus: 'bloqueado',
+        insuranceChargeStatus: 'pendente',
+        guaranteeStatus: 'not_required',
+      });
+    prisma.user.findUnique
+      .mockResolvedValueOnce({
+        ...global.testUser,
+        saldoAtual: 500,
+        saldoBloqueado: 0,
+        isVerificado: true,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 500,
+        saldoBloqueado: 0,
+      });
+    prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
+    prisma.user.update.mockResolvedValue({});
+    prisma.movimentacao.create.mockResolvedValue({});
+
+    const response = await request(app)
+      .post('/api/loans/loan-ins-1/approve')
+      .set('Authorization', BEARER)
+      .set('x-internal-key', INTERNAL_LOAN_KEY)
+      .send({ valorAprovado: 2000 })
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(prisma.loanInsuranceCharge.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          loanId: 'loan-ins-1',
+          userId: 'loan-owner-1',
+          amount: 39.9,
+          status: 'pendente',
+        }),
+      }),
+    );
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { saldoBloqueado: { increment: 2000 } },
+      }),
+    );
+  });
+
+  it('bloqueia aprovacao quando seguro marcado sem termos aceitos', async () => {
+    prisma.emprestimo.findUnique.mockResolvedValueOnce({
+      id: 'loan-bad-ins',
+      userId: 'loan-owner-1',
+      valorSolicitado: 1000,
+      prazoMeses: 6,
+      status: 'pendente',
+      insuranceSelected: true,
+      insuranceTermsAccepted: false,
+    });
+
+    const response = await request(app)
+      .post('/api/loans/loan-bad-ins/approve')
+      .set('Authorization', BEARER)
+      .set('x-internal-key', INTERNAL_LOAN_KEY)
+      .send({ valorAprovado: 1000 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_INSURANCE_TERMS_REQUIRED');
+    expect(prisma.emprestimo.updateMany).not.toHaveBeenCalled();
   });
 
   it('bloqueia reprocessamento de emprestimo ja decidido com erro de negocio', async () => {
@@ -342,6 +493,8 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         valorSolicitado: 2200,
         prazoMeses: 10,
         status: 'pendente',
+        insuranceSelected: false,
+        insuranceTermsAccepted: false,
       })
       .mockResolvedValueOnce({
         id: 'loan-admin-approve-1',
@@ -350,9 +503,9 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         valorAprovado: 2200,
         prazoMeses: 10,
         status: 'aprovado',
+        fundsStatus: 'bloqueado',
       });
-    prisma.user.findUnique
-      .mockResolvedValueOnce({ saldoAtual: 1000 });
+    prisma.user.findUnique.mockResolvedValueOnce({ saldoAtual: 1000, saldoBloqueado: 0 });
     prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
     prisma.movimentacao.create.mockResolvedValue({});
@@ -440,6 +593,8 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         valorSolicitado: 1000,
         prazoMeses: 6,
         status: 'pendente',
+        insuranceSelected: false,
+        insuranceTermsAccepted: false,
       })
       .mockResolvedValueOnce({
         id: 'loan-legacy-1',
@@ -448,10 +603,19 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         valorAprovado: 1000,
         prazoMeses: 6,
         status: 'aprovado',
+        fundsStatus: 'bloqueado',
       });
     prisma.user.findUnique
-      .mockResolvedValueOnce({ ...global.testUser, scoreCredito: 750, saldoAtual: 1000 })
-      .mockResolvedValueOnce({ saldoAtual: 500 });
+      .mockResolvedValueOnce({
+        ...global.testUser,
+        saldoAtual: 1000,
+        saldoBloqueado: 0,
+        isVerificado: true,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 1000,
+        saldoBloqueado: 0,
+      });
     prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
     prisma.movimentacao.create.mockResolvedValue({});
@@ -465,6 +629,84 @@ describe('Loans API — elegibilidade e decisao segura', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data.emprestimo.status).toBe('aprovado');
+  });
+
+  it('quita seguro do empréstimo e libera saldo disponível', async () => {
+    prisma.emprestimo.findUnique
+      .mockResolvedValueOnce({
+        id: 'loan-pay-1',
+        userId: global.testUser.id,
+        status: 'aprovado',
+        valorAprovado: 1500,
+        insuranceSelected: true,
+        insuranceChargeStatus: 'pendente',
+        fundsStatus: 'bloqueado',
+        guaranteeStatus: 'not_required',
+      })
+      .mockResolvedValueOnce({
+        id: 'loan-pay-1',
+        userId: global.testUser.id,
+        status: 'aprovado',
+        fundsStatus: 'disponivel',
+        insuranceChargeStatus: 'pago',
+      });
+    prisma.loanInsuranceCharge.findUnique.mockResolvedValueOnce({
+      id: 'chg-1',
+      loanId: 'loan-pay-1',
+      userId: global.testUser.id,
+      amount: 39.9,
+      status: 'pendente',
+    });
+    prisma.user.findUnique
+      .mockResolvedValueOnce({
+        ...global.testUser,
+        saldoAtual: 200,
+        saldoBloqueado: 1500,
+        isVerificado: true,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 200,
+        saldoBloqueado: 1500,
+      });
+    prisma.user.update.mockResolvedValue({});
+    prisma.emprestimo.update.mockResolvedValue({});
+    prisma.movimentacao.create.mockResolvedValue({});
+
+    const response = await request(app)
+      .post('/api/loans/loan-pay-1/insurance/pay')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: global.testUser.id },
+        data: expect.objectContaining({
+          saldoAtual: { increment: 1500 - 39.9 },
+          saldoBloqueado: { decrement: 1500 },
+        }),
+      }),
+    );
+    expect(prisma.movimentacao.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('nao duplica quitacao de seguro', async () => {
+    prisma.emprestimo.findUnique.mockResolvedValue({
+      id: 'loan-pay-2',
+      userId: global.testUser.id,
+      status: 'aprovado',
+      valorAprovado: 1000,
+      insuranceSelected: true,
+      insuranceChargeStatus: 'pago',
+      fundsStatus: 'disponivel',
+    });
+
+    const response = await request(app)
+      .post('/api/loans/loan-pay-2/insurance/pay')
+      .set('Authorization', BEARER)
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_INSURANCE_ALREADY_SETTLED');
   });
 
   it('retorna inelegivel para renda mensal igual a 1000', async () => {

@@ -692,11 +692,29 @@ const validateLoanRequest = [
   body('valorSolicitado')
     .isFloat({ min: 100 })
     .withMessage('Valor deve ser maior ou igual a R$ 100,00'),
-  
+
   body('prazoMeses')
     .isInt({ min: 1 })
     .withMessage('Prazo deve ser maior ou igual a 1 mês'),
-  
+
+  body('insuranceSelected')
+    .optional()
+    .isBoolean()
+    .withMessage('insuranceSelected deve ser booleano'),
+
+  body('insuranceTermsAccepted')
+    .optional()
+    .isBoolean()
+    .withMessage('insuranceTermsAccepted deve ser booleano')
+    .custom((value, { req }) => {
+      if (req.body.insuranceSelected === true && value !== true) {
+        throw new Error(
+          'Aceite dos termos do seguro é obrigatório quando Com seguro é selecionado'
+        );
+      }
+      return true;
+    }),
+
   handleValidationErrors
 ];
 

@@ -399,6 +399,63 @@
   text-underline-offset: 2px;
 }
 
+.ab-emp-insurance-warning {
+  display: block;
+  margin-top: 6px;
+  color: #294b69 !important;
+  font-weight: 600;
+}
+
+.ab-emp-insurance-warning-sub {
+  display: block;
+  margin-top: 6px;
+  color: var(--ab-muted) !important;
+  font-weight: 500;
+}
+
+.ab-emp-insurance-terms-wrap {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #dbe7f3;
+  border-radius: 12px;
+  background: #fafcfe;
+}
+
+.ab-emp-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1b3550;
+}
+
+.ab-emp-checkbox-row input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--ab-blue);
+}
+
+.ab-emp-note-margin {
+  margin-top: 10px !important;
+}
+
+.ab-emp-history-pay-ins {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid var(--ab-blue);
+  border-radius: 10px;
+  background: var(--ab-blue-soft);
+  color: var(--ab-blue);
+  padding: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
 .ab-emp-inline-link {
   border: none;
   background: transparent;

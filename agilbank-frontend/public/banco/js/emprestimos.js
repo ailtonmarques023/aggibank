@@ -6,7 +6,7 @@
   const REQUEST_TIMEOUT_MS = 12000;
   const TOKEN_KEYS = ["agilbank_token", "govbr_token", "token"];
   const DEFAULT_PRAZOS = [6, 12, 18, 24, 36, 48, 60, 72];
-  const INSURANCE_MONTHLY_LABEL = "R$ 39,90/mês";
+  const INSURANCE_UNIQUE_LABEL = "R$ 39,90 valor único";
 
   class EmprestimosModule {
     constructor(documentRef) {
@@ -26,7 +26,8 @@
         selectedValue: 0,
         selectedPrazo: null,
         simulation: null,
-        insuranceChoice: null
+        insuranceChoice: null,
+        insuranceTermsAccepted: false
       };
 
       this.elements = this.getElements();
@@ -69,6 +70,8 @@
         continueInstallmentsBtn: this.document.getElementById("abEmpContinueInstallmentsBtn"),
 
         insuranceOptions: Array.from(this.document.querySelectorAll("[data-insurance]")),
+        insuranceTermsWrap: this.document.getElementById("abEmpInsuranceTermsWrap"),
+        insuranceTermsCheck: this.document.getElementById("abEmpInsuranceTermsCheck"),
         insuranceError: this.document.getElementById("abEmpInsuranceError"),
         continueInsuranceBtn: this.document.getElementById("abEmpContinueInsuranceBtn"),
 
@@ -117,6 +120,20 @@
 
       this.elements.insuranceOptions.forEach((btn) => {
         btn.addEventListener("click", () => this.selectInsurance(btn.dataset.insurance || ""));
+      });
+
+      if (this.elements.insuranceTermsCheck) {
+        this.elements.insuranceTermsCheck.addEventListener("change", () => this.onInsuranceTermsChange());
+      }
+
+      this.elements.historyCards.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const payBtn = target.closest("[data-pay-insurance]");
+        if (payBtn && payBtn.getAttribute("data-pay-insurance")) {
+          event.preventDefault();
+          this.payLoanInsurance(payBtn.getAttribute("data-pay-insurance") || "");
+        }
       });
 
       if (this.elements.navInicioBtn) {
@@ -370,10 +387,30 @@
       if (choice !== "com" && choice !== "sem") return;
       this.state.insuranceChoice = choice;
       this.elements.insuranceError.textContent = "";
+      if (choice === "sem") {
+        this.state.insuranceTermsAccepted = false;
+        if (this.elements.insuranceTermsCheck) {
+          this.elements.insuranceTermsCheck.checked = false;
+        }
+      }
       this.elements.insuranceOptions.forEach((btn) => {
         btn.classList.toggle("is-selected", btn.dataset.insurance === choice);
       });
+      this.updateInsuranceTermsVisibility();
       this.syncInsuranceCta();
+    }
+
+    onInsuranceTermsChange() {
+      this.state.insuranceTermsAccepted = Boolean(
+        this.elements.insuranceTermsCheck && this.elements.insuranceTermsCheck.checked
+      );
+      this.syncInsuranceCta();
+    }
+
+    updateInsuranceTermsVisibility() {
+      const wrap = this.elements.insuranceTermsWrap;
+      if (!wrap) return;
+      wrap.hidden = this.state.insuranceChoice !== "com";
     }
 
     syncInsuranceCta() {
@@ -384,13 +421,23 @@
         btn.textContent = "Escolha uma opção";
         return;
       }
+      if (this.state.insuranceChoice === "com" && !this.state.insuranceTermsAccepted) {
+        btn.disabled = true;
+        btn.textContent = "Aceite os termos do seguro para continuar";
+        return;
+      }
       btn.disabled = false;
       btn.textContent = "Revisar detalhes da proposta";
     }
 
     clearInsuranceSelection() {
       this.state.insuranceChoice = null;
+      this.state.insuranceTermsAccepted = false;
+      if (this.elements.insuranceTermsCheck) {
+        this.elements.insuranceTermsCheck.checked = false;
+      }
       this.elements.insuranceOptions.forEach((btn) => btn.classList.remove("is-selected"));
+      this.updateInsuranceTermsVisibility();
       this.syncInsuranceCta();
     }
 
@@ -411,6 +458,11 @@
         this.elements.insuranceError.textContent = "Escolha uma opcao para continuar.";
         return;
       }
+      if (this.state.insuranceChoice === "com" && !this.state.insuranceTermsAccepted) {
+        this.elements.insuranceError.textContent = "Aceite os termos do seguro para continuar.";
+        return;
+      }
+      this.elements.insuranceError.textContent = "";
       this.renderReview();
       this.goToStep("review");
     }
@@ -421,17 +473,20 @@
       const parcela = Number(sim.valorParcela || 0);
       const total = this.resolveSimulationTotal(sim, parcela, prazo);
 
+      const seguroRow =
+        this.state.insuranceChoice === "com"
+          ? ["Seguro", `Com seguro — ${INSURANCE_UNIQUE_LABEL}`]
+          : ["Seguro", "Sem seguro"];
+
       const fields = [
         ["Voce solicita", `R$ ${this.formatMoney(this.state.selectedValue)}`],
         ["Parcelas", `${this.formatInteger(prazo)}x de R$ ${this.formatMoney(parcela)}`],
         ["Total estimado", `R$ ${this.formatMoney(total)}`],
         ["Taxa de juros", this.formatPercent(sim.taxaJuros)],
-        [
-          "Seguro",
-          this.state.insuranceChoice === "com"
-            ? `Com seguro (${INSURANCE_MONTHLY_LABEL} indicativo, opcional, nao enviado ao backend)`
-            : "Sem seguro"
-        ]
+        seguroRow,
+        this.state.insuranceChoice === "com"
+          ? ["Termos aceitos", "Sim"]
+          : ["Desbloqueio", "Mediante garantia aprovada"]
       ];
 
       const optionalApiFields = [
@@ -486,11 +541,14 @@
       this.elements.submitProposalBtn.textContent = "Enviando...";
 
       try {
+        const insuranceSelected = this.state.insuranceChoice === "com";
         const createResult = await this.requestLoan("loans", {
           method: "POST",
           body: JSON.stringify({
             valorSolicitado: this.state.selectedValue,
-            prazoMeses: this.state.selectedPrazo
+            prazoMeses: this.state.selectedPrazo,
+            insuranceSelected,
+            insuranceTermsAccepted: insuranceSelected ? Boolean(this.state.insuranceTermsAccepted) : false
           })
         });
 
@@ -535,21 +593,110 @@
       const valor = Number(item && item.valorSolicitado);
       const prazo = Number(item && item.prazoMeses);
       const status = String((item && item.status) || "pendente").toLowerCase();
-      const classeStatus = this.mapStatusClass(status);
+      const summary = this.formatHistoryStatusSummary(item);
+      const classeStatus = this.mapHistoryChipClass(status, item, summary);
       const dataSolicitacao = this.formatDate(item && item.dataSolicitacao);
       const totalEstimado = Number(item && (item.valorTotal || item.totalPagar || item.total));
+      const payInsuranceBtn =
+        summary.showPayInsurance && item && item.id
+          ? `<button type="button" class="ab-emp-history-pay-ins" data-pay-insurance="${String(item.id).replace(/"/g, "")}">Quitar seguro (${INSURANCE_UNIQUE_LABEL})</button>`
+          : "";
 
       return (
         `<article class="ab-emp-card ab-emp-history-card">` +
         `<div class="ab-emp-history-top">` +
         `<strong>R$ ${this.formatMoney(valor)}</strong>` +
-        `<span class="ab-emp-status ${classeStatus}">${status}</span>` +
+        `<span class="ab-emp-status ${classeStatus}">${summary.chipLabel}</span>` +
         `</div>` +
         `<p>Parcelas: ${this.formatInteger(prazo)}x</p>` +
         `<p>Data: ${dataSolicitacao}</p>` +
+        `${summary.detailLine ? `<p class="ab-emp-muted">${summary.detailLine}</p>` : ""}` +
         `${Number.isFinite(totalEstimado) && totalEstimado > 0 ? `<p>Total estimado: R$ ${this.formatMoney(totalEstimado)}</p>` : ""}` +
+        payInsuranceBtn +
         `</article>`
       );
+    }
+
+    formatHistoryStatusSummary(item) {
+      const st = String((item && item.status) || "pendente").toLowerCase();
+      if (st === "pendente") {
+        return { chipLabel: "Pendente", detailLine: "", showPayInsurance: false };
+      }
+      if (st === "rejeitado") {
+        return { chipLabel: "Rejeitado", detailLine: "", showPayInsurance: false };
+      }
+      const ins = Boolean(item && item.insuranceSelected);
+      const fs = String((item && item.fundsStatus) || "").toLowerCase();
+      const g = String((item && item.guaranteeStatus) || "").toLowerCase();
+      const ich = String((item && item.insuranceChargeStatus) || "").toLowerCase();
+
+      if (st === "aprovado" && ins && ich === "pendente" && fs === "bloqueado") {
+        return {
+          chipLabel: "Aprovado — valor bloqueado",
+          detailLine:
+            "Credito bloqueado ate quitar o seguro. O saldo disponivel so aumenta apos o pagamento da taxa e liberacao pelo banco.",
+          showPayInsurance: true
+        };
+      }
+      if (st === "aprovado" && ins && fs === "disponivel") {
+        return {
+          chipLabel: "Aprovado — valor disponivel",
+          detailLine: "",
+          showPayInsurance: false
+        };
+      }
+      if (st === "aprovado" && !ins && g === "pending" && fs === "bloqueado") {
+        return {
+          chipLabel: "Garantia pendente",
+          detailLine: "Valor bloqueado ate apresentacao/aprovacao de garantia.",
+          showPayInsurance: false
+        };
+      }
+      if (st === "aprovado" && !ins && g === "approved" && fs === "disponivel") {
+        return {
+          chipLabel: "Aprovado — valor disponivel",
+          detailLine: "",
+          showPayInsurance: false
+        };
+      }
+      if (st === "aprovado") {
+        return {
+          chipLabel: "Aprovado",
+          detailLine: fs === "bloqueado" ? "Valor bloqueado conforme regras da proposta." : "",
+          showPayInsurance: false
+        };
+      }
+      return { chipLabel: st || "—", detailLine: "", showPayInsurance: false };
+    }
+
+    async payLoanInsurance(loanId) {
+      if (!loanId) return;
+      const result = await this.requestLoan(`loans/${encodeURIComponent(loanId)}/insurance/pay`, {
+        method: "POST"
+      });
+      if (!result.ok) {
+        const msg = this.errorToText(result.error);
+        window.alert(msg);
+        return;
+      }
+      const historyResult = await this.requestLoan("loans");
+      if (historyResult.ok) {
+        this.state.history = this.extractHistory(historyResult.data);
+        this.renderHistory();
+      }
+    }
+
+    mapHistoryChipClass(status, item, summary) {
+      if (status === "rejeitado" || status === "rejected") return "is-rejected";
+      if (status === "pendente") return "is-pending";
+      if (status === "aprovado" || status === "approved") {
+        const fs = String((item && item.fundsStatus) || "").toLowerCase();
+        if (fs === "bloqueado" || summary.chipLabel.includes("bloqueado") || summary.chipLabel.includes("Garantia pendente")) {
+          return "is-pending";
+        }
+        return "is-approved";
+      }
+      return "is-pending";
     }
 
     mapStatusClass(status) {
@@ -611,6 +758,7 @@
       this.elements.topbarTitle.textContent = step === "history" ? "Historico de propostas" : "Credito pessoal";
       this.updateFooterVisibility(step);
       if (step === "insurance") {
+        this.updateInsuranceTermsVisibility();
         this.syncInsuranceCta();
       }
     }

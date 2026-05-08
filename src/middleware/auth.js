@@ -39,6 +39,7 @@ const authenticateToken = async (req, res, next) => {
         telefone: true,
         dataNascimento: true,
         saldoAtual: true,
+        saldoBloqueado: true,
         limiteCartao: true,
         limitePixDiario: true,
         limitePixMensal: true,
