@@ -17,6 +17,75 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Barra fixa compacta: saldo ao rolar (dashboard) */
+        .saldo-sticky-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: 0;
+            z-index: 850;
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+            padding: calc(6px + env(safe-area-inset-top, 0px)) 12px 8px;
+            background: linear-gradient(90deg, #0066b3 0%, #007fd4 100%);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 40, 80, 0.22);
+            transform: translateY(-110%);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s ease, opacity 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .saldo-sticky-bar.saldo-sticky-bar--visible {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .saldo-sticky-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: flex-start;
+            gap: 10px 18px;
+            font-size: 0.78rem;
+            line-height: 1.25;
+        }
+
+        .saldo-sticky-item {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .saldo-sticky-lbl {
+            font-weight: 500;
+            opacity: 0.92;
+        }
+
+        .saldo-sticky-val {
+            font-weight: 700;
+            font-size: 0.88rem;
+            letter-spacing: 0.01em;
+        }
+
+        .saldo-sticky-item-blocked .saldo-sticky-lbl {
+            opacity: 0.88;
+        }
+
+        .saldo-sticky-item-blocked .saldo-sticky-val {
+            color: #fff8e6;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .saldo-sticky-bar {
+                transition: none;
+            }
+        }
         /* animação do botão */
         .botao-animado {
             transition: transform 0.2s ease;
@@ -325,6 +394,19 @@
             width: 100%;
             font-size: 16px;
             background: transparent;
+        }
+
+        /* Card compacto Empréstimos (dashboard): entre busca e Movimente */
+        .dashboard-emprestimo-card-wrap {
+            margin: 10px 15px 14px;
+        }
+
+        .dashboard-emprestimo-card-inner {
+            background: #fff;
+            border: 1px solid #d8e5f2;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0, 102, 179, 0.08);
         }
         .top-search-container {
             position: relative;

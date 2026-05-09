@@ -353,18 +353,26 @@ model ChavePix {
 }
 
 model Boleto {
-  id             String    @id @default(cuid())
-  userId         String
-  codigoBarras   String    @unique
-  valor          Decimal   @db.Decimal(10, 2)
-  dataVencimento DateTime
-  descricao      String
-  beneficiario   String
-  status         String    @default("pendente")
-  dataPagamento  DateTime?
-  createdAt      DateTime  @default(now())
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  userId            String
+  codigoBarras      String    @unique
+  valor             Decimal   @db.Decimal(10, 2)
+  dataVencimento    DateTime
+  descricao         String
+  beneficiario      String
+  status            String    @default("pendente")
+  dataPagamento     DateTime?
+  createdAt         DateTime  @default(now())
+  protocolo         String?   @unique
+  cpfOuCnpj         String?
+  solicitacaoTipo   String?
+  solicitacaoId     String?
+  pixCopiaECola     String?
+  qrCodePix         String?
+  pixReceiverKey    String?
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([solicitacaoTipo, solicitacaoId])
   @@map("boletos")
 }
 

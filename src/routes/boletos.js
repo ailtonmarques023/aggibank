@@ -3,6 +3,7 @@ const { authenticateToken, requireVerification, logCriticalOperation } = require
 const { validateBoletoPayment } = require('../middleware/validation');
 const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
+const { getOrCreateGruCobranca } = require('../utils/gruCharge');
 
 const router = express.Router();
 
@@ -66,6 +67,40 @@ router.get('/', async (req, res) => {
       success: false,
       message: 'Erro interno do servidor',
       code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/boletos/gru
+ * Cobrança GRU (dados reais: boleto vinculado à solicitação ou taxa de remessa pendente).
+ * Deve ficar antes de GET /:id para não capturar "gru" como id de boleto.
+ */
+router.get('/gru', async (req, res) => {
+  try {
+    const result = await getOrCreateGruCobranca(prisma, req.user.id);
+    if (result.notFound) {
+      return res.status(404).json({
+        success: false,
+        message: 'Nenhuma cobrança GRU pendente encontrada para esta conta.',
+        code: 'GRU_COBRANCA_NOT_FOUND',
+      });
+    }
+    return res.json({
+      success: true,
+      message: 'Cobrança GRU obtida com sucesso',
+      data: { cobranca: result.cobranca },
+    });
+  } catch (error) {
+    logger.error('Erro ao obter cobrança GRU:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
     });
   }
 });

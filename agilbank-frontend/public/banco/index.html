@@ -2246,6 +2246,20 @@
         </div>
     </header>
 
+    <!-- Barra compacta de saldo ao rolar o dashboard (não substitui o bloco .saldo completo) -->
+    <div id="saldoStickyBar" class="saldo-sticky-bar" aria-hidden="true">
+        <div class="saldo-sticky-inner">
+            <div class="saldo-sticky-item">
+                <span class="saldo-sticky-lbl">Disponível</span>
+                <strong id="saldoStickyValue" class="saldo-sticky-val">R$ 0,00</strong>
+            </div>
+            <div id="saldoStickyBloqueadoWrap" class="saldo-sticky-item saldo-sticky-item-blocked" hidden>
+                <span class="saldo-sticky-lbl">Bloqueado</span>
+                <strong id="saldoStickyBloqueadoValue" class="saldo-sticky-val">R$ 0,00</strong>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal AgilBank - Propaganda Cartão e Crédito -->
     <div id="agilModal" aria-hidden="false" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; background: rgba(0,0,0,0.8);">
         <div class="agil-overlay" role="dialog" aria-modal="true" aria-labelledby="agilTitle">
@@ -2370,6 +2384,17 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" placeholder="Buscar conversa">
         </div>
+        <div class="dashboard-emprestimo-card-wrap" role="region" aria-label="Empréstimos e crédito pessoal">
+            <div class="dashboard-emprestimo-card-inner">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#1e3550;">Empréstimos</h3>
+                    <button type="button" onclick="activateCredito()" style="border:none;background:transparent;color:#0066b3;font-weight:700;cursor:pointer;">Consultar →</button>
+                </div>
+                <p style="margin:0 0 10px;color:#1e3550;font-weight:700;">Crédito pessoal para sua conta</p>
+                <p style="margin:0 0 12px;color:#5a6f85;">Consulte opções disponíveis para sua conta.</p>
+                <button type="button" onclick="activateCredito()" style="border:none;border-radius:10px;background:#0066b3;color:#fff;padding:10px 16px;font-weight:700;cursor:pointer;">Simular</button>
+            </div>
+        </div>
         <!--movimente sua conta -->
         <div class="movimente"> 
             <h3>Movimente sua conta</h3>
@@ -2464,15 +2489,6 @@
                 </div>
                 <h3>Empréstimos</h3>
             </div>
-        </div>
-        <div style="background:#fff;border:1px solid #d8e5f2;border-radius:14px;padding:14px;margin:14px 0;box-shadow:0 2px 8px rgba(0,102,179,0.08);">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
-                <h3 style="margin:0;color:#1e3550;">Empréstimos</h3>
-                <button type="button" onclick="activateCredito()" style="border:none;background:transparent;color:#0066b3;font-weight:700;cursor:pointer;">Consultar →</button>
-            </div>
-            <p style="margin:0 0 10px;color:#1e3550;font-weight:700;">Crédito pessoal para sua conta</p>
-            <p style="margin:0 0 12px;color:#5a6f85;">Consulte opções disponíveis para sua conta.</p>
-            <button type="button" onclick="activateCredito()" style="border:none;border-radius:10px;background:#0066b3;color:#fff;padding:10px 16px;font-weight:700;cursor:pointer;">Simular</button>
         </div>
         <!-- banner para pedir cartão container -->
         <div class="cartao-container" onclick="openDynamicCardForm()">
@@ -6213,6 +6229,7 @@
                 if (pmf) pmf.textContent = '—';
                 if (pme) pme.textContent = '—';
                 if (pma) pma.textContent = '—';
+                if (typeof agilbankSyncSaldoStickyBar === 'function') agilbankSyncSaldoStickyBar();
                 return;
             }
 
@@ -6247,6 +6264,7 @@
                 if (imf) imf.textContent = msgNome;
                 if (ime) ime.textContent = msgMail;
                 if (ima) ima.textContent = '—';
+                if (typeof agilbankSyncSaldoStickyBar === 'function') agilbankSyncSaldoStickyBar();
                 return;
             }
 
@@ -6325,12 +6343,95 @@
                 var cardLPh = document.getElementById('userCardLimit');
                 if (cardLPh) cardLPh.style.display = 'none';
             }
+            if (typeof agilbankSyncSaldoStickyBar === 'function') agilbankSyncSaldoStickyBar();
         };
 
         // Variáveis de estado
         let saldoVisivel = true;
         let saldoReal = null;
         let saldoBloqueadoReal = null;
+
+        function agilbankFormatMoneySaldoSticky(n) {
+            if (typeof n !== 'number' || isNaN(n)) return '—';
+            return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function agilbankSyncSaldoStickyBar() {
+            var vDisp = document.getElementById('saldoStickyValue');
+            var wrapBloq = document.getElementById('saldoStickyBloqueadoWrap');
+            var vBloq = document.getElementById('saldoStickyBloqueadoValue');
+            if (!vDisp) return;
+
+            if (!saldoVisivel) {
+                vDisp.textContent = '********';
+                if (wrapBloq && vBloq) {
+                    if (typeof saldoBloqueadoReal === 'number' && !isNaN(saldoBloqueadoReal) && saldoBloqueadoReal > 0) {
+                        wrapBloq.removeAttribute('hidden');
+                        vBloq.textContent = '********';
+                    } else {
+                        wrapBloq.setAttribute('hidden', 'hidden');
+                    }
+                }
+            } else {
+                vDisp.textContent =
+                    typeof saldoReal === 'number' && !isNaN(saldoReal) ? agilbankFormatMoneySaldoSticky(saldoReal) : '—';
+                if (wrapBloq && vBloq) {
+                    if (typeof saldoBloqueadoReal === 'number' && !isNaN(saldoBloqueadoReal) && saldoBloqueadoReal > 0) {
+                        wrapBloq.removeAttribute('hidden');
+                        vBloq.textContent = agilbankFormatMoneySaldoSticky(saldoBloqueadoReal);
+                    } else {
+                        wrapBloq.setAttribute('hidden', 'hidden');
+                    }
+                }
+            }
+        }
+
+        function agilbankSaldoStickySetVisible(show) {
+            var bar = document.getElementById('saldoStickyBar');
+            if (!bar) return;
+            if (show) {
+                bar.classList.add('saldo-sticky-bar--visible');
+                bar.setAttribute('aria-hidden', 'false');
+            } else {
+                bar.classList.remove('saldo-sticky-bar--visible');
+                bar.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        (function agilbankInitSaldoStickyScroll() {
+            var saldoEl = document.querySelector('#container .saldo');
+            var cont = document.getElementById('container');
+            if (!saldoEl || !cont || typeof IntersectionObserver === 'undefined') return;
+
+            var obs = new IntersectionObserver(
+                function (entries) {
+                    var e = entries[0];
+                    var rect = e.boundingClientRect;
+                    var dashOpen = cont.style.display !== 'none' && window.getComputedStyle(cont).display !== 'none';
+                    if (!dashOpen) {
+                        agilbankSaldoStickySetVisible(false);
+                        return;
+                    }
+                    if (e.isIntersecting) {
+                        agilbankSaldoStickySetVisible(false);
+                        return;
+                    }
+                    if (rect.top > window.innerHeight) {
+                        agilbankSaldoStickySetVisible(false);
+                        return;
+                    }
+                    if (rect.bottom < 2) {
+                        agilbankSaldoStickySetVisible(true);
+                        return;
+                    }
+                    agilbankSaldoStickySetVisible(false);
+                },
+                { root: null, threshold: 0, rootMargin: '0px' }
+            );
+            obs.observe(saldoEl);
+        })();
+
+        window.agilbankSyncSaldoStickyBar = agilbankSyncSaldoStickyBar;
 
         // Função para abrir o formulário dinâmico de cartão (GET /api/cards → formulário ou lista real)
         async function openDynamicCardForm() {
@@ -7434,6 +7535,7 @@
                 }
                 eyeIcon.className = "fa-solid fa-eye";
             }
+            agilbankSyncSaldoStickyBar();
             });
 
             // Quando clicar no VALOR -> abre o painel/extrato
@@ -7496,6 +7598,7 @@
         // Inicialização (saldo real preenchido após API / login)
         saldoValue.textContent = "—";
         eyeIcon.className = "fa-solid fa-eye-slash";
+        agilbankSyncSaldoStickyBar();
         mostrarNotificacao();
 
         // Adicionar às funções de navegação
