@@ -126,6 +126,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
       metadata: {},
     });
     prisma.notificacao.update.mockResolvedValue({});
+    prisma.cardShipment.findFirst.mockResolvedValue(null);
   });
 
   describe('POST /api/cards', () => {
@@ -297,6 +298,34 @@ describe('Cards API — POST decisão e GET segurança', () => {
           createdAt: new Date('2026-05-01T12:00:00.000Z'),
           updatedAt: new Date('2026-05-01T12:00:00.000Z'),
         }));
+
+        let __autoShipmentRow = null;
+        prisma.endereco.findUnique.mockResolvedValue({
+          userId: 'test-user-id',
+          cep: '01001-000',
+          logradouro: 'Rua Teste',
+          numero: '100',
+          bairro: 'Centro',
+          cidade: 'São Paulo',
+          estado: 'SP',
+          complemento: null,
+        });
+        prisma.cardShipment.findFirst.mockImplementation(async () => __autoShipmentRow);
+        prisma.cardShipment.create.mockImplementation(async ({ data }) => {
+          __autoShipmentRow = {
+            id: 'ship-auto-1',
+            cardId: data.cardId,
+            userId: data.userId,
+            status: data.status,
+            shippingFeeAmount: data.shippingFeeAmount,
+            shippingFeeStatus: data.shippingFeeStatus,
+            shippingFeeMovementId: data.shippingFeeMovementId ?? null,
+            createdAt: new Date('2026-05-01T12:00:00.000Z'),
+            updatedAt: new Date('2026-05-01T12:00:00.000Z'),
+          };
+          return __autoShipmentRow;
+        });
+        prisma.cardShipmentEvent.create.mockResolvedValue({ id: 'ev-auto' });
       });
 
       it('autoaprova com limite renda×1,8, cria notificação card_approved e agenda e-mail', async () => {
@@ -308,6 +337,9 @@ describe('Cards API — POST decisão e GET segurança', () => {
 
         expect(res.body.data.cartao.status).toBe('aprovado');
         expect(Number(res.body.data.cartao.limite)).toBe(9000);
+        expect(res.body.data.proximosPassos).toBeDefined();
+        expect(res.body.data.proximosPassos.envioFisico).toBeDefined();
+        expect(res.body.data.proximosPassos.envioFisico.valorFretePadraoBrl).toBe(39.9);
         expect(prisma.cartao.update).toHaveBeenCalledWith(
           expect.objectContaining({
             where: { id: 'cartao-test-id' },
@@ -332,6 +364,18 @@ describe('Cards API — POST decisão e GET segurança', () => {
           { email: global.testUser.email, nomeCompleto: global.testUser.nomeCompleto },
           expect.objectContaining({ limite: 9000, status: 'aprovado' }),
         );
+        expect(prisma.cardShipment.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              cardId: 'cartao-test-id',
+              userId: 'test-user-id',
+              status: 'AGUARDANDO_COBRANCA',
+              shippingFeeStatus: 'PENDENTE',
+              idempotencyKeyCharge: 'auto-card-shipment:cartao-test-id',
+            }),
+          }),
+        );
+        expect(res.body.data.proximosPassos.envioFisico.temRemessa).toBe(true);
       });
 
       it('falha no e-mail não impede 201 na autoaprovação', async () => {
@@ -469,6 +513,33 @@ describe('Cards API — POST decisão e GET segurança', () => {
 
     beforeEach(() => {
       __cardNotifByDedupeKey = Object.create(null);
+      let __approveShipmentRow = null;
+      prisma.endereco.findUnique.mockResolvedValue({
+        userId: 'test-user-id',
+        cep: '01001-000',
+        logradouro: 'Rua Teste',
+        numero: '100',
+        bairro: 'Centro',
+        cidade: 'São Paulo',
+        estado: 'SP',
+        complemento: null,
+      });
+      prisma.cardShipment.findFirst.mockImplementation(async () => __approveShipmentRow);
+      prisma.cardShipment.create.mockImplementation(async ({ data }) => {
+        __approveShipmentRow = {
+          id: 'ship-approve-1',
+          cardId: data.cardId,
+          userId: data.userId,
+          status: data.status,
+          shippingFeeAmount: data.shippingFeeAmount,
+          shippingFeeStatus: data.shippingFeeStatus,
+          shippingFeeMovementId: data.shippingFeeMovementId ?? null,
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          updatedAt: new Date('2026-05-01T12:00:00.000Z'),
+        };
+        return __approveShipmentRow;
+      });
+      prisma.cardShipmentEvent.create.mockResolvedValue({ id: 'ev-approve' });
       prisma.notificacao.findUnique.mockImplementation(async ({ where }) => {
         if (!where || !where.dedupeKey) return null;
         return __cardNotifByDedupeKey[where.dedupeKey] || null;

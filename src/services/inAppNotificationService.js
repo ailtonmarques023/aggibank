@@ -32,7 +32,7 @@ async function notifyCardApproved({ userId, cardId, limiteAprovado }) {
   const dedupeKey = cardApprovedDedupeKey(cardId);
   const limiteFmt = formatLimiteMensagemBRL(limiteAprovado);
   const titulo = 'Cartão aprovado';
-  const mensagem = `Seu cartão de crédito AgilBank foi aprovado com limite de R$ ${limiteFmt}. Acesse sua conta para acompanhar a emissão e ativação.`;
+  const mensagem = `Seu cartão AgilBank foi aprovado com limite de R$ ${limiteFmt}. Acesse Meus cartões para acompanhar a emissão e os detalhes.`;
   const metadata = { cardId, action: 'view_card' };
 
   try {

@@ -144,6 +144,59 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
     expect(prisma.cardShipment.create).not.toHaveBeenCalled();
   });
 
+  it('retoma remessa automática com frete PENDENTE e debita sem criar segunda remessa', async () => {
+    prisma.cardShipment.findUnique.mockResolvedValue(null);
+    prisma.cartao.findFirst.mockResolvedValue(makeCard());
+    const pendingAuto = makeShipment({
+      id: 'shipment-pend-auto',
+      status: 'AGUARDANDO_COBRANCA',
+      shippingFeeStatus: 'PENDENTE',
+      shippingFeeMovementId: null,
+      idempotencyKeyCharge: 'auto-card-shipment:card-shipment-1',
+    });
+    prisma.cardShipment.findFirst.mockResolvedValue(pendingAuto);
+    prisma.user.findUnique
+      .mockResolvedValueOnce(global.testUser)
+      .mockResolvedValueOnce({ saldoAtual: 1000 });
+    prisma.movimentacao.create.mockResolvedValue({
+      id: 'mov-resume',
+      userId: 'test-user-id',
+      tipo: 'tarifa',
+      categoria: 'cartao_fisico_frete',
+      valor: -39.9,
+      saldoAnterior: 1000,
+      saldoAtual: 960.1,
+    });
+    prisma.user.update.mockResolvedValue({ id: 'test-user-id', saldoAtual: 960.1 });
+    prisma.cardShipment.update.mockResolvedValue({
+      ...pendingAuto,
+      status: 'COBRANCA_CONFIRMADA',
+      shippingFeeStatus: 'DEBITADO',
+      shippingFeeMovementId: 'mov-resume',
+    });
+    prisma.movimentacao.update.mockResolvedValue({ id: 'mov-resume', referenceId: 'shipment-pend-auto' });
+    prisma.cardShipmentEvent.create.mockResolvedValue({
+      id: 'ev-resume',
+      shipmentId: 'shipment-pend-auto',
+      eventType: 'FRETE_COBRADO',
+      shipmentStatus: 'COBRANCA_CONFIRMADA',
+    });
+
+    const res = await request(app)
+      .post('/api/cards/card-shipment-1/shipment')
+      .set('Authorization', BEARER)
+      .send({
+        idempotencyKey: 'idem-resume-pendente-001',
+        deliveryAddressSnapshot: makeAddressPayload(),
+      })
+      .expect(201);
+
+    expect(res.body.success).toBe(true);
+    expect(prisma.cardShipment.create).not.toHaveBeenCalled();
+    expect(prisma.cardShipment.update).toHaveBeenCalled();
+    expect(prisma.movimentacao.create).toHaveBeenCalled();
+  });
+
   it('retorna 402 quando saldo insuficiente e mantém trilha logística', async () => {
     prisma.cardShipment.findUnique.mockResolvedValue(null);
     prisma.cartao.findFirst.mockResolvedValue(makeCard());

@@ -460,7 +460,8 @@ const emailTemplates = {
         <p style="margin:0 0 12px 0;">Seu cartão de crédito AgilBank foi <strong>aprovado</strong>.</p>
         <p style="margin:0 0 12px 0;"><strong>Limite aprovado:</strong> R$ ${limiteFmt}</p>
         <p style="margin:0 0 12px 0;"><strong>Status:</strong> ${statusEsc}</p>
-        <p style="margin:0;font-size:14px;color:#5a6b7a;">Acesse sua conta para acompanhar a emissão, ativação e detalhes do seu cartão.</p>
+        <p style="margin:0 0 12px 0;font-size:14px;color:#5a6b7a;">Acesse sua conta para acompanhar a emissão e os detalhes do cartão (Meus cartões).</p>
+        <p style="margin:0;font-size:14px;color:#5a6b7a;">Caso exista cobrança de frete para envio físico, ela aparecerá na área de Cobranças após a solicitação de envio.</p>
       </td>
     </tr>
     <tr>
@@ -476,7 +477,8 @@ const emailTemplates = {
       '',
       `Limite aprovado: R$ ${formatMoneyBR(data.limite)}.`,
       '',
-      'Acesse sua conta para acompanhar a emissão, ativação e detalhes do seu cartão.',
+      'Acesse sua conta para acompanhar a emissão e os detalhes do cartão (Meus cartões).',
+      'Caso exista cobrança de frete para envio físico, ela aparecerá na área de Cobranças após a solicitação de envio.',
       '',
       'AgilBank',
       securityFooterText(),

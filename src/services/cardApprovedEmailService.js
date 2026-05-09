@@ -73,10 +73,8 @@ async function sendCardApprovedEmailIfNeeded({ cardId, userId, limiteAprovado, s
 }
 
 function scheduleCardApprovedEmail(payload) {
-  setImmediate(() => {
-    sendCardApprovedEmailIfNeeded(payload).catch((err) => {
-      logger.error({ err: err.message }, 'card_approved_email_deferred_failed');
-    });
+  void sendCardApprovedEmailIfNeeded(payload).catch((err) => {
+    logger.error({ err: err.message }, 'card_approved_email_deferred_failed');
   });
 }
 

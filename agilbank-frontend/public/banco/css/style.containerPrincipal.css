@@ -161,6 +161,70 @@
             padding: 10px 15px 20px;
             color: white;
         }
+
+        .saldo-block {
+            display: block;
+        }
+
+        .saldo-block-label {
+            display: block;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.88);
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+            font-weight: 500;
+        }
+
+        .saldo-block-label-blocked {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255, 248, 230, 0.95);
+        }
+
+        .saldo-block-label-blocked i {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+
+        .saldo-block-blocked {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        /* Card de valor (disponível e bloqueado) — caixa legível sobre o azul */
+        .saldo .saldo-card {
+            box-sizing: border-box;
+        }
+
+        .saldo .saldo-card-blocked {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-height: 44px;
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            line-height: 1.35;
+            color: #fffef8;
+            text-shadow: 0 1px 0 rgba(0, 51, 102, 0.18);
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 224, 178, 0.45);
+            box-shadow: 0 2px 8px rgba(0, 40, 80, 0.12);
+        }
+
+        .saldo .saldo-blocked-hint {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.68rem;
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.78);
+            font-weight: 400;
+        }
+
         /* saldo-container */
         .saldo .saldo-container {
             display: flex;
@@ -187,6 +251,14 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        .saldo .saldo-value.saldo-card {
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            box-shadow: 0 2px 8px rgba(0, 40, 80, 0.1);
+            background: rgba(255, 255, 255, 0.14);
+        }
+
         /* status */
         .status{
             font-size: 12px;

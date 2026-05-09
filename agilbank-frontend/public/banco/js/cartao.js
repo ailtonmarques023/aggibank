@@ -29,7 +29,7 @@ function coletarDadosCartao() {
     var rendaNumero = parseFloat(rendaRaw.replace(/\D/g, ''));
     if (!isFinite(rendaNumero) || rendaNumero < 1) {
         if (typeof showErrorModal === 'function') {
-            showErrorModal('Renda obrigatória', 'Informe sua renda mensal na etapa &quot;Dados profissionais&quot;.');
+            showErrorModal('Renda obrigatória', 'Informe sua renda mensal na etapa “Dados profissionais”.');
         }
         return null;
     }
@@ -37,7 +37,7 @@ function coletarDadosCartao() {
     var tempoVal = gv('cartaoSelectTempo').trim();
     if (!tempoVal) {
         if (typeof showErrorModal === 'function') {
-            showErrorModal('Dados profissionais', 'Selecione o tempo no emprego ou &quot;Não informado&quot;.');
+            showErrorModal('Dados profissionais', 'Selecione o tempo no emprego ou “Não informado”.');
         }
         return null;
     }
@@ -572,7 +572,7 @@ function agilbankWizardBindNav() {
     agilbankWizardPinBind();
 }
 
-function agilbankWizardAplicarResultadoPosPost(cartoes) {
+function agilbankWizardAplicarResultadoPosPost(cartoes, proximosPassos) {
     var resBox = document.getElementById('cartaoWizardResultado');
     var icon = document.getElementById('cartaoWizardResultadoIcon');
     var tit = document.getElementById('cartaoWizardResultadoTitulo');
@@ -586,8 +586,24 @@ function agilbankWizardAplicarResultadoPosPost(cartoes) {
             if (icon) icon.textContent = '✓';
             if (tit) tit.textContent = 'Cartão aprovado';
             if (txt) {
-                txt.textContent =
-                    'Seu cartão está ativo na conta. Os detalhes aparecem em &quot;Meus cartões&quot;.';
+                var linhas = [
+                    'Seu cartão foi aprovado. Acompanhe a emissão e os detalhes em Meus cartões.'
+                ];
+                if (proximosPassos && proximosPassos.envioFisico) {
+                    var ef = proximosPassos.envioFisico;
+                    if (ef.temRemessaAberta && ef.mensagemRemessa) {
+                        linhas.push(String(ef.mensagemRemessa));
+                    } else if (ef.cobrancaFreteAplicavel) {
+                        linhas.push(
+                            'Para receber o cartão físico, acompanhe a cobrança de frete em Cobranças.'
+                        );
+                    } else {
+                        linhas.push(
+                            'A emissão e o envio físico (quando disponíveis) poderão ser acompanhados em Meus cartões.'
+                        );
+                    }
+                }
+                txt.textContent = linhas.join(' ');
             }
         } else {
             resBox.classList.add('is-pendente');
@@ -2349,7 +2365,11 @@ async function enviarSolicitacao() {
 
                 var fetchRes = await fetchCartoesFromApi();
                 var list = fetchRes.ok ? fetchRes.cartoes : [];
-                agilbankWizardAplicarResultadoPosPost(list);
+                var pp =
+                    result && result.data && result.data.proximosPassos
+                        ? result.data.proximosPassos
+                        : null;
+                agilbankWizardAplicarResultadoPosPost(list, pp);
                 agilbankWizardGoToStep(7);
             }, 600);
 

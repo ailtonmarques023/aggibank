@@ -2326,17 +2326,21 @@
         </div>
        
         <div class="saldo">
-            <div class="saldo-disponivel-label" style="font-size: 0.75rem; color: #666; margin-bottom: 4px; letter-spacing: 0.02em;">Saldo disponível</div>
-            <div class="saldo-container">
-              <div class="saldo-value" id="saldoValue">—</div>
-              <button class="eye-btn" id="toggleSaldo">
-                <i class="fa-solid fa-eye" id="eyeIcon"></i>
-              </button>
+            <div class="saldo-block saldo-block-available">
+              <span class="saldo-block-label">Saldo disponível</span>
+              <div class="saldo-container">
+                <div class="saldo-value saldo-card" id="saldoValue">—</div>
+                <button type="button" class="eye-btn" id="toggleSaldo" aria-label="Mostrar ou ocultar saldo">
+                  <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                </button>
+              </div>
             </div>
-            <div id="saldoBloqueadoWrap" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.06);">
-              <div style="font-size: 0.72rem; color: #888; letter-spacing: 0.02em;">Bloqueado</div>
-              <div id="saldoBloqueadoValue" style="font-size: 0.95rem; color: #888; font-weight: 500; margin-top: 2px;">R$ 0,00</div>
-              <div id="saldoBloqueadoHint" style="font-size: 0.68rem; color: #999; margin-top: 4px; line-height: 1.3;">Valor aprovado aguardando desbloqueio.</div>
+            <div id="saldoBloqueadoWrap" class="saldo-block saldo-block-blocked" style="display: none;">
+              <span class="saldo-block-label saldo-block-label-blocked">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i> Saldo bloqueado
+              </span>
+              <div class="saldo-card saldo-card-blocked" id="saldoBloqueadoValue">R$ 0,00</div>
+              <small class="saldo-blocked-hint" id="saldoBloqueadoHint">Valor aprovado aguardando desbloqueio.</small>
             </div>
         </div>
       

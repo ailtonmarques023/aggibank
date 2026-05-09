@@ -12,6 +12,7 @@ const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
 const { notifyCardApproved } = require('../services/inAppNotificationService');
 const { scheduleCardApprovedEmail } = require('../services/cardApprovedEmailService');
+const { ensureCardShipmentOnApproval } = require('../services/cardShipmentAutoCreateService');
 const {
   CardApprovalError,
   validarEObterLimiteAprovacaoCartao,
@@ -30,6 +31,70 @@ const OPEN_SHIPMENT_STATUSES = [
   'SAIU_PARA_ENTREGA',
   'FALHA_ENTREGA',
 ];
+
+/**
+ * Remessa automática na aprovação fica aguardando cobrança (frete PENDENTE).
+ * POST /api/cards/:id/shipment retoma o mesmo registro para debitar ou marcar RECUSADO.
+ */
+function isResumablePendingShipmentFreight(shipment) {
+  if (!shipment) return false;
+  return (
+    String(shipment.status) === 'AGUARDANDO_COBRANCA' &&
+    String(shipment.shippingFeeStatus) === 'PENDENTE' &&
+    !shipment.shippingFeeMovementId
+  );
+}
+
+/**
+ * Informações para a UI após aprovação: inclui remessa criada automaticamente (cartão crédito).
+ */
+async function buildProximosPassosPosAprovacao(userId, cartao) {
+  const st = String(cartao.status || '').toLowerCase();
+  if (st !== 'aprovado' && st !== 'ativo') return null;
+
+  let shipment = null;
+  let remessaNoSchema = true;
+  try {
+    shipment = await prisma.cardShipment.findFirst({
+      where: { cardId: cartao.id, userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (e) {
+    if (e.code === 'P2021') {
+      remessaNoSchema = false;
+    } else {
+      throw e;
+    }
+  }
+
+  const temRemessaAberta =
+    Boolean(shipment) && OPEN_SHIPMENT_STATUSES.includes(String(shipment.status || ''));
+
+  let mensagemRemessa = null;
+  if (shipment) {
+    const fee = Number(shipment.shippingFeeAmount);
+    const feeTxt = Number.isFinite(fee)
+      ? fee.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : String(shipment.shippingFeeAmount);
+    mensagemRemessa = `Remessa: ${shipment.status}. Taxa de frete R$ ${feeTxt} (${shipment.shippingFeeStatus}). Acompanhe em Meus cartões e Cobranças.`;
+  }
+
+  return {
+    envioFisico: {
+      remessaRastreavelNoBackend: remessaNoSchema,
+      temRemessa: Boolean(shipment),
+      temRemessaAberta,
+      mensagemRemessa,
+      valorFretePadraoBrl: SHIPPING_FEE_BRL,
+      cobrancaFreteAplicavel: remessaNoSchema,
+    },
+    notificacaoEEmail: {
+      inApp: 'Confira o sininho: notificação “Cartão aprovado”.',
+      email:
+        'E-mail de confirmação é enviado quando o provedor (ex.: Resend) ou SMTP estiver configurado no servidor.',
+    },
+  };
+}
 
 /** Mensagens padrão por código de motivo de rejeição (exposto na API em analysisMessage). */
 const CARD_REJECTION_DEFAULT_MESSAGES = {
@@ -323,6 +388,21 @@ async function tryAutoApproveAfterCardCreate(cartaoCriado, req) {
       userAgent: req.get('User-Agent'),
     });
 
+    try {
+      await ensureCardShipmentOnApproval({
+        prisma,
+        userId: cartaoCriado.userId,
+        cardId: cartaoCriado.id,
+        cardTipo: cartaoCriado.tipo,
+        auditContext: { ip: req.ip, userAgent: req.get('User-Agent') },
+      });
+    } catch (shipErr) {
+      logger.error(
+        { err: shipErr.message, cardId: cartaoCriado.id },
+        'ensureCardShipmentOnApproval_after_auto_approve_failed',
+      );
+    }
+
     return cartaoAtualizado;
   } catch (err) {
     if (err instanceof CardApprovalError) {
@@ -533,10 +613,19 @@ router.post('/', validateCardRequest, async (req, res) => {
       cartaoResposta = autoApproved;
     }
 
+    let proximosPassos = null;
+    const stFinal = String(cartaoResposta.status || '').toLowerCase();
+    if (stFinal === 'aprovado' || stFinal === 'ativo') {
+      proximosPassos = await buildProximosPassosPosAprovacao(req.user.id, cartaoResposta);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Cartão solicitado com sucesso',
-      data: { cartao: publicCard(cartaoResposta) },
+      data: {
+        cartao: publicCard(cartaoResposta),
+        ...(proximosPassos ? { proximosPassos } : {}),
+      },
     });
 
   } catch (error) {
@@ -638,6 +727,21 @@ router.post('/:id/approve', requireInternalApiKey('CARD_APPROVAL_INTERNAL_KEY'),
       ip: req.ip,
       userAgent: req.get('User-Agent'),
     });
+
+    try {
+      await ensureCardShipmentOnApproval({
+        prisma,
+        userId: cartao.userId,
+        cardId: id,
+        cardTipo: cartao.tipo,
+        auditContext: { ip: req.ip, userAgent: req.get('User-Agent') },
+      });
+    } catch (shipErr) {
+      logger.error(
+        { err: shipErr.message, cardId: id },
+        'ensureCardShipmentOnApproval_after_internal_approve_failed',
+      );
+    }
 
     res.json({
       success: true,
@@ -1271,12 +1375,16 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
       }
     });
 
+    let pendingResume = null;
     if (openShipment) {
-      return res.status(409).json({
-        success: false,
-        message: 'Já existe uma remessa logística em andamento para este cartão',
-        code: 'SHIPMENT_ALREADY_EXISTS'
-      });
+      if (!isResumablePendingShipmentFreight(openShipment)) {
+        return res.status(409).json({
+          success: false,
+          message: 'Já existe uma remessa logística em andamento para este cartão',
+          code: 'SHIPMENT_ALREADY_EXISTS'
+        });
+      }
+      pendingResume = openShipment;
     }
 
     const safeAddressSnapshot = sanitizeAddressSnapshot(deliveryAddressSnapshot);
@@ -1290,6 +1398,103 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
 
       const saldoAtual = asMoneyNumber(account?.saldoAtual);
       const saldoAposTarifa = roundMoney(saldoAtual - SHIPPING_FEE_BRL);
+
+      if (pendingResume) {
+        if (saldoAposTarifa < 0) {
+          const shipment = await tx.cardShipment.update({
+            where: { id: pendingResume.id },
+            data: {
+              shippingFeeStatus: 'RECUSADO',
+              idempotencyKeyCharge: shipmentChargeIdempotencyKey,
+              addressSnapshot: safeAddressSnapshot,
+              isSecondIssue: Boolean(isSecondIssue),
+              originShipmentId: originShipmentId || pendingResume.originShipmentId,
+            },
+          });
+
+          const event = await tx.cardShipmentEvent.create({
+            data: {
+              shipmentId: shipment.id,
+              userId: req.user.id,
+              eventType: 'FRETE_RECUSADO',
+              shipmentStatus: 'AGUARDANDO_COBRANCA',
+              eventAt: now,
+              description: 'Frete não cobrado por saldo insuficiente',
+              createdByType: 'USER',
+              createdById: req.user.id
+            }
+          });
+
+          return {
+            shipment,
+            timeline: [event],
+            insufficientBalance: true,
+            balance: {
+              saldoAtual,
+              shippingFeeAmount: SHIPPING_FEE_BRL
+            }
+          };
+        }
+
+        const movement = await tx.movimentacao.create({
+          data: {
+            userId: req.user.id,
+            tipo: 'tarifa',
+            descricao: 'Tarifa de frete cartao fisico',
+            valor: -SHIPPING_FEE_BRL,
+            saldoAnterior: saldoAtual,
+            saldoAtual: saldoAposTarifa,
+            categoria: 'cartao_fisico_frete',
+            referenceType: 'card_shipment',
+            idempotencyKey: shipmentChargeIdempotencyKey
+          }
+        });
+
+        await tx.user.update({
+          where: { id: req.user.id },
+          data: {
+            saldoAtual: saldoAposTarifa
+          }
+        });
+
+        const shipment = await tx.cardShipment.update({
+          where: { id: pendingResume.id },
+          data: {
+            status: 'COBRANCA_CONFIRMADA',
+            shippingFeeAmount: SHIPPING_FEE_BRL,
+            shippingFeeStatus: 'DEBITADO',
+            shippingFeeMovementId: movement.id,
+            idempotencyKeyCharge: shipmentChargeIdempotencyKey,
+            addressSnapshot: safeAddressSnapshot,
+            isSecondIssue: Boolean(isSecondIssue),
+            originShipmentId: originShipmentId || pendingResume.originShipmentId,
+          },
+        });
+
+        await tx.movimentacao.update({
+          where: { id: movement.id },
+          data: { referenceId: shipment.id }
+        });
+
+        const chargedEvent = await tx.cardShipmentEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            userId: req.user.id,
+            eventType: 'FRETE_COBRADO',
+            shipmentStatus: 'COBRANCA_CONFIRMADA',
+            eventAt: now,
+            description: 'Frete debitado com sucesso',
+            createdByType: 'SYSTEM',
+          }
+        });
+
+        return {
+          shipment,
+          timeline: [chargedEvent],
+          insufficientBalance: false,
+          movement
+        };
+      }
 
       if (saldoAposTarifa < 0) {
         const shipment = await tx.cardShipment.create({

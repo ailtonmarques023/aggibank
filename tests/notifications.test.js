@@ -210,7 +210,9 @@ describe('Notifications API e serviço in-app', () => {
         }),
       }),
     );
-    expect(String(prisma.notificacao.create.mock.calls[0][0].data.mensagem)).toContain('2.500,00');
+    const msg = String(prisma.notificacao.create.mock.calls[0][0].data.mensagem);
+    expect(msg).toContain('2.500,00');
+    expect(msg).toContain('Meus cartões');
   });
 
   it('notifyCardApproved não duplica para o mesmo cardId', async () => {
