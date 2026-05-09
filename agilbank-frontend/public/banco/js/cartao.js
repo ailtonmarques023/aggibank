@@ -1789,13 +1789,47 @@ function renderCartoesReaisGrid(cartoes) {
 
 /**
  * Esconde banners/modal de oferta no dashboard quando já existe cartão na API.
+ * O card compacto “Cartão aprovado” no dashboard é controlado por {@link agilbankSyncDashboardApprovedMiniCard}.
  */
 function agilbankSetDashboardCardOffersVisible(visible) {
     var disp = visible ? '' : 'none';
     var banner = document.querySelector('.banner-divulgação');
     if (banner) banner.style.display = disp;
-    var mini = document.querySelector('#container .cartao-container');
-    if (mini) mini.style.display = disp;
+}
+
+/**
+ * Card azul compacto no dashboard: visível só com cartão aprovado ou ativo (GET /api/cards).
+ */
+function agilbankSyncDashboardApprovedMiniCard(list) {
+    var wrap = document.getElementById('dashboardCardApprovedMiniWrap');
+    var row = document.getElementById('dashboardFeatureCards');
+    if (!wrap || !row) return;
+    var l = Array.isArray(list) ? list : [];
+    var show = l.some(function (c) {
+        var s = agilbankStatusNorm(c && c.status);
+        return s === 'aprovado' || s === 'ativo';
+    });
+    wrap.style.display = show ? '' : 'none';
+    if (show) {
+        row.classList.remove('dashboard-feature-cards--no-cartao');
+    } else {
+        row.classList.add('dashboard-feature-cards--no-cartao');
+    }
+}
+
+/** Abre Meus cartões sem forçar fluxo de nova solicitação (diferente de openDynamicCardForm). */
+function agilbankDashboardOpenCartaoPainel() {
+    try {
+        window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = false;
+    } catch (e) {
+        /* ignore */
+    }
+    if (typeof window.showCartaoGerenciamento === 'function') {
+        window.showCartaoGerenciamento();
+    }
+    if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+        void window.agilbankRefreshPainelCartoes();
+    }
 }
 
 function resetCartaoSolicitacaoFlowUi() {
@@ -2080,6 +2114,7 @@ function renderCartoesErroCarregamento() {
             };
         }
     }
+    agilbankSyncDashboardApprovedMiniCard([]);
 }
 
 function agilbankRenderCtaSolicitacaoCartao(msgEl, texto) {
@@ -2153,6 +2188,7 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
                 agilbankRenderCtaSolicitacaoCartao(msg, 'Você ainda não possui cartão.');
             }
         }
+        agilbankSyncDashboardApprovedMiniCard([]);
         return;
     }
 
@@ -2183,6 +2219,7 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
                 '</span>';
         }
     }
+    agilbankSyncDashboardApprovedMiniCard(list);
 }
 
 /**
@@ -2201,6 +2238,8 @@ async function agilbankRefreshPainelCartoes() {
 window.agilbankRefreshPainelCartoes = agilbankRefreshPainelCartoes;
 window.agilbankAplicarEstadoPainelCartao = agilbankAplicarEstadoPainelCartao;
 window.agilbankSetDashboardCardOffersVisible = agilbankSetDashboardCardOffersVisible;
+window.agilbankSyncDashboardApprovedMiniCard = agilbankSyncDashboardApprovedMiniCard;
+window.agilbankDashboardOpenCartaoPainel = agilbankDashboardOpenCartaoPainel;
 window.agilbankSetSolicitacaoWizardMode = agilbankSetSolicitacaoWizardMode;
 window.agilbankFecharSolicitacaoCartao = agilbankFecharSolicitacaoCartao;
 window.agilbankFetchCartoes = fetchCartoesFromApi;

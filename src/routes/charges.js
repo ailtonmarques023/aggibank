@@ -196,6 +196,38 @@ router.get('/', async (req, res) => {
 
     const charges = summaries.map(toPublicChargeSummary);
 
+    if (process.env.AGILBANK_CHARGES_DIAGNOSTIC === 'true' && charges.length === 0) {
+      const [
+        licAny,
+        licPendente,
+        shipAny,
+        shipFeePendente,
+        bolPendenteOuVencido,
+      ] = await Promise.all([
+        prisma.loanInsuranceCharge.count({ where: { userId } }),
+        prisma.loanInsuranceCharge.count({ where: { userId, status: 'pendente' } }),
+        prisma.cardShipment.count({ where: { userId } }),
+        prisma.cardShipment.count({ where: { userId, shippingFeeStatus: 'PENDENTE' } }),
+        prisma.boleto.count({
+          where: { userId, status: { in: ['pendente', 'vencido'] } },
+        }),
+      ]);
+      logger.info(
+        {
+          requestId: req.requestId,
+          category: 'charges_diagnostic',
+          userId,
+          chargesReturned: 0,
+          loanInsuranceCharges_total: licAny,
+          loanInsuranceCharges_statusPendente: licPendente,
+          cardShipments_total: shipAny,
+          cardShipments_shippingFeeStatusPENDENTE: shipFeePendente,
+          boletos_pendenteOuVencido: bolPendenteOuVencido,
+        },
+        'GET /api/charges: lista vazia — contagens no banco para o titular do JWT (defina AGILBANK_CHARGES_DIAGNOSTIC=true no Railway para ver este log)'
+      );
+    }
+
     return res.json({
       success: true,
       data: { charges },

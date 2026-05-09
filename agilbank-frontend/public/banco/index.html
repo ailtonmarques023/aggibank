@@ -2384,13 +2384,17 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" placeholder="Buscar conversa">
         </div>
-        <div class="dashboard-feature-cards" role="region" aria-label="Cartão e empréstimos">
-            <div class="cartao-container dashboard-cartao-destaque" role="button" tabindex="0" aria-label="Cartão aprovado AgilBank. Abrir solicitação ou gerenciamento." onclick="openDynamicCardForm()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDynamicCardForm();}">
-                <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="" class="cartao-imagem" aria-hidden="true">
-                <div class="cartao-texto">
-                    <div class="cartao-titulo"><b>Cartão aprovado</b></div>
-                    <div class="cartao-subtitulo">Compras e pagamentos com um só cartão.</div>
-                </div>
+        <div class="dashboard-feature-cards dashboard-feature-cards--no-cartao" id="dashboardFeatureCards" role="region" aria-label="Cartão e empréstimos">
+            <div id="dashboardCardApprovedMiniWrap" class="dashboard-card-approved-mini-wrap" style="display:none;">
+                <button type="button" class="dashboard-card-approved-mini" id="dashboardCardApprovedMiniBtn" aria-label="Cartão aprovado. Abrir Meus cartões." onclick="if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();}">
+                    <span class="dashboard-card-mini-icon" aria-hidden="true">
+                        <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="" width="34" height="24" />
+                    </span>
+                    <span class="dashboard-card-mini-copy">
+                        <strong>Cartão aprovado</strong>
+                        <small>Compras e pagamentos com um só cartão.</small>
+                    </span>
+                </button>
             </div>
             <div class="dashboard-emprestimo-card-wrap" aria-label="Empréstimos e crédito pessoal">
                 <div class="dashboard-emprestimo-card-inner">
