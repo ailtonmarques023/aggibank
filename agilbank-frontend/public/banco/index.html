@@ -6949,11 +6949,12 @@
                         carregarPerfilUsuario();
                     }, 1000);
                     
-                    // Exibir modal de propaganda após login
-                    setTimeout(() => {
-                        console.log('🎯 Exibindo modal de propaganda após login...');
-                        tentarExibirModal();
-                    }, 2000);
+                    // Modal contextual: mesma regra do dashboard (GET /api/cards + /api/loans via checkUserCardAndShowModal)
+                    setTimeout(function () {
+                        if (typeof checkUserCardAndShowModal === 'function') {
+                            checkUserCardAndShowModal();
+                        }
+                    }, 2500);
                     
                 } else {
                     const error = await response.json().catch(function () { return {}; });
@@ -11332,7 +11333,7 @@
                         console.log('✅ Limite exibido automaticamente');
                     }
                 } else {
-                    console.log('⚠️ Usuário não tem limite de cartão');
+                    /* limite_cartao ausente no payload — não inferir ausência de cartão/produto */
                 }
             })
             .catch(error => {
@@ -11375,7 +11376,7 @@
 
         // Função para forçar exibição do limite (baseado nos dados do banco)
         function forceShowUserLimit() {
-            console.log('🔧 FORÇANDO EXIBIÇÃO DO LIMITE DO USUÁRIO...');
+            console.log('[AgilBank][debug] forceShowUserLimit — atualiza UI do limite via GET user-complete-data');
             
             // Limite real do usuário ailton (ID 41) do banco de dados
             // Buscar limite real do usuário (sem valor fixo)
@@ -11404,7 +11405,7 @@
 
         // Função para forçar atualização dos dados do header
         function forceUpdateHeaderData() {
-            console.log('🔧 FORÇANDO ATUALIZAÇÃO DOS DADOS DO HEADER...');
+            console.log('[AgilBank][debug] forceUpdateHeaderData');
             var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (!token) {
                 if (window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
@@ -11554,40 +11555,24 @@
             });
         }
 
-        // Auto-executar verificação de limite ao carregar a página
-        setTimeout(() => {
+        // Limite no header (sem abrir modal nem inferir produtos a partir de payload incompleto)
+        setTimeout(function () {
             checkAndShowLimit();
-            // Se não conseguir carregar do servidor, usar dados do banco
-            setTimeout(() => {
-                forceShowUserLimit();
-                forceUpdateHeaderData(); // Atualizar dados do header
-                
-                // HABILITADO - Buscar dados automaticamente
-                console.log('✅ Busca de dados em tempo real habilitada');
-                carregarPerfilUsuario();
+            setTimeout(function () {
+                forceUpdateHeaderData();
+                if (typeof carregarPerfilUsuario === 'function') {
+                    carregarPerfilUsuario();
+                }
             }, 1000);
         }, 1000);
-        
-        // EXIBIR MODAL AUTOMATICAMENTE - MÚLTIPLAS TENTATIVAS
+
+        /**
+         * Obsoleto: antes abria #agilModal com !important ignorando APIs.
+         * Mantido como alias de teste: delega para checkUserCardAndShowModal({ forceShow: true }).
+         */
         function tentarExibirModal() {
-            console.log('🔍 Tentativa de exibir modal...');
-            const modal = document.getElementById('agilModal');
-            if (modal) {
-                console.log('✅ Modal encontrado!');
-                modal.style.setProperty('display', 'block', 'important');
-                modal.style.setProperty('position', 'fixed', 'important');
-                modal.style.setProperty('top', '0', 'important');
-                modal.style.setProperty('left', '0', 'important');
-                modal.style.setProperty('width', '100vw', 'important');
-                modal.style.setProperty('height', '100vh', 'important');
-                modal.style.setProperty('z-index', '999999', 'important');
-                modal.style.setProperty('background', 'rgba(0,0,0,0.8)', 'important');
-                modal.setAttribute('aria-hidden', 'false');
-                console.log('✅ Modal forçado a aparecer!');
-                return true;
-            } else {
-                console.log('❌ Modal não encontrado!');
-                return false;
+            if (typeof checkUserCardAndShowModal === 'function') {
+                return checkUserCardAndShowModal({ forceShow: true });
             }
         }
         
@@ -11722,17 +11707,9 @@
             };
         }
         
-        // TESTE MANUAL - Expor função globalmente
         window.showAgilModal = showAgilModal;
         window.tentarExibirModal = tentarExibirModal;
-        console.log('🔧 Funções expostas globalmente para teste');
-        
-        // TESTE IMEDIATO - Forçar modal agora
-        console.log('🚀 TESTE IMEDIATO - Forçando modal...');
-        setTimeout(() => {
-            console.log('🔧 Executando teste imediato...');
-            tentarExibirModal();
-        }, 2000);
+        console.log('[AgilBank index version]', '2026-05-09-banner-modal-cleanup');
     </script>
 </body>
 </html>
