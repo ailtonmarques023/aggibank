@@ -1,33 +1,74 @@
 const request = require('supertest');
 const app = require('../src/server');
 const { prisma } = require('../src/config/database');
+const emailUtils = require('../src/utils/email');
+const { sendLoanApprovedBlockedEmailIfNeeded } = require('../src/services/loanApprovedBlockedEmailService');
 
 const BEARER = `Bearer ${global.testToken}`;
+
+function flushDeferred() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
 
 describe('Loans API — elegibilidade e decisao segura', () => {
   const INTERNAL_LOAN_KEY = 'internal-loan-key-test';
   const ADMIN_LOAN_KEY = 'admin-loan-key-test';
 
+  let __testLastLoanCreate;
+  let __notifByDedupeKey;
+
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.LOAN_DECISION_INTERNAL_KEY = INTERNAL_LOAN_KEY;
     process.env.ADMIN_API_KEY = ADMIN_LOAN_KEY;
+    __testLastLoanCreate = null;
+    __notifByDedupeKey = Object.create(null);
     prisma.user.findUnique.mockResolvedValue({
       ...global.testUser,
       scoreCredito: 750,
       saldoAtual: 1000,
+      saldoBloqueado: 0,
       isVerificado: true,
       dadosProfissionais: { rendaMensal: 3000 },
     });
     prisma.emprestimo.findFirst.mockResolvedValue(null);
-    prisma.emprestimo.findUnique.mockResolvedValue(null);
-    prisma.emprestimo.create.mockImplementation(async ({ data }) => ({
-      id: 'loan-1',
-      ...data,
-      dataSolicitacao: new Date('2026-05-07T15:00:00.000Z'),
-      dataAprovacao: null,
-      dataQuitacao: null,
-    }));
+    prisma.emprestimo.create.mockImplementation(async ({ data }) => {
+      __testLastLoanCreate = {
+        id: 'loan-1',
+        ...data,
+        dataSolicitacao: new Date('2026-05-07T15:00:00.000Z'),
+        dataAprovacao: null,
+        dataQuitacao: null,
+      };
+      return __testLastLoanCreate;
+    });
+    prisma.emprestimo.findUnique.mockImplementation(async (args) => {
+      if (!args || !args.where || !args.where.id) return null;
+      if (!args.select) return null;
+      if (!__testLastLoanCreate || args.where.id !== __testLastLoanCreate.id) return null;
+      const data = __testLastLoanCreate;
+      const vs = Number(data.valorSolicitado);
+      return {
+        id: data.id,
+        userId: data.userId,
+        valorSolicitado: data.valorSolicitado,
+        valorAprovado: vs,
+        prazoMeses: data.prazoMeses,
+        taxaJuros: data.taxaJuros,
+        valorParcela: data.valorParcela,
+        status: 'aprovado',
+        insuranceSelected: data.insuranceSelected,
+        insuranceAmount: data.insuranceAmount,
+        insuranceTermsAccepted: data.insuranceTermsAccepted,
+        fundsStatus: 'bloqueado',
+        blockedAmount: vs,
+        guaranteeStatus: data.insuranceSelected ? 'not_required' : 'pending',
+        insuranceChargeStatus: data.insuranceSelected ? 'pendente' : null,
+        dataSolicitacao: data.dataSolicitacao,
+        dataAprovacao: new Date('2026-05-07T15:10:00.000Z'),
+        dataQuitacao: null,
+      };
+    });
     prisma.emprestimo.findMany.mockResolvedValue([]);
     prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.emprestimo.update.mockResolvedValue({});
@@ -40,9 +81,41 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     });
     prisma.loanInsuranceCharge.updateMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(async (callback) => callback(prisma));
+    prisma.notificacao.findUnique.mockImplementation(async ({ where }) => {
+      if (!where || !where.dedupeKey) return null;
+      return __notifByDedupeKey[where.dedupeKey] || null;
+    });
+    prisma.notificacao.create.mockImplementation(async ({ data }) => {
+      const row = {
+        id: 'notif-loan-test',
+        ...data,
+        dataEnvio: new Date('2026-05-09T12:00:00.000Z'),
+        createdAt: new Date('2026-05-09T12:00:00.000Z'),
+        isLida: false,
+        readAt: null,
+      };
+      if (data.dedupeKey) {
+        __notifByDedupeKey[data.dedupeKey] = {
+          id: row.id,
+          userId: row.userId,
+          metadata:
+            row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+              ? { ...row.metadata }
+              : {},
+        };
+      }
+      return row;
+    });
+    prisma.notificacao.update.mockImplementation(async ({ where, data }) => {
+      const entry = Object.values(__notifByDedupeKey).find((v) => v.id === where.id);
+      if (entry && data.metadata) {
+        entry.metadata = { ...entry.metadata, ...data.metadata };
+      }
+      return { id: where.id, ...data };
+    });
   });
 
-  it('cria proposta pendente para usuario elegivel via POST /api/loans', async () => {
+  it('aprova automaticamente e bloqueia saldo para usuario elegivel via POST /api/loans', async () => {
     const response = await request(app)
       .post('/api/loans')
       .set('Authorization', BEARER)
@@ -50,7 +123,10 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       .expect(201);
 
     expect(response.body.success).toBe(true);
-    expect(response.body.data.emprestimo.status).toBe('pendente');
+    expect(response.body.data.emprestimo.status).toBe('aprovado');
+    expect(response.body.data.emprestimo.fundsStatus).toBe('bloqueado');
+    expect(response.body.data.emprestimo.blockedAmount).toBe(5000);
+    expect(response.body.data.emprestimo.guaranteeStatus).toBe('pending');
     expect(prisma.emprestimo.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -62,6 +138,45 @@ describe('Loans API — elegibilidade e decisao segura', () => {
           insuranceTermsAccepted: false,
           guaranteeStatus: 'pending',
         }),
+      }),
+    );
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: global.testUser.id },
+        data: { saldoBloqueado: { increment: 5000 } },
+      }),
+    );
+    prisma.user.update.mock.calls.forEach((call) => {
+      expect(call[0].data.saldoAtual).toBeUndefined();
+    });
+    expect(prisma.movimentacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'credito_bloqueado',
+          valor: 5000,
+          saldoAnterior: 1000,
+          saldoAtual: 1000,
+        }),
+      }),
+    );
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: global.testUser.id,
+          tipo: 'loan_approved_blocked',
+          titulo: 'Empréstimo aprovado',
+          dedupeKey: 'loan_approved_blocked:loan-1',
+          metadata: { loanId: 'loan-1', action: 'submit_guarantee' },
+        }),
+      }),
+    );
+    await flushDeferred();
+    expect(emailUtils.sendLoanApprovedBlockedEmail).toHaveBeenCalledTimes(1);
+    expect(emailUtils.sendLoanApprovedBlockedEmail).toHaveBeenCalledWith(
+      { email: global.testUser.email, nomeCompleto: global.testUser.nomeCompleto },
+      expect.objectContaining({
+        valor: 5000,
+        acaoDesbloqueio: expect.stringMatching(/garantia|desbloqueio/i),
       }),
     );
   });
@@ -95,6 +210,9 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       .expect(201);
 
     expect(response.body.success).toBe(true);
+    expect(response.body.data.emprestimo.status).toBe('aprovado');
+    expect(response.body.data.emprestimo.fundsStatus).toBe('bloqueado');
+    expect(response.body.data.emprestimo.insuranceChargeStatus).toBe('pendente');
     expect(prisma.emprestimo.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -105,9 +223,82 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         }),
       }),
     );
+    expect(prisma.loanInsuranceCharge.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          loanId: 'loan-1',
+          userId: global.testUser.id,
+          amount: 39.9,
+          status: 'pendente',
+        }),
+      }),
+    );
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: { loanId: 'loan-1', action: 'pay_insurance' },
+        }),
+      }),
+    );
+    await flushDeferred();
+    expect(emailUtils.sendLoanApprovedBlockedEmail).toHaveBeenCalledTimes(1);
+    expect(emailUtils.sendLoanApprovedBlockedEmail).toHaveBeenCalledWith(
+      { email: global.testUser.email, nomeCompleto: global.testUser.nomeCompleto },
+      expect.objectContaining({
+        valor: 5000,
+        acaoDesbloqueio: expect.stringContaining('39,90'),
+      }),
+    );
   });
 
-  it('executa fluxo runtime elegivel: eligibility true, simulate 200, create 201 pendente e historico com proposta', async () => {
+  it('não envia e-mail quando validação impede criação do empréstimo', async () => {
+    await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({
+        valorSolicitado: 5000,
+        prazoMeses: 12,
+        insuranceSelected: true,
+        insuranceTermsAccepted: false,
+      })
+      .expect(400);
+
+    await flushDeferred();
+    expect(emailUtils.sendLoanApprovedBlockedEmail).not.toHaveBeenCalled();
+  });
+
+  it('falha no envio de e-mail não impede 201 no empréstimo autoaprovado', async () => {
+    emailUtils.sendLoanApprovedBlockedEmail.mockRejectedValueOnce(new Error('provider_down'));
+    const response = await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({ valorSolicitado: 5000, prazoMeses: 12 })
+      .expect(201);
+
+    expect(response.body.success).toBe(true);
+    await flushDeferred();
+    expect(emailUtils.sendLoanApprovedBlockedEmail).toHaveBeenCalled();
+  });
+
+  it('não reenvia e-mail para o mesmo loanId após primeiro envio (idempotência)', async () => {
+    await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({ valorSolicitado: 5000, prazoMeses: 12 })
+      .expect(201);
+    await flushDeferred();
+    expect(emailUtils.sendLoanApprovedBlockedEmail).toHaveBeenCalledTimes(1);
+    emailUtils.sendLoanApprovedBlockedEmail.mockClear();
+    await sendLoanApprovedBlockedEmailIfNeeded({
+      loanId: 'loan-1',
+      userId: global.testUser.id,
+      insuranceSelected: false,
+      valorAprovado: 5000,
+    });
+    expect(emailUtils.sendLoanApprovedBlockedEmail).not.toHaveBeenCalled();
+  });
+
+  it('executa fluxo runtime elegivel: eligibility true, simulate 200, create 201 auto-aprovado e historico com proposta', async () => {
     prisma.emprestimo.findMany
       .mockResolvedValueOnce([
         {
@@ -147,7 +338,8 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       .send({ valorSolicitado: 5000, prazoMeses: 12 })
       .expect(201);
 
-    expect(createResponse.body.data.emprestimo.status).toBe('pendente');
+    expect(createResponse.body.data.emprestimo.status).toBe('aprovado');
+    expect(createResponse.body.data.emprestimo.fundsStatus).toBe('bloqueado');
 
     const historyResponse = await request(app)
       .get('/api/loans')
@@ -163,6 +355,30 @@ describe('Loans API — elegibilidade e decisao segura', () => {
         }),
       ]),
     );
+  });
+
+  it('retorna 400 quando ja existe credito aprovado bloqueado', async () => {
+    prisma.emprestimo.findFirst.mockImplementation(async ({ where }) => {
+      if (where.status === 'pendente') return null;
+      if (where.status === 'aprovado' && where.fundsStatus === 'bloqueado') {
+        return {
+          id: 'blocked-existing',
+          userId: global.testUser.id,
+          status: 'aprovado',
+          fundsStatus: 'bloqueado',
+        };
+      }
+      return null;
+    });
+
+    const response = await request(app)
+      .post('/api/loans')
+      .set('Authorization', BEARER)
+      .send({ valorSolicitado: 3000, prazoMeses: 12 })
+      .expect(400);
+
+    expect(response.body.code).toBe('LOAN_BLOCKED_FUNDS_ACTIVE');
+    expect(prisma.emprestimo.create).not.toHaveBeenCalled();
   });
 
   it('mantem bloqueio para usuario inelegivel', async () => {
@@ -690,6 +906,59 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     expect(prisma.movimentacao.create).toHaveBeenCalledTimes(2);
   });
 
+  it('aprova garantia internamente e move saldoBloqueado para saldoAtual', async () => {
+    prisma.emprestimo.findUnique
+      .mockReset()
+      .mockResolvedValueOnce({
+        id: 'loan-guarantee-1',
+        userId: global.testUser.id,
+        status: 'aprovado',
+        valorAprovado: 800,
+        insuranceSelected: false,
+        fundsStatus: 'bloqueado',
+        guaranteeStatus: 'pending',
+      })
+      .mockResolvedValueOnce({
+        id: 'loan-guarantee-1',
+        userId: global.testUser.id,
+        status: 'aprovado',
+        valorAprovado: 800,
+        fundsStatus: 'disponivel',
+        guaranteeStatus: 'approved',
+      });
+    prisma.user.findUnique
+      .mockResolvedValueOnce({
+        ...global.testUser,
+        saldoAtual: 200,
+        saldoBloqueado: 800,
+        isVerificado: true,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 200,
+        saldoBloqueado: 800,
+      });
+    prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
+    prisma.user.update.mockResolvedValue({});
+    prisma.movimentacao.create.mockResolvedValue({});
+
+    const response = await request(app)
+      .post('/api/loans/loan-guarantee-1/guarantee/approve')
+      .set('Authorization', BEARER)
+      .set('x-internal-key', INTERNAL_LOAN_KEY)
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: global.testUser.id },
+        data: expect.objectContaining({
+          saldoAtual: { increment: 800 },
+          saldoBloqueado: { decrement: 800 },
+        }),
+      }),
+    );
+  });
+
   it('nao duplica quitacao de seguro', async () => {
     prisma.emprestimo.findUnique.mockResolvedValue({
       id: 'loan-pay-2',
@@ -869,5 +1138,39 @@ describe('Loans API — elegibilidade e decisao segura', () => {
 
     expect(response.body.code).toBe('LOAN_TERM_ABOVE_LIMIT');
     expect(prisma.emprestimo.create).not.toHaveBeenCalled();
+  });
+
+  it('GET /api/user/user-complete-data retorna saldoBloqueado para o dashboard', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: global.testUser.id,
+      nomeCompleto: global.testUser.nomeCompleto,
+      email: global.testUser.email,
+      cpf: global.testUser.cpf,
+      telefone: global.testUser.telefone,
+      dataNascimento: global.testUser.dataNascimento,
+      saldoAtual: 100,
+      saldoBloqueado: 5000,
+      limiteCartao: null,
+      limitePixDiario: 1000,
+      limitePixMensal: 10000,
+      scoreCredito: 750,
+      numeroConta: '123456',
+      digitoConta: '7',
+      agencia: '0001',
+      isAtivo: true,
+      isVerificado: true,
+      endereco: null,
+      dadosProfissionais: null,
+      configuracoes: null,
+    });
+
+    const response = await request(app)
+      .get('/api/user/user-complete-data')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.user.saldoAtual).toBe(100);
+    expect(response.body.data.user.saldoBloqueado).toBe(5000);
   });
 });

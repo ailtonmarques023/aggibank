@@ -1,6 +1,12 @@
 const request = require('supertest');
 const app = require('../src/server');
 const { prisma } = require('../src/config/database');
+const emailUtils = require('../src/utils/email');
+const { sendCardApprovedEmailIfNeeded } = require('../src/services/cardApprovedEmailService');
+
+function flushDeferred() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
 
 const BEARER = `Bearer ${global.testToken}`;
 
@@ -45,11 +51,34 @@ function expectPublicCartaoVirtualShape(cartaoVirtual) {
   });
 }
 
+/** Perfil mínimo exigido pela aprovação interna de cartão (renda em BRL no modelo Prisma). */
+function usuarioPerfilCartaoCompleto(overrides = {}) {
+  return authUser({
+    endereco: {
+      cep: '01001-000',
+      logradouro: 'Rua Teste',
+      numero: '100',
+      bairro: 'Centro',
+      cidade: 'São Paulo',
+      estado: 'SP',
+    },
+    dadosProfissionais: {
+      rendaMensal: 5000,
+      profissao: 'Analista',
+      empresa: 'Empresa SA',
+    },
+    ...overrides,
+  });
+}
+
 describe('Cards API — POST decisão e GET segurança', () => {
   const INTERNAL_APPROVE_KEY = 'internal-approve-test-key';
 
   beforeEach(() => {
-    prisma.user.findUnique.mockResolvedValue(authUser({ scoreCredito: 750 }));
+    // Perfil incompleto por padrão: evita autoaprovação em POST /api/cards nos testes que esperam "pendente".
+    prisma.user.findUnique.mockResolvedValue(
+      authUser({ scoreCredito: 750, endereco: null, dadosProfissionais: null }),
+    );
     prisma.cartao.findFirst.mockResolvedValue(null);
     prisma.cartao.findMany.mockResolvedValue([]);
     process.env.CARD_APPROVAL_INTERNAL_KEY = INTERNAL_APPROVE_KEY;
@@ -90,6 +119,13 @@ describe('Cards API — POST decisão e GET segurança', () => {
       createdAt: new Date('2026-05-01T12:00:00.000Z'),
       updatedAt: new Date('2026-05-01T12:00:00.000Z'),
     }));
+    prisma.notificacao.findUnique.mockResolvedValue(null);
+    prisma.notificacao.create.mockResolvedValue({
+      id: 'notif-default',
+      userId: 'test-user-id',
+      metadata: {},
+    });
+    prisma.notificacao.update.mockResolvedValue({});
   });
 
   describe('POST /api/cards', () => {
@@ -108,6 +144,9 @@ describe('Cards API — POST decisão e GET segurança', () => {
       const arg = prisma.cartao.create.mock.calls[0][0];
       expect(arg.data.status).toBe('pendente');
       expect(Number(arg.data.limite)).toBe(5000);
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).not.toHaveBeenCalled();
+      expect(prisma.notificacao.create).not.toHaveBeenCalled();
     });
 
     it('sem renda válida (só tipo) usa limite por score e fica pendente', async () => {
@@ -138,7 +177,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expectPublicCartaoShape(res.body.data.cartao);
     });
 
-    it('renda 2000 sem limite → aprovado e limite 600', async () => {
+    it('renda 2000 sem limite → sempre pendente; limite provisório 600 (30% renda form)', async () => {
       const res = await request(app)
         .post('/api/cards')
         .set('Authorization', BEARER)
@@ -148,15 +187,15 @@ describe('Cards API — POST decisão e GET segurança', () => {
         })
         .expect(201);
 
-      expect(res.body.data.cartao.status).toBe('aprovado');
+      expect(res.body.data.cartao.status).toBe('pendente');
       expect(Number(res.body.data.cartao.limite)).toBe(600);
-      expect(res.body.data.cartao.dataAprovacao).toBeDefined();
+      expect(res.body.data.cartao.dataAprovacao).toBeNull();
       expectPublicCartaoShape(res.body.data.cartao);
       const arg = prisma.cartao.create.mock.calls[0][0];
-      expect(arg.data.dataAprovacao).toBeInstanceOf(Date);
+      expect(arg.data.dataAprovacao).toBeNull();
     });
 
-    it('renda 5000 sem limite → limite 1500 e aprovado', async () => {
+    it('renda 5000 sem limite → pendente e limite provisório 1500', async () => {
       const res = await request(app)
         .post('/api/cards')
         .set('Authorization', BEARER)
@@ -166,12 +205,12 @@ describe('Cards API — POST decisão e GET segurança', () => {
         })
         .expect(201);
 
-      expect(res.body.data.cartao.status).toBe('aprovado');
+      expect(res.body.data.cartao.status).toBe('pendente');
       expect(Number(res.body.data.cartao.limite)).toBe(1500);
       expectPublicCartaoShape(res.body.data.cartao);
     });
 
-    it('renda muito alta sem limite → limite máximo 10000', async () => {
+    it('renda muito alta sem limite → pendente e limite provisório máximo 10000', async () => {
       const res = await request(app)
         .post('/api/cards')
         .set('Authorization', BEARER)
@@ -182,11 +221,11 @@ describe('Cards API — POST decisão e GET segurança', () => {
         .expect(201);
 
       expect(Number(res.body.data.cartao.limite)).toBe(10000);
-      expect(res.body.data.cartao.status).toBe('aprovado');
+      expect(res.body.data.cartao.status).toBe('pendente');
       expectPublicCartaoShape(res.body.data.cartao);
     });
 
-    it('respeita limite enviado pelo cliente quando válido', async () => {
+    it('respeita limite enviado pelo cliente quando válido (status continua pendente)', async () => {
       const res = await request(app)
         .post('/api/cards')
         .set('Authorization', BEARER)
@@ -198,12 +237,116 @@ describe('Cards API — POST decisão e GET segurança', () => {
         .expect(201);
 
       expect(Number(res.body.data.cartao.limite)).toBe(4200);
-      expect(res.body.data.cartao.status).toBe('aprovado');
+      expect(res.body.data.cartao.status).toBe('pendente');
       expectPublicCartaoShape(res.body.data.cartao);
       const arg = prisma.cartao.create.mock.calls[0][0];
       expect(arg.data.dadosSolicitacao.decisaoAutomatica.limiteFonte).toBe('cliente');
     });
 
+    describe('POST /api/cards — auto-aprovação (perfil elegível)', () => {
+      let __postAutoNotifByDedupeKey;
+
+      beforeEach(() => {
+        prisma.user.findUnique.mockResolvedValue(usuarioPerfilCartaoCompleto({ scoreCredito: 750 }));
+        __postAutoNotifByDedupeKey = Object.create(null);
+        prisma.notificacao.findUnique.mockImplementation(async ({ where }) => {
+          if (!where || !where.dedupeKey) return null;
+          return __postAutoNotifByDedupeKey[where.dedupeKey] || null;
+        });
+        prisma.notificacao.create.mockImplementation(async ({ data }) => {
+          const row = {
+            id: 'notif-post-auto',
+            ...data,
+            dataEnvio: new Date('2026-05-09T12:00:00.000Z'),
+            createdAt: new Date('2026-05-09T12:00:00.000Z'),
+            isLida: false,
+            readAt: null,
+          };
+          if (data.dedupeKey) {
+            __postAutoNotifByDedupeKey[data.dedupeKey] = {
+              id: row.id,
+              userId: row.userId,
+              metadata:
+                row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+                  ? { ...row.metadata }
+                  : {},
+            };
+          }
+          return row;
+        });
+        prisma.notificacao.update.mockImplementation(async ({ where, data }) => {
+          const entry = Object.values(__postAutoNotifByDedupeKey).find((v) => v.id === where.id);
+          if (entry && data.metadata) {
+            entry.metadata = { ...entry.metadata, ...data.metadata };
+          }
+          return { id: where.id, ...data };
+        });
+        prisma.cartao.update.mockImplementation(({ where, data }) => ({
+          id: where.id,
+          userId: 'test-user-id',
+          maskedNumber: '**** **** **** 1111',
+          last4: '1111',
+          validade: '01/2030',
+          limite: data.limite,
+          saldoUtilizado: 0,
+          status: data.status,
+          tipo: 'credito',
+          bandeira: 'elo',
+          dataSolicitacao: new Date('2026-05-01T12:00:00.000Z'),
+          dataAprovacao: data.dataAprovacao,
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          updatedAt: new Date('2026-05-01T12:00:00.000Z'),
+        }));
+      });
+
+      it('autoaprova com limite renda×1,8, cria notificação card_approved e agenda e-mail', async () => {
+        const res = await request(app)
+          .post('/api/cards')
+          .set('Authorization', BEARER)
+          .send({ tipo: 'credito', limite: 2000 })
+          .expect(201);
+
+        expect(res.body.data.cartao.status).toBe('aprovado');
+        expect(Number(res.body.data.cartao.limite)).toBe(9000);
+        expect(prisma.cartao.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: 'cartao-test-id' },
+            data: expect.objectContaining({
+              status: 'aprovado',
+              limite: 9000,
+              dataAprovacao: expect.any(Date),
+            }),
+          }),
+        );
+        expect(prisma.notificacao.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              tipo: 'card_approved',
+              dedupeKey: 'card_approved:cartao-test-id',
+              metadata: { cardId: 'cartao-test-id', action: 'view_card' },
+            }),
+          }),
+        );
+        await flushDeferred();
+        expect(emailUtils.sendCardApprovedEmail).toHaveBeenCalledWith(
+          { email: global.testUser.email, nomeCompleto: global.testUser.nomeCompleto },
+          expect.objectContaining({ limite: 9000, status: 'aprovado' }),
+        );
+      });
+
+      it('falha no e-mail não impede 201 na autoaprovação', async () => {
+        emailUtils.sendCardApprovedEmail.mockRejectedValueOnce(new Error('provider_down'));
+        const res = await request(app)
+          .post('/api/cards')
+          .set('Authorization', BEARER)
+          .send({ tipo: 'credito' })
+          .expect(201);
+        expect(res.body.data.cartao.status).toBe('aprovado');
+        expect(Number(res.body.data.cartao.limite)).toBe(9000);
+        await flushDeferred();
+        expect(emailUtils.sendCardApprovedEmail).toHaveBeenCalled();
+      });
+    });
   });
 
   describe('GET /api/cards', () => {
@@ -250,26 +393,28 @@ describe('Cards API — POST decisão e GET segurança', () => {
     });
   });
 
-  describe('POST /api/cards — CARD_ALREADY_EXISTS', () => {
-    it('retorna 400 e não cria cartão quando já existe pendente do mesmo tipo', async () => {
-      prisma.cartao.findFirst.mockResolvedValue({
-        id: 'existing-pend',
-        userId: 'test-user-id',
-        tipo: 'credito',
-        status: 'pendente',
-      });
+  describe('POST /api/cards — duplicidade', () => {
+    it('retorna 400 CARD_PENDING_ALREADY_EXISTS quando já existe pendente do mesmo tipo', async () => {
+      prisma.cartao.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'existing-pend',
+          userId: 'test-user-id',
+          tipo: 'credito',
+          status: 'pendente',
+        });
       const res = await request(app)
         .post('/api/cards')
         .set('Authorization', BEARER)
         .send({ tipo: 'credito', limite: 3000 })
         .expect(400);
 
-      expect(res.body.code).toBe('CARD_ALREADY_EXISTS');
+      expect(res.body.code).toBe('CARD_PENDING_ALREADY_EXISTS');
       expect(prisma.cartao.create).not.toHaveBeenCalled();
     });
 
-    it('retorna 400 e não cria cartão quando já existe aprovado do mesmo tipo', async () => {
-      prisma.cartao.findFirst.mockResolvedValue({
+    it('retorna 400 CARD_ACTIVE_ALREADY_EXISTS quando já existe aprovado do mesmo tipo', async () => {
+      prisma.cartao.findFirst.mockResolvedValueOnce({
         id: 'existing-apr',
         userId: 'test-user-id',
         tipo: 'credito',
@@ -281,12 +426,12 @@ describe('Cards API — POST decisão e GET segurança', () => {
         .send({ tipo: 'credito', limite: 2000 })
         .expect(400);
 
-      expect(res.body.code).toBe('CARD_ALREADY_EXISTS');
+      expect(res.body.code).toBe('CARD_ACTIVE_ALREADY_EXISTS');
       expect(prisma.cartao.create).not.toHaveBeenCalled();
     });
 
-    it('retorna 400 e não cria cartão quando já existe ativo do mesmo tipo', async () => {
-      prisma.cartao.findFirst.mockResolvedValue({
+    it('retorna 400 CARD_ACTIVE_ALREADY_EXISTS quando já existe ativo do mesmo tipo', async () => {
+      prisma.cartao.findFirst.mockResolvedValueOnce({
         id: 'existing-ativo',
         userId: 'test-user-id',
         tipo: 'credito',
@@ -298,7 +443,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
         .send({ tipo: 'credito', limite: 2000 })
         .expect(400);
 
-      expect(res.body.code).toBe('CARD_ALREADY_EXISTS');
+      expect(res.body.code).toBe('CARD_ACTIVE_ALREADY_EXISTS');
       expect(prisma.cartao.create).not.toHaveBeenCalled();
     });
   });
@@ -320,14 +465,62 @@ describe('Cards API — POST decisão e GET segurança', () => {
       updatedAt: new Date('2026-05-01T12:00:00.000Z'),
     };
 
+    let __cardNotifByDedupeKey;
+
+    beforeEach(() => {
+      __cardNotifByDedupeKey = Object.create(null);
+      prisma.notificacao.findUnique.mockImplementation(async ({ where }) => {
+        if (!where || !where.dedupeKey) return null;
+        return __cardNotifByDedupeKey[where.dedupeKey] || null;
+      });
+      prisma.notificacao.create.mockImplementation(async ({ data }) => {
+        const row = {
+          id: 'notif-card-test',
+          ...data,
+          dataEnvio: new Date('2026-05-09T12:00:00.000Z'),
+          createdAt: new Date('2026-05-09T12:00:00.000Z'),
+          isLida: false,
+          readAt: null,
+        };
+        if (data.dedupeKey) {
+          __cardNotifByDedupeKey[data.dedupeKey] = {
+            id: row.id,
+            userId: row.userId,
+            metadata:
+              row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+                ? { ...row.metadata }
+                : {},
+          };
+        }
+        return row;
+      });
+      prisma.notificacao.update.mockImplementation(async ({ where, data }) => {
+        const entry = Object.values(__cardNotifByDedupeKey).find((v) => v.id === where.id);
+        if (entry && data.metadata) {
+          entry.metadata = { ...entry.metadata, ...data.metadata };
+        }
+        return { id: where.id, ...data };
+      });
+    });
+
     function mockFindFirstPostThenApprove(pendingCard) {
       prisma.cartao.findFirst.mockImplementation((opts) => {
         const w = opts && opts.where;
-        if (w && w.tipo && w.status && Array.isArray(w.status.in)) {
+        if (!w) return null;
+        if (w.userId && w.tipo && Array.isArray(w.status && w.status.in) && !w.id) {
           return null;
         }
-        if (w && w.id === pendingCard.id && w.status === 'pendente') {
+        if (w.userId && w.tipo && w.status === 'pendente' && !w.id) {
+          return null;
+        }
+        if (w.id === pendingCard.id && w.status === 'pendente' && Object.keys(w).length === 2) {
           return pendingCard;
+        }
+        if (w.userId && w.id && w.id.not && Array.isArray(w.status && w.status.in)) {
+          return null;
+        }
+        if (w.userId && w.id && w.id.not && w.status === 'pendente') {
+          return null;
         }
         return null;
       });
@@ -343,12 +536,16 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expect(prisma.cartao.update).not.toHaveBeenCalled();
     });
 
-    it('aprova cartão pendente: status aprovado, dataAprovacao, resposta sem campos sensíveis', async () => {
+    it('aprova cartão pendente: status aprovado, limite = renda perfil × 1,8, dataAprovacao', async () => {
       mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({ dadosProfissionais: { rendaMensal: 2500, profissao: 'Dev', empresa: 'ACME' } }),
+      );
       const dataApr = new Date('2026-06-01T12:00:00.000Z');
       prisma.cartao.update.mockResolvedValue({
         ...pendingBase,
         status: 'aprovado',
+        limite: 4500,
         dataAprovacao: dataApr,
         dadosSolicitacao: { x: 1 },
         cardToken: 'secret-token',
@@ -365,22 +562,45 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.cartao.status).toBe('aprovado');
       expect(res.body.data.cartao.dataAprovacao).toBeDefined();
+      expect(Number(res.body.data.cartao.limite)).toBe(4500);
       expectPublicCartaoShape(res.body.data.cartao);
       expect(prisma.cartao.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'ap1' },
           data: expect.objectContaining({
             status: 'aprovado',
+            limite: 4500,
             dataAprovacao: expect.any(Date),
           }),
         }),
+      );
+      expect(prisma.notificacao.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'test-user-id',
+            tipo: 'card_approved',
+            titulo: 'Cartão aprovado',
+            dedupeKey: 'card_approved:ap1',
+            metadata: { cardId: 'ap1', action: 'view_card' },
+          }),
+        }),
+      );
+      expect(String(prisma.notificacao.create.mock.calls[0][0].data.mensagem)).toContain('4.500,00');
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).toHaveBeenCalledTimes(1);
+      expect(emailUtils.sendCardApprovedEmail).toHaveBeenCalledWith(
+        { email: global.testUser.email, nomeCompleto: global.testUser.nomeCompleto },
+        expect.objectContaining({ limite: 4500, status: 'aprovado' }),
       );
     });
 
     it('404 quando cartão não existe (id inválido)', async () => {
       prisma.cartao.findFirst.mockImplementation((opts) => {
         const w = opts && opts.where;
-        if (w && w.tipo && w.status && Array.isArray(w.status.in)) {
+        if (w.userId && w.tipo && Array.isArray(w.status && w.status.in) && !w.id) {
+          return null;
+        }
+        if (w.userId && w.tipo && w.status === 'pendente' && !w.id) {
           return null;
         }
         return null;
@@ -394,12 +614,18 @@ describe('Cards API — POST decisão e GET segurança', () => {
 
       expect(res.body.code).toBe('CARD_NOT_FOUND');
       expect(prisma.cartao.update).not.toHaveBeenCalled();
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).not.toHaveBeenCalled();
+      expect(prisma.notificacao.create).not.toHaveBeenCalled();
     });
 
-    it('404 quando não há linha pendente para o utilizador (equiv. cartão inexistente ou de outro utilizador)', async () => {
+    it('404 quando não há linha pendente (id desconhecido)', async () => {
       prisma.cartao.findFirst.mockImplementation((opts) => {
         const w = opts && opts.where;
-        if (w && w.tipo && w.status && Array.isArray(w.status.in)) {
+        if (w.userId && w.tipo && Array.isArray(w.status && w.status.in) && !w.id) {
+          return null;
+        }
+        if (w.userId && w.tipo && w.status === 'pendente' && !w.id) {
           return null;
         }
         return null;
@@ -413,12 +639,18 @@ describe('Cards API — POST decisão e GET segurança', () => {
 
       expect(res.body.code).toBe('CARD_NOT_FOUND');
       expect(prisma.cartao.update).not.toHaveBeenCalled();
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).not.toHaveBeenCalled();
+      expect(prisma.notificacao.create).not.toHaveBeenCalled();
     });
 
     it('404 ao aprovar cartão já aprovado (rota só considera status pendente)', async () => {
       prisma.cartao.findFirst.mockImplementation((opts) => {
         const w = opts && opts.where;
-        if (w && w.tipo && w.status && Array.isArray(w.status.in)) {
+        if (w.userId && w.tipo && Array.isArray(w.status && w.status.in) && !w.id) {
+          return null;
+        }
+        if (w.userId && w.tipo && w.status === 'pendente' && !w.id) {
           return null;
         }
         if (w && w.id === 'already-approved-id' && w.status === 'pendente') {
@@ -436,6 +668,306 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expect(res.body.code).toBe('CARD_NOT_FOUND');
       expect(res.body.message).toMatch(/não encontrado|já processado/i);
       expect(prisma.cartao.update).not.toHaveBeenCalled();
+    });
+
+    it('400 CARD_INCOME_NOT_ELIGIBLE quando renda perfil < 1000', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({
+          dadosProfissionais: { rendaMensal: 999.99, profissao: 'Dev', empresa: 'ACME' },
+        }),
+      );
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(400);
+      expect(res.body.code).toBe('CARD_INCOME_NOT_ELIGIBLE');
+      expect(prisma.cartao.update).not.toHaveBeenCalled();
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).not.toHaveBeenCalled();
+      expect(prisma.notificacao.create).not.toHaveBeenCalled();
+    });
+
+    it('aprova com renda 1000 → limite 1800', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({
+          dadosProfissionais: { rendaMensal: 1000, profissao: 'Dev', empresa: 'ACME' },
+        }),
+      );
+      prisma.cartao.update.mockResolvedValue({
+        ...pendingBase,
+        status: 'aprovado',
+        limite: 1800,
+        dataAprovacao: new Date(),
+      });
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(200);
+      expect(Number(res.body.data.cartao.limite)).toBe(1800);
+      expect(prisma.cartao.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ limite: 1800, status: 'aprovado' }),
+        }),
+      );
+    });
+
+    it('aprova com renda 1200 → limite 2160', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({
+          dadosProfissionais: { rendaMensal: 1200, profissao: 'Dev', empresa: 'ACME' },
+        }),
+      );
+      prisma.cartao.update.mockResolvedValue({
+        ...pendingBase,
+        status: 'aprovado',
+        limite: 2160,
+        dataAprovacao: new Date(),
+      });
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(200);
+      expect(Number(res.body.data.cartao.limite)).toBe(2160);
+    });
+
+    it('aprova com renda 2000 → limite 3600', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({
+          dadosProfissionais: { rendaMensal: 2000, profissao: 'Dev', empresa: 'ACME' },
+        }),
+      );
+      prisma.cartao.update.mockResolvedValue({
+        ...pendingBase,
+        status: 'aprovado',
+        limite: 3600,
+        dataAprovacao: new Date(),
+      });
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(200);
+      expect(Number(res.body.data.cartao.limite)).toBe(3600);
+    });
+
+    it('falha no envio de e-mail não impede 200 na aprovação', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({
+          dadosProfissionais: { rendaMensal: 1000, profissao: 'Dev', empresa: 'ACME' },
+        }),
+      );
+      prisma.cartao.update.mockResolvedValue({
+        ...pendingBase,
+        status: 'aprovado',
+        limite: 1800,
+        dataAprovacao: new Date(),
+      });
+      emailUtils.sendCardApprovedEmail.mockRejectedValueOnce(new Error('resend_down'));
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(200);
+      expect(res.body.success).toBe(true);
+      await flushDeferred();
+      expect(prisma.notificacao.create).toHaveBeenCalled();
+      expect(emailUtils.sendCardApprovedEmail).toHaveBeenCalled();
+    });
+
+    it('não reenvia e-mail para o mesmo cardId após primeiro envio (idempotência)', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({
+          dadosProfissionais: { rendaMensal: 1000, profissao: 'Dev', empresa: 'ACME' },
+        }),
+      );
+      prisma.cartao.update.mockResolvedValue({
+        ...pendingBase,
+        status: 'aprovado',
+        limite: 1800,
+        dataAprovacao: new Date(),
+      });
+      await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(200);
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).toHaveBeenCalledTimes(1);
+      emailUtils.sendCardApprovedEmail.mockClear();
+      await sendCardApprovedEmailIfNeeded({
+        cardId: 'ap1',
+        userId: 'test-user-id',
+        limiteAprovado: 1800,
+        status: 'aprovado',
+      });
+      expect(emailUtils.sendCardApprovedEmail).not.toHaveBeenCalled();
+    });
+
+    it('403 ACCOUNT_NOT_VERIFIED quando titular não verificado', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({ isVerificado: false }),
+      );
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(403);
+      expect(res.body.code).toBe('ACCOUNT_NOT_VERIFIED');
+      expect(prisma.cartao.update).not.toHaveBeenCalled();
+    });
+
+    it('400 CARD_PROFILE_INCOMPLETE sem endereço', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({ endereco: null }),
+      );
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(400);
+      expect(res.body.code).toBe('CARD_PROFILE_INCOMPLETE');
+      expect(prisma.cartao.update).not.toHaveBeenCalled();
+    });
+
+    it('400 CARD_PROFILE_INCOMPLETE sem dados profissionais completos', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.user.findUnique.mockResolvedValue(
+        usuarioPerfilCartaoCompleto({ dadosProfissionais: { rendaMensal: 3000, profissao: '', empresa: 'X' } }),
+      );
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(400);
+      expect(res.body.code).toBe('CARD_PROFILE_INCOMPLETE');
+    });
+
+    it('400 CARD_ACTIVE_ALREADY_EXISTS se já há outro cartão aprovado do mesmo tipo', async () => {
+      prisma.cartao.findFirst.mockImplementation((opts) => {
+        const w = opts && opts.where;
+        if (w.userId && w.tipo && Array.isArray(w.status && w.status.in) && !w.id) {
+          return null;
+        }
+        if (w.userId && w.tipo && w.status === 'pendente' && !w.id) {
+          return null;
+        }
+        if (w.id === pendingBase.id && w.status === 'pendente' && Object.keys(w).length === 2) {
+          return pendingBase;
+        }
+        if (w.userId && w.id && w.id.not && Array.isArray(w.status && w.status.in)) {
+          return { id: 'outro', status: 'aprovado', userId: 'test-user-id', tipo: 'credito' };
+        }
+        if (w.userId && w.id && w.id.not && w.status === 'pendente') {
+          return null;
+        }
+        return null;
+      });
+      prisma.user.findUnique.mockResolvedValue(usuarioPerfilCartaoCompleto());
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(400);
+      expect(res.body.code).toBe('CARD_ACTIVE_ALREADY_EXISTS');
+      expect(prisma.cartao.update).not.toHaveBeenCalled();
+    });
+
+    it('400 CARD_PENDING_ALREADY_EXISTS se há outra solicitação pendente do mesmo tipo', async () => {
+      prisma.cartao.findFirst.mockImplementation((opts) => {
+        const w = opts && opts.where;
+        if (w.userId && w.tipo && Array.isArray(w.status && w.status.in) && !w.id) {
+          return null;
+        }
+        if (w.userId && w.tipo && w.status === 'pendente' && !w.id) {
+          return null;
+        }
+        if (w.id === pendingBase.id && w.status === 'pendente' && Object.keys(w).length === 2) {
+          return pendingBase;
+        }
+        if (w.userId && w.id && w.id.not && Array.isArray(w.status && w.status.in)) {
+          return null;
+        }
+        if (w.userId && w.id && w.id.not && w.status === 'pendente') {
+          return { id: 'outro-pend', status: 'pendente', userId: 'test-user-id', tipo: 'credito' };
+        }
+        return null;
+      });
+      prisma.user.findUnique.mockResolvedValue(usuarioPerfilCartaoCompleto());
+      const res = await request(app)
+        .post('/api/cards/ap1/approve')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(400);
+      expect(res.body.code).toBe('CARD_PENDING_ALREADY_EXISTS');
+    });
+
+    it('POST /api/cards/:id/reject (interno) → status rejeitado + analysisReason/analysisMessage', async () => {
+      mockFindFirstPostThenApprove({
+        ...pendingBase,
+        dadosSolicitacao: { schemaVersion: 1 },
+      });
+      prisma.cartao.update.mockImplementation(({ data }) => ({
+        ...pendingBase,
+        ...data,
+        dadosSolicitacao: data.dadosSolicitacao,
+      }));
+      const res = await request(app)
+        .post('/api/cards/ap1/reject')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .send({ analysisReason: 'INCOME_BELOW_MINIMUM' })
+        .expect(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.cartao.status).toBe('rejeitado');
+      expect(res.body.data.cartao.analysisReason).toBe('INCOME_BELOW_MINIMUM');
+      expect(res.body.data.cartao.analysisMessage).toBe(
+        'A renda mensal informada ainda não permite aprovação do cartão de crédito.',
+      );
+      await flushDeferred();
+      expect(emailUtils.sendCardApprovedEmail).not.toHaveBeenCalled();
+      expect(prisma.notificacao.create).not.toHaveBeenCalled();
+      expect(prisma.cartao.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ap1' },
+          data: expect.objectContaining({
+            status: 'rejeitado',
+            dataAprovacao: null,
+            dadosSolicitacao: expect.objectContaining({
+              decisaoRejeicao: expect.objectContaining({
+                code: 'INCOME_BELOW_MINIMUM',
+                message: 'A renda mensal informada ainda não permite aprovação do cartão de crédito.',
+              }),
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('POST /api/cards/:id/reject sem body → MANUAL_REJECTION e mensagem padrão', async () => {
+      mockFindFirstPostThenApprove(pendingBase);
+      prisma.cartao.update.mockImplementation(({ data }) => ({
+        ...pendingBase,
+        ...data,
+        dadosSolicitacao: data.dadosSolicitacao,
+      }));
+      const res = await request(app)
+        .post('/api/cards/ap1/reject')
+        .set('Authorization', BEARER)
+        .set('x-internal-key', INTERNAL_APPROVE_KEY)
+        .expect(200);
+      expect(res.body.data.cartao.analysisReason).toBe('MANUAL_REJECTION');
+      expect(res.body.data.cartao.analysisMessage).toContain('Solicitação não aprovada');
     });
   });
 

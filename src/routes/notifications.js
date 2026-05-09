@@ -5,53 +5,70 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// Aplicar autenticação em todas as rotas
 router.use(authenticateToken);
+
+function toPublicNotification(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    type: row.tipo,
+    title: row.titulo,
+    message: row.mensagem,
+    status: row.isLida ? 'read' : 'unread',
+    createdAt: row.dataEnvio || row.createdAt,
+    readAt: row.readAt,
+    metadata: row.metadata == null ? null : row.metadata,
+  };
+}
+
+async function markOneRead(userId, id) {
+  const notificacao = await prisma.notificacao.findFirst({
+    where: { id, userId },
+  });
+
+  if (!notificacao) {
+    return { error: 'NOTIFICATION_NOT_FOUND', status: 404 };
+  }
+
+  const notificacaoAtualizada = await prisma.notificacao.update({
+    where: { id },
+    data: { isLida: true, readAt: new Date() },
+  });
+
+  return { notificacao: notificacaoAtualizada };
+}
 
 /**
  * @swagger
  * /api/notifications:
  *   get:
  *     summary: Listar notificações do usuário
- *     tags: [Notificações]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *         description: Número da página
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *         description: Limite de itens por página
- *       - in: query
- *         name: unread
- *         schema:
- *           type: boolean
- *         description: Filtrar apenas não lidas
- *     responses:
- *       200:
- *         description: Notificações listadas com sucesso
  */
 router.get('/', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const unread = req.query.unread === 'true';
+    if (req.query.countOnly === 'true') {
+      const where = { userId: req.user.id };
+      if (req.query.status === 'unread' || req.query.unread === 'true') {
+        where.isLida = false;
+      }
+      const count = await prisma.notificacao.count({ where });
+      return res.json({
+        success: true,
+        message: 'Contagem obtida com sucesso',
+        data: { count },
+      });
+    }
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
     const skip = (page - 1) * limit;
 
     const where = { userId: req.user.id };
-    if (unread) {
+    if (req.query.unread === 'true' || req.query.status === 'unread') {
       where.isLida = false;
     }
 
-    const [notificacoes, total, unreadCount] = await Promise.all([
+    const [rows, total, unreadCount] = await Promise.all([
       prisma.notificacao.findMany({
         where,
         orderBy: { dataEnvio: 'desc' },
@@ -64,259 +81,100 @@ router.get('/', async (req, res) => {
           tipo: true,
           isLida: true,
           dataEnvio: true,
-          createdAt: true
-        }
+          createdAt: true,
+          readAt: true,
+          metadata: true,
+        },
       }),
       prisma.notificacao.count({ where }),
       prisma.notificacao.count({
-        where: { userId: req.user.id, isLida: false }
-      })
+        where: { userId: req.user.id, isLida: false },
+      }),
     ]);
+
+    const notifications = rows.map(toPublicNotification);
 
     res.json({
       success: true,
       message: 'Notificações listadas com sucesso',
       data: {
-        notificacoes,
+        notifications,
+        notificacoes: notifications,
         unreadCount,
         pagination: {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
-        }
-      }
+          pages: Math.ceil(total / limit),
+        },
+      },
     });
-
   } catch (error) {
     logger.error('Erro ao listar notificações:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
     });
   }
 });
 
 /**
- * @swagger
- * /api/notifications/{id}/read:
- *   put:
- *     summary: Marcar notificação como lida
- *     tags: [Notificações]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Notificação marcada como lida
- */
-router.put('/:id/read', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const notificacao = await prisma.notificacao.findFirst({
-      where: {
-        id,
-        userId: req.user.id
-      }
-    });
-
-    if (!notificacao) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notificação não encontrada',
-        code: 'NOTIFICATION_NOT_FOUND'
-      });
-    }
-
-    const notificacaoAtualizada = await prisma.notificacao.update({
-      where: { id },
-      data: { isLida: true }
-    });
-
-    res.json({
-      success: true,
-      message: 'Notificação marcada como lida',
-      data: { notificacao: notificacaoAtualizada }
-    });
-
-  } catch (error) {
-    logger.error('Erro ao marcar notificação como lida:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/notifications/read-all:
- *   put:
- *     summary: Marcar todas as notificações como lidas
- *     tags: [Notificações]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Todas as notificações marcadas como lidas
- */
-router.put('/read-all', async (req, res) => {
-  try {
-    const result = await prisma.notificacao.updateMany({
-      where: {
-        userId: req.user.id,
-        isLida: false
-      },
-      data: { isLida: true }
-    });
-
-    res.json({
-      success: true,
-      message: `${result.count} notificações marcadas como lidas`,
-      data: { updatedCount: result.count }
-    });
-
-  } catch (error) {
-    logger.error('Erro ao marcar todas as notificações como lidas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/notifications/{id}:
- *   delete:
- *     summary: Deletar notificação
- *     tags: [Notificações]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Notificação deletada com sucesso
- */
-router.delete('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const notificacao = await prisma.notificacao.findFirst({
-      where: {
-        id,
-        userId: req.user.id
-      }
-    });
-
-    if (!notificacao) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notificação não encontrada',
-        code: 'NOTIFICATION_NOT_FOUND'
-      });
-    }
-
-    await prisma.notificacao.delete({
-      where: { id }
-    });
-
-    res.json({
-      success: true,
-      message: 'Notificação deletada com sucesso'
-    });
-
-  } catch (error) {
-    logger.error('Erro ao deletar notificação:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/notifications/unread-count:
- *   get:
- *     summary: Obter contador de notificações não lidas
- *     tags: [Notificações]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Contador obtido com sucesso
+ * Contador dedicado (legado)
  */
 router.get('/unread-count', async (req, res) => {
   try {
     const unreadCount = await prisma.notificacao.count({
       where: {
         userId: req.user.id,
-        isLida: false
-      }
+        isLida: false,
+      },
     });
 
     res.json({
       success: true,
       message: 'Contador obtido com sucesso',
-      data: { unreadCount }
+      data: { unreadCount },
     });
-
   } catch (error) {
     logger.error('Erro ao obter contador de notificações:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
     });
   }
 });
 
-/**
- * @swagger
- * /api/notifications/send:
- *   post:
- *     summary: Enviar notificação (interno)
- *     tags: [Notificações]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - titulo
- *               - mensagem
- *               - tipo
- *             properties:
- *               titulo:
- *                 type: string
- *               mensagem:
- *                 type: string
- *               tipo:
- *                 type: string
- *                 enum: [info, warning, success, error]
- *     responses:
- *       201:
- *         description: Notificação enviada com sucesso
- */
+async function handleReadAll(req, res) {
+  try {
+    const now = new Date();
+    const result = await prisma.notificacao.updateMany({
+      where: {
+        userId: req.user.id,
+        isLida: false,
+      },
+      data: { isLida: true, readAt: now },
+    });
+
+    res.json({
+      success: true,
+      message: `${result.count} notificações marcadas como lidas`,
+      data: { updatedCount: result.count },
+    });
+  } catch (error) {
+    logger.error('Erro ao marcar todas as notificações como lidas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+}
+
+router.post('/read-all', handleReadAll);
+router.put('/read-all', handleReadAll);
+
 router.post('/send', async (req, res) => {
   try {
     const { titulo, mensagem, tipo } = req.body;
@@ -325,7 +183,7 @@ router.post('/send', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Título, mensagem e tipo são obrigatórios',
-        code: 'MISSING_PARAMETERS'
+        code: 'MISSING_PARAMETERS',
       });
     }
 
@@ -334,28 +192,94 @@ router.post('/send', async (req, res) => {
         userId: req.user.id,
         titulo,
         mensagem,
-        tipo
-      }
+        tipo,
+      },
     });
 
     logger.info('Notificação criada:', {
       userId: req.user.id,
       titulo,
-      tipo
+      tipo,
     });
 
     res.status(201).json({
       success: true,
       message: 'Notificação enviada com sucesso',
-      data: { notificacao }
+      data: { notificacao: toPublicNotification(notificacao) },
     });
-
   } catch (error) {
     logger.error('Erro ao enviar notificação:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+async function handleMarkRead(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await markOneRead(req.user.id, id);
+    if (result.error) {
+      return res.status(result.status).json({
+        success: false,
+        message: 'Notificação não encontrada',
+        code: result.error,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Notificação marcada como lida',
+      data: { notification: toPublicNotification(result.notificacao) },
+    });
+  } catch (error) {
+    logger.error('Erro ao marcar notificação como lida:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+}
+
+router.post('/:id/read', handleMarkRead);
+router.put('/:id/read', handleMarkRead);
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const notificacao = await prisma.notificacao.findFirst({
+      where: {
+        id,
+        userId: req.user.id,
+      },
+    });
+
+    if (!notificacao) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notificação não encontrada',
+        code: 'NOTIFICATION_NOT_FOUND',
+      });
+    }
+
+    await prisma.notificacao.delete({
+      where: { id },
+    });
+
+    res.json({
+      success: true,
+      message: 'Notificação deletada com sucesso',
+    });
+  } catch (error) {
+    logger.error('Erro ao deletar notificação:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
     });
   }
 });

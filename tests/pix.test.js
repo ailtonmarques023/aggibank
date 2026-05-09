@@ -85,4 +85,31 @@ describe('PIX API — idempotência no envio', () => {
     expect(prisma.movimentacao.create).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
+
+  it('nao utiliza saldoBloqueado quando saldo disponivel e insuficiente', async () => {
+    prisma.user.findUnique.mockResolvedValue(
+      authUser({
+        saldoAtual: 50,
+        saldoBloqueado: 10000,
+        limitePixDiario: 1000,
+        limitePixMensal: 10000,
+        isVerificado: true,
+      }),
+    );
+
+    const res = await request(app)
+      .post('/api/pix/send')
+      .set('Authorization', BEARER)
+      .set('Idempotency-Key', 'pix-key-blocked-test')
+      .send({
+        chavePix: 'destino@agilbank.com',
+        valor: 100,
+        descricao: 'Teste saldo bloqueado',
+      })
+      .expect(400);
+
+    expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
+    expect(prisma.transacaoPix.create).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
 });

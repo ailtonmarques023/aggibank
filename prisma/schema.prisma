@@ -301,15 +301,18 @@ enum ShipmentActorType {
 }
 
 model Notificacao {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   titulo    String
   mensagem  String
   tipo      String
-  isLida    Boolean  @default(false)
-  dataEnvio DateTime @default(now())
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isLida    Boolean   @default(false)
+  dataEnvio DateTime  @default(now())
+  createdAt DateTime  @default(now())
+  metadata  Json?
+  readAt    DateTime?
+  dedupeKey String?   @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notificacoes")
 }

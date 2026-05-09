@@ -9,8 +9,13 @@ const {
 } = require('../middleware/validation');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
-const { sendCardNotification } = require('../utils/email');
 const { recordAudit } = require('../utils/auditLog');
+const { notifyCardApproved } = require('../services/inAppNotificationService');
+const { scheduleCardApprovedEmail } = require('../services/cardApprovedEmailService');
+const {
+  CardApprovalError,
+  validarEObterLimiteAprovacaoCartao,
+} = require('../services/cardApprovalService');
 
 const router = express.Router();
 
@@ -26,9 +31,56 @@ const OPEN_SHIPMENT_STATUSES = [
   'FALHA_ENTREGA',
 ];
 
-/** Resposta API: sem token interno, sem snapshot de solicitacao nem metadados LGPD persistidos. */
+/** Mensagens padrão por código de motivo de rejeição (exposto na API em analysisMessage). */
+const CARD_REJECTION_DEFAULT_MESSAGES = {
+  INCOME_BELOW_MINIMUM:
+    'A renda mensal informada ainda não permite aprovação do cartão de crédito.',
+  MANUAL_REJECTION: 'Solicitação não aprovada após análise.',
+};
+
+/**
+ * Corpo opcional de POST /api/cards/:id/reject — persiste em dadosSolicitacao.decisaoRejeicao.
+ * @param {object|null|undefined} body
+ * @returns {{ code: string, message: string, decidedAt: string }}
+ */
+function buildDecisaoRejeicaoFromRequestBody(body) {
+  const rawReason =
+    body && body.analysisReason != null && String(body.analysisReason).trim()
+      ? String(body.analysisReason).trim()
+      : 'MANUAL_REJECTION';
+  const code = rawReason.slice(0, 80);
+  const custom =
+    body && body.analysisMessage != null && String(body.analysisMessage).trim()
+      ? String(body.analysisMessage).trim().slice(0, 2000)
+      : '';
+  const message =
+    custom ||
+    CARD_REJECTION_DEFAULT_MESSAGES[code] ||
+    CARD_REJECTION_DEFAULT_MESSAGES.MANUAL_REJECTION;
+  return {
+    code,
+    message,
+    decidedAt: new Date().toISOString(),
+  };
+}
+
+/** Resposta API: sem token interno; snapshot bruto de solicitacao omitido; motivo de rejeição exposto quando houver. */
 function publicCard(cartao) {
   if (!cartao) return cartao;
+  const snap = cartao.dadosSolicitacao;
+  let analysisReason;
+  let analysisMessage;
+  if (
+    snap &&
+    typeof snap === 'object' &&
+    !Array.isArray(snap) &&
+    snap.decisaoRejeicao &&
+    typeof snap.decisaoRejeicao === 'object'
+  ) {
+    analysisReason = snap.decisaoRejeicao.code != null ? String(snap.decisaoRejeicao.code) : undefined;
+    analysisMessage =
+      snap.decisaoRejeicao.message != null ? String(snap.decisaoRejeicao.message) : undefined;
+  }
   const {
     cardToken: _omitToken,
     dadosSolicitacao: _omitSnap,
@@ -41,7 +93,12 @@ function publicCard(cartao) {
     password: _omitPassword,
     ...rest
   } = cartao;
-  return rest;
+  const out = { ...rest };
+  if (String(cartao.status || '').toLowerCase() === 'rejeitado' && analysisReason) {
+    out.analysisReason = analysisReason;
+    out.analysisMessage = analysisMessage || '';
+  }
+  return out;
 }
 
 /** Resposta API de cartao virtual: sem token interno nem hash de CVV. */
@@ -162,11 +219,9 @@ function sanitizeDadosAnaliseForStorage(raw) {
   return Object.keys(out).length ? out : null;
 }
 
-/** Renda mensal declarada >= este valor (BRL) → status inicial `aprovado` (regra explícita, sem score). */
-const REGRA_RENDA_MIN_APROVACAO = 2000;
-
 /**
- * Limite sugerido: 30% da renda declarada, entre R$ 300 e R$ 10.000.
+ * Limite sugerido na solicitação (provisório): 30% da renda declarada no formulário, entre R$ 300 e R$ 10.000.
+ * O limite definitivo na aprovação vem de `dadosProfissionais.rendaMensal` no banco × 1,8 (serviço de aprovação).
  * @param {number} renda
  * @returns {number|null}
  */
@@ -179,12 +234,10 @@ function limiteSugeridoPorRenda030(renda) {
 }
 
 /**
- * Define limite final e status inicial a partir de `dadosAnalise` sanitizado (renda) e corpo do POST.
- * Transparência: retorna rótulos de critério para persistir em `dadosSolicitacao.decisaoAutomatica`.
- *
+ * Limite provisório e metadados para nova solicitação. Status é sempre `pendente` até aprovação interna.
  * @param {{ limiteBody: unknown, analiseSan: object|null, scoreCredito: number }} p
  */
-function resolveLimiteEStatusCriacaoCard({ limiteBody, analiseSan, scoreCredito }) {
+function resolveLimiteProvisionalNovaSolicitacao({ limiteBody, analiseSan, scoreCredito }) {
   const rendaVal = analiseSan && analiseSan.rendaMensalDeclarada != null
     ? analiseSan.rendaMensalDeclarada
     : null;
@@ -205,29 +258,78 @@ function resolveLimiteEStatusCriacaoCard({ limiteBody, analiseSan, scoreCredito 
     limiteFonte = 'score_credito';
   }
 
-  let statusInicial = 'pendente';
-  let statusCriterio = 'pendente_sem_renda_declarada';
+  const statusInicial = 'pendente';
+  let statusCriterio = 'pendente_aguardando_analise_backend';
   if (rendaN != null && Number.isFinite(rendaN)) {
-    if (rendaN >= REGRA_RENDA_MIN_APROVACAO) {
-      statusInicial = 'aprovado';
-      statusCriterio = 'aprovado_renda_maior_igual_2000';
-    } else {
-      statusInicial = 'pendente';
-      statusCriterio = 'pendente_renda_menor_2000';
-    }
+    statusCriterio = 'pendente_renda_declarada_formulario';
   }
-
-  const dataAprovacao = statusInicial === 'aprovado' ? new Date() : null;
 
   return {
     limiteFinal,
     statusInicial,
-    dataAprovacao,
+    dataAprovacao: null,
     limiteFonte,
     statusCriterio,
     limiteSugerido,
     rendaN,
   };
+}
+
+/**
+ * Após criar solicitação pendente: se o titular atende às mesmas regras de POST /:id/approve,
+ * aprova na hora, cria notificação in-app e agenda e-mail (falhas de e-mail não revertem).
+ * CardApprovalError → permanece pendente, sem propagar.
+ */
+async function tryAutoApproveAfterCardCreate(cartaoCriado, req) {
+  try {
+    const ctx = await validarEObterLimiteAprovacaoCartao(prisma, cartaoCriado);
+    const limiteAprovado = ctx.limiteAprovado;
+    const cartaoAtualizado = await prisma.cartao.update({
+      where: { id: cartaoCriado.id },
+      data: {
+        status: 'aprovado',
+        limite: limiteAprovado,
+        dataAprovacao: new Date(),
+      },
+    });
+
+    await notifyCardApproved({
+      userId: cartaoCriado.userId,
+      cardId: cartaoCriado.id,
+      limiteAprovado,
+    });
+
+    scheduleCardApprovedEmail({
+      cardId: cartaoCriado.id,
+      userId: cartaoCriado.userId,
+      limiteAprovado,
+      status: 'aprovado',
+    });
+
+    logger.banking('card_approved', cartaoCriado.userId, {
+      cartaoId: cartaoCriado.id,
+      tipo: cartaoCriado.tipo,
+      limiteAprovado,
+      autoApproved: true,
+    });
+
+    await recordAudit({
+      userId: cartaoCriado.userId,
+      action: 'card.approved',
+      entity: 'Cartao',
+      entityId: cartaoCriado.id,
+      metadata: { limiteAprovado, autoApproved: true },
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+
+    return cartaoAtualizado;
+  } catch (err) {
+    if (err instanceof CardApprovalError) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 // Aplicar autenticação em todas as rotas
@@ -306,7 +408,7 @@ router.post('/', validateCardRequest, async (req, res) => {
 
     const analiseSan = sanitizeDadosAnaliseForStorage(dadosAnalise);
 
-    const decisao = resolveLimiteEStatusCriacaoCard({
+    const decisao = resolveLimiteProvisionalNovaSolicitacao({
       limiteBody: limite,
       analiseSan,
       scoreCredito: req.user.scoreCredito,
@@ -318,10 +420,11 @@ router.post('/', validateCardRequest, async (req, res) => {
         schemaVersion: SCHEMA_SOLICITACAO,
         dadosAnalise: analiseSan,
         decisaoAutomatica: {
-          versaoRegra: '202605-v1',
+          versaoRegra: '202602-v2-pendente-ate-aprovacao-backend',
           limiteFonte: decisao.limiteFonte,
           statusCriterio: decisao.statusCriterio,
           limiteSugeridoRenda030: decisao.limiteSugerido,
+          limiteAprovacaoBackend: 'renda_perfil_x_1_8',
         },
       };
     }
@@ -333,20 +436,35 @@ router.post('/', validateCardRequest, async (req, res) => {
       lgpdConsentVersion = String(lgpd.versao).trim().slice(0, 64);
     }
 
-    // Verificar se usuário já tem cartão ativo do mesmo tipo
-    const cartaoExistente = await prisma.cartao.findFirst({
+    const cartaoAtivoOuAprovado = await prisma.cartao.findFirst({
       where: {
         userId: req.user.id,
         tipo,
-        status: { in: ['aprovado', 'pendente', 'ativo'] }
-      }
+        status: { in: ['ativo', 'aprovado'] },
+      },
     });
 
-    if (cartaoExistente) {
+    if (cartaoAtivoOuAprovado) {
       return res.status(400).json({
         success: false,
-        message: `Você já possui um cartão de ${tipo} ativo ou pendente`,
-        code: 'CARD_ALREADY_EXISTS'
+        message: 'Já existe um cartão ativo para esta conta.',
+        code: 'CARD_ACTIVE_ALREADY_EXISTS',
+      });
+    }
+
+    const cartaoPendente = await prisma.cartao.findFirst({
+      where: {
+        userId: req.user.id,
+        tipo,
+        status: 'pendente',
+      },
+    });
+
+    if (cartaoPendente) {
+      return res.status(400).json({
+        success: false,
+        message: 'Já existe uma solicitação de cartão em análise.',
+        code: 'CARD_PENDING_ALREADY_EXISTS',
       });
     }
 
@@ -409,10 +527,16 @@ router.post('/', validateCardRequest, async (req, res) => {
       });
     }
 
+    let cartaoResposta = cartao;
+    const autoApproved = await tryAutoApproveAfterCardCreate(cartao, req);
+    if (autoApproved) {
+      cartaoResposta = autoApproved;
+    }
+
     res.status(201).json({
       success: true,
       message: 'Cartão solicitado com sucesso',
-      data: { cartao: publicCard(cartao) },
+      data: { cartao: publicCard(cartaoResposta) },
     });
 
   } catch (error) {
@@ -450,53 +574,67 @@ router.post('/:id/approve', requireInternalApiKey('CARD_APPROVAL_INTERNAL_KEY'),
     const cartao = await prisma.cartao.findFirst({
       where: {
         id,
-        userId: req.user.id,
-        status: 'pendente'
-      }
+        status: 'pendente',
+      },
     });
 
     if (!cartao) {
       return res.status(404).json({
         success: false,
         message: 'Cartão não encontrado ou já processado',
-        code: 'CARD_NOT_FOUND'
+        code: 'CARD_NOT_FOUND',
       });
+    }
+
+    let limiteAprovado;
+    try {
+      const ctx = await validarEObterLimiteAprovacaoCartao(prisma, cartao);
+      limiteAprovado = ctx.limiteAprovado;
+    } catch (err) {
+      if (err instanceof CardApprovalError) {
+        return res.status(err.httpStatus).json({
+          success: false,
+          code: err.code,
+          message: err.message,
+        });
+      }
+      throw err;
     }
 
     const cartaoAtualizado = await prisma.cartao.update({
       where: { id },
       data: {
         status: 'aprovado',
-        dataAprovacao: new Date()
-      }
+        limite: limiteAprovado,
+        dataAprovacao: new Date(),
+      },
     });
 
-    // Enviar notificação por email
-    try {
-      await sendCardNotification(
-        { nome: req.user.nomeCompleto, email: req.user.email },
-        {
-          status: 'aprovado',
-          tipo: cartao.tipo,
-          bandeira: cartao.bandeira,
-          limite: cartao.limite,
-          dataAprovacao: cartaoAtualizado.dataAprovacao
-        }
-      );
-    } catch (emailError) {
-      logger.warn('Erro ao enviar notificação de cartão:', emailError);
-    }
+    await notifyCardApproved({
+      userId: cartao.userId,
+      cardId: id,
+      limiteAprovado,
+    });
 
-    logger.banking('card_approved', req.user.id, {
+    scheduleCardApprovedEmail({
+      cardId: id,
+      userId: cartao.userId,
+      limiteAprovado,
+      status: 'aprovado',
+    });
+
+    logger.banking('card_approved', cartao.userId, {
       cartaoId: id,
       tipo: cartao.tipo,
+      limiteAprovado,
     });
 
     await recordAudit({
-      userId: req.user.id,
+      userId: cartao.userId,
       action: 'card.approved',
       entity: 'Cartao',
       entityId: id,
+      metadata: { limiteAprovado },
       ip: req.ip,
       userAgent: req.get('User-Agent'),
     });
@@ -506,13 +644,85 @@ router.post('/:id/approve', requireInternalApiKey('CARD_APPROVAL_INTERNAL_KEY'),
       message: 'Cartão aprovado com sucesso',
       data: { cartao: publicCard(cartaoAtualizado) },
     });
-
   } catch (error) {
     logger.error('Erro ao aprovar cartão:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+/**
+ * Rejeitar solicitação de cartão (interno). Protegido por CARD_APPROVAL_INTERNAL_KEY.
+ */
+router.post('/:id/reject', requireInternalApiKey('CARD_APPROVAL_INTERNAL_KEY'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const cartao = await prisma.cartao.findFirst({
+      where: {
+        id,
+        status: 'pendente',
+      },
+    });
+
+    if (!cartao) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cartão não encontrado ou já processado',
+        code: 'CARD_NOT_FOUND',
+      });
+    }
+
+    const decisaoRejeicao = buildDecisaoRejeicaoFromRequestBody(req.body);
+    const prevSnap =
+      cartao.dadosSolicitacao &&
+      typeof cartao.dadosSolicitacao === 'object' &&
+      !Array.isArray(cartao.dadosSolicitacao)
+        ? { ...cartao.dadosSolicitacao }
+        : {};
+    prevSnap.decisaoRejeicao = decisaoRejeicao;
+
+    const cartaoAtualizado = await prisma.cartao.update({
+      where: { id },
+      data: {
+        status: 'rejeitado',
+        dataAprovacao: null,
+        dadosSolicitacao: prevSnap,
+      },
+    });
+
+    logger.banking('card_rejected', cartao.userId, {
+      cartaoId: id,
+      tipo: cartao.tipo,
+      analysisReason: decisaoRejeicao.code,
+    });
+
+    await recordAudit({
+      userId: cartao.userId,
+      action: 'card.rejected',
+      entity: 'Cartao',
+      entityId: id,
+      metadata: {
+        analysisReason: decisaoRejeicao.code,
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+
+    res.json({
+      success: true,
+      message: 'Solicitação de cartão rejeitada',
+      data: { cartao: publicCard(cartaoAtualizado) },
+    });
+  } catch (error) {
+    logger.error('Erro ao rejeitar cartão:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
     });
   }
 });

@@ -268,6 +268,16 @@
 
     pickFocusLoan(list) {
       if (!list || !list.length) return null;
+      try {
+        const params = new URLSearchParams(window.location.search || "");
+        const forcedId = params.get("loanId");
+        if (forcedId) {
+          const direct = list.find((row) => row && String(row.id) === String(forcedId));
+          if (direct) return direct;
+        }
+      } catch (_) {
+        /* ignore */
+      }
       const sorted = [...list].sort((a, b) => {
         const ta = new Date(a && a.dataSolicitacao ? a.dataSolicitacao : 0).getTime();
         const tb = new Date(b && b.dataSolicitacao ? b.dataSolicitacao : 0).getTime();
@@ -357,6 +367,27 @@
       const listHtml = `<div class="ab-emp-card ab-emp-manage-list-card"><h3 class="ab-emp-manage-list-title">Suas propostas</h3><div class="ab-emp-manage-list-inner">${listInner}</div></div>`;
 
       root.innerHTML = `${heroHtml}${extraHtml}${listHtml}<div class="ab-emp-manage-actions">${actionsHtml}</div>`;
+      this.applyLoanDeepLinkFromUrl();
+    }
+
+    applyLoanDeepLinkFromUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search || "");
+        const loanId = params.get("loanId");
+        const cta = (params.get("cta") || "").toLowerCase().replace(/-/g, "_");
+        if (!loanId) return;
+        if (cta === "pay_insurance" || cta === "payinsurance") {
+          void this.payLoanInsurance(loanId);
+          return;
+        }
+        if (cta === "submit_guarantee" || cta === "guarantee") {
+          window.alert(
+            "Funcionalidade de garantia em preparacao. Entre em contato com o banco ou aguarde novidades no app."
+          );
+        }
+      } catch (_) {
+        /* ignore */
+      }
     }
 
     escapeHtml(text) {

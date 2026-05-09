@@ -648,6 +648,7 @@ function extrairCartoesDaResposta(body) {
     if (!body || typeof body !== 'object') return [];
     var list =
         (body.data && body.data.cartoes) ||
+        (body.data && body.data.cards) ||
         body.cartoes ||
         body.cards ||
         null;
@@ -655,26 +656,113 @@ function extrairCartoesDaResposta(body) {
 }
 
 /**
- * GET /api/cards — lista normalizada (pode ser vazia em erro silencioso).
+ * Valida formato de GET /api/cards antes de tratar lista como confiável.
+ * Com `success: true`, exige `data.cartoes` ou `data.cards` como array.
+ */
+function agilbankValidarPayloadListaCartoesResponse(result) {
+    if (!result || typeof result !== 'object') return false;
+    if (result.success === true) {
+        var d = result.data;
+        if (!d || typeof d !== 'object') return false;
+        if (Object.prototype.hasOwnProperty.call(d, 'cartoes')) {
+            return Array.isArray(d.cartoes);
+        }
+        if (Object.prototype.hasOwnProperty.call(d, 'cards')) {
+            return Array.isArray(d.cards);
+        }
+        return false;
+    }
+    var d2 = result.data;
+    if (d2 && typeof d2 === 'object') {
+        if (Object.prototype.hasOwnProperty.call(d2, 'cartoes')) {
+            return Array.isArray(d2.cartoes);
+        }
+        if (Object.prototype.hasOwnProperty.call(d2, 'cards')) {
+            return Array.isArray(d2.cards);
+        }
+    }
+    if (Array.isArray(result.cartoes) || Array.isArray(result.cards)) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * GET /api/cards — resultado estruturado. Em erro de rede/HTTP/formato, `ok` é false e `cartoes` é null (nunca mascarar erro como lista vazia).
+ * @returns {Promise<{ ok: true, cartoes: Array, reason: 'success' } | { ok: false, cartoes: null, error: string, reason: string, status?: number }>}
  */
 async function fetchCartoesFromApi() {
     var token = getCartaoAuthToken();
     if (!token || !window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
-        return [];
+        return {
+            ok: false,
+            cartoes: null,
+            error: 'Sessão ou cliente de API indisponível. Faça login novamente.',
+            reason: 'no_auth'
+        };
     }
     try {
         var response = await window.AgilBank.api.request('cards', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
-        if (!response.ok) return [];
         var result = await response.json().catch(function () {
-            return {};
+            return null;
         });
-        return extrairCartoesDaResposta(result);
+        if (!response.ok) {
+            var errMsg =
+                (result && (result.message || result.error)) ||
+                'Não foi possível carregar seus cartões agora.';
+            return {
+                ok: false,
+                cartoes: null,
+                error: String(errMsg),
+                reason: 'http',
+                status: response.status
+            };
+        }
+        if (result == null || typeof result !== 'object') {
+            return {
+                ok: false,
+                cartoes: null,
+                error: 'Resposta inválida do servidor ao listar cartões.',
+                reason: 'invalid_body'
+            };
+        }
+        if (Object.prototype.hasOwnProperty.call(result, 'success') && result.success === false) {
+            return {
+                ok: false,
+                cartoes: null,
+                error: String(result.message || result.error || 'Não foi possível carregar seus cartões agora.'),
+                reason: 'api'
+            };
+        }
+        if (!agilbankValidarPayloadListaCartoesResponse(result)) {
+            return {
+                ok: false,
+                cartoes: null,
+                error: 'Formato de resposta inesperado ao listar cartões.',
+                reason: 'invalid_shape'
+            };
+        }
+        var cartoes = extrairCartoesDaResposta(result);
+        if (!Array.isArray(cartoes)) {
+            return {
+                ok: false,
+                cartoes: null,
+                error: 'Formato de resposta inesperado ao listar cartões.',
+                reason: 'invalid_shape'
+            };
+        }
+        return { ok: true, cartoes: cartoes, reason: 'success' };
     } catch (e) {
         console.warn('fetchCartoesFromApi:', e);
-        return [];
+        return {
+            ok: false,
+            cartoes: null,
+            error: 'Erro de rede ao carregar cartões.',
+            reason: 'network'
+        };
     }
 }
 
@@ -683,7 +771,7 @@ function statusCartaoLabel(status) {
     if (s === 'ativo') return 'Ativo';
     if (s === 'aprovado') return 'Aprovado';
     if (s === 'bloqueado') return 'Bloqueado';
-    if (s === 'rejeitado' || s === 'rejected' || s === 'negado' || s === 'recusado') return 'Não aprovado';
+    if (s === 'rejeitado' || s === 'rejected' || s === 'negado' || s === 'recusado') return 'Solicitação não aprovada';
     if (
         s === 'pending' ||
         s === 'pendente' ||
@@ -1879,14 +1967,16 @@ function agilbankRenderPainelCartaoRejeitado(msgEl, c) {
     if (!msgEl) return;
     msgEl.style.display = 'block';
     msgEl.className = 'cartao-painel-msg cartao-painel-msg--rich';
+    var detalheApi =
+        c && c.analysisMessage && String(c.analysisMessage).trim()
+            ? String(c.analysisMessage).trim()
+            : 'No momento, sua solicitação de cartão não foi aprovada. Continue usando sua conta e tente novamente em outro momento.';
     msgEl.innerHTML =
         '<h3 class="cartao-painel-titulo">' +
         agilbankEscapeHtmlPainel('Solicitação não aprovada') +
         '</h3>' +
         '<p class="cartao-painel-texto">' +
-        agilbankEscapeHtmlPainel(
-            'No momento, sua solicitação de cartão não foi aprovada. Continue usando sua conta e tente novamente em outro momento.'
-        ) +
+        agilbankEscapeHtmlPainel(detalheApi) +
         '</p>' +
         '<button type="button" class="limite-button" id="cartaoPainelBtnSolicitarNovamente">Solicitar novamente</button>';
     var btn = document.getElementById('cartaoPainelBtnSolicitarNovamente');
@@ -1912,6 +2002,8 @@ function agilbankIsCardAlreadyPendingConflict(result) {
     if (!result || typeof result !== 'object') return false;
     var code = result.code || result.error;
     if (code === 'CARD_ALREADY_EXISTS') return true;
+    if (code === 'CARD_PENDING_ALREADY_EXISTS') return true;
+    if (code === 'CARD_ACTIVE_ALREADY_EXISTS') return true;
     var msg = String(result.message || result.error || '').toLowerCase();
     if (code === 'CARD_ALREADY_PENDING') return true;
     if (msg.indexOf('já possui') >= 0 && msg.indexOf('pendente') >= 0) return true;
@@ -1927,6 +2019,51 @@ function agilbankTemSolicitacaoCartaoPendente() {
     return list.some(function (x) {
         return agilbankStatusIsPendente(x && x.status);
     });
+}
+
+/**
+ * Estado de erro ao carregar GET /api/cards — não abre wizard nem CTA de solicitação.
+ */
+function renderCartoesErroCarregamento() {
+    var flow = document.getElementById('cartaoSolicitacaoFlow');
+    var listaSec = document.getElementById('cartaoListaRealSection');
+    var msg = document.getElementById('cartaoPainelMensagem');
+    window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = false;
+
+    agilbankSetSolicitacaoWizardMode(false);
+    if (flow) flow.style.display = 'none';
+    if (listaSec) listaSec.style.display = 'block';
+
+    agilbankSetDashboardCardOffersVisible(false);
+
+    var grid = document.getElementById('cartoesReaisGrid');
+    if (grid) {
+        grid.innerHTML =
+            '<p class="cartao-painel-erro-grid-hint">O painel de cartões não pôde ser atualizado.</p>';
+    }
+    var painel = document.getElementById('cartaoPainelAcoes');
+    if (painel) painel.style.display = 'none';
+
+    if (msg) {
+        msg.style.display = 'block';
+        msg.className = 'cartao-painel-msg cartao-painel-erro-carregamento';
+        msg.innerHTML =
+            '<h3 class="cartao-painel-titulo">' +
+            agilbankEscapeHtmlPainel('Não foi possível carregar seus cartões agora.') +
+            '</h3>' +
+            '<p class="cartao-painel-texto">' +
+            agilbankEscapeHtmlPainel('Tente novamente em instantes.') +
+            '</p>' +
+            '<button type="button" class="limite-button cartao-painel-btn-tentar" id="cartaoPainelBtnTentarNovamente">Tentar novamente</button>';
+        var btn = document.getElementById('cartaoPainelBtnTentarNovamente');
+        if (btn) {
+            btn.onclick = function () {
+                if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+                    window.agilbankRefreshPainelCartoes();
+                }
+            };
+        }
+    }
 }
 
 function agilbankRenderCtaSolicitacaoCartao(msgEl, texto) {
@@ -2036,9 +2173,13 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
  * Atualiza painel de cartões (GET) + ofertas no dashboard. Expõe para index.html.
  */
 async function agilbankRefreshPainelCartoes() {
-    var cartoes = await fetchCartoesFromApi();
-    agilbankAplicarEstadoPainelCartao(cartoes);
-    return cartoes;
+    var result = await fetchCartoesFromApi();
+    if (!result.ok) {
+        renderCartoesErroCarregamento();
+        return result;
+    }
+    agilbankAplicarEstadoPainelCartao(result.cartoes);
+    return result;
 }
 
 window.agilbankRefreshPainelCartoes = agilbankRefreshPainelCartoes;
@@ -2085,9 +2226,11 @@ function normalizarCartaoParaLegado(cartao, fallbackLimite) {
  * @returns {number} Limite calculado
  */
 function calcularLimite(renda) {
-    // Calcular limite baseado na renda (sem valor fixo)
-    const limiteBase = Math.min(Math.max(renda * 0.4, 1000), 10000);
-    return limiteBase;
+    // Espelha regra de limite na aprovação (backend): renda × 1,8 em R$. A aprovação efetiva é só na API.
+    const raw = Number(renda);
+    if (!Number.isFinite(raw) || raw <= 0) return 1000;
+    const limiteBase = Math.round(raw * 1.8 * 100) / 100;
+    return Math.min(Math.max(limiteBase, 100), 500000);
 }
 
 /**
@@ -2204,7 +2347,8 @@ async function enviarSolicitacao() {
                 var wr = document.getElementById('cartaoWizardRoot');
                 if (wr) wr.style.display = 'block';
 
-                var list = await fetchCartoesFromApi();
+                var fetchRes = await fetchCartoesFromApi();
+                var list = fetchRes.ok ? fetchRes.cartoes : [];
                 agilbankWizardAplicarResultadoPosPost(list);
                 agilbankWizardGoToStep(7);
             }, 600);
@@ -2483,9 +2627,9 @@ async function selecionarVencimento(dia, ev) {
         // Buscar dados do cartão pela fonte real (API/lista em memória)
         var cartaoData = agilbankGetCartaoSelecionado();
         if (!cartaoData) {
-            var lista = await fetchCartoesFromApi();
-            if (Array.isArray(lista) && lista.length) {
-                cartaoData = lista[0];
+            var fetchLista = await fetchCartoesFromApi();
+            if (fetchLista.ok && Array.isArray(fetchLista.cartoes) && fetchLista.cartoes.length) {
+                cartaoData = fetchLista.cartoes[0];
             }
         }
         if (!cartaoData) {

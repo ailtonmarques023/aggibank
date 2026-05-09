@@ -1,6 +1,8 @@
 const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
+const { notifyLoanApprovedBlockedFunds } = require('./inAppNotificationService');
+const { scheduleLoanApprovedBlockedEmail } = require('./loanApprovedBlockedEmailService');
 
 const LOAN_INSURANCE_FEE_BRL = 39.9;
 
@@ -108,6 +110,88 @@ function isInsuranceTermsAccepted(emprestimo) {
   return Boolean(emprestimo && emprestimo.insuranceTermsAccepted);
 }
 
+/**
+ * Aprova proposta pendente: crédito em saldoBloqueado, sem incrementar saldoAtual.
+ * Deve rodar dentro de prisma.$transaction.
+ */
+async function applyApprovedLoanBlockedFundsInTx(prismaTx, loanId, emprestimoSnapshot, valorCredito) {
+  const withInsurance = isInsuranceSelected(emprestimoSnapshot);
+
+  const contaDono = await prismaTx.user.findUnique({
+    where: { id: emprestimoSnapshot.userId },
+    select: { saldoAtual: true, saldoBloqueado: true },
+  });
+
+  if (!contaDono) {
+    throw new LoanDecisionError('LOAN_OWNER_NOT_FOUND', 'Titular do empréstimo não encontrado', 404);
+  }
+
+  const saldoDisponivelAntes = Number(contaDono.saldoAtual);
+
+  const updateResult = await prismaTx.emprestimo.updateMany({
+    where: { id: loanId, status: 'pendente' },
+    data: {
+      status: 'aprovado',
+      valorAprovado: valorCredito,
+      dataAprovacao: new Date(),
+      fundsStatus: 'bloqueado',
+      blockedAmount: valorCredito,
+      guaranteeStatus: withInsurance ? 'not_required' : 'pending',
+      insuranceChargeStatus: withInsurance ? 'pendente' : null,
+    },
+  });
+
+  if (updateResult.count !== 1) {
+    throw new LoanDecisionError('LOAN_ALREADY_DECIDED', 'Empréstimo já foi processado', 400);
+  }
+
+  await prismaTx.user.update({
+    where: { id: emprestimoSnapshot.userId },
+    data: {
+      saldoBloqueado: {
+        increment: valorCredito,
+      },
+    },
+  });
+
+  if (withInsurance) {
+    const existingCharge = await prismaTx.loanInsuranceCharge.findUnique({
+      where: { loanId },
+    });
+    if (!existingCharge) {
+      await prismaTx.loanInsuranceCharge.create({
+        data: {
+          loanId,
+          userId: emprestimoSnapshot.userId,
+          amount: LOAN_INSURANCE_FEE_BRL,
+          status: 'pendente',
+        },
+      });
+    }
+  }
+
+  await prismaTx.movimentacao.create({
+    data: {
+      userId: emprestimoSnapshot.userId,
+      tipo: 'credito_bloqueado',
+      descricao: withInsurance
+        ? 'Empréstimo aprovado — crédito bloqueado até pagamento do seguro (R$ 39,90)'
+        : 'Empréstimo aprovado — crédito bloqueado até garantia aprovada',
+      valor: valorCredito,
+      saldoAnterior: saldoDisponivelAntes,
+      saldoAtual: saldoDisponivelAntes,
+      categoria: 'emprestimo',
+      referenceType: 'emprestimo',
+      referenceId: loanId,
+    },
+  });
+
+  return prismaTx.emprestimo.findUnique({
+    where: { id: loanId },
+    select: loanPublicSelect,
+  });
+}
+
 async function approveLoanDecision({ loanId, valorAprovado, actorId, actorMeta = {} }) {
   const emprestimo = await prisma.emprestimo.findUnique({ where: { id: loanId } });
 
@@ -128,89 +212,16 @@ async function approveLoanDecision({ loanId, valorAprovado, actorId, actorMeta =
   }
 
   const valorCredito = normalizeApprovalValue(emprestimo.valorSolicitado, valorAprovado);
-  const withInsurance = isInsuranceSelected(emprestimo);
 
-  const resultado = await transaction(async (prismaTx) => {
-    const contaDono = await prismaTx.user.findUnique({
-      where: { id: emprestimo.userId },
-      select: { saldoAtual: true, saldoBloqueado: true },
-    });
-
-    if (!contaDono) {
-      throw new LoanDecisionError('LOAN_OWNER_NOT_FOUND', 'Titular do empréstimo não encontrado', 404);
-    }
-
-    const saldoDisponivelAntes = Number(contaDono.saldoAtual);
-
-    const updateResult = await prismaTx.emprestimo.updateMany({
-      where: { id: loanId, status: 'pendente' },
-      data: {
-        status: 'aprovado',
-        valorAprovado: valorCredito,
-        dataAprovacao: new Date(),
-        fundsStatus: 'bloqueado',
-        blockedAmount: valorCredito,
-        guaranteeStatus: withInsurance ? 'not_required' : 'pending',
-        insuranceChargeStatus: withInsurance ? 'pendente' : null,
-      },
-    });
-
-    if (updateResult.count !== 1) {
-      throw new LoanDecisionError('LOAN_ALREADY_DECIDED', 'Empréstimo já foi processado', 400);
-    }
-
-    await prismaTx.user.update({
-      where: { id: emprestimo.userId },
-      data: {
-        saldoBloqueado: {
-          increment: valorCredito,
-        },
-      },
-    });
-
-    if (withInsurance) {
-      const existingCharge = await prismaTx.loanInsuranceCharge.findUnique({
-        where: { loanId },
-      });
-      if (!existingCharge) {
-        await prismaTx.loanInsuranceCharge.create({
-          data: {
-            loanId,
-            userId: emprestimo.userId,
-            amount: LOAN_INSURANCE_FEE_BRL,
-            status: 'pendente',
-          },
-        });
-      }
-    }
-
-    await prismaTx.movimentacao.create({
-      data: {
-        userId: emprestimo.userId,
-        tipo: 'credito_bloqueado',
-        descricao: withInsurance
-          ? 'Empréstimo aprovado — crédito bloqueado até pagamento do seguro (R$ 39,90)'
-          : 'Empréstimo aprovado — crédito bloqueado até garantia aprovada',
-        valor: valorCredito,
-        saldoAnterior: saldoDisponivelAntes,
-        saldoAtual: saldoDisponivelAntes,
-        categoria: 'emprestimo',
-        referenceType: 'emprestimo',
-        referenceId: loanId,
-      },
-    });
-
-    return prismaTx.emprestimo.findUnique({
-      where: { id: loanId },
-      select: loanPublicSelect,
-    });
-  });
+  const resultado = await transaction(async (prismaTx) =>
+    applyApprovedLoanBlockedFundsInTx(prismaTx, loanId, emprestimo, valorCredito)
+  );
 
   logger.logCriticalOperation('loan_approved', actorId || 'internal-admin', valorCredito, {
     emprestimoId: loanId,
     loanOwnerId: emprestimo.userId,
     prazoMeses: emprestimo.prazoMeses,
-    insuranceSelected: withInsurance,
+    insuranceSelected: isInsuranceSelected(emprestimo),
     fundsStatus: 'bloqueado',
     actorMeta,
   });
@@ -227,8 +238,95 @@ async function approveLoanDecision({ loanId, valorAprovado, actorId, actorMeta =
       previousStatus: 'pendente',
       currentStatus: 'aprovado',
       fundsStatus: 'bloqueado',
-      insuranceSelected: withInsurance,
+      insuranceSelected: isInsuranceSelected(emprestimo),
     },
+  });
+
+  return resultado;
+}
+
+/**
+ * Fluxo comum: cria proposta e aprova automaticamente com crédito bloqueado (uma transação).
+ */
+async function createPersonalLoanAutoApproved({
+  userId,
+  valorSolicitado,
+  prazoMeses,
+  taxaJuros,
+  valorParcela,
+  insuranceSelected,
+  insuranceTermsAccepted,
+  insuranceAmount,
+  actorId,
+  actorMeta = {},
+}) {
+  if (insuranceSelected && !insuranceTermsAccepted) {
+    throw new LoanDecisionError(
+      'LOAN_INSURANCE_TERMS_REQUIRED',
+      'Proposta com seguro exige aceite dos termos do seguro antes da contratação',
+      400
+    );
+  }
+
+  const resultado = await transaction(async (prismaTx) => {
+    const created = await prismaTx.emprestimo.create({
+      data: {
+        userId,
+        valorSolicitado,
+        prazoMeses,
+        taxaJuros,
+        valorParcela,
+        status: 'pendente',
+        insuranceSelected,
+        insuranceTermsAccepted,
+        insuranceAmount: insuranceSelected ? LOAN_INSURANCE_FEE_BRL : insuranceAmount,
+        guaranteeStatus: insuranceSelected ? 'not_required' : 'pending',
+      },
+    });
+
+    const valorCredito = normalizeApprovalValue(created.valorSolicitado, undefined);
+
+    return applyApprovedLoanBlockedFundsInTx(prismaTx, created.id, created, valorCredito);
+  });
+
+  const valorCredito = Number(resultado.valorAprovado);
+
+  logger.logCriticalOperation('loan_approved', actorId || 'system-auto', valorCredito, {
+    emprestimoId: resultado.id,
+    loanOwnerId: userId,
+    prazoMeses: resultado.prazoMeses,
+    insuranceSelected: isInsuranceSelected(resultado),
+    fundsStatus: 'bloqueado',
+    actorMeta: { ...actorMeta, autoApproved: true },
+  });
+
+  await recordAudit({
+    userId: actorId || null,
+    action: 'loan_auto_approved',
+    entity: 'emprestimo',
+    entityId: resultado.id,
+    metadata: {
+      actorMeta,
+      loanOwnerId: userId,
+      valorAprovado: valorCredito,
+      previousStatus: 'pendente',
+      currentStatus: 'aprovado',
+      fundsStatus: 'bloqueado',
+      insuranceSelected: isInsuranceSelected(resultado),
+    },
+  });
+
+  await notifyLoanApprovedBlockedFunds({
+    userId,
+    loanId: resultado.id,
+    insuranceSelected: isInsuranceSelected(resultado),
+  });
+
+  scheduleLoanApprovedBlockedEmail({
+    loanId: resultado.id,
+    userId,
+    insuranceSelected: isInsuranceSelected(resultado),
+    valorAprovado: Number(resultado.valorAprovado),
   });
 
   return resultado;
@@ -563,6 +661,7 @@ module.exports = {
   getLoanById,
   getLoanByIdWithBorrower,
   approveLoanDecision,
+  createPersonalLoanAutoApproved,
   rejectLoanDecision,
   payLoanInsuranceCharge,
   releaseLoanFundsAfterGuaranteeApproved,

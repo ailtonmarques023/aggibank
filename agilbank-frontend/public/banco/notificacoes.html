@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+  <title>AgilBank | Notificações</title>
+  <link rel="stylesheet" href="./css/style.notificacoes.css">
+</head>
+<body class="ab-notif-page">
+  <div class="ab-notif-shell" id="abNotifShell">
+    <header class="ab-notif-topbar">
+      <div class="ab-notif-topbar-leading">
+        <button type="button" class="ab-notif-icon-btn" id="abNotifBackBtn" aria-label="Voltar">&#8592;</button>
+      </div>
+      <div class="ab-notif-topbar-title-wrap">
+        <p class="ab-notif-kicker">AgilBank</p>
+        <h1 class="ab-notif-title">Notificações</h1>
+      </div>
+      <span class="ab-notif-pill" id="abNotifPill" hidden></span>
+    </header>
+
+    <main class="ab-notif-main">
+      <div class="ab-notif-toolbar">
+        <button type="button" class="ab-notif-btn-secondary" id="abNotifReadAllBtn">Marcar todas como lidas</button>
+      </div>
+
+      <div id="abNotifStateLoading" class="ab-notif-state">
+        <div class="ab-notif-spinner" aria-hidden="true"></div>
+        <p>Carregando notificações...</p>
+      </div>
+
+      <div id="abNotifStateError" class="ab-notif-state ab-notif-state--error" hidden>
+        <p>Não foi possível carregar suas notificações agora.</p>
+        <button type="button" class="ab-notif-btn" id="abNotifRetryBtn">Tentar novamente</button>
+      </div>
+
+      <div id="abNotifStateEmpty" class="ab-notif-state ab-notif-state--empty" hidden>
+        <p>Você ainda não possui notificações.</p>
+      </div>
+
+      <ul id="abNotifList" class="ab-notif-list" hidden aria-live="polite"></ul>
+    </main>
+  </div>
+
+  <script src="./js/agilbankApiBase.js"></script>
+  <script src="./js/notificacoes.js" defer></script>
+</body>
+</html>

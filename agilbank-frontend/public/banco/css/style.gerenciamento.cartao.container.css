@@ -269,3 +269,31 @@
             color: #0066b3;
             border: 2px solid #0066b3;
         }
+
+        .cartao-painel-erro-carregamento {
+            margin: 12px 15px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #fff8f0;
+            border: 1px solid #e8d9cc;
+        }
+        .cartao-painel-erro-carregamento .cartao-painel-titulo {
+            margin: 0 0 8px 0;
+            font-size: 1.05rem;
+            color: #333;
+        }
+        .cartao-painel-erro-carregamento .cartao-painel-texto {
+            margin: 0 0 14px 0;
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.35;
+        }
+        .cartao-painel-erro-carregamento .cartao-painel-btn-tentar {
+            width: 100%;
+            max-width: 280px;
+        }
+        .cartao-painel-erro-grid-hint {
+            padding: 16px;
+            color: #666;
+            margin: 0 15px;
+        }

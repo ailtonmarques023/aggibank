@@ -1,0 +1,230 @@
+/* AgilBank — módulo notificações (mobile-first) */
+.ab-notif-page {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f0f4f8;
+  color: #1a1a2e;
+}
+
+.ab-notif-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #f0f4f8;
+  display: flex;
+  flex-direction: column;
+}
+
+.ab-notif-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.ab-notif-icon-btn {
+  border: none;
+  background: #f5f5f5;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #0066b3;
+}
+
+.ab-notif-topbar-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.ab-notif-kicker {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+}
+
+.ab-notif-title {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0066b3;
+}
+
+.ab-notif-pill {
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e8f4fc;
+  color: #0066b3;
+}
+
+.ab-notif-main {
+  flex: 1;
+  padding: 12px 14px 24px;
+}
+
+.ab-notif-toolbar {
+  margin-bottom: 12px;
+}
+
+.ab-notif-btn,
+.ab-notif-btn-secondary {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.ab-notif-btn {
+  background: #0066b3;
+  color: #fff;
+}
+
+.ab-notif-btn-secondary {
+  background: #fff;
+  color: #0066b3;
+  border: 1px solid rgba(0, 102, 179, 0.35);
+  width: 100%;
+}
+
+.ab-notif-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.ab-notif-state--error {
+  color: #b00020;
+}
+
+.ab-notif-state--empty {
+  color: #777;
+}
+
+.ab-notif-spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 16px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #0066b3;
+  border-radius: 50%;
+  animation: ab-notif-spin 0.8s linear infinite;
+}
+
+@keyframes ab-notif-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ab-notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-notif-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.ab-notif-card--unread {
+  border-left: 4px solid #0066b3;
+}
+
+.ab-notif-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ab-notif-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e8f4fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ab-notif-card-title-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.ab-notif-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.ab-notif-badge-novo {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #0066b3;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.ab-notif-time {
+  font-size: 0.72rem;
+  color: #999;
+  margin-top: 4px;
+}
+
+.ab-notif-message {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #444;
+}
+
+.ab-notif-cta {
+  margin-top: 12px;
+}
+
+.ab-notif-cta button {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #0066b3;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.ab-notif-cta button.ab-notif-cta--muted {
+  background: #e8e8e8;
+  color: #555;
+}

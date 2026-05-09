@@ -238,6 +238,8 @@ jest.mock('../src/utils/email', () => ({
   sendPasswordResetEmail: jest.fn(),
   sendTransactionNotification: jest.fn(),
   sendCardNotification: jest.fn(),
+  sendCardApprovedEmail: jest.fn(() => Promise.resolve({ success: true })),
+  sendLoanApprovedBlockedEmail: jest.fn(() => Promise.resolve({ success: true })),
   testEmailConfiguration: jest.fn(() => Promise.resolve(true)),
 }));
 

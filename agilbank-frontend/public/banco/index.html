@@ -2326,13 +2326,18 @@
         </div>
        
         <div class="saldo">
+            <div class="saldo-disponivel-label" style="font-size: 0.75rem; color: #666; margin-bottom: 4px; letter-spacing: 0.02em;">Saldo disponível</div>
             <div class="saldo-container">
               <div class="saldo-value" id="saldoValue">—</div>
               <button class="eye-btn" id="toggleSaldo">
                 <i class="fa-solid fa-eye" id="eyeIcon"></i>
               </button>
             </div>
-           
+            <div id="saldoBloqueadoWrap" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.06);">
+              <div style="font-size: 0.72rem; color: #888; letter-spacing: 0.02em;">Bloqueado</div>
+              <div id="saldoBloqueadoValue" style="font-size: 0.95rem; color: #888; font-weight: 500; margin-top: 2px;">R$ 0,00</div>
+              <div id="saldoBloqueadoHint" style="font-size: 0.68rem; color: #999; margin-top: 4px; line-height: 1.3;">Valor aprovado aguardando desbloqueio.</div>
+            </div>
         </div>
       
 
@@ -6105,6 +6110,9 @@
             var saldoSrc = raw.saldo_atual != null ? raw.saldo_atual : raw.saldoAtual;
             var saldoNum = saldoSrc === null || saldoSrc === undefined ? 0 : Number(saldoSrc);
             if (isNaN(saldoNum)) saldoNum = 0;
+            var bloqSrc = raw.saldo_bloqueado != null ? raw.saldo_bloqueado : raw.saldoBloqueado;
+            var saldoBloqueadoNum = bloqSrc === null || bloqSrc === undefined ? 0 : Number(bloqSrc);
+            if (isNaN(saldoBloqueadoNum)) saldoBloqueadoNum = 0;
             var limRaw = raw.limite_cartao !== undefined ? raw.limite_cartao : raw.limiteCartao;
             var limite = null;
             if (limRaw !== null && limRaw !== undefined && limRaw !== '') {
@@ -6116,6 +6124,7 @@
                 email: String(raw.email || '').trim(),
                 cpf: String(raw.cpf || '').trim(),
                 saldoAtual: saldoNum,
+                saldoBloqueado: saldoBloqueadoNum,
                 limiteCartao: limite,
                 numeroConta: raw.numero_conta != null ? raw.numero_conta : raw.numeroConta,
                 digitoConta: raw.digito_conta != null ? raw.digito_conta : raw.digitoConta,
@@ -6189,6 +6198,9 @@
                 if (pa) pa.textContent = '—';
                 if (ps) ps.textContent = '—';
                 if (pl) pl.textContent = '—';
+                var pbw = document.getElementById('saldoBloqueadoWrap');
+                if (pbw) pbw.style.display = 'none';
+                saldoBloqueadoReal = null;
                 var plc = document.getElementById('limiteCartaoContainer');
                 if (plc) plc.style.display = 'none';
                 var pmf = document.getElementById('user-menu-fullname');
@@ -6218,6 +6230,9 @@
                 if (i3) i3.textContent = '—';
                 if (i4) i4.textContent = '—';
                 if (i5) i5.textContent = '—';
+                var ibw = document.getElementById('saldoBloqueadoWrap');
+                if (ibw) ibw.style.display = 'none';
+                saldoBloqueadoReal = null;
                 var ilc = document.getElementById('limiteCartaoContainer');
                 if (ilc) ilc.style.display = 'none';
                 var iuc = document.getElementById('userCardLimit');
@@ -6242,6 +6257,7 @@
             }
 
             saldoReal = n.saldoAtual;
+            saldoBloqueadoReal = typeof n.saldoBloqueado === 'number' && !isNaN(n.saldoBloqueado) ? n.saldoBloqueado : 0;
             window.__agilbankHeaderTemDadosReais = true;
             window.__agilbankUltimosDadosUsuarioReais = n;
 
@@ -6260,6 +6276,22 @@
             if (accountEl) accountEl.textContent = linhaConta;
             if (saldoEl) {
                 saldoEl.textContent = 'R$ ' + n.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            var saldoBloqEl = document.getElementById('saldoBloqueadoValue');
+            var saldoBloqWrap = document.getElementById('saldoBloqueadoWrap');
+            if (saldoBloqEl && saldoBloqWrap) {
+                if (saldoBloqueadoReal > 0) {
+                    saldoBloqWrap.style.display = 'block';
+                    if (saldoVisivel) {
+                        saldoBloqEl.textContent = 'R$ ' + saldoBloqueadoReal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    } else {
+                        saldoBloqEl.textContent = '********';
+                    }
+                } else {
+                    saldoBloqWrap.style.display = 'none';
+                    saldoBloqEl.textContent = 'R$ 0,00';
+                }
             }
 
             var mff = document.getElementById('user-menu-fullname');
@@ -6294,6 +6326,7 @@
         // Variáveis de estado
         let saldoVisivel = true;
         let saldoReal = null;
+        let saldoBloqueadoReal = null;
 
         // Função para abrir o formulário dinâmico de cartão (GET /api/cards → formulário ou lista real)
         async function openDynamicCardForm() {
@@ -6372,13 +6405,7 @@
         }
 
         function irParaNotification() {
-            ocultarTodosContainers();
-            mostrarAnimacaoLogo02(() => {
-            notification.style.display = 'block';
-            notification.style.opacity = '1';
-            notification.style.transform = 'translateX(0)';
-            window.scrollTo(0, 0);
-        });
+            window.location.assign('notificacoes.html');
         }
 
         // Função para mostrar o container de empréstimo
@@ -7386,9 +7413,20 @@
                 } else {
                     saldoValue.textContent = '—';
                 }
+                var bloqV = document.getElementById('saldoBloqueadoValue');
+                if (bloqV && typeof saldoBloqueadoReal === 'number' && !isNaN(saldoBloqueadoReal) && saldoBloqueadoReal > 0) {
+                    bloqV.textContent = 'R$ ' + saldoBloqueadoReal.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
                 eyeIcon.className = "fa-solid fa-eye-slash";
             } else {
                 saldoValue.textContent = "********";
+                var bloqH = document.getElementById('saldoBloqueadoValue');
+                if (bloqH && typeof saldoBloqueadoReal === 'number' && !isNaN(saldoBloqueadoReal) && saldoBloqueadoReal > 0) {
+                    bloqH.textContent = "********";
+                }
                 eyeIcon.className = "fa-solid fa-eye";
             }
             });
@@ -10518,6 +10556,21 @@
             // Ignore storage access issues.
         }
     });
+    // Abrir painel de cartão ao voltar das notificações (CTA view_card).
+    window.addEventListener('load', function() {
+        try {
+            var shouldOpenCards = sessionStorage.getItem('agilbank_open_cards') === '1';
+            if (!shouldOpenCards) return;
+            sessionStorage.removeItem('agilbank_open_cards');
+            setTimeout(function() {
+                if (typeof showCartaoContainer === 'function') {
+                    showCartaoContainer();
+                }
+            }, 350);
+        } catch (e) {
+            // Ignore storage access issues.
+        }
+    });
     // ===== MENU DO USUÁRIO =====
     document.addEventListener('DOMContentLoaded', function() {
         // Configurar botão de esqueci senha
@@ -11048,6 +11101,7 @@
                 var loansWrap = loansResult.value;
 
                 if (!cardsWrap.ok || !loansWrap.ok) {
+                    // Não inferir hasCard/hasLoan a partir de lista vazia: sem GET /api/cards ou /api/loans válidos, não abrir modal contextual.
                     console.warn('[agilModal] Não foi possível validar produtos. Modal de oferta não será aberto.', {
                         cardsOk: cardsWrap.ok,
                         cardsStatus: cardsWrap.status,

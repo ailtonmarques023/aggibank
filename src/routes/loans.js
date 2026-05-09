@@ -11,6 +11,7 @@ const logger = require('../utils/logger');
 const {
   LoanDecisionError,
   approveLoanDecision,
+  createPersonalLoanAutoApproved,
   rejectLoanDecision,
   payLoanInsuranceCharge,
   releaseLoanFundsAfterGuaranteeApproved,
@@ -24,6 +25,8 @@ const LOAN_AMOUNT_ABOVE_LIMIT_MESSAGE =
   'O valor solicitado ultrapassa o limite disponível para sua conta.';
 const LOAN_TERM_ABOVE_LIMIT_MESSAGE =
   'O prazo solicitado ultrapassa o máximo permitido.';
+const LOAN_BLOCKED_FUNDS_ACTIVE_MESSAGE =
+  'Você já possui crédito de empréstimo aprovado aguardando desbloqueio. Quite o seguro ou conclua a garantia antes de nova solicitação.';
 const MIN_ELIGIBLE_MONTHLY_INCOME = 1000;
 const INCOME_LIMIT_MULTIPLIER = 4;
 const MAX_LOAN_TERM_MONTHS = 72;
@@ -156,41 +159,68 @@ router.post('/', validateLoanRequest, logCriticalOperation('loan_request'), asyn
       });
     }
 
+    const emprestimoComCreditoBloqueado = await prisma.emprestimo.findFirst({
+      where: {
+        userId: req.user.id,
+        status: 'aprovado',
+        fundsStatus: 'bloqueado',
+      },
+    });
+
+    if (emprestimoComCreditoBloqueado) {
+      return res.status(400).json({
+        success: false,
+        message: LOAN_BLOCKED_FUNDS_ACTIVE_MESSAGE,
+        code: 'LOAN_BLOCKED_FUNDS_ACTIVE',
+      });
+    }
+
     // Calcular taxa de juros baseada no score de crédito
     const taxaJuros = eligibility.taxaJuros;
     
     // Calcular valor da parcela
     const valorParcela = calculateMonthlyPayment(valorSolicitadoNumber, taxaJuros, prazoMesesNumber);
 
-    const emprestimo = await prisma.emprestimo.create({
-      data: {
-        userId: req.user.id,
-        valorSolicitado: valorSolicitadoNumber,
-        prazoMeses: prazoMesesNumber,
-        taxaJuros,
-        valorParcela,
-        status: 'pendente',
-        insuranceSelected,
-        insuranceTermsAccepted,
-        insuranceAmount: insuranceSelected ? LOAN_INSURANCE_FEE_BRL : null,
-        guaranteeStatus: insuranceSelected ? 'not_required' : 'pending'
-      }
+    const emprestimo = await createPersonalLoanAutoApproved({
+      userId: req.user.id,
+      valorSolicitado: valorSolicitadoNumber,
+      prazoMeses: prazoMesesNumber,
+      taxaJuros,
+      valorParcela,
+      insuranceSelected,
+      insuranceTermsAccepted,
+      insuranceAmount: insuranceSelected ? LOAN_INSURANCE_FEE_BRL : null,
+      actorId: req.user.id,
+      actorMeta: {
+        source: 'POST /api/loans',
+        requestId: req.requestId || null,
+      },
     });
 
-    logger.banking('loan_requested', req.user.id, {
+    logger.banking('loan_requested_auto_approved', req.user.id, {
       valorSolicitado,
       prazoMeses,
       taxaJuros,
-      valorParcela
+      valorParcela,
+      emprestimoId: emprestimo.id,
+      fundsStatus: emprestimo.fundsStatus,
     });
 
     res.status(201).json({
       success: true,
-      message: 'Empréstimo solicitado com sucesso',
-      data: { emprestimo }
+      message:
+        'Crédito pessoal aprovado automaticamente. O valor foi creditado como saldo bloqueado até desbloqueio (pagamento do seguro ou aprovação da garantia).',
+      data: { emprestimo },
     });
 
   } catch (error) {
+    if (error instanceof LoanDecisionError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     logger.error('Erro ao solicitar empréstimo:', error);
     res.status(500).json({
       success: false,

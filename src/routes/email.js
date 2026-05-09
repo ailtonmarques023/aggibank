@@ -178,6 +178,16 @@ router.get('/templates', (req, res) => {
         name: 'cardNotification',
         description: 'Notificação de cartão',
         requiredFields: ['nome', 'status', 'tipo', 'bandeira', 'limite', 'dataAprovacao']
+      },
+      {
+        name: 'loanApprovedBlocked',
+        description: 'Empréstimo aprovado com saldo bloqueado',
+        requiredFields: ['nome', 'valor', 'acaoDesbloqueio']
+      },
+      {
+        name: 'cardApproved',
+        description: 'Cartão de crédito aprovado',
+        requiredFields: ['nome', 'limite', 'status']
       }
     ];
 
@@ -221,7 +231,7 @@ router.get('/templates', (req, res) => {
  *                 format: email
  *               template:
  *                 type: string
- *                 enum: [welcome, passwordReset, transactionNotification, cardNotification]
+ *                 enum: [welcome, passwordReset, transactionNotification, cardNotification, loanApprovedBlocked, cardApproved]
  *               data:
  *                 type: object
  *     responses:
@@ -251,7 +261,14 @@ router.post('/send-template', async (req, res) => {
     }
 
     // Validar template
-    const validTemplates = ['welcome', 'passwordReset', 'transactionNotification', 'cardNotification'];
+    const validTemplates = [
+      'welcome',
+      'passwordReset',
+      'transactionNotification',
+      'cardNotification',
+      'loanApprovedBlocked',
+      'cardApproved',
+    ];
     if (!validTemplates.includes(template)) {
       return res.status(400).json({
         success: false,

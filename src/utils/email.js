@@ -445,6 +445,105 @@ const emailTemplates = {
       text,
     };
   },
+
+  /** Cartão de crédito aprovado (mesmo fluxo que notificação in-app card_approved). */
+  cardApproved: (data) => {
+    const primeiroEsc = escapeHtml(primeiroNomeFromCompleto(data.nome));
+    const limiteFmt = formatMoneyBR(data.limite);
+    const statusRaw = data.status != null ? String(data.status) : 'aprovado';
+    const statusEsc = escapeHtml(humanizeStatus(statusRaw));
+
+    const inner = `
+    <tr>
+      <td style="padding:24px 28px 8px 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.55;color:#1a2b3c;">
+        <p style="margin:0 0 12px 0;">Olá, <strong>${primeiroEsc}</strong>.</p>
+        <p style="margin:0 0 12px 0;">Seu cartão de crédito AgilBank foi <strong>aprovado</strong>.</p>
+        <p style="margin:0 0 12px 0;"><strong>Limite aprovado:</strong> R$ ${limiteFmt}</p>
+        <p style="margin:0 0 12px 0;"><strong>Status:</strong> ${statusEsc}</p>
+        <p style="margin:0;font-size:14px;color:#5a6b7a;">Acesse sua conta para acompanhar a emissão, ativação e detalhes do seu cartão.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 28px 28px 28px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#5a6b7a;">
+        AgilBank
+      </td>
+    </tr>`;
+
+    const text = [
+      `Olá, ${primeiroNomeFromCompleto(data.nome)}.`,
+      '',
+      'Seu cartão de crédito AgilBank foi aprovado.',
+      '',
+      `Limite aprovado: R$ ${formatMoneyBR(data.limite)}.`,
+      '',
+      'Acesse sua conta para acompanhar a emissão, ativação e detalhes do seu cartão.',
+      '',
+      'AgilBank',
+      securityFooterText(),
+    ].join('\n');
+
+    return {
+      subject: 'Seu cartão AgilBank foi aprovado',
+      html: wrapEmailDocument({
+        preheader: 'Cartão aprovado — AgilBank',
+        innerRowsHtml: inner,
+      }),
+      text,
+    };
+  },
+
+  /** Empréstimo aprovado automaticamente com crédito em saldo bloqueado (com/sem seguro). */
+  loanApprovedBlocked: (data) => {
+    const primeiroEsc = escapeHtml(primeiroNomeFromCompleto(data.nome));
+    const valorFmt = formatMoneyBR(data.valor);
+    const acaoRaw =
+      data.acaoDesbloqueio != null && String(data.acaoDesbloqueio).trim() !== ''
+        ? String(data.acaoDesbloqueio).trim()
+        : 'Acesse o app para ver os próximos passos.';
+    const acaoEsc = escapeHtml(acaoRaw).replace(/\n/g, '<br>');
+
+    const inner = `
+    <tr>
+      <td style="padding:24px 28px 8px 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.55;color:#1a2b3c;">
+        <p style="margin:0 0 12px 0;">Olá, <strong>${primeiroEsc}</strong>.</p>
+        <p style="margin:0 0 12px 0;">Seu empréstimo foi <strong>aprovado</strong>.</p>
+        <p style="margin:0 0 12px 0;">O valor de <strong>R$ ${valorFmt}</strong> já foi reservado na sua conta AgilBank como <strong>saldo bloqueado</strong>.</p>
+        <p style="margin:0 0 8px 0;"><strong>Para desbloquear o valor, siga a orientação abaixo:</strong></p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f8fb;border-radius:8px;border-left:4px solid #00a3e0;">
+          <tr>
+            <td style="padding:16px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1a2b3c;">
+              ${acaoEsc}
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0 0;font-size:14px;color:#5a6b7a;">Acesse sua conta no app para acompanhar os detalhes.</p>
+      </td>
+    </tr>`;
+
+    const text = [
+      `Olá, ${primeiroNomeFromCompleto(data.nome)}.`,
+      '',
+      'Seu empréstimo foi aprovado.',
+      '',
+      `O valor de R$ ${formatMoneyBR(data.valor)} já foi reservado na sua conta AgilBank como saldo bloqueado.`,
+      '',
+      'Para desbloquear o valor, siga a orientação abaixo:',
+      '',
+      acaoRaw,
+      '',
+      'Acesse sua conta para acompanhar os detalhes.',
+      securityFooterText(),
+    ].join('\n');
+
+    return {
+      subject: 'Seu empréstimo AgilBank foi aprovado',
+      html: wrapEmailDocument({
+        preheader: 'Empréstimo aprovado — valor em saldo bloqueado',
+        innerRowsHtml: inner,
+      }),
+      text,
+    };
+  },
 };
 
 function isResendConfigured() {
@@ -711,6 +810,30 @@ const sendCardNotification = async (userData, cardData) => {
   });
 };
 
+const sendLoanApprovedBlockedEmail = async (userData, loanData) => {
+  return await sendEmail({
+    to: userData.email,
+    template: 'loanApprovedBlocked',
+    data: {
+      nome: userData.nomeCompleto || userData.nome,
+      valor: loanData.valor,
+      acaoDesbloqueio: loanData.acaoDesbloqueio,
+    },
+  });
+};
+
+const sendCardApprovedEmail = async (userData, cardData) => {
+  return await sendEmail({
+    to: userData.email,
+    template: 'cardApproved',
+    data: {
+      nome: userData.nomeCompleto || userData.nome,
+      limite: cardData.limite,
+      status: cardData.status,
+    },
+  });
+};
+
 const testEmailConfiguration = async () => {
   try {
     if (isResendReady()) {
@@ -743,6 +866,8 @@ module.exports = {
   sendPasswordResetEmail,
   sendTransactionNotification,
   sendCardNotification,
+  sendCardApprovedEmail,
+  sendLoanApprovedBlockedEmail,
   testEmailConfiguration,
   isResendReady,
   isSmtpFallbackAllowed,
