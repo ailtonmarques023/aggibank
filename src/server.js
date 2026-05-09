@@ -23,6 +23,7 @@ const pixRoutes = require('./routes/pix');
 const boletoRoutes = require('./routes/boletos');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
+const chargeRoutes = require('./routes/charges');
 const emailRoutes = require('./routes/email');
 const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, isRedisAvailable, getRedis } = require('./utils/redis');
@@ -348,6 +349,7 @@ app.use('/api/pix', pixRoutes);
 app.use('/api/boletos', boletoRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/charges', chargeRoutes);
 app.use('/api/email', emailRoutes);
 
 // Documentação Swagger

@@ -176,3 +176,66 @@
     .nav-btn:hover {
         background-color: #002244;
     }
+
+    .gru-cobrancas-loading {
+        text-align: center;
+        color: #666;
+        padding: 12px;
+    }
+
+    .gru-cobrancas-empty {
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        color: #333;
+        margin-bottom: 12px;
+    }
+
+    .gru-cobrancas-empty-sub {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .gru-charge-select {
+        max-width: 100%;
+        flex: 1;
+        margin-left: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+    }
+
+    .gru-pix-result-panel {
+        margin-top: 16px;
+        padding: 12px;
+        background: #f0f7ff;
+        border: 1px solid #cce0f5;
+        border-radius: 8px;
+    }
+
+    .gru-pix-instructions {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #003366;
+    }
+
+    .gru-pix-payload {
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+    }
+
+    .gru-pix-key-line {
+        font-size: 14px;
+        word-break: break-all;
+        color: #333;
+    }
+
+    .gru-pix-label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+        color: #003366;
+    }

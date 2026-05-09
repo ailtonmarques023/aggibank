@@ -2384,15 +2384,24 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" placeholder="Buscar conversa">
         </div>
-        <div class="dashboard-emprestimo-card-wrap" role="region" aria-label="Empréstimos e crédito pessoal">
-            <div class="dashboard-emprestimo-card-inner">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
-                    <h3 style="margin:0;color:#1e3550;">Empréstimos</h3>
-                    <button type="button" onclick="activateCredito()" style="border:none;background:transparent;color:#0066b3;font-weight:700;cursor:pointer;">Consultar →</button>
+        <div class="dashboard-feature-cards" role="region" aria-label="Cartão e empréstimos">
+            <div class="cartao-container dashboard-cartao-destaque" role="button" tabindex="0" aria-label="Cartão aprovado AgilBank. Abrir solicitação ou gerenciamento." onclick="openDynamicCardForm()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDynamicCardForm();}">
+                <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="" class="cartao-imagem" aria-hidden="true">
+                <div class="cartao-texto">
+                    <div class="cartao-titulo"><b>Cartão aprovado</b></div>
+                    <div class="cartao-subtitulo">Compras e pagamentos com um só cartão.</div>
                 </div>
-                <p style="margin:0 0 10px;color:#1e3550;font-weight:700;">Crédito pessoal para sua conta</p>
-                <p style="margin:0 0 12px;color:#5a6f85;">Consulte opções disponíveis para sua conta.</p>
-                <button type="button" onclick="activateCredito()" style="border:none;border-radius:10px;background:#0066b3;color:#fff;padding:10px 16px;font-weight:700;cursor:pointer;">Simular</button>
+            </div>
+            <div class="dashboard-emprestimo-card-wrap" aria-label="Empréstimos e crédito pessoal">
+                <div class="dashboard-emprestimo-card-inner">
+                    <div class="dashboard-emprestimo-card-head">
+                        <h3 class="dashboard-emprestimo-card-title">Empréstimos</h3>
+                        <button type="button" class="dashboard-emprestimo-card-link" onclick="activateCredito()">Consultar →</button>
+                    </div>
+                    <p class="dashboard-emprestimo-card-lead">Crédito pessoal para sua conta</p>
+                    <p class="dashboard-emprestimo-card-desc">Consulte opções disponíveis para sua conta.</p>
+                    <button type="button" class="dashboard-emprestimo-card-cta" onclick="activateCredito()">Simular</button>
+                </div>
             </div>
         </div>
         <!--movimente sua conta -->
@@ -2488,15 +2497,6 @@
                     <i class="fa-solid fa-money-bill-wave"></i>
                 </div>
                 <h3>Empréstimos</h3>
-            </div>
-        </div>
-        <!-- banner para pedir cartão container -->
-        <div class="cartao-container" onclick="openDynamicCardForm()">
-            <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="Cartão" class="cartao-imagem">
-            <div class="cartao-texto">
-                <div class="cartao-titulo"><b>Tudo em um só cartão</b></div>
-                <div class="cartao-subtitulo">Faça compras, pagamentos e muito mais, ideal para você e para seu negócio.
-                </div>
             </div>
         </div>
         <!-- modal para gerar gru-->
@@ -4880,41 +4880,65 @@
         </div>
         <div class="content-gerar-boleto-pix">
             <h2>Gerar Boleto ou Pix</h2>
-            <div class="info-pagamento">
-                <div class="detalhe-pagamento">
-                    <span class="label">Número do Protocolo:</span>
-                    <span class="valor">Indisponível</span>
-                </div>
-                <div class="detalhe-pagamento">
-                    <span class="label">Situação da Solicitação:</span>
-                    <span class="valor">Indisponível</span>
-                </div>
-                <div class="detalhe-pagamento">
-                    <span class="label">Data da Solicitação:</span>
-                    <span class="valor">Indisponível</span>
-                </div>
-                <div class="detalhe-pagamento">
-                    <span class="label">CPF:</span>
-                    <span class="valor">Indisponível</span>
-                </div>
-                <div class="detalhe-pagamento">
-                    <span class="label">Nome:</span>
-                    <span class="valor">Indisponível</span>
-                </div>
-                <div class="detalhe-pagamento">
-                    <span class="label">Valor:</span>
-                    <span class="valor">Indisponível</span>
-                </div>
+            <div id="gruCobrancasLoading" class="gru-cobrancas-loading" style="display:none;">Carregando cobranças…</div>
+            <div id="gruCobrancasEmpty" class="gru-cobrancas-empty" style="display:none;">
+                <p><strong>Você não possui cobranças pendentes.</strong></p>
+                <p class="gru-cobrancas-empty-sub">Quando houver seguro, frete ou outra cobrança, ela aparecerá aqui.</p>
             </div>
-            <div class="acoes-pagamento">
-                <button class="btn-gerar-boleto" onclick="levarboletoContainer()">
-                    <i class="fas fa-barcode"></i>
-                    Gerar Boleto
-                </button>
-                <button class="btn-gerar-pix">
-                    <i class="fas fa-qrcode"></i>
-                    Gerar Pix
-                </button>
+            <div id="gruCobrancasPanel" style="display:none;">
+                <div class="detalhe-pagamento" id="gruCobrancaSelectWrap" style="display:none;">
+                    <span class="label">Cobrança:</span>
+                    <select id="gruChargeSelect" class="gru-charge-select" aria-label="Selecionar cobrança"></select>
+                </div>
+                <div class="info-pagamento" id="gruCobrancaDetalhes">
+                    <div class="detalhe-pagamento">
+                        <span class="label">Produto / cobrança:</span>
+                        <span class="valor" id="gruDetalheProduto">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Número do Protocolo:</span>
+                        <span class="valor" id="gruDetalheProtocolo">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Situação da Solicitação:</span>
+                        <span class="valor" id="gruDetalheSituacao">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Data da Solicitação:</span>
+                        <span class="valor" id="gruDetalheData">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">CPF:</span>
+                        <span class="valor" id="gruDetalheCpf">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Nome:</span>
+                        <span class="valor" id="gruDetalheNome">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Valor:</span>
+                        <span class="valor" id="gruDetalheValor">—</span>
+                    </div>
+                </div>
+                <div class="acoes-pagamento">
+                    <button type="button" class="btn-gerar-boleto" onclick="agilbankChargesGerarBoleto(event)">
+                        <i class="fas fa-barcode"></i>
+                        Gerar Boleto
+                    </button>
+                    <button type="button" class="btn-gerar-pix" onclick="agilbankChargesGerarPix(event)">
+                        <i class="fas fa-qrcode"></i>
+                        Gerar Pix
+                    </button>
+                </div>
+                <div id="gruPixResultPanel" class="gru-pix-result-panel" style="display:none;" aria-live="polite">
+                    <p id="gruPixResultInstructions" class="gru-pix-instructions"></p>
+                    <label for="gruPixPayload" class="gru-pix-label" id="gruPixPayloadLabel" style="display:none;">Código Pix</label>
+                    <textarea id="gruPixPayload" class="gru-pix-payload" rows="4" readonly style="display:none;"></textarea>
+                    <p id="gruPixKeyLine" class="gru-pix-key-line" style="display:none;"></p>
+                    <button type="button" class="btn-gerar-pix" id="gruPixCopyBtn" style="display:none;margin-top:8px;" onclick="agilbankChargesCopiarPixPayload()">
+                        <i class="fas fa-copy"></i> <span id="gruPixCopyBtnLabel">Copiar</span>
+                    </button>
+                </div>
             </div>
             <div class="observacao">
                 <p>* O prazo para processamento é de até 24 horas úteis</p>
@@ -4950,8 +4974,8 @@
                         <i class="fa-brands fa-pix"></i>
                         <h3>Pagamento via PIX</h3>
                     </div>  
-                    <div class="qr-code-boleto">
-                        <img src="https://i.postimg.cc/WzkfP8X2/qr-code.png" alt="QR Code">
+                    <div class="qr-code-boleto" id="boletoQrFakeWrap" style="display:none;">
+                        <img id="boletoQrFakeImg" src="https://i.postimg.cc/WzkfP8X2/qr-code.png" alt="">
                     </div>
                     <!-- botão pix copia e cola -->
                     <div class="pix-info-boleto">
@@ -4974,27 +4998,27 @@
                 <div class="container-campo">
                 <div class="campo">
                     <span class="campo-label">Nome do Beneficiário</span>
-                    <span class="campo-valor">Indisponível</span>
+                    <span class="campo-valor" id="gruBoletoBenefNome">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">CNPJ do Beneficiário</span>
-                    <span class="campo-valor">Indisponível</span>
+                    <span class="campo-valor" id="gruBoletoBenefCnpj">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Data de Vencimento</span>
-                    <span class="campo-valor">—</span>
+                    <span class="campo-valor" id="gruBoletoVenc">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Valor Total</span>
-                    <span class="campo-valor">Indisponível</span>
+                    <span class="campo-valor" id="gruBoletoValorTotal">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Data de Emissão</span>
-                    <span class="campo-valor">—</span>
+                    <span class="campo-valor" id="gruBoletoEmissao">—</span>
                 </div>
                 <div class="campo">
                     <span class="campo-label">Número de Controle</span>
-                    <span class="campo-valor">Indisponível</span>
+                    <span class="campo-valor" id="gruBoletoControle">—</span>
                 </div>
                 </div>  
                 <!-- aviso de segurança -->
@@ -5011,9 +5035,9 @@
                 <img src="https://i.postimg.cc/6pXLhF1N/Captura-de-tela-2025-03-18-140740.png" alt="banco do brasil" style="width: 100%; height: 20px;">
                 <p style="font-size: 11px; margin-left: 10px; color:#666; text-align: left;">Pagável em qualquer banco até o vencimento</p>
                 <div class="dados-beneficiario">
-                    <small>Nome: Indisponível</small>
-                    <small>CNPJ: Indisponível</small>
-                    <small style="display: inline-block;">Data de vencimento: —<span style="float: right; margin-left: 70px;">Valor: <b>Indisponível</b></span></small>
+                    <small id="gruBoletoRodapeNome">Nome: —</small>
+                    <small id="gruBoletoRodapeCnpj">CNPJ: —</small>
+                    <small style="display: inline-block;">Data de vencimento: <span id="gruBoletoRodapeVenc">—</span><span style="float: right; margin-left: 70px;">Valor: <b id="gruBoletoRodapeValor">—</b></span></small>
                 </div>
                 <div class="codigo-barras">
                     <img src="https://i.postimg.cc/k4K3yvj6/codigo-de-barras.png" alt="Código de Barras">
@@ -8386,6 +8410,289 @@
     });
     }
 
+    window.__agilbankChargeDetail = window.__agilbankChargeDetail || null;
+    window.__agilbankChargesList = window.__agilbankChargesList || [];
+
+    function agilbankFormatMoneyBr(n) {
+        var x = Number(n);
+        if (!isFinite(x)) return '—';
+        return x.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function agilbankFormatChargeDateTime(iso) {
+        if (!iso) return '—';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    function agilbankChargeSetVisible(id, show) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    }
+
+    function agilbankChargesPopulateDetailFromPayload(payload) {
+        window.__agilbankChargeDetail = payload;
+        var c = payload && payload.charge;
+        var u = payload && payload.user;
+        if (!c || !u) return;
+        var set = function (id, txt) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = txt != null ? String(txt) : '—';
+        };
+        set('gruDetalheProduto', c.product || c.description || '—');
+        set('gruDetalheProtocolo', c.protocol || '—');
+        set('gruDetalheSituacao', c.statusLabel || c.status || '—');
+        set('gruDetalheData', agilbankFormatChargeDateTime(c.createdAt));
+        set('gruDetalheCpf', u.cpf || '—');
+        set('gruDetalheNome', u.name || '—');
+        set('gruDetalheValor', agilbankFormatMoneyBr(c.amount));
+        agilbankChargeSetVisible('gruPixResultPanel', false);
+        var ta = document.getElementById('gruPixPayload');
+        if (ta) { ta.value = ''; ta.style.display = 'none'; }
+        agilbankChargeSetVisible('gruPixPayloadLabel', false);
+        agilbankChargeSetVisible('gruPixKeyLine', false);
+        agilbankChargeSetVisible('gruPixCopyBtn', false);
+    }
+
+    function agilbankChargePopulateBoletoFromCache() {
+        var d = window.__agilbankChargeDetail;
+        var c = d && d.charge;
+        var wrap = document.getElementById('boletoQrFakeWrap');
+        if (wrap) wrap.style.display = 'none';
+        if (!c) return;
+        var set = function (id, txt) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = txt != null ? String(txt) : '—';
+        };
+        set('gruBoletoBenefNome', c.beneficiarioNome || 'AgilBank');
+        set('gruBoletoBenefCnpj', c.beneficiarioCnpj || '—');
+        if (c.dataVencimento) {
+            var dv = new Date(c.dataVencimento);
+            set('gruBoletoVenc', isNaN(dv.getTime()) ? '—' : dv.toLocaleDateString('pt-BR'));
+        } else set('gruBoletoVenc', '—');
+        set('gruBoletoValorTotal', agilbankFormatMoneyBr(c.amount));
+        var now = new Date();
+        set('gruBoletoEmissao', now.toLocaleString('pt-BR'));
+        set('gruBoletoControle', c.protocol || '—');
+        var pixInput = document.getElementById('pixCodeBoleto');
+        if (pixInput) pixInput.value = '';
+        var linha = document.getElementById('codigoLinha');
+        if (linha) linha.value = c.codigoBarras ? String(c.codigoBarras) : '';
+        var rn = document.getElementById('gruBoletoRodapeNome');
+        if (rn) rn.textContent = 'Nome: ' + (c.beneficiarioNome || 'AgilBank');
+        var rc = document.getElementById('gruBoletoRodapeCnpj');
+        if (rc) rc.textContent = 'CNPJ: ' + (c.beneficiarioCnpj || '—');
+        var rv = document.getElementById('gruBoletoRodapeVenc');
+        if (rv) rv.textContent = document.getElementById('gruBoletoVenc') ? document.getElementById('gruBoletoVenc').textContent : '—';
+        var rb = document.getElementById('gruBoletoRodapeValor');
+        if (rb) rb.textContent = agilbankFormatMoneyBr(c.amount);
+    }
+
+    function agilbankCobrancasRefresh() {
+        var api = window.legacyApiClient || (window.AgilBank && window.AgilBank.api);
+        if (!api || typeof api.request !== 'function') {
+            if (typeof mostrarAgilbankAviso === 'function') {
+                mostrarAgilbankAviso('Serviço de cobranças indisponível no cliente.');
+            }
+            return Promise.resolve();
+        }
+        agilbankChargeSetVisible('gruCobrancasLoading', true);
+        agilbankChargeSetVisible('gruCobrancasEmpty', false);
+        agilbankChargeSetVisible('gruCobrancasPanel', false);
+        return api.request('charges', { method: 'GET' })
+            .then(function (res) { return res.json().then(function (body) { return { res: res, body: body }; }); })
+            .then(function (_ref) {
+                var res = _ref.res;
+                var body = _ref.body;
+                agilbankChargeSetVisible('gruCobrancasLoading', false);
+                if (!res.ok || !body || !body.success) {
+                    agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                    if (typeof mostrarAgilbankAviso === 'function' && res.status === 403) {
+                        mostrarAgilbankAviso((body && body.message) || 'Conta não verificada ou sem permissão.');
+                    }
+                    return;
+                }
+                var list = (body.data && body.data.charges) ? body.data.charges : [];
+                window.__agilbankChargesList = list;
+                if (!list.length) {
+                    agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                    return;
+                }
+                agilbankChargeSetVisible('gruCobrancasPanel', true);
+                var sel = document.getElementById('gruChargeSelect');
+                var wrapSel = document.getElementById('gruCobrancaSelectWrap');
+                if (sel) {
+                    sel.innerHTML = '';
+                    list.forEach(function (ch) {
+                        var opt = document.createElement('option');
+                        opt.value = ch.id;
+                        opt.textContent = (ch.product || ch.type) + ' — ' + agilbankFormatMoneyBr(ch.amount);
+                        sel.appendChild(opt);
+                    });
+                    if (list.length > 1) {
+                        agilbankChargeSetVisible('gruCobrancaSelectWrap', true);
+                    } else {
+                        agilbankChargeSetVisible('gruCobrancaSelectWrap', false);
+                    }
+                    sel.onchange = function () {
+                        agilbankChargesLoadDetail(sel.value);
+                    };
+                }
+                return agilbankChargesLoadDetail(list[0].id);
+            })
+            .catch(function (err) {
+                console.error('agilbankCobrancasRefresh', err);
+                agilbankChargeSetVisible('gruCobrancasLoading', false);
+                agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                if (typeof mostrarAgilbankAviso === 'function') {
+                    mostrarAgilbankAviso('Não foi possível carregar cobranças. Verifique a conexão.');
+                }
+            });
+    }
+
+    function agilbankChargesLoadDetail(chargeId) {
+        var api = window.legacyApiClient || (window.AgilBank && window.AgilBank.api);
+        if (!api || !chargeId) return Promise.resolve();
+        return api.request('charges/' + encodeURIComponent(chargeId), { method: 'GET' })
+            .then(function (res) { return res.json().then(function (body) { return { res: res, body: body }; }); })
+            .then(function (_ref2) {
+                var res = _ref2.res;
+                var body = _ref2.body;
+                if (!res.ok || !body || !body.success || !body.data) {
+                    if (typeof mostrarAgilbankAviso === 'function') {
+                        mostrarAgilbankAviso((body && body.message) || 'Cobrança não encontrada.');
+                    }
+                    return;
+                }
+                agilbankChargesPopulateDetailFromPayload(body.data);
+                var sel = document.getElementById('gruChargeSelect');
+                if (sel && sel.value !== chargeId) sel.value = chargeId;
+            })
+            .catch(function (e) {
+                console.error('agilbankChargesLoadDetail', e);
+                if (typeof mostrarAgilbankAviso === 'function') {
+                    mostrarAgilbankAviso('Erro ao carregar detalhe da cobrança.');
+                }
+            });
+    }
+
+    function agilbankChargesGerarPix(ev) {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        var d = window.__agilbankChargeDetail;
+        if (!d || !d.charge || !d.charge.id) {
+            if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Selecione uma cobrança antes de gerar Pix.');
+            return;
+        }
+        var api = window.legacyApiClient || (window.AgilBank && window.AgilBank.api);
+        if (!api) return;
+        api.request('charges/' + encodeURIComponent(d.charge.id) + '/pix', { method: 'POST', body: '{}' })
+            .then(function (res) { return res.json().then(function (body) { return { res: res, body: body }; }); })
+            .then(function (_ref3) {
+                var res = _ref3.res;
+                var body = _ref3.body;
+                if (res.status === 503) {
+                    if (typeof mostrarAgilbankAviso === 'function') {
+                        mostrarAgilbankAviso((body && body.message) || 'Pix não configurado no servidor.');
+                    }
+                    return;
+                }
+                if (!res.ok || !body || !body.success) {
+                    if (typeof mostrarAgilbankAviso === 'function') {
+                        mostrarAgilbankAviso((body && body.message) || 'Não foi possível obter instruções Pix.');
+                    }
+                    return;
+                }
+                var p = body.data || {};
+                var panel = document.getElementById('gruPixResultPanel');
+                var instr = document.getElementById('gruPixResultInstructions');
+                var ta = document.getElementById('gruPixPayload');
+                var lbl = document.getElementById('gruPixPayloadLabel');
+                var keyLine = document.getElementById('gruPixKeyLine');
+                var btn = document.getElementById('gruPixCopyBtn');
+                var btnLbl = document.getElementById('gruPixCopyBtnLabel');
+                if (instr) instr.textContent = p.instructions || '';
+                if (panel) panel.style.display = '';
+                if (p.pixMode === 'copiaecola' && p.pixCopiaECola) {
+                    if (lbl) { lbl.style.display = ''; lbl.textContent = 'Código Pix'; }
+                    if (ta) { ta.style.display = ''; ta.value = p.pixCopiaECola; }
+                    var pixBoletoInp = document.getElementById('pixCodeBoleto');
+                    if (pixBoletoInp) pixBoletoInp.value = p.pixCopiaECola;
+                    if (keyLine) keyLine.style.display = 'none';
+                    if (btn) btn.style.display = '';
+                    if (btnLbl) btnLbl.textContent = 'Copiar Pix';
+                } else if (p.pixKey) {
+                    if (lbl) lbl.style.display = 'none';
+                    if (ta) { ta.style.display = 'none'; ta.value = ''; }
+                    if (keyLine) {
+                        keyLine.style.display = '';
+                        keyLine.textContent = 'Chave Pix: ' + p.pixKey + ' — Valor: ' + agilbankFormatMoneyBr(p.amount);
+                    }
+                    if (btn) btn.style.display = '';
+                    if (btnLbl) btnLbl.textContent = 'Copiar chave Pix';
+                } else {
+                    if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Resposta Pix incompleta.');
+                }
+            })
+            .catch(function (err) {
+                console.error('agilbankChargesGerarPix', err);
+                if (typeof mostrarAgilbankAviso === 'function') {
+                    mostrarAgilbankAviso('Falha de rede ao solicitar Pix.');
+                }
+            });
+    }
+
+    function agilbankChargesCopiarPixPayload() {
+        var d = window.__agilbankChargeDetail;
+        var ta = document.getElementById('gruPixPayload');
+        var keyLine = document.getElementById('gruPixKeyLine');
+        var text = (ta && ta.style.display !== 'none' && ta.value) ? ta.value : '';
+        if (!text && keyLine && keyLine.style.display !== 'none') {
+            var m = keyLine.textContent && keyLine.textContent.match(/Chave Pix:\s*([^—]+)/);
+            text = m ? m[1].trim() : '';
+        }
+        if (!text) {
+            if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Nada para copiar.');
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Copiado para a área de transferência.');
+            }).catch(function () {
+                if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Não foi possível copiar.');
+            });
+        } else {
+            var x = document.createElement('textarea');
+            x.value = text;
+            document.body.appendChild(x);
+            x.select();
+            document.execCommand('copy');
+            document.body.removeChild(x);
+            if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Copiado para a área de transferência.');
+        }
+    }
+
+    function agilbankChargesGerarBoleto(ev) {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        var d = window.__agilbankChargeDetail;
+        if (!d || !d.charge) {
+            if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Nenhuma cobrança selecionada.');
+            return;
+        }
+        if (!d.charge.hasBoletoLinha || !d.charge.codigoBarras) {
+            if (typeof mostrarAgilbankAviso === 'function') {
+                mostrarAgilbankAviso('Boleto ainda não disponível para esta cobrança. Use Pix para pagamento.');
+            }
+            return;
+        }
+        levarboletoContainer();
+    }
+
+    window.agilbankCobrancasRefresh = agilbankCobrancasRefresh;
+
     // funcao para levar ao container gerar boleto
     function containerGerarBoletoPix() {
         ocultarTodosContainers();
@@ -8407,6 +8714,9 @@
         }
         document.getElementById('containerGerarBoletoPix').style.display = 'block';
         window.scrollTo(0, 0);
+        if (typeof agilbankCobrancasRefresh === 'function') {
+            void agilbankCobrancasRefresh();
+        }
     });
     }
 
@@ -8414,6 +8724,9 @@
     function levarboletoContainer() {
         ocultarTodosContainers();
         mostrarAnimacaoLogo02(() => {
+        if (typeof agilbankChargePopulateBoletoFromCache === 'function') {
+            agilbankChargePopulateBoletoFromCache();
+        }
         document.getElementById('boletoContainer').style.display = 'block';
         window.scrollTo(0, 0);
     });

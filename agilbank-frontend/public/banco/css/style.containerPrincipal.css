@@ -396,17 +396,167 @@
             background: transparent;
         }
 
-        /* Card compacto Empréstimos (dashboard): entre busca e Movimente */
-        .dashboard-emprestimo-card-wrap {
-            margin: 10px 15px 14px;
+        /* Dois destaques lado a lado: grid estável em mobile (sem estourar largura) */
+        .dashboard-feature-cards {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 8px;
+            margin: 10px 12px 12px;
+            align-items: stretch;
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
+        .dashboard-feature-cards > * {
+            min-width: 0;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-wrap {
+            margin: 0;
+            width: 100%;
+            display: flex;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-inner {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            box-sizing: border-box;
+        }
+
+        /* Card compacto Empréstimos */
         .dashboard-emprestimo-card-inner {
             background: #fff;
             border: 1px solid #d8e5f2;
             border-radius: 14px;
             padding: 14px;
             box-shadow: 0 2px 8px rgba(0, 102, 179, 0.08);
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-inner {
+            padding: 8px 10px;
+        }
+
+        .dashboard-emprestimo-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .dashboard-emprestimo-card-title {
+            margin: 0;
+            color: #1e3550;
+            font-size: 15px;
+            line-height: 1.2;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-title {
+            font-size: 12px;
+        }
+
+        .dashboard-emprestimo-card-link {
+            border: none;
+            background: transparent;
+            color: #0066b3;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 0;
+            flex-shrink: 0;
+            text-align: right;
+            line-height: 1.2;
+            max-width: 42%;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-link {
+            font-size: 10px;
+        }
+
+        .dashboard-emprestimo-card-lead {
+            margin: 0 0 6px;
+            color: #1e3550;
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-lead {
+            font-size: 11px;
+        }
+
+        .dashboard-emprestimo-card-desc {
+            margin: 0 0 10px;
+            color: #5a6f85;
+            font-size: 13px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-desc {
+            font-size: 10px;
+            margin-bottom: 6px;
+        }
+
+        .dashboard-emprestimo-card-cta {
+            border: none;
+            border-radius: 10px;
+            background: #0066b3;
+            color: #fff;
+            padding: 8px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+            align-self: flex-start;
+            margin-top: auto;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        .dashboard-feature-cards .dashboard-emprestimo-card-cta {
+            padding: 6px 8px;
+            font-size: 11px;
+        }
+
+        /* Cartão na mesma linha: compacto, sem rolagem horizontal */
+        .dashboard-feature-cards .cartao-container.dashboard-cartao-destaque {
+            margin: 0;
+            width: 100%;
+            min-height: 100%;
+            height: auto;
+            box-sizing: border-box;
+            padding: 6px 8px;
+            gap: 6px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .dashboard-feature-cards .cartao-container.dashboard-cartao-destaque .cartao-texto {
+            min-width: 0;
+        }
+
+        .dashboard-feature-cards .cartao-container.dashboard-cartao-destaque .cartao-imagem {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+        }
+
+        .dashboard-feature-cards .cartao-container.dashboard-cartao-destaque .cartao-titulo {
+            font-size: 11px;
+            margin-bottom: 3px;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-feature-cards .cartao-container.dashboard-cartao-destaque .cartao-subtitulo {
+            font-size: 9px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
         }
         .top-search-container {
             position: relative;
