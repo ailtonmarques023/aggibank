@@ -9,6 +9,7 @@ const {
 const {
   LedgerError,
   registrarCreditoLiberadoDeBloqueado,
+  registrarCreditoSaldoBloqueado,
   registrarDebitoSaldoAtual,
 } = require('./ledgerService');
 const { scheduleLoanApprovedBlockedEmail } = require('./loanApprovedBlockedEmailService');
@@ -126,17 +127,6 @@ function isInsuranceTermsAccepted(emprestimo) {
 async function applyApprovedLoanBlockedFundsInTx(prismaTx, loanId, emprestimoSnapshot, valorCredito) {
   const withInsurance = isInsuranceSelected(emprestimoSnapshot);
 
-  const contaDono = await prismaTx.user.findUnique({
-    where: { id: emprestimoSnapshot.userId },
-    select: { saldoAtual: true, saldoBloqueado: true },
-  });
-
-  if (!contaDono) {
-    throw new LoanDecisionError('LOAN_OWNER_NOT_FOUND', 'Titular do empréstimo não encontrado', 404);
-  }
-
-  const saldoDisponivelAntes = Number(contaDono.saldoAtual);
-
   const updateResult = await prismaTx.emprestimo.updateMany({
     where: { id: loanId, status: 'pendente' },
     data: {
@@ -154,14 +144,25 @@ async function applyApprovedLoanBlockedFundsInTx(prismaTx, loanId, emprestimoSna
     throw new LoanDecisionError('LOAN_ALREADY_DECIDED', 'Empréstimo já foi processado', 400);
   }
 
-  await prismaTx.user.update({
-    where: { id: emprestimoSnapshot.userId },
-    data: {
-      saldoBloqueado: {
-        increment: valorCredito,
-      },
-    },
-  });
+  try {
+    await registrarCreditoSaldoBloqueado(prismaTx, {
+      userId: emprestimoSnapshot.userId,
+      valorBloqueado: valorCredito,
+      tipo: 'credito_bloqueado',
+      descricao: withInsurance
+        ? 'Empréstimo aprovado — crédito bloqueado até pagamento do seguro (R$ 39,90)'
+        : 'Empréstimo aprovado — crédito bloqueado até garantia aprovada',
+      categoria: 'emprestimo',
+      referenceType: 'emprestimo',
+      referenceId: loanId,
+      idempotencyKey: `loan_blocked_funds:${loanId}`,
+    });
+  } catch (e) {
+    if (e instanceof LedgerError && e.code === 'LEDGER_USER_NOT_FOUND') {
+      throw new LoanDecisionError('LOAN_OWNER_NOT_FOUND', 'Titular do empréstimo não encontrado', 404);
+    }
+    throw e;
+  }
 
   if (withInsurance) {
     const existingCharge = await prismaTx.loanInsuranceCharge.findUnique({
@@ -178,22 +179,6 @@ async function applyApprovedLoanBlockedFundsInTx(prismaTx, loanId, emprestimoSna
       });
     }
   }
-
-  await prismaTx.movimentacao.create({
-    data: {
-      userId: emprestimoSnapshot.userId,
-      tipo: 'credito_bloqueado',
-      descricao: withInsurance
-        ? 'Empréstimo aprovado — crédito bloqueado até pagamento do seguro (R$ 39,90)'
-        : 'Empréstimo aprovado — crédito bloqueado até garantia aprovada',
-      valor: valorCredito,
-      saldoAnterior: saldoDisponivelAntes,
-      saldoAtual: saldoDisponivelAntes,
-      categoria: 'emprestimo',
-      referenceType: 'emprestimo',
-      referenceId: loanId,
-    },
-  });
 
   return prismaTx.emprestimo.findUnique({
     where: { id: loanId },

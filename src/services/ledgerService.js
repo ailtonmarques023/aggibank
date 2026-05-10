@@ -197,8 +197,112 @@ async function registrarCreditoLiberadoDeBloqueado(prismaTx, params) {
   return movimentacao;
 }
 
+/**
+ * Crédito apenas em saldoBloqueado (sem alterar saldoAtual) + linha informativa no extrato.
+ * Uso: aprovação de empréstimo com principal bloqueado até seguro ou garantia.
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} prismaTx
+ * @param {object} params
+ * @param {string} params.userId
+ * @param {number|string} params.valorBloqueado
+ * @param {string} [params.tipo] — deve ser `credito_bloqueado`
+ * @param {string} params.descricao
+ * @param {string} [params.categoria]
+ * @param {string} [params.referenceType]
+ * @param {string} params.referenceId
+ * @param {string} params.idempotencyKey
+ */
+async function registrarCreditoSaldoBloqueado(prismaTx, params) {
+  const {
+    userId,
+    valorBloqueado,
+    tipo = 'credito_bloqueado',
+    descricao,
+    categoria = 'emprestimo',
+    referenceType = 'emprestimo',
+    referenceId,
+    idempotencyKey,
+  } = params;
+
+  if (!userId || typeof userId !== 'string') {
+    throw new LedgerError('LEDGER_USER_REQUIRED', 'Identificação do titular ausente', 400);
+  }
+  if (tipo !== 'credito_bloqueado') {
+    throw new LedgerError(
+      'LEDGER_FIELDS_REQUIRED',
+      'Tipo deve ser credito_bloqueado para bloqueio de empréstimo',
+      400,
+    );
+  }
+  if (!descricao) {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'Descrição é obrigatória', 400);
+  }
+  if (!referenceId || typeof referenceId !== 'string') {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'referenceId do empréstimo é obrigatório', 400);
+  }
+  if (!idempotencyKey || typeof idempotencyKey !== 'string') {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'idempotencyKey é obrigatório', 400);
+  }
+
+  const existing = await prismaTx.movimentacao.findUnique({
+    where: { idempotencyKey },
+  });
+  if (existing) {
+    if (existing.userId !== userId) {
+      throw new LedgerError(
+        'LEDGER_IDEMPOTENCY_CONFLICT',
+        'Chave de idempotência pertence a outro titular',
+        409,
+      );
+    }
+    return existing;
+  }
+
+  const amount = toPositiveAmount(valorBloqueado);
+
+  const user = await prismaTx.user.findUnique({
+    where: { id: userId },
+    select: { saldoAtual: true, saldoBloqueado: true },
+  });
+
+  if (!user) {
+    throw new LedgerError('LEDGER_USER_NOT_FOUND', 'Titular não encontrado', 404);
+  }
+
+  const saldoDisponivel = Number(user.saldoAtual);
+  const bloqueadoNum = Number(user.saldoBloqueado);
+  if (!Number.isFinite(saldoDisponivel) || !Number.isFinite(bloqueadoNum)) {
+    throw new LedgerError('LEDGER_BALANCE_INVALID', 'Saldos inválidos', 400);
+  }
+
+  await prismaTx.user.update({
+    where: { id: userId },
+    data: {
+      saldoBloqueado: { increment: amount },
+    },
+  });
+
+  const movimentacao = await prismaTx.movimentacao.create({
+    data: {
+      userId,
+      tipo: 'credito_bloqueado',
+      descricao,
+      valor: amount,
+      saldoAnterior: saldoDisponivel,
+      saldoAtual: saldoDisponivel,
+      categoria,
+      referenceType,
+      referenceId,
+      idempotencyKey,
+    },
+  });
+
+  return movimentacao;
+}
+
 module.exports = {
   LedgerError,
   registrarDebitoSaldoAtual,
   registrarCreditoLiberadoDeBloqueado,
+  registrarCreditoSaldoBloqueado,
 };

@@ -156,6 +156,10 @@ describe('Loans API — elegibilidade e decisao segura', () => {
           valor: 5000,
           saldoAnterior: 1000,
           saldoAtual: 1000,
+          categoria: 'emprestimo',
+          referenceType: 'emprestimo',
+          referenceId: 'loan-1',
+          idempotencyKey: 'loan_blocked_funds:loan-1',
         }),
       }),
     );
@@ -524,6 +528,7 @@ describe('Loans API — elegibilidade e decisao segura', () => {
           valor: 1200,
           saldoAnterior: 1000,
           saldoAtual: 1000,
+          idempotencyKey: 'loan_blocked_funds:loan-approve-1',
         }),
       }),
     );
@@ -735,6 +740,13 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data.emprestimo.status).toBe('aprovado');
     expect(prisma.movimentacao.create).toHaveBeenCalledTimes(1);
+    expect(prisma.movimentacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          idempotencyKey: 'loan_blocked_funds:loan-admin-approve-1',
+        }),
+      }),
+    );
   });
 
   it('bloqueia reprocessamento admin e nao duplica saldo/movimentacao', async () => {
