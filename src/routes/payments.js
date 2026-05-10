@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticateToken, requireVerification } = require('../middleware/auth');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
+const { registrarDebitoSaldoAtual, LedgerError } = require('../services/ledgerService');
 
 const router = express.Router();
 
@@ -313,8 +314,8 @@ router.post('/:id/process', async (req, res) => {
       });
     }
 
-    // Verificar saldo novamente
-    if (req.user.saldoAtual < pagamento.valor) {
+    const valorNum = Number(pagamento.valor);
+    if (req.user.saldoAtual < valorNum) {
       return res.status(400).json({
         success: false,
         message: 'Saldo insuficiente',
@@ -322,41 +323,40 @@ router.post('/:id/process', async (req, res) => {
       });
     }
 
-    // Processar pagamento
-    const resultado = await prisma.$transaction(async (prisma) => {
-      // Atualizar pagamento
-      const pagamentoAtualizado = await prisma.pagamento.update({
+    const resultado = await prisma.$transaction(async (tx) => {
+      const stillPendente = await tx.pagamento.findFirst({
+        where: {
+          id,
+          userId: req.user.id,
+          status: 'pendente',
+        },
+      });
+
+      if (!stillPendente) {
+        const err = new Error('Pagamento não encontrado ou já processado');
+        err.code = 'PAYMENT_NOT_FOUND';
+        err.statusCode = 404;
+        throw err;
+      }
+
+      await registrarDebitoSaldoAtual(tx, {
+        userId: req.user.id,
+        valorDebito: stillPendente.valor,
+        tipo: stillPendente.tipo,
+        descricao: `Pagamento via ${String(stillPendente.tipo).toUpperCase()}`,
+        categoria: 'pagamento',
+        referenceType: 'pagamento',
+        referenceId: stillPendente.id,
+        idempotencyKey: `payment-process:${stillPendente.id}`,
+      });
+
+      return tx.pagamento.update({
         where: { id },
         data: {
           status: 'processado',
-          dataPagamento: new Date()
-        }
+          dataPagamento: new Date(),
+        },
       });
-
-      // Debitar valor da conta
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: {
-          saldoAtual: {
-            decrement: pagamento.valor
-          }
-        }
-      });
-
-      // Registrar movimentação
-      await prisma.movimentacao.create({
-        data: {
-          userId: req.user.id,
-          tipo: pagamento.tipo,
-          descricao: `Pagamento via ${pagamento.tipo.toUpperCase()}`,
-          valor: -pagamento.valor,
-          saldoAnterior: req.user.saldoAtual,
-          saldoAtual: req.user.saldoAtual - pagamento.valor,
-          categoria: 'pagamento'
-        }
-      });
-
-      return pagamentoAtualizado;
     });
 
     logger.banking('payment_processed', req.user.id, {
@@ -372,6 +372,27 @@ router.post('/:id/process', async (req, res) => {
     });
 
   } catch (error) {
+    if (error && error.code === 'PAYMENT_NOT_FOUND' && error.statusCode === 404) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pagamento não encontrado ou já processado',
+        code: 'PAYMENT_NOT_FOUND'
+      });
+    }
+    if (error instanceof LedgerError) {
+      if (error.code === 'INSUFFICIENT_BALANCE') {
+        return res.status(400).json({
+          success: false,
+          message: 'Saldo insuficiente',
+          code: 'INSUFFICIENT_BALANCE'
+        });
+      }
+      return res.status(error.httpStatus).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     logger.error('Erro ao processar pagamento:', error);
     res.status(500).json({
       success: false,
