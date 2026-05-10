@@ -4091,7 +4091,7 @@
                 <p>Você ainda não realizou nenhuma movimentação em sua conta. Quando fizer transações, elas aparecerão aqui.</p>
             </div>
 
-            <!-- Legado: linhas fictícias removidas. Movimentações reais (Pix) em #extratoPixListaReal via carregarExtratoPixReal(). -->
+            <!-- Movimentações reais (tabela Movimentacao) em #extratoPixListaReal via GET /api/user/statement — carregarExtratoPixReal(). -->
             <div class="movimentacoes-entrada" style="display: none;" aria-hidden="true"></div>
         </div>
     </div>
@@ -7651,8 +7651,19 @@
         });
         }
 
-        // Transações Pix do extrato (API real); null = erro de carga, [] = vazio com sucesso
+        // Itens do extrato (GET /api/user/statement); null = erro de carga, [] = vazio com sucesso
         var extratoPixTransacoesCache = null;
+        var EXTRATO_CARREGANDO_MSG = 'Carregando movimentações...';
+
+        function extratoIconClassForOrigem(origem) {
+            var o = String(origem || '').toUpperCase();
+            if (o === 'PIX') return 'fas fa-qrcode';
+            if (o === 'BOLETO') return 'fas fa-barcode';
+            if (o === 'EMPRESTIMO') return 'fas fa-hand-holding-usd';
+            if (o === 'CARTAO') return 'fas fa-credit-card';
+            if (o === 'FRETE') return 'fas fa-truck';
+            return 'fas fa-receipt';
+        }
 
         function renderExtratoPixDesdeCache() {
             var listaEl = document.getElementById('extratoPixListaReal');
@@ -7667,9 +7678,11 @@
             var filtro = ativo ? ativo.getAttribute('data-tipo') : 'todos';
             var arr = extratoPixTransacoesCache.slice();
             if (filtro === 'saidas') {
-                arr = arr.filter(function (t) { return t && t.tipo === 'envio'; });
+                arr = arr.filter(function (t) { return t && String(t.tipo).toUpperCase() === 'DEBITO'; });
             } else if (filtro === 'entradas') {
-                arr = arr.filter(function (t) { return t && t.tipo !== 'envio'; });
+                arr = arr.filter(function (t) { return t && String(t.tipo).toUpperCase() === 'CREDITO'; });
+            } else if (filtro === 'pix') {
+                arr = arr.filter(function (t) { return t && String(t.origem || '').toUpperCase() === 'PIX'; });
             }
 
             listaEl.innerHTML = '';
@@ -7678,8 +7691,13 @@
                 semEl.style.display = 'block';
                 var h3 = semEl.querySelector('h3');
                 var p = semEl.querySelector('p');
-                if (h3) h3.textContent = 'Nenhuma movimentação neste filtro';
-                if (p) p.textContent = 'Transações Pix registradas aparecem aqui após o envio ou recebimento.';
+                if (filtro === 'todos') {
+                    if (h3) h3.textContent = 'Nenhuma movimentação encontrada';
+                    if (p) p.textContent = 'Quando houver transações na sua conta (PIX, boletos, cartão, empréstimos, etc.), elas aparecerão aqui.';
+                } else {
+                    if (h3) h3.textContent = 'Nenhuma movimentação neste filtro';
+                    if (p) p.textContent = 'Tente outro filtro ou aguarde novas movimentações.';
+                }
                 return;
             }
 
@@ -7688,23 +7706,20 @@
 
             arr.forEach(function (t) {
                 if (!t) return;
-                var isEnvio = t.tipo === 'envio';
-                var titulo = isEnvio ? 'PIX enviado' : 'PIX recebido';
-                var rawChave = t.chavePix != null ? String(t.chavePix).trim() : '';
-                var destinatario = rawChave.length > 0 ? rawChave : 'Destinatário não informado';
+                var tipoMov = String(t.tipo || '').toUpperCase();
+                var isDebito = tipoMov === 'DEBITO';
+                var origemStr = t.origem != null ? String(t.origem) : '—';
                 var descTrim = (t.descricao != null && String(t.descricao).trim()) ? String(t.descricao).trim() : '';
-                var desc = descTrim;
-                if (!desc) {
-                    desc = isEnvio ? ('PIX enviado para ' + destinatario) : 'PIX recebido';
-                }
+                var titulo = origemStr !== '—' ? origemStr : (isDebito ? 'Saída' : 'Entrada');
+                var desc = descTrim || (isDebito ? 'Movimentação de débito' : 'Movimentação de crédito');
                 var valNum = Number(t.valor);
                 if (isNaN(valNum)) valNum = 0;
                 var valorStr = 'R$ ' + valNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                var valorMostra = isEnvio ? ('- ' + valorStr) : ('+ ' + valorStr);
-                var clsVal = isEnvio ? 'movimentacao-valor negativo' : 'movimentacao-valor positivo';
+                var valorMostra = isDebito ? ('- ' + valorStr) : ('+ ' + valorStr);
+                var clsVal = isDebito ? 'movimentacao-valor negativo' : 'movimentacao-valor positivo';
                 var dataStr = '—';
-                if (t.dataTransacao) {
-                    var dt = new Date(t.dataTransacao);
+                if (t.data) {
+                    var dt = new Date(t.data);
                     if (!isNaN(dt.getTime())) {
                         dataStr = dt.toLocaleString('pt-BR', {
                             day: '2-digit', month: '2-digit', year: 'numeric',
@@ -7713,6 +7728,10 @@
                     }
                 }
                 var st = t.status != null ? String(t.status) : '—';
+                var refLine = '';
+                if (t.referenciaId != null && String(t.referenciaId).trim() !== '') {
+                    refLine = 'Ref: ' + String(t.referenciaId).trim();
+                }
 
                 var item = document.createElement('div');
                 item.className = 'movimentacao-item';
@@ -7720,23 +7739,30 @@
                 var iconWrap = document.createElement('div');
                 iconWrap.className = 'movimentacao-icon';
                 var ic = document.createElement('i');
-                ic.className = 'fas fa-qrcode';
+                ic.className = extratoIconClassForOrigem(t.origem);
                 iconWrap.appendChild(ic);
 
                 var info = document.createElement('div');
                 info.className = 'movimentacao-info';
                 var h4 = document.createElement('h4');
-                h4.textContent = titulo;
-                var pPara = document.createElement('p');
-                pPara.textContent = isEnvio ? ('Para: ' + destinatario) : ('Chave Pix: ' + destinatario);
+                h4.textContent = titulo + ' · ' + tipoMov;
+                var pOrig = document.createElement('p');
+                pOrig.textContent = 'Origem: ' + origemStr;
                 var pDesc = document.createElement('p');
                 pDesc.textContent = desc;
                 var pData = document.createElement('p');
                 pData.textContent = 'Data: ' + dataStr + ' · Status: ' + st;
                 info.appendChild(h4);
-                info.appendChild(pPara);
+                info.appendChild(pOrig);
                 info.appendChild(pDesc);
                 info.appendChild(pData);
+                if (refLine) {
+                    var pRef = document.createElement('p');
+                    pRef.textContent = refLine;
+                    pRef.style.fontSize = '0.85em';
+                    pRef.style.opacity = '0.85';
+                    info.appendChild(pRef);
+                }
 
                 var valDiv = document.createElement('div');
                 valDiv.className = clsVal;
@@ -7757,7 +7783,7 @@
             if (!msgEl || !listaEl || !semEl) return;
 
             msgEl.style.display = 'block';
-            msgEl.textContent = 'Carregando movimentações Pix...';
+            msgEl.textContent = EXTRATO_CARREGANDO_MSG;
             listaEl.style.display = 'none';
             listaEl.innerHTML = '';
             semEl.style.display = 'none';
@@ -7766,12 +7792,12 @@
 
             var token = typeof getAuthToken === 'function' ? getAuthToken() : null;
             if (!token) {
-                msgEl.textContent = 'Faça login para ver o extrato Pix.';
+                msgEl.textContent = 'Faça login para ver o extrato.';
                 return;
             }
 
             try {
-                var response = await fetch(`${AGILBANK_API_BASE}/pix/transactions?page=1&limit=20`, {
+                var response = await fetch(`${AGILBANK_API_BASE}/user/statement?page=1&limit=50`, {
                     headers: {
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
@@ -7779,24 +7805,29 @@
                 });
                 var raw = await response.json().catch(function () { return {}; });
                 if (!response.ok) {
-                    var extratoMsg = (raw && raw.code === 'ACCOUNT_NOT_VERIFIED')
-                        ? 'Verifique seu e-mail para consultar movimentações Pix.'
-                        : (typeof pixApiMessage === 'function'
-                            ? pixApiMessage(raw, 'Não foi possível carregar o extrato agora.')
-                            : 'Não foi possível carregar o extrato agora.');
+                    var extratoMsg;
+                    if (response.status === 401) {
+                        extratoMsg = 'Sessão expirada ou inválida. Faça login novamente para ver o extrato.';
+                    } else if (raw && raw.code === 'ACCOUNT_NOT_VERIFIED') {
+                        extratoMsg = 'Verifique seu e-mail para consultar o extrato.';
+                    } else if (raw && typeof raw.message === 'string' && raw.message.trim()) {
+                        extratoMsg = 'Não foi possível carregar o extrato: ' + raw.message.trim();
+                    } else {
+                        extratoMsg = 'Não foi possível carregar o extrato agora. Tente novamente em instantes.';
+                    }
                     msgEl.textContent = extratoMsg;
                     listaEl.style.display = 'none';
                     extratoPixTransacoesCache = null;
                     return;
                 }
-                var d = typeof pixBody === 'function' ? pixBody(raw) : raw.data;
-                extratoPixTransacoesCache = (d && Array.isArray(d.transacoes)) ? d.transacoes : [];
+                var items = (raw && Array.isArray(raw.items)) ? raw.items : [];
+                extratoPixTransacoesCache = items;
                 msgEl.style.display = 'none';
                 msgEl.textContent = '';
                 renderExtratoPixDesdeCache();
             } catch (err) {
-                console.error('Extrato Pix:', err);
-                msgEl.textContent = 'Não foi possível carregar o extrato agora.';
+                console.error('Extrato:', err);
+                msgEl.textContent = 'Não foi possível carregar o extrato agora. Verifique sua conexão e tente de novo.';
                 listaEl.style.display = 'none';
                 extratoPixTransacoesCache = null;
             }
@@ -7821,7 +7852,7 @@
                 } else {
                     var msgFiltro = document.getElementById('extratoPixMensagem');
                     if (msgFiltro && msgFiltro.style.display === 'block' && msgFiltro.textContent) {
-                        if (msgFiltro.textContent === 'Carregando movimentações Pix...') return;
+                        if (msgFiltro.textContent === EXTRATO_CARREGANDO_MSG) return;
                         return;
                     }
                     if (semMovimentacoes) {
@@ -7829,7 +7860,7 @@
                         var h3f = semMovimentacoes.querySelector('h3');
                         var pf = semMovimentacoes.querySelector('p');
                         if (h3f) h3f.textContent = 'Nenhuma movimentação encontrada';
-                        if (pf) pf.textContent = 'Abra o extrato novamente para carregar as movimentações Pix.';
+                        if (pf) pf.textContent = 'Abra o extrato novamente para carregar as movimentações.';
                     }
                 }
             });

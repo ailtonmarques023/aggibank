@@ -106,7 +106,99 @@ async function registrarDebitoSaldoAtual(prismaTx, params) {
   return movimentacao;
 }
 
+/**
+ * Crédito em saldo disponível com redução de saldo bloqueado no mesmo valor.
+ * Uso típico: liberação do principal aprovado após garantia (sem seguro).
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} prismaTx
+ * @param {object} params
+ * @param {string} params.userId
+ * @param {number|string} params.valorLiberado — valor creditado e retirado do bloqueado
+ * @param {string} params.tipo — ex.: 'credito'
+ * @param {string} params.descricao
+ * @param {string} [params.categoria]
+ * @param {string} [params.referenceType]
+ * @param {string} [params.referenceId]
+ * @param {string} [params.idempotencyKey]
+ */
+async function registrarCreditoLiberadoDeBloqueado(prismaTx, params) {
+  const {
+    userId,
+    valorLiberado,
+    tipo,
+    descricao,
+    categoria,
+    referenceType,
+    referenceId,
+    idempotencyKey,
+  } = params;
+
+  if (!userId || typeof userId !== 'string') {
+    throw new LedgerError('LEDGER_USER_REQUIRED', 'Identificação do titular ausente', 400);
+  }
+  if (!tipo || !descricao) {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'Tipo e descrição são obrigatórios', 400);
+  }
+
+  const amount = toPositiveAmount(valorLiberado);
+
+  const user = await prismaTx.user.findUnique({
+    where: { id: userId },
+    select: { saldoAtual: true, saldoBloqueado: true },
+  });
+
+  if (!user) {
+    throw new LedgerError('LEDGER_USER_NOT_FOUND', 'Titular não encontrado', 404);
+  }
+
+  const saldoAntes = Number(user.saldoAtual);
+  const bloqueadoAntes = Number(user.saldoBloqueado);
+
+  if (!Number.isFinite(saldoAntes) || !Number.isFinite(bloqueadoAntes)) {
+    throw new LedgerError('LEDGER_BALANCE_INVALID', 'Saldos inválidos', 400);
+  }
+
+  if (bloqueadoAntes < amount) {
+    throw new LedgerError(
+      'INSUFFICIENT_BLOCKED_BALANCE',
+      'Saldo bloqueado insuficiente para liberação',
+      400,
+    );
+  }
+
+  const saldoDepois = Math.round((saldoAntes + amount) * 100) / 100;
+  const bloqueadoDepois = Math.round((bloqueadoAntes - amount) * 100) / 100;
+
+  await prismaTx.user.update({
+    where: { id: userId },
+    data: {
+      saldoAtual: saldoDepois,
+      saldoBloqueado: bloqueadoDepois,
+    },
+  });
+
+  const data = {
+    userId,
+    tipo,
+    descricao,
+    valor: amount,
+    saldoAnterior: saldoAntes,
+    saldoAtual: saldoDepois,
+    categoria: categoria ?? null,
+    referenceType: referenceType ?? null,
+    referenceId: referenceId ?? null,
+  };
+  if (idempotencyKey) {
+    data.idempotencyKey = idempotencyKey;
+  }
+
+  const movimentacao = await prismaTx.movimentacao.create({ data });
+
+  return movimentacao;
+}
+
 module.exports = {
   LedgerError,
   registrarDebitoSaldoAtual,
+  registrarCreditoLiberadoDeBloqueado,
 };

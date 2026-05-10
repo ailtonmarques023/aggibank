@@ -4,6 +4,8 @@ const { prisma } = require('../src/config/database');
 const {
   notifyLoanApprovedBlockedFunds,
   notifyCardApproved,
+  notifyBoletoPago,
+  notifyLoanGuaranteeCreditReleased,
 } = require('../src/services/inAppNotificationService');
 
 const BEARER = `Bearer ${global.testToken}`;
@@ -221,6 +223,84 @@ describe('Notifications API e serviço in-app', () => {
       userId: 'test-user-id',
       cardId: 'card-dup',
       limiteAprovado: 100,
+    });
+    expect(prisma.notificacao.create).not.toHaveBeenCalled();
+  });
+
+  it('notifyBoletoPago persiste tipo boleto_pago e metadata view_statement', async () => {
+    prisma.notificacao.findUnique.mockResolvedValue(null);
+    await notifyBoletoPago({
+      userId: 'test-user-id',
+      boletoId: 'bol-x',
+      movimentacaoId: 'mov-x',
+      valor: 42.5,
+    });
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'boleto_pago',
+          dedupeKey: 'boleto_pago:bol-x',
+          titulo: 'Boleto pago com sucesso',
+          metadata: {
+            boletoId: 'bol-x',
+            movimentacaoId: 'mov-x',
+            valor: 42.5,
+            action: 'view_statement',
+          },
+        }),
+      }),
+    );
+  });
+
+  it('notifyBoletoPago não duplica para o mesmo boletoId', async () => {
+    prisma.notificacao.findUnique.mockResolvedValue({ id: 'already-bol' });
+    await notifyBoletoPago({
+      userId: 'test-user-id',
+      boletoId: 'bol-dup',
+      movimentacaoId: 'mov-1',
+      valor: 10,
+    });
+    await notifyBoletoPago({
+      userId: 'test-user-id',
+      boletoId: 'bol-dup',
+      movimentacaoId: 'mov-2',
+      valor: 10,
+    });
+    expect(prisma.notificacao.create).not.toHaveBeenCalled();
+  });
+
+  it('notifyLoanGuaranteeCreditReleased persiste tipo e action view_statement', async () => {
+    prisma.notificacao.findUnique.mockResolvedValue(null);
+    await notifyLoanGuaranteeCreditReleased({
+      userId: 'test-user-id',
+      loanId: 'loan-g',
+      movimentacaoId: 'mov-g',
+      valor: 800,
+    });
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'loan_guarantee_credit_released',
+          dedupeKey: 'loan_guarantee_credit_released:loan-g',
+          titulo: 'Crédito liberado',
+          metadata: {
+            loanId: 'loan-g',
+            movimentacaoId: 'mov-g',
+            valor: 800,
+            action: 'view_statement',
+          },
+        }),
+      }),
+    );
+  });
+
+  it('notifyLoanGuaranteeCreditReleased não duplica para o mesmo loanId', async () => {
+    prisma.notificacao.findUnique.mockResolvedValue({ id: 'exists-loan-g' });
+    await notifyLoanGuaranteeCreditReleased({
+      userId: 'test-user-id',
+      loanId: 'loan-dup-g',
+      movimentacaoId: 'mov-x',
+      valor: 100,
     });
     expect(prisma.notificacao.create).not.toHaveBeenCalled();
   });

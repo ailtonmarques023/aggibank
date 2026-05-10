@@ -38,6 +38,11 @@ describe('POST /api/boletos/:id/pay — ledger (Fase C)', () => {
       saldoAtual: 1000,
       isVerificado: true,
     });
+    prisma.notificacao.findUnique.mockResolvedValue(null);
+    prisma.notificacao.create.mockResolvedValue({
+      id: 'notif-boleto-1',
+      dedupeKey: 'boleto_pago:bol-ledger-1',
+    });
   });
 
   it('debita saldo e cria Movimentacao na mesma transação (saldo lido dentro do tx)', async () => {
@@ -89,6 +94,25 @@ describe('POST /api/boletos/:id/pay — ledger (Fase C)', () => {
         data: { saldoAtual: 900 },
       }),
     );
+
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: global.testUser.id,
+          tipo: 'boleto_pago',
+          dedupeKey: 'boleto_pago:bol-ledger-1',
+          titulo: 'Boleto pago com sucesso',
+          metadata: expect.objectContaining({
+            boletoId: 'bol-ledger-1',
+            movimentacaoId: 'mov-ledger-1',
+            action: 'view_statement',
+            valor: 100,
+          }),
+        }),
+      }),
+    );
+    expect(String(prisma.notificacao.create.mock.calls[0][0].data.mensagem)).toContain('100,00');
+    expect(String(prisma.notificacao.create.mock.calls[0][0].data.mensagem)).toContain('extrato');
   });
 
   it('retorna 400 INSUFFICIENT_BALANCE quando LedgerError no pagamento', async () => {

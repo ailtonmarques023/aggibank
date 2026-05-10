@@ -5,6 +5,7 @@ const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
 const { getOrCreateGruCobranca } = require('../utils/gruCharge');
 const { registrarDebitoSaldoAtual, LedgerError } = require('../services/ledgerService');
+const { notifyBoletoPago } = require('../services/inAppNotificationService');
 
 const router = express.Router();
 
@@ -246,7 +247,7 @@ router.post('/:id/pay', logCriticalOperation('boleto_payment'), async (req, res)
         }
       });
 
-      await registrarDebitoSaldoAtual(prismaTx, {
+      const movimentacao = await registrarDebitoSaldoAtual(prismaTx, {
         userId: req.user.id,
         valorDebito: boleto.valor,
         tipo: 'boleto',
@@ -256,7 +257,7 @@ router.post('/:id/pay', logCriticalOperation('boleto_payment'), async (req, res)
         referenceId: id,
       });
 
-      return boletoAtualizado;
+      return { boletoAtualizado, movimentacao };
     });
 
     logger.criticalOperation('boleto_paid', req.user.id, boleto.valor, {
@@ -264,10 +265,17 @@ router.post('/:id/pay', logCriticalOperation('boleto_payment'), async (req, res)
       beneficiario: boleto.beneficiario
     });
 
+    await notifyBoletoPago({
+      userId: req.user.id,
+      boletoId: id,
+      movimentacaoId: resultado.movimentacao.id,
+      valor: boleto.valor,
+    });
+
     res.json({
       success: true,
       message: 'Boleto pago com sucesso',
-      data: { boleto: resultado }
+      data: { boleto: resultado.boletoAtualizado }
     });
 
   } catch (error) {

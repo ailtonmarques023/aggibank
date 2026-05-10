@@ -4,6 +4,7 @@ const { validateProfileUpdate, validatePasswordChange, validateAddress } = requi
 const { prisma } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const logger = require('../utils/logger');
+const { listStatementForUser } = require('../services/statementService');
 
 const router = express.Router();
 
@@ -375,6 +376,49 @@ router.get('/balance', async (req, res) => {
       success: false,
       message: 'Erro interno do servidor',
       code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
+ * Extrato unificado (Movimentacao), somente leitura. Sem userId no query — sempre req.user.id.
+ *
+ * @swagger
+ * /api/user/statement:
+ *   get:
+ *     summary: Extrato da conta (movimentações persistidas)
+ *     tags: [Usuário]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Lista paginada de movimentações
+ */
+router.get('/statement', async (req, res) => {
+  try {
+    const result = await listStatementForUser(prisma, req.user.id, req.query);
+    return res.json(result);
+  } catch (error) {
+    logger.error('Erro ao obter extrato:', {
+      requestId: req.requestId,
+      error: error && error.message ? error.message : String(error || ''),
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
     });
   }
 });
