@@ -59,8 +59,23 @@ describe('PIX API — idempotência no envio', () => {
 
     expect(prisma.transacaoPix.create).toHaveBeenCalledTimes(1);
     expect(prisma.transacaoPix.create.mock.calls[0][0].data.idempotencyKey).toBe('pix-key-12345');
-    expect(prisma.movimentacao.create.mock.calls[0][0].data.idempotencyKey).toBe('pix-key-12345');
+    expect(prisma.movimentacao.create).toHaveBeenCalledTimes(1);
+    expect(prisma.movimentacao.create.mock.calls[0][0].data).toEqual(
+      expect.objectContaining({
+        idempotencyKey: 'pix-key-12345',
+        tipo: 'pix',
+        valor: -25.5,
+        saldoAnterior: 1000,
+        saldoAtual: 974.5,
+        referenceType: 'pix',
+        categoria: 'transferencia',
+      }),
+    );
     expect(prisma.user.update).toHaveBeenCalledTimes(1);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: global.testUser.id },
+      data: { saldoAtual: 974.5 },
+    });
   });
 
   it('retorna transação existente sem debitar novamente quando a chave idempotente já existe', async () => {

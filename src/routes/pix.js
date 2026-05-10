@@ -4,6 +4,7 @@ const { validatePixTransaction } = require('../middleware/validation');
 const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
 const { sendTransactionNotification } = require('../utils/email');
+const { registrarDebitoSaldoAtual, LedgerError } = require('../services/ledgerService');
 
 const router = express.Router();
 
@@ -279,10 +280,9 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
       });
     }
 
-    // Executar transação
-    const resultado = await transaction(async (prisma) => {
-      // Criar transação PIX
-      const transacaoPix = await prisma.transacaoPix.create({
+    // Executar transação (débito + Movimentacao via ledger)
+    const resultado = await transaction(async (prismaTx) => {
+      const transacaoPix = await prismaTx.transacaoPix.create({
         data: {
           userId: req.user.id,
           chavePix,
@@ -290,34 +290,19 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
           descricao,
           tipo: 'envio',
           status: 'processada',
-          idempotencyKey
-        }
+          idempotencyKey,
+        },
       });
 
-      // Atualizar saldo do usuário
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: {
-          saldoAtual: {
-            decrement: valor
-          }
-        }
-      });
-
-      // Registrar movimentação
-      await prisma.movimentacao.create({
-        data: {
-          userId: req.user.id,
-          tipo: 'pix',
-          descricao: `PIX enviado para ${chavePix}`,
-          valor: -valor,
-          saldoAnterior: req.user.saldoAtual,
-          saldoAtual: req.user.saldoAtual - valor,
-          categoria: 'transferencia',
-          referenceType: 'pix',
-          referenceId: transacaoPix.id,
-          idempotencyKey
-        }
+      await registrarDebitoSaldoAtual(prismaTx, {
+        userId: req.user.id,
+        valorDebito: valor,
+        tipo: 'pix',
+        descricao: `PIX enviado para ${chavePix}`,
+        categoria: 'transferencia',
+        referenceType: 'pix',
+        referenceId: transacaoPix.id,
+        idempotencyKey,
       });
 
       return transacaoPix;
@@ -353,6 +338,13 @@ router.post('/send', validatePixTransaction, logCriticalOperation('pix_send'), a
     });
 
   } catch (error) {
+    if (error instanceof LedgerError) {
+      return res.status(error.httpStatus).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     if (isUniqueConstraintError(error)) {
       try {
         const idempotencyKey = getIdempotencyKey(req);
