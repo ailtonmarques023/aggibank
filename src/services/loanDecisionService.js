@@ -1,7 +1,16 @@
 const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
-const { notifyLoanApprovedBlockedFunds } = require('./inAppNotificationService');
+const {
+  notifyLoanApprovedBlockedFunds,
+  notifyLoanGuaranteeCreditReleased,
+  notifyLoanInsuranceSettled,
+} = require('./inAppNotificationService');
+const {
+  LedgerError,
+  registrarCreditoLiberadoDeBloqueado,
+  registrarDebitoSaldoAtual,
+} = require('./ledgerService');
 const { scheduleLoanApprovedBlockedEmail } = require('./loanApprovedBlockedEmailService');
 
 const LOAN_INSURANCE_FEE_BRL = 39.9;
@@ -378,35 +387,7 @@ async function payLoanInsuranceCharge({ loanId, userId }) {
     throw new LoanDecisionError('LOAN_INVALID_AMOUNTS', 'Valores de empréstimo ou seguro inválidos', 400);
   }
 
-  return transaction(async (prismaTx) => {
-    const userRow = await prismaTx.user.findUnique({
-      where: { id: userId },
-      select: { saldoAtual: true, saldoBloqueado: true },
-    });
-
-    if (!userRow) {
-      throw new LoanDecisionError('USER_NOT_FOUND', 'Usuário não encontrado', 404);
-    }
-
-    const saldoAntes = Number(userRow.saldoAtual);
-    const bloqueadoAntes = Number(userRow.saldoBloqueado);
-
-    if (saldoAntes < fee) {
-      throw new LoanDecisionError(
-        'INSUFFICIENT_BALANCE_FOR_INSURANCE',
-        'Saldo disponível insuficiente para pagar o seguro do empréstimo',
-        400
-      );
-    }
-
-    if (bloqueadoAntes < principal) {
-      throw new LoanDecisionError(
-        'BLOCKED_BALANCE_MISMATCH',
-        'Saldo bloqueado inconsistente com o valor aprovado',
-        400
-      );
-    }
-
+  const emprestimoAtualizado = await transaction(async (prismaTx) => {
     const updateCharge = await prismaTx.loanInsuranceCharge.updateMany({
       where: { loanId, status: 'pendente' },
       data: { status: 'pago', paidAt: new Date() },
@@ -420,16 +401,57 @@ async function payLoanInsuranceCharge({ loanId, userId }) {
       );
     }
 
-    const saldoAposTaxa = saldoAntes - fee;
-    const saldoFinal = saldoAposTaxa + principal;
+    let movDebito;
+    try {
+      movDebito = await registrarDebitoSaldoAtual(prismaTx, {
+        userId,
+        valorDebito: fee,
+        tipo: 'debito',
+        descricao: 'Pagamento seguro de empréstimo (valor único)',
+        categoria: 'seguro_emprestimo',
+        referenceType: 'loan_insurance_charge',
+        referenceId: charge.id,
+        idempotencyKey: `loan_insurance_fee:${loanId}`,
+      });
+    } catch (e) {
+      if (e instanceof LedgerError && e.code === 'INSUFFICIENT_BALANCE') {
+        throw new LoanDecisionError(
+          'INSUFFICIENT_BALANCE_FOR_INSURANCE',
+          'Saldo disponível insuficiente para pagar o seguro do empréstimo',
+          400
+        );
+      }
+      if (e instanceof LedgerError && e.code === 'LEDGER_USER_NOT_FOUND') {
+        throw new LoanDecisionError('USER_NOT_FOUND', 'Usuário não encontrado', 404);
+      }
+      throw e;
+    }
 
-    await prismaTx.user.update({
-      where: { id: userId },
-      data: {
-        saldoAtual: { increment: principal - fee },
-        saldoBloqueado: { decrement: principal },
-      },
-    });
+    let movCredito;
+    try {
+      movCredito = await registrarCreditoLiberadoDeBloqueado(prismaTx, {
+        userId,
+        valorLiberado: principal,
+        tipo: 'credito',
+        descricao: 'Liberação do crédito do empréstimo após seguro',
+        categoria: 'emprestimo_desbloqueio',
+        referenceType: 'emprestimo',
+        referenceId: loanId,
+        idempotencyKey: `loan_insurance_release:${loanId}`,
+      });
+    } catch (e) {
+      if (e instanceof LedgerError && e.code === 'INSUFFICIENT_BLOCKED_BALANCE') {
+        throw new LoanDecisionError(
+          'BLOCKED_BALANCE_MISMATCH',
+          'Saldo bloqueado inconsistente com o valor aprovado',
+          400
+        );
+      }
+      if (e instanceof LedgerError && e.code === 'LEDGER_USER_NOT_FOUND') {
+        throw new LoanDecisionError('USER_NOT_FOUND', 'Usuário não encontrado', 404);
+      }
+      throw e;
+    }
 
     await prismaTx.emprestimo.update({
       where: { id: loanId },
@@ -439,41 +461,26 @@ async function payLoanInsuranceCharge({ loanId, userId }) {
       },
     });
 
-    await prismaTx.movimentacao.create({
-      data: {
-        userId,
-        tipo: 'debito',
-        descricao: 'Pagamento seguro de empréstimo (valor único)',
-        valor: fee,
-        saldoAnterior: saldoAntes,
-        saldoAtual: saldoAposTaxa,
-        categoria: 'seguro_emprestimo',
-        referenceType: 'loan_insurance_charge',
-        referenceId: charge.id,
-      },
-    });
-
-    await prismaTx.movimentacao.create({
-      data: {
-        userId,
-        tipo: 'credito',
-        descricao: 'Liberação do crédito do empréstimo após seguro',
-        valor: principal,
-        saldoAnterior: saldoAposTaxa,
-        saldoAtual: saldoFinal,
-        categoria: 'emprestimo_desbloqueio',
-        referenceType: 'emprestimo',
-        referenceId: loanId,
-      },
-    });
-
     logger.banking('loan_insurance_paid', userId, { loanId, fee, principal });
 
-    return prismaTx.emprestimo.findUnique({
+    const row = await prismaTx.emprestimo.findUnique({
       where: { id: loanId },
       select: loanPublicSelect,
     });
+
+    return { row, movDebito, movCredito };
   });
+
+  await notifyLoanInsuranceSettled({
+    userId,
+    loanId,
+    movimentacaoFeeId: emprestimoAtualizado.movDebito.id,
+    movimentacaoCreditoId: emprestimoAtualizado.movCredito.id,
+    fee,
+    principal,
+  });
+
+  return emprestimoAtualizado.row;
 }
 
 /**
@@ -514,7 +521,7 @@ async function releaseLoanFundsAfterGuaranteeApproved({ loanId, actorId, actorMe
     throw new LoanDecisionError('LOAN_INVALID_AMOUNTS', 'Valor aprovado inválido', 400);
   }
 
-  return transaction(async (prismaTx) => {
+  const resultadoTx = await transaction(async (prismaTx) => {
     const userRow = await prismaTx.user.findUnique({
       where: { id: loan.userId },
       select: { saldoAtual: true, saldoBloqueado: true },
@@ -524,7 +531,6 @@ async function releaseLoanFundsAfterGuaranteeApproved({ loanId, actorId, actorMe
       throw new LoanDecisionError('LOAN_OWNER_NOT_FOUND', 'Titular não encontrado', 404);
     }
 
-    const saldoAntes = Number(userRow.saldoAtual);
     const bloqueadoAntes = Number(userRow.saldoBloqueado);
 
     if (bloqueadoAntes < principal) {
@@ -556,28 +562,14 @@ async function releaseLoanFundsAfterGuaranteeApproved({ loanId, actorId, actorMe
       );
     }
 
-    await prismaTx.user.update({
-      where: { id: loan.userId },
-      data: {
-        saldoAtual: { increment: principal },
-        saldoBloqueado: { decrement: principal },
-      },
-    });
-
-    const saldoFinal = saldoAntes + principal;
-
-    await prismaTx.movimentacao.create({
-      data: {
-        userId: loan.userId,
-        tipo: 'credito',
-        descricao: 'Liberação do crédito do empréstimo após garantia aprovada',
-        valor: principal,
-        saldoAnterior: saldoAntes,
-        saldoAtual: saldoFinal,
-        categoria: 'emprestimo_desbloqueio',
-        referenceType: 'emprestimo',
-        referenceId: loanId,
-      },
+    const movimentacao = await registrarCreditoLiberadoDeBloqueado(prismaTx, {
+      userId: loan.userId,
+      valorLiberado: principal,
+      tipo: 'credito',
+      descricao: 'Liberação do crédito do empréstimo após garantia aprovada',
+      categoria: 'emprestimo_desbloqueio',
+      referenceType: 'emprestimo',
+      referenceId: loanId,
     });
 
     logger.logCriticalOperation('loan_guarantee_released', actorId || 'internal-admin', principal, {
@@ -598,11 +590,22 @@ async function releaseLoanFundsAfterGuaranteeApproved({ loanId, actorId, actorMe
       },
     });
 
-    return prismaTx.emprestimo.findUnique({
+    const emprestimo = await prismaTx.emprestimo.findUnique({
       where: { id: loanId },
       select: loanPublicSelect,
     });
+
+    return { emprestimo, movimentacao };
   });
+
+  await notifyLoanGuaranteeCreditReleased({
+    userId: loan.userId,
+    loanId,
+    movimentacaoId: resultadoTx.movimentacao.id,
+    valor: principal,
+  });
+
+  return resultadoTx.emprestimo;
 }
 
 async function rejectLoanDecision({ loanId, actorId, actorMeta = {} }) {

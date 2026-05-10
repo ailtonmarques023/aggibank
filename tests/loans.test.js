@@ -883,10 +883,17 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       .mockResolvedValueOnce({
         saldoAtual: 200,
         saldoBloqueado: 1500,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 160.1,
+        saldoBloqueado: 1500,
       });
     prisma.user.update.mockResolvedValue({});
     prisma.emprestimo.update.mockResolvedValue({});
-    prisma.movimentacao.create.mockResolvedValue({});
+    let __movInsIdx = 0;
+    prisma.movimentacao.create.mockImplementation(async () => ({
+      id: __movInsIdx++ === 0 ? 'mov-ins-fee' : 'mov-ins-credit',
+    }));
 
     const response = await request(app)
       .post('/api/loans/loan-pay-1/insurance/pay')
@@ -894,16 +901,63 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       .expect(200);
 
     expect(response.body.success).toBe(true);
-    expect(prisma.user.update).toHaveBeenCalledWith(
+    expect(prisma.user.update).toHaveBeenCalledTimes(2);
+    expect(prisma.user.update).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         where: { id: global.testUser.id },
-        data: expect.objectContaining({
-          saldoAtual: { increment: 1500 - 39.9 },
-          saldoBloqueado: { decrement: 1500 },
-        }),
+        data: { saldoAtual: 160.1 },
+      }),
+    );
+    expect(prisma.user.update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { id: global.testUser.id },
+        data: {
+          saldoAtual: 1660.1,
+          saldoBloqueado: 0,
+        },
       }),
     );
     expect(prisma.movimentacao.create).toHaveBeenCalledTimes(2);
+    expect(prisma.movimentacao.create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'debito',
+          valor: -39.9,
+          saldoAnterior: 200,
+          saldoAtual: 160.1,
+          idempotencyKey: 'loan_insurance_fee:loan-pay-1',
+        }),
+      }),
+    );
+    expect(prisma.movimentacao.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'credito',
+          valor: 1500,
+          saldoAnterior: 160.1,
+          saldoAtual: 1660.1,
+          idempotencyKey: 'loan_insurance_release:loan-pay-1',
+        }),
+      }),
+    );
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'loan_insurance_settled',
+          dedupeKey: 'loan_insurance_settled:loan-pay-1',
+          metadata: expect.objectContaining({
+            loanId: 'loan-pay-1',
+            movimentacaoFeeId: 'mov-ins-fee',
+            movimentacaoCreditoId: 'mov-ins-credit',
+            action: 'view_statement',
+          }),
+        }),
+      }),
+    );
   });
 
   it('aprova garantia internamente e move saldoBloqueado para saldoAtual', async () => {
@@ -936,10 +990,14 @@ describe('Loans API — elegibilidade e decisao segura', () => {
       .mockResolvedValueOnce({
         saldoAtual: 200,
         saldoBloqueado: 800,
+      })
+      .mockResolvedValueOnce({
+        saldoAtual: 200,
+        saldoBloqueado: 800,
       });
     prisma.emprestimo.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue({});
-    prisma.movimentacao.create.mockResolvedValue({});
+    prisma.movimentacao.create.mockResolvedValue({ id: 'mov-guarantee-ledger-1' });
 
     const response = await request(app)
       .post('/api/loans/loan-guarantee-1/guarantee/approve')
@@ -951,9 +1009,38 @@ describe('Loans API — elegibilidade e decisao segura', () => {
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: global.testUser.id },
+        data: {
+          saldoAtual: 1000,
+          saldoBloqueado: 0,
+        },
+      }),
+    );
+    expect(prisma.movimentacao.create).toHaveBeenCalledTimes(1);
+    expect(prisma.movimentacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
         data: expect.objectContaining({
-          saldoAtual: { increment: 800 },
-          saldoBloqueado: { decrement: 800 },
+          userId: global.testUser.id,
+          tipo: 'credito',
+          valor: 800,
+          saldoAnterior: 200,
+          saldoAtual: 1000,
+          categoria: 'emprestimo_desbloqueio',
+          referenceType: 'emprestimo',
+          referenceId: 'loan-guarantee-1',
+        }),
+      }),
+    );
+    expect(prisma.notificacao.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'loan_guarantee_credit_released',
+          dedupeKey: 'loan_guarantee_credit_released:loan-guarantee-1',
+          metadata: expect.objectContaining({
+            loanId: 'loan-guarantee-1',
+            movimentacaoId: 'mov-guarantee-ledger-1',
+            action: 'view_statement',
+            valor: 800,
+          }),
         }),
       }),
     );

@@ -8,6 +8,7 @@ const {
 const { validateLoanRequest } = require('../middleware/validation');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
+const { LedgerError } = require('../services/ledgerService');
 const {
   LoanDecisionError,
   approveLoanDecision,
@@ -339,6 +340,13 @@ router.post(
           code: error.code
         });
       }
+      if (error instanceof LedgerError) {
+        return res.status(error.httpStatus).json({
+          success: false,
+          message: error.message,
+          code: error.code,
+        });
+      }
 
       logger.error('Erro ao quitar seguro do empréstimo:', error);
       res.status(500).json({
@@ -376,6 +384,13 @@ router.post(
           success: false,
           message: error.message,
           code: error.code
+        });
+      }
+      if (error instanceof LedgerError) {
+        return res.status(error.httpStatus).json({
+          success: false,
+          message: error.message,
+          code: error.code,
         });
       }
 
