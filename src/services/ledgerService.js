@@ -1,0 +1,112 @@
+'use strict';
+
+/**
+ * Serviço central de movimentações: débito em saldoAtual + persistência de Movimentacao na mesma transação Prisma.
+ * Não envia notificações (mantido nos fluxos chamadores quando já existirem).
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} prismaTx
+ */
+
+class LedgerError extends Error {
+  /**
+   * @param {string} code
+   * @param {string} message
+   * @param {number} [httpStatus=400]
+   */
+  constructor(code, message, httpStatus = 400) {
+    super(message);
+    this.name = 'LedgerError';
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+function toPositiveAmount(valor) {
+  const n = Number(valor);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new LedgerError('LEDGER_INVALID_AMOUNT', 'Valor da movimentação inválido', 400);
+  }
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * Registra débito em saldo disponível (saldoAtual) e cria linha em Movimentacao.
+ * `valorDebito` é sempre interpretado como valor absoluto positivo; a linha gravada usa valor negativo.
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} prismaTx
+ * @param {object} params
+ * @param {string} params.userId
+ * @param {number|string|import('@prisma/client').Prisma.Decimal} params.valorDebito
+ * @param {string} params.tipo — ex.: 'boleto', 'pix'
+ * @param {string} params.descricao
+ * @param {string} [params.categoria]
+ * @param {string} [params.referenceType]
+ * @param {string} [params.referenceId]
+ * @param {string} [params.idempotencyKey]
+ */
+async function registrarDebitoSaldoAtual(prismaTx, params) {
+  const {
+    userId,
+    valorDebito,
+    tipo,
+    descricao,
+    categoria,
+    referenceType,
+    referenceId,
+    idempotencyKey,
+  } = params;
+
+  if (!userId || typeof userId !== 'string') {
+    throw new LedgerError('LEDGER_USER_REQUIRED', 'Identificação do titular ausente', 400);
+  }
+  if (!tipo || !descricao) {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'Tipo e descrição são obrigatórios', 400);
+  }
+
+  const amount = toPositiveAmount(valorDebito);
+
+  const user = await prismaTx.user.findUnique({
+    where: { id: userId },
+    select: { saldoAtual: true },
+  });
+
+  if (!user) {
+    throw new LedgerError('LEDGER_USER_NOT_FOUND', 'Titular não encontrado', 404);
+  }
+
+  const saldoAntes = Number(user.saldoAtual);
+  if (!Number.isFinite(saldoAntes) || saldoAntes < amount) {
+    throw new LedgerError('INSUFFICIENT_BALANCE', 'Saldo insuficiente', 400);
+  }
+
+  const saldoDepois = Math.round((saldoAntes - amount) * 100) / 100;
+
+  await prismaTx.user.update({
+    where: { id: userId },
+    data: { saldoAtual: saldoDepois },
+  });
+
+  const data = {
+    userId,
+    tipo,
+    descricao,
+    valor: -amount,
+    saldoAnterior: saldoAntes,
+    saldoAtual: saldoDepois,
+    categoria: categoria ?? null,
+    referenceType: referenceType ?? null,
+    referenceId: referenceId ?? null,
+  };
+  if (idempotencyKey) {
+    data.idempotencyKey = idempotencyKey;
+  }
+
+  const movimentacao = await prismaTx.movimentacao.create({ data });
+
+  return movimentacao;
+}
+
+module.exports = {
+  LedgerError,
+  registrarDebitoSaldoAtual,
+};

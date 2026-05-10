@@ -4,6 +4,7 @@ const { validateBoletoPayment } = require('../middleware/validation');
 const { prisma, transaction } = require('../config/database');
 const logger = require('../utils/logger');
 const { getOrCreateGruCobranca } = require('../utils/gruCharge');
+const { registrarDebitoSaldoAtual, LedgerError } = require('../services/ledgerService');
 
 const router = express.Router();
 
@@ -235,10 +236,9 @@ router.post('/:id/pay', logCriticalOperation('boleto_payment'), async (req, res)
       });
     }
 
-    // Executar pagamento
-    const resultado = await transaction(async (prisma) => {
-      // Atualizar boleto
-      const boletoAtualizado = await prisma.boleto.update({
+    // Executar pagamento (débito + movimentação via ledger na mesma transação)
+    const resultado = await transaction(async (prismaTx) => {
+      const boletoAtualizado = await prismaTx.boleto.update({
         where: { id },
         data: {
           status: 'pago',
@@ -246,27 +246,14 @@ router.post('/:id/pay', logCriticalOperation('boleto_payment'), async (req, res)
         }
       });
 
-      // Debitar valor da conta
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: {
-          saldoAtual: {
-            decrement: boleto.valor
-          }
-        }
-      });
-
-      // Registrar movimentação
-      await prisma.movimentacao.create({
-        data: {
-          userId: req.user.id,
-          tipo: 'boleto',
-          descricao: `Pagamento de boleto - ${boleto.descricao}`,
-          valor: -boleto.valor,
-          saldoAnterior: req.user.saldoAtual,
-          saldoAtual: req.user.saldoAtual - boleto.valor,
-          categoria: 'pagamento'
-        }
+      await registrarDebitoSaldoAtual(prismaTx, {
+        userId: req.user.id,
+        valorDebito: boleto.valor,
+        tipo: 'boleto',
+        descricao: `Pagamento de boleto - ${boleto.descricao}`,
+        categoria: 'pagamento',
+        referenceType: 'boleto',
+        referenceId: id,
       });
 
       return boletoAtualizado;
@@ -284,6 +271,13 @@ router.post('/:id/pay', logCriticalOperation('boleto_payment'), async (req, res)
     });
 
   } catch (error) {
+    if (error instanceof LedgerError) {
+      return res.status(error.httpStatus).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     logger.error('Erro ao pagar boleto:', error);
     res.status(500).json({
       success: false,
