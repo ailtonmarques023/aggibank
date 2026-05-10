@@ -300,9 +300,102 @@ async function registrarCreditoSaldoBloqueado(prismaTx, params) {
   return movimentacao;
 }
 
+/**
+ * Crédito em saldo disponível (saldoAtual) + linha em Movimentacao (valor positivo).
+ * Idempotência obrigatória por `idempotencyKey` (global na tabela).
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} prismaTx
+ * @param {object} params
+ * @param {string} params.userId
+ * @param {number|string} params.valorCredito
+ * @param {string} [params.tipo='credito']
+ * @param {string} params.descricao
+ * @param {string} [params.categoria]
+ * @param {string} [params.referenceType]
+ * @param {string} [params.referenceId]
+ * @param {string} params.idempotencyKey
+ */
+async function registrarCreditoSaldoAtual(prismaTx, params) {
+  const {
+    userId,
+    valorCredito,
+    tipo = 'credito',
+    descricao,
+    categoria = null,
+    referenceType = null,
+    referenceId = null,
+    idempotencyKey,
+  } = params;
+
+  if (!userId || typeof userId !== 'string') {
+    throw new LedgerError('LEDGER_USER_REQUIRED', 'Identificação do titular ausente', 400);
+  }
+  if (!tipo || !descricao) {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'Tipo e descrição são obrigatórios', 400);
+  }
+  if (!idempotencyKey || typeof idempotencyKey !== 'string') {
+    throw new LedgerError('LEDGER_FIELDS_REQUIRED', 'idempotencyKey é obrigatório', 400);
+  }
+
+  const existing = await prismaTx.movimentacao.findUnique({
+    where: { idempotencyKey },
+  });
+  if (existing) {
+    if (existing.userId !== userId) {
+      throw new LedgerError(
+        'LEDGER_IDEMPOTENCY_CONFLICT',
+        'Chave de idempotência pertence a outro titular',
+        409,
+      );
+    }
+    return existing;
+  }
+
+  const amount = toPositiveAmount(valorCredito);
+
+  const user = await prismaTx.user.findUnique({
+    where: { id: userId },
+    select: { saldoAtual: true },
+  });
+
+  if (!user) {
+    throw new LedgerError('LEDGER_USER_NOT_FOUND', 'Titular não encontrado', 404);
+  }
+
+  const saldoAntes = Number(user.saldoAtual);
+  if (!Number.isFinite(saldoAntes)) {
+    throw new LedgerError('LEDGER_BALANCE_INVALID', 'Saldo inválido', 400);
+  }
+
+  const saldoDepois = Math.round((saldoAntes + amount) * 100) / 100;
+
+  await prismaTx.user.update({
+    where: { id: userId },
+    data: { saldoAtual: saldoDepois },
+  });
+
+  const movimentacao = await prismaTx.movimentacao.create({
+    data: {
+      userId,
+      tipo,
+      descricao,
+      valor: amount,
+      saldoAnterior: saldoAntes,
+      saldoAtual: saldoDepois,
+      categoria,
+      referenceType,
+      referenceId,
+      idempotencyKey,
+    },
+  });
+
+  return movimentacao;
+}
+
 module.exports = {
   LedgerError,
   registrarDebitoSaldoAtual,
   registrarCreditoLiberadoDeBloqueado,
   registrarCreditoSaldoBloqueado,
+  registrarCreditoSaldoAtual,
 };

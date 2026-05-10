@@ -49,6 +49,9 @@ function mapOrigem(row) {
     if (tipo === 'boleto') return 'BOLETO';
     return 'BOLETO';
   }
+  if (ref === 'operational_credit_staging' || cat === 'ajuste_operacional_staging') {
+    return 'AJUSTE';
+  }
   if (tipo === 'tarifa') return 'CARTAO';
   return 'AJUSTE';
 }

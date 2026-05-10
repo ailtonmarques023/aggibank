@@ -27,6 +27,16 @@ describe('statementService — mapeamento', () => {
       }),
     ).toBe('FRETE');
   });
+
+  it('mapeia crédito operacional de staging para AJUSTE', () => {
+    expect(
+      mapOrigem({
+        tipo: 'credito',
+        categoria: 'ajuste_operacional_staging',
+        referenceType: 'operational_credit_staging',
+      }),
+    ).toBe('AJUSTE');
+  });
 });
 
 describe('GET /api/user/statement', () => {
@@ -159,5 +169,38 @@ describe('GET /api/user/statement', () => {
 
   it('exige autenticação', async () => {
     await request(app).get('/api/user/statement').expect(401);
+  });
+
+  it('lista crédito operacional de staging no extrato como AJUSTE / CREDITO', async () => {
+    const d = new Date('2026-05-10T12:00:00.000Z');
+    prisma.movimentacao.findMany.mockResolvedValue([
+      {
+        id: 'm-staging',
+        tipo: 'credito',
+        descricao: '[Homologação/staging] smoke',
+        valor: 15,
+        saldoAnterior: 0,
+        saldoAtual: 15,
+        categoria: 'ajuste_operacional_staging',
+        referenceType: 'operational_credit_staging',
+        referenceId: 'idem-staging-1',
+        dataMovimentacao: d,
+        createdAt: d,
+      },
+    ]);
+    prisma.movimentacao.count.mockResolvedValue(1);
+
+    const res = await request(app)
+      .get('/api/user/statement')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(res.body.items[0]).toMatchObject({
+      id: 'm-staging',
+      tipo: 'CREDITO',
+      valor: 15,
+      origem: 'AJUSTE',
+      referenciaId: 'idem-staging-1',
+    });
   });
 });
