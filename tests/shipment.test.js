@@ -74,6 +74,7 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
     prisma.cardShipment.findFirst.mockResolvedValue(null);
     prisma.user.findUnique
       .mockResolvedValueOnce(global.testUser)
+      .mockResolvedValueOnce({ saldoAtual: 1000 })
       .mockResolvedValueOnce({ saldoAtual: 1000 });
     prisma.movimentacao.create.mockResolvedValue({
       id: 'mov-1',
@@ -118,8 +119,15 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
       data: expect.objectContaining({
         categoria: 'cartao_fisico_frete',
         valor: -39.9,
+        tipo: 'tarifa',
+        saldoAnterior: 1000,
+        saldoAtual: 960.1,
       }),
     }));
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'test-user-id' },
+      data: { saldoAtual: 960.1 },
+    });
   });
 
   it('retorna 200 idempotente sem duplicar cobrança', async () => {
@@ -157,6 +165,7 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
     prisma.cardShipment.findFirst.mockResolvedValue(pendingAuto);
     prisma.user.findUnique
       .mockResolvedValueOnce(global.testUser)
+      .mockResolvedValueOnce({ saldoAtual: 1000 })
       .mockResolvedValueOnce({ saldoAtual: 1000 });
     prisma.movimentacao.create.mockResolvedValue({
       id: 'mov-resume',
@@ -195,6 +204,7 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
     expect(prisma.cardShipment.create).not.toHaveBeenCalled();
     expect(prisma.cardShipment.update).toHaveBeenCalled();
     expect(prisma.movimentacao.create).toHaveBeenCalled();
+    expect(prisma.movimentacao.update).not.toHaveBeenCalled();
   });
 
   it('retorna 402 quando saldo insuficiente e mantém trilha logística', async () => {

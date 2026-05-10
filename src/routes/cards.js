@@ -17,6 +17,7 @@ const {
   CardApprovalError,
   validarEObterLimiteAprovacaoCartao,
 } = require('../services/cardApprovalService');
+const { registrarDebitoSaldoAtual, LedgerError } = require('../services/ledgerService');
 
 const router = express.Router();
 
@@ -1436,25 +1437,15 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
           };
         }
 
-        const movement = await tx.movimentacao.create({
-          data: {
-            userId: req.user.id,
-            tipo: 'tarifa',
-            descricao: 'Tarifa de frete cartao fisico',
-            valor: -SHIPPING_FEE_BRL,
-            saldoAnterior: saldoAtual,
-            saldoAtual: saldoAposTarifa,
-            categoria: 'cartao_fisico_frete',
-            referenceType: 'card_shipment',
-            idempotencyKey: shipmentChargeIdempotencyKey
-          }
-        });
-
-        await tx.user.update({
-          where: { id: req.user.id },
-          data: {
-            saldoAtual: saldoAposTarifa
-          }
+        const movement = await registrarDebitoSaldoAtual(tx, {
+          userId: req.user.id,
+          valorDebito: SHIPPING_FEE_BRL,
+          tipo: 'tarifa',
+          descricao: 'Tarifa de frete cartao fisico',
+          categoria: 'cartao_fisico_frete',
+          referenceType: 'card_shipment',
+          referenceId: pendingResume.id,
+          idempotencyKey: shipmentChargeIdempotencyKey,
         });
 
         const shipment = await tx.cardShipment.update({
@@ -1469,11 +1460,6 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
             isSecondIssue: Boolean(isSecondIssue),
             originShipmentId: originShipmentId || pendingResume.originShipmentId,
           },
-        });
-
-        await tx.movimentacao.update({
-          where: { id: movement.id },
-          data: { referenceId: shipment.id }
         });
 
         const chargedEvent = await tx.cardShipmentEvent.create({
@@ -1535,25 +1521,14 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
         };
       }
 
-      const movement = await tx.movimentacao.create({
-        data: {
-          userId: req.user.id,
-          tipo: 'tarifa',
-          descricao: 'Tarifa de frete cartao fisico',
-          valor: -SHIPPING_FEE_BRL,
-          saldoAnterior: saldoAtual,
-          saldoAtual: saldoAposTarifa,
-          categoria: 'cartao_fisico_frete',
-          referenceType: 'card_shipment',
-          idempotencyKey: shipmentChargeIdempotencyKey
-        }
-      });
-
-      await tx.user.update({
-        where: { id: req.user.id },
-        data: {
-          saldoAtual: saldoAposTarifa
-        }
+      const movement = await registrarDebitoSaldoAtual(tx, {
+        userId: req.user.id,
+        valorDebito: SHIPPING_FEE_BRL,
+        tipo: 'tarifa',
+        descricao: 'Tarifa de frete cartao fisico',
+        categoria: 'cartao_fisico_frete',
+        referenceType: 'card_shipment',
+        idempotencyKey: shipmentChargeIdempotencyKey,
       });
 
       const shipment = await tx.cardShipment.create({
@@ -1658,6 +1633,20 @@ router.post('/:id/shipment', validateCardShipmentCreate, async (req, res) => {
       }
     });
   } catch (error) {
+    if (error instanceof LedgerError) {
+      if (error.code === 'INSUFFICIENT_BALANCE') {
+        return res.status(402).json({
+          success: false,
+          message: 'Saldo insuficiente para cobrança do frete do cartão físico',
+          code: 'INSUFFICIENT_BALANCE',
+        });
+      }
+      return res.status(error.httpStatus).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     if (error && error.code === 'P2002') {
       return res.status(409).json({
         success: false,
