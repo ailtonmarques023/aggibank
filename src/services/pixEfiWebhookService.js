@@ -198,10 +198,37 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
 
         const paidAt = horario ? new Date(horario) : new Date();
 
-        // grossAmount: valor bruto confirmado pelo PSP no webhook (única fonte confiável disponível).
-        // providerFeeAmount e netAmount permanecem null — API Efí Pix não fornece taxa no payload.
-        // Serão preenchidos futuramente via extrato financeiro Efí (providerFeeSource: efi_financial_report).
+        // grossAmount: valor bruto confirmado pelo PSP no webhook.
+        // Taxa PSP: normalmente não vem no payload Pix padrão; quando a conta Efí tiver
+        // `PUT /v2/gn/config` com notificacao.tarifa, a Efí pode enviar `gnExtras.tarifa` no webhook.
         const grossAmountDecimal = moneyCents(valor) != null ? Number(String(valor).replace(',', '.')) : null;
+
+        const gnExtras =
+          item && item.gnExtras && typeof item.gnExtras === 'object'
+            ? item.gnExtras
+            : item && item.GnExtras && typeof item.GnExtras === 'object'
+              ? item.GnExtras
+              : null;
+        let providerFeeDecimal = null;
+        if (gnExtras && gnExtras.tarifa != null && String(gnExtras.tarifa).trim() !== '') {
+          const tf = Number(String(gnExtras.tarifa).trim().replace(',', '.'));
+          if (Number.isFinite(tf) && tf > 0) providerFeeDecimal = tf;
+        }
+
+        let netAmountDecimal = null;
+        let providerFeeSourceVal = 'efi_pix_payload';
+        if (grossAmountDecimal != null && providerFeeDecimal != null) {
+          const gc = moneyCents(grossAmountDecimal);
+          const fc = moneyCents(providerFeeDecimal);
+          if (gc != null && fc != null && fc < gc) {
+            netAmountDecimal = (gc - fc) / 100;
+            providerFeeSourceVal = 'efi_pix_webhook_gn_extras';
+          } else {
+            providerFeeDecimal = null;
+            netAmountDecimal = null;
+            providerFeeSourceVal = 'efi_pix_payload';
+          }
+        }
 
         const updated = await tx.pixCobranca.update({
           where: { id: cob.id },
@@ -212,10 +239,10 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
             rawProviderPayload: sanitizeForStorage(item),
             ...(grossAmountDecimal != null && {
               grossAmount: grossAmountDecimal,
-              providerFeeAmount: null,
-              netAmount: null,
+              providerFeeAmount: providerFeeDecimal,
+              netAmount: netAmountDecimal,
               providerFeeCurrency: 'BRL',
-              providerFeeSource: 'efi_pix_payload',
+              providerFeeSource: providerFeeSourceVal,
               providerFeeCapturedAt: paidAt,
             }),
           },

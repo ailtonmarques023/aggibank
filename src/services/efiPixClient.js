@@ -478,6 +478,187 @@ async function listPixReceived(params) {
 }
 
 /** GET /v2/webhook/:chave — consulta webhook (escopo webhook.read). */
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/**
+ * POST /v2/gn/relatorios/extrato-conciliacao — solicita extrato de conciliação (CSV).
+ * Requer escopo `gn.reports.write` na aplicação Efí.
+ *
+ * @param {{ dataMovimento: string, tipoRegistros?: object }} params — dataMovimento `YYYY-MM-DD` (fuso conforme doc Efí / movimento diário)
+ * @returns {Promise<object>} corpo JSON com `id`, `status`, etc.
+ */
+async function postExtratoConciliacao(params) {
+  if (!isEfiPixConfigured()) {
+    throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
+  }
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
+    throw new EfiPixClientError(
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true',
+      403,
+    );
+  }
+
+  const dataMovimento = String(params.dataMovimento || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataMovimento)) {
+    throw new EfiPixClientError('EFI_EXTRATO_DATE_INVALID', 'dataMovimento deve estar no formato YYYY-MM-DD', 400);
+  }
+
+  const tipoRegistros = params.tipoRegistros || {
+    pixRecebido: true,
+    tarifaPixRecebido: true,
+    pixEnviadoChave: false,
+    pixEnviadoDadosBancarios: false,
+    estornoPixEnviado: false,
+    pixDevolucaoEnviada: false,
+    pixDevolucaoRecebida: false,
+    tarifaPixEnviado: false,
+    estornoTarifaPixEnviado: false,
+    saldoDiaAnterior: false,
+    saldoDia: false,
+    transferenciaEnviada: false,
+    transferenciaRecebida: false,
+    estornoTransferenciaEnviada: false,
+    tarifaTransferenciaEnviada: false,
+    estornoTarifaTransferenciaEnviada: false,
+    estornoTarifaPixRecebido: false,
+  };
+
+  const httpsAgent = buildHttpsAgent();
+  const baseUrl = getBaseUrl();
+  const token = await fetchAccessToken(httpsAgent, baseUrl);
+  const url = `${baseUrl}/v2/gn/relatorios/extrato-conciliacao`;
+  try {
+    const res = await axios.post(
+      url,
+      { dataMovimento, tipoRegistros },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        httpsAgent,
+        timeout: 45000,
+      },
+    );
+    return res.data && typeof res.data === 'object' ? res.data : {};
+  } catch (err) {
+    if (err instanceof EfiPixClientError) throw err;
+    const status = err.response && err.response.status;
+    const detail = err.response && err.response.data;
+    logger.error('efi_extrato_conciliacao_post_failed', {
+      category: 'operational_error',
+      component: 'efiPixClient',
+      httpStatus: status || null,
+      message: err.message,
+      detail: detail ? JSON.stringify(detail).slice(0, 500) : null,
+    });
+    throw new EfiPixClientError(
+      'EFI_EXTRATO_POST_FAILED',
+      'Falha ao solicitar extrato de conciliação na Efí (verifique escopos gn.reports.write / produção)',
+      status && status < 500 ? status : 502,
+    );
+  }
+}
+
+/**
+ * GET /v2/gn/relatorios/:id — download do extrato (CSV) ou status de processamento (202 + JSON).
+ * Requer escopo `gn.reports.read` na aplicação Efí.
+ *
+ * @param {string} id
+ * @param {{ maxWaitMs?: number, pollMs?: number }} [opts]
+ * @returns {Promise<{ ok: boolean, status: number, csv?: string, json?: object, code?: string }>}
+ */
+async function downloadRelatorioById(id, opts = {}) {
+  if (!isEfiPixConfigured()) {
+    throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
+  }
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
+    throw new EfiPixClientError(
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true',
+      403,
+    );
+  }
+
+  const rid = String(id || '').trim();
+  if (!rid) {
+    throw new EfiPixClientError('EFI_RELATORIO_ID_REQUIRED', 'id do relatório obrigatório', 400);
+  }
+
+  const maxWaitMs = opts.maxWaitMs != null ? Number(opts.maxWaitMs) : 120000;
+  const pollMs = opts.pollMs != null ? Number(opts.pollMs) : 5000;
+
+  const httpsAgent = buildHttpsAgent();
+  const baseUrl = getBaseUrl();
+  const token = await fetchAccessToken(httpsAgent, baseUrl);
+  const url = `${baseUrl}/v2/gn/relatorios/${encodeURIComponent(rid)}`;
+
+  let waitedMs = 0;
+  while (waitedMs <= maxWaitMs) {
+    // eslint-disable-next-line no-await-in-loop
+    const res = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      httpsAgent,
+      timeout: 45000,
+      responseType: 'text',
+      transformResponse: [(body) => body],
+      validateStatus: () => true,
+    });
+
+    if (res.status === 200) {
+      const body = res.data;
+      const text = typeof body === 'string' ? body : String(body || '');
+      if (text.includes(';') && text.split('\n').some((l) => String(l).trim().startsWith('CA;'))) {
+        return { ok: true, status: 200, csv: text };
+      }
+      // alguns ambientes podem retornar JSON em 200
+      try {
+        const j = JSON.parse(text);
+        return { ok: false, status: 200, json: j, code: 'UNEXPECTED_JSON_BODY' };
+      } catch (_) {
+        return { ok: false, status: 200, code: 'UNEXPECTED_BODY' };
+      }
+    }
+
+    if (res.status === 202) {
+      const step = Number.isFinite(pollMs) && pollMs > 0 ? pollMs : 5000;
+      if (waitedMs + step > maxWaitMs) {
+        return { ok: false, status: 202, code: 'TIMEOUT_WAITING_CSV' };
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(step);
+      waitedMs += step;
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    if (res.status === 404) {
+      return { ok: false, status: 404, code: 'NOT_FOUND' };
+    }
+
+    logger.error('efi_relatorio_get_failed', {
+      category: 'operational_error',
+      component: 'efiPixClient',
+      relatorioId: rid,
+      httpStatus: res.status,
+    });
+    throw new EfiPixClientError(
+      'EFI_RELATORIO_GET_FAILED',
+      'Falha ao baixar relatório/extrato na Efí',
+      res.status < 500 ? res.status : 502,
+    );
+  }
+
+  return { ok: false, status: 202, code: 'TIMEOUT_WAITING_CSV' };
+}
+
 async function getPixWebhook() {
   if (!isEfiPixConfigured()) {
     throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
@@ -542,4 +723,6 @@ module.exports = {
   listPixReceived,
   putPixWebhook,
   getPixWebhook,
+  postExtratoConciliacao,
+  downloadRelatorioById,
 };

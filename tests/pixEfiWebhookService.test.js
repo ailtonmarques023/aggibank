@@ -103,6 +103,40 @@ describe('pixEfiWebhookService', () => {
     expect(settlePaidPixCobrancaInTx).toHaveBeenCalled();
   });
 
+  it('PROCESSED persiste taxa via gnExtras.tarifa quando enviada pela Efí', async () => {
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue({
+      id: 'cob1',
+      userId: 'u1',
+      amount: 10,
+      status: 'ATIVA',
+    });
+    prisma.pixCobranca.update.mockResolvedValue({});
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-gn' });
+    prisma.pixWebhookEvent.update.mockResolvedValue({});
+
+    await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2EGnExtrasTarifa01',
+            txid: 'txidGnExtrasTarifa01',
+            valor: '10.00',
+            horario: '2026-05-11T15:00:00.000Z',
+            gnExtras: { tarifa: '0.43' },
+          },
+        ],
+      },
+      {},
+    );
+
+    const up = prisma.pixCobranca.update.mock.calls[0][0];
+    expect(up.data.grossAmount).toBe(10);
+    expect(up.data.providerFeeAmount).toBe(0.43);
+    expect(up.data.netAmount).toBe(9.57);
+    expect(up.data.providerFeeSource).toBe('efi_pix_webhook_gn_extras');
+  });
+
   it('PROCESSED persiste settlementResult SETTLED quando settlement retorna SETTLED', async () => {
     settlePaidPixCobrancaInTx.mockResolvedValueOnce({ settlementResult: 'SETTLED' });
 

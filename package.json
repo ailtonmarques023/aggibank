@@ -18,6 +18,7 @@
     "o2:webhook-verify": "node scripts/o2-verify-pix-webhook-readonly.js",
     "q1:pix-provider-validate": "node scripts/q1-validate-pix-provider-railway-readonly.js",
     "efi:r:reconcile": "node scripts/efi-reconcile-received-pix.js",
+    "efi:s4:reconcile-fees": "node scripts/efi-reconcile-provider-fees.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
