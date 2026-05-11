@@ -27,6 +27,7 @@ gov.br1/
 
 # Documentações e relatórios locais
 docs/
+docs-reports/
 
 # Certificados integrador (Efí etc.) - nunca versionar
 *.p12

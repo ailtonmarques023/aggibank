@@ -2464,6 +2464,7 @@
         <!-- serviços e produtos -->
         <div class="services-header">
             <h3>Serviços e Produtos</h3>
+            <a href="modulos.html" id="agilbankLinkTodosServicos" style="display:inline-block;margin-top:8px;font-size:0.9rem;font-weight:600;color:#1351B4;text-decoration:none;">Todos os serviços</a>
         </div>
         <div class="services">
             <div class="service-item" onclick="containerGerarBoletoPix()">
@@ -11058,6 +11059,27 @@
                 }
             }, 350);
         } catch (e) {
+            // Ignore storage access issues.
+        }
+    });
+    // Fase V — retorno de modulos.html: abre seção real no SPA (sem novo endpoint).
+    window.addEventListener('load', function() {
+        try {
+            var target = sessionStorage.getItem('agilbank_modulos_target');
+            if (!target) return;
+            sessionStorage.removeItem('agilbank_modulos_target');
+            setTimeout(function() {
+                if (target === 'pix' && typeof showPixContainer === 'function') {
+                    showPixContainer();
+                } else if (target === 'extrato' && typeof showExtratoContainer === 'function') {
+                    showExtratoContainer();
+                } else if (target === 'cartoes' && typeof showCartaoGerenciamento === 'function') {
+                    showCartaoGerenciamento();
+                } else if (target === 'pagar' && typeof levarboletoContainer === 'function') {
+                    levarboletoContainer();
+                }
+            }, 480);
+        } catch (e2) {
             // Ignore storage access issues.
         }
     });
