@@ -462,13 +462,15 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-/// Cobrança Pix emitida na Efí (Cob imediata). Fase N: emissão; Fase O: confirmação via webhook (sem settlement de negócio).
+/// Cobrança Pix emitida por um PSP (Fase N emissão; Fase O webhook; Fase Q: campo `provider`).
 model PixCobranca {
   id                 String             @id @default(cuid())
   userId             String
   linkedEntityType   String
   linkedEntityId     String
   amount             Decimal            @db.Decimal(10, 2)
+  /// PSP emissor (ex.: EFI). Taxas líquidas/brutas: futuro quando a API do PSP informar valores confiáveis.
+  provider           String             @default("EFI")
   status             String             @default("ATIVA")
   txid               String             @unique
   endToEndId         String?            @unique
@@ -488,7 +490,7 @@ model PixCobranca {
   @@map("pix_cobrancas")
 }
 
-/// Evento recebido do webhook Pix Efí (Fase O). Idempotência por idempotencyKey (ex.: endToEndId).
+/// Evento recebido do webhook Pix (PSP; hoje Efí). Idempotência por idempotencyKey (ex.: endToEndId).
 model PixWebhookEvent {
   id                 String       @id @default(cuid())
   idempotencyKey     String       @unique

@@ -7,7 +7,7 @@ const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const { resolvePixReceiverKey } = require('../utils/gruCharge');
 const efiPixClient = require('../services/efiPixClient');
-const pixCobrancaEfiService = require('../services/pixCobrancaEfiService');
+const pixProviderService = require('../services/pix/pixProviderService');
 
 const router = express.Router();
 
@@ -407,6 +407,7 @@ router.get('/:id', async (req, res) => {
         payload.charge.providerReference = pixRow.providerReference;
         payload.charge.pixExpiresAt = pixRow.expiresAt.toISOString();
         payload.charge.pixPaidAt = pixRow.paidAt ? pixRow.paidAt.toISOString() : null;
+        payload.charge.pixProvider = pixRow.provider || 'EFI';
       } else {
         payload.charge.pixStatus = null;
         payload.charge.pixCopiaECola = null;
@@ -416,6 +417,7 @@ router.get('/:id', async (req, res) => {
         payload.charge.providerReference = null;
         payload.charge.pixExpiresAt = null;
         payload.charge.pixPaidAt = null;
+        payload.charge.pixProvider = null;
       }
     }
 
@@ -498,9 +500,9 @@ router.post('/:id/pix', async (req, res) => {
 
     const amount = detail.charge.amount;
 
-    if (efiPixClient.isEfiPixConfigured()) {
+    if (pixProviderService.isPixChargeProviderConfigured()) {
       try {
-        const data = await pixCobrancaEfiService.getOrCreateEfiPixForCharge({
+        const data = await pixProviderService.createOrGetPixChargeForCharge({
           userId,
           chargeKind: parsed.kind,
           linkedEntityId: parsed.id,
@@ -520,7 +522,7 @@ router.post('/:id/pix', async (req, res) => {
             code: err.code,
           });
         }
-        logger.error('Erro ao gerar cobrança Pix Efí:', {
+        logger.error('Erro ao gerar cobrança Pix (provedor):', {
           requestId: req.requestId,
           error: err && err.message ? err.message : String(err || ''),
         });

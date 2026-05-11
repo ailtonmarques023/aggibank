@@ -3,6 +3,7 @@
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const efiPixClient = require('./efiPixClient');
+const { PIX_PROVIDER_ID } = require('./pix/pixProviderTypes');
 
 const ACTIVE_PIX_STATUSES = ['CRIADA', 'ATIVA'];
 
@@ -34,7 +35,7 @@ function mapRowToPixResponse(row) {
     pixCopiaECola: row.pixCopiaECola || null,
     pixKey: null,
     amount: Number(row.amount),
-    instructions: 'Utilize o código Pix abaixo para realizar o pagamento (Efí).',
+    instructions: 'Utilize o código Pix abaixo para realizar o pagamento.',
     txid: row.txid,
     providerReference: row.providerReference,
     qrCodePix: row.qrCodePix || null,
@@ -42,6 +43,7 @@ function mapRowToPixResponse(row) {
     paidAt: row.paidAt ? row.paidAt.toISOString() : null,
     pixStatus: row.status,
     source: 'efi',
+    provider: row.provider || PIX_PROVIDER_ID.EFI,
   };
 }
 
@@ -100,6 +102,7 @@ async function getOrCreateEfiPixForCharge({
       linkedEntityType,
       linkedEntityId,
       amount,
+      provider: PIX_PROVIDER_ID.EFI,
       status: efiResult.status || 'ATIVA',
       txid: efiResult.txid,
       providerReference: efiResult.providerReference,

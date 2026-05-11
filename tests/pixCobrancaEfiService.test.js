@@ -58,6 +58,7 @@ describe('pixCobrancaEfiService.getOrCreateEfiPixForCharge', () => {
     expect(out.txid).toBe('existingTxidUnitTestCharge0001');
     expect(out.pixCopiaECola).toBe('000201existing');
     expect(out.source).toBe('efi');
+    expect(out.provider).toBe('EFI');
   });
 
   it('cria na Efí e persiste quando não há cobrança ativa', async () => {
@@ -92,6 +93,8 @@ describe('pixCobrancaEfiService.getOrCreateEfiPixForCharge', () => {
 
     expect(efiPixClient.createImmediateCob).toHaveBeenCalled();
     expect(prisma.pixCobranca.create).toHaveBeenCalled();
+    const createArg = prisma.pixCobranca.create.mock.calls[0][0];
+    expect(createArg.data.provider).toBe('EFI');
     expect(out.txid).toBe('txidFromEfiMockUnitTest0001');
     expect(out.pixCopiaECola).toContain('000201');
   });

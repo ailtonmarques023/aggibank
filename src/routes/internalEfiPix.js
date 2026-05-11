@@ -3,7 +3,7 @@
 const express = require('express');
 const { requireEfiPixWebhookAuth } = require('../middleware/auth');
 const logger = require('../utils/logger');
-const pixEfiWebhookService = require('../services/pixEfiWebhookService');
+const pixProviderService = require('../services/pix/pixProviderService');
 
 const router = express.Router();
 
@@ -56,7 +56,7 @@ async function handleEfiPixWebhookPost(req, res) {
       });
     }
 
-    const parsed = await pixEfiWebhookService.processEfiPixWebhookBody(req.body, {
+    const parsed = await pixProviderService.processChargeWebhookBody(req.body, {
       requestId: req.requestId,
       ip: req.ip,
     });

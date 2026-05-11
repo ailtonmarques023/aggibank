@@ -4908,7 +4908,7 @@
                         <span class="valor" id="gruDetalheSituacao">—</span>
                     </div>
                     <div class="detalhe-pagamento" id="gruDetalhePixEfiWrap" style="display:none;">
-                        <span class="label">Pix (Efí):</span>
+                        <span class="label">Pix:</span>
                         <span class="valor" id="gruDetalhePixEfi">—</span>
                     </div>
                     <div class="detalhe-pagamento">
@@ -8473,6 +8473,14 @@
         if (el) el.style.display = show ? '' : 'none';
     }
 
+    function agilbankPixProviderLabel(c) {
+        var p = c.pixProvider || c.provider;
+        if (p) return String(p).toUpperCase();
+        var s = c.source;
+        if (s && String(s).toLowerCase() === 'efi') return 'EFI';
+        return '';
+    }
+
     function agilbankChargesPopulateDetailFromPayload(payload) {
         window.__agilbankChargeDetail = payload;
         var c = payload && payload.charge;
@@ -8492,7 +8500,9 @@
         var pixWrap = document.getElementById('gruDetalhePixEfiWrap');
         var pixEfi = document.getElementById('gruDetalhePixEfi');
         if (c.pixStatus && String(c.pixStatus).toUpperCase() === 'PAGA' && c.pixPaidAt) {
-            var ptxt = 'Pago (Efí)';
+            var ptxt = 'Pago';
+            var plbl = agilbankPixProviderLabel(c);
+            if (plbl) ptxt += ' (' + plbl + ')';
             try {
                 var pd = new Date(c.pixPaidAt);
                 if (!isNaN(pd.getTime())) ptxt += ' em ' + pd.toLocaleString('pt-BR');

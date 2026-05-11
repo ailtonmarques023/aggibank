@@ -105,6 +105,7 @@ describe('GET /api/charges/:id', () => {
         expiresAt: new Date('2026-12-01T12:00:00.000Z'),
         paidAt: null,
         idempotencyKey: 'k1',
+        provider: 'EFI',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -119,6 +120,7 @@ describe('GET /api/charges/:id', () => {
     expect(res.body.data.charge.providerReference).toBe('77');
     expect(res.body.data.charge.pixCopiaECola).toContain('000201');
     expect(res.body.data.charge.pixPaidAt).toBeNull();
+    expect(res.body.data.charge.pixProvider).toBe('EFI');
   });
 });
 
@@ -220,7 +222,7 @@ describe('POST /api/charges/:id/pix com Efí (serviço mockado)', () => {
       pixCopiaECola: '00020101021226840014BR.GOV.BCB.PIX2564EFI0000000001',
       pixKey: null,
       amount: 39.9,
-      instructions: 'Utilize o código Pix abaixo para realizar o pagamento (Efí).',
+      instructions: 'Utilize o código Pix abaixo para realizar o pagamento.',
       txid: 'txidAgilbankFaseNMockEfiCharge01',
       providerReference: '4242',
       qrCodePix: null,
@@ -228,6 +230,7 @@ describe('POST /api/charges/:id/pix com Efí (serviço mockado)', () => {
       paidAt: null,
       pixStatus: 'ATIVA',
       source: 'efi',
+      provider: 'EFI',
     });
   });
 
@@ -257,6 +260,7 @@ describe('POST /api/charges/:id/pix com Efí (serviço mockado)', () => {
 
     expect(res.body.success).toBe(true);
     expect(res.body.data.source).toBe('efi');
+    expect(res.body.data.provider).toBe('EFI');
     expect(res.body.data.pixCopiaECola).toContain('000201');
     expect(res.body.data.txid).toBe('txidAgilbankFaseNMockEfiCharge01');
     expect(res.body.data.pixKey).toBeNull();

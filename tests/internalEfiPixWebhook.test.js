@@ -2,7 +2,7 @@
 
 const request = require('supertest');
 const app = require('../src/server');
-const pixSvc = require('../src/services/pixEfiWebhookService');
+const pixProviderService = require('../src/services/pix/pixProviderService');
 
 describe('POST /api/internal/efi/pix/webhook', () => {
   const prevInternal = process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
@@ -12,7 +12,7 @@ describe('POST /api/internal/efi/pix/webhook', () => {
   beforeEach(() => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'test-internal-webhook-key-fase-o';
     delete process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN;
-    spy = jest.spyOn(pixSvc, 'processEfiPixWebhookBody').mockResolvedValue({
+    spy = jest.spyOn(pixProviderService, 'processChargeWebhookBody').mockResolvedValue({
       ok: true,
       code: 'OK',
       results: [{ txid: 't1', endToEndId: 'E1', result: 'PROCESSED' }],
