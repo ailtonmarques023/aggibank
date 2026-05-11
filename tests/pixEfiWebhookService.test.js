@@ -71,6 +71,7 @@ describe('pixEfiWebhookService', () => {
     });
     prisma.pixCobranca.update.mockResolvedValue({});
     prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev1' });
+    prisma.pixWebhookEvent.update.mockResolvedValue({});
 
     const r = await processEfiPixWebhookBody(
       {
@@ -94,7 +95,86 @@ describe('pixEfiWebhookService', () => {
     expect(up.data.status).toBe('PAGA');
     expect(up.data.endToEndId).toBe('E2EUnitTestPixWebhookFaseO01');
     expect(prisma.pixWebhookEvent.create).toHaveBeenCalled();
+    expect(prisma.pixWebhookEvent.update).toHaveBeenCalled();
+    const upd = prisma.pixWebhookEvent.update.mock.calls[0][0];
+    expect(upd.where.id).toBe('ev1');
+    const updData = upd.data;
+    expect(updData.settlementResult).toBe('UNSUPPORTED_ENTITY');
     expect(settlePaidPixCobrancaInTx).toHaveBeenCalled();
+  });
+
+  it('PROCESSED persiste settlementResult SETTLED quando settlement retorna SETTLED', async () => {
+    settlePaidPixCobrancaInTx.mockResolvedValueOnce({ settlementResult: 'SETTLED' });
+
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue({
+      id: 'cob1',
+      userId: 'u1',
+      amount: 39.9,
+      status: 'ATIVA',
+    });
+    prisma.pixCobranca.update.mockResolvedValue({});
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-settled' });
+    prisma.pixWebhookEvent.update.mockResolvedValue({});
+
+    const r = await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2EUnitTestPixWebhookFaseO01-SETTLED',
+            txid: 'txidUnitTestPixWebhookFaseO01-SETTLED',
+            valor: '39.90',
+            horario: '2026-05-11T15:00:00.000Z',
+          },
+        ],
+      },
+      {},
+    );
+
+    expect(r.ok).toBe(true);
+    expect(r.results[0].result).toBe('PROCESSED');
+    expect(r.results[0].settlementResult).toBe('SETTLED');
+    expect(prisma.pixWebhookEvent.update).toHaveBeenCalled();
+    const upd = prisma.pixWebhookEvent.update.mock.calls[0][0];
+    expect(upd.where.id).toBe('ev-settled');
+    expect(upd.data.settlementResult).toBe('SETTLED');
+  });
+
+  it('PROCESSED persiste settlementResult ALREADY_SETTLED quando settlement retorna ALREADY_SETTLED', async () => {
+    settlePaidPixCobrancaInTx.mockResolvedValueOnce({ settlementResult: 'ALREADY_SETTLED' });
+
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue({
+      id: 'cob1',
+      userId: 'u1',
+      amount: 39.9,
+      status: 'ATIVA',
+    });
+    prisma.pixCobranca.update.mockResolvedValue({});
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-already' });
+    prisma.pixWebhookEvent.update.mockResolvedValue({});
+
+    const r = await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2EUnitTestPixWebhookFaseO01-ALREADY',
+            txid: 'txidUnitTestPixWebhookFaseO01-ALREADY',
+            valor: '39.90',
+            horario: '2026-05-11T15:00:00.000Z',
+          },
+        ],
+      },
+      {},
+    );
+
+    expect(r.ok).toBe(true);
+    expect(r.results[0].result).toBe('PROCESSED');
+    expect(r.results[0].settlementResult).toBe('ALREADY_SETTLED');
+    expect(prisma.pixWebhookEvent.update).toHaveBeenCalled();
+    const upd = prisma.pixWebhookEvent.update.mock.calls[0][0];
+    expect(upd.where.id).toBe('ev-already');
+    expect(upd.data.settlementResult).toBe('ALREADY_SETTLED');
   });
 
   it('ORPHAN_TXID quando txid não existe no banco', async () => {
@@ -146,6 +226,7 @@ describe('pixEfiWebhookService', () => {
 
     expect(r.results[0].result).toBe('AMOUNT_MISMATCH');
     expect(prisma.pixCobranca.update).not.toHaveBeenCalled();
+    expect(prisma.pixWebhookEvent.update).not.toHaveBeenCalled();
   });
 
   it('ALREADY_PAID quando cob já está PAGA', async () => {
@@ -174,5 +255,6 @@ describe('pixEfiWebhookService', () => {
 
     expect(r.results[0].result).toBe('ALREADY_PAID');
     expect(prisma.pixCobranca.update).not.toHaveBeenCalled();
+    expect(prisma.pixWebhookEvent.update).not.toHaveBeenCalled();
   });
 });

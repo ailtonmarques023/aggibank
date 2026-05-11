@@ -240,6 +240,16 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
           ip: ip || null,
         });
 
+        // Persistir explicitamente o resultado do settlement para auditoria/conciliacao.
+        // Observacao: se o settlement lancar, toda a transacao e revertida (rollback).
+        await tx.pixWebhookEvent.update({
+          where: { id: ev.id },
+          data: {
+            settlementResult: settlementPack.settlementResult,
+            settlementAt: new Date(),
+          },
+        });
+
         return {
           result: 'PROCESSED',
           event: ev,

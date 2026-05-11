@@ -499,6 +499,9 @@ model PixWebhookEvent {
   amountReceived     String?
   processingResult   String
   pixCobrancaId      String?
+  /// Resultado do settlement (negócio) associado ao mesmo webhook Pix.
+  settlementResult  String?
+  settlementAt       DateTime?
   metadata           Json?
   createdAt          DateTime     @default(now())
   pixCobranca        PixCobranca? @relation(fields: [pixCobrancaId], references: [id], onDelete: SetNull)
