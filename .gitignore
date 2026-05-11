@@ -28,5 +28,10 @@ gov.br1/
 # Documentações e relatórios locais
 docs/
 
+# Certificados integrador (Efí etc.) - nunca versionar
+*.p12
+*.pfx
+*.pem
+certs/
 
 

@@ -366,6 +366,117 @@ async function putPixWebhook(params) {
   }
 }
 
+/**
+ * GET /v2/cob/:txid — consulta cobrança imediata (escopo cob.read).
+ * Não cria cobrança. Retorna `null` se a Efí responder 404 (txid inexistente no PSP).
+ *
+ * @param {string} txid
+ * @returns {Promise<object|null>}
+ */
+async function getCobByTxid(txid) {
+  if (!isEfiPixConfigured()) {
+    throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
+  }
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
+    throw new EfiPixClientError(
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true',
+      403,
+    );
+  }
+  const t = String(txid || '').trim();
+  if (!t) {
+    throw new EfiPixClientError('EFI_TXID_REQUIRED', 'txid obrigatório', 400);
+  }
+  const httpsAgent = buildHttpsAgent();
+  const baseUrl = getBaseUrl();
+  const token = await fetchAccessToken(httpsAgent, baseUrl);
+  const url = `${baseUrl}/v2/cob/${encodeURIComponent(t)}`;
+  try {
+    const res = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      httpsAgent,
+      timeout: 45000,
+    });
+    return res.data && typeof res.data === 'object' ? res.data : null;
+  } catch (err) {
+    const status = err.response && err.response.status;
+    if (status === 404) {
+      return null;
+    }
+    logger.error('efi_pix_cob_get_failed', {
+      category: 'operational_error',
+      component: 'efiPixClient',
+      txid: t,
+      httpStatus: status || null,
+      message: err.message,
+    });
+    throw new EfiPixClientError(
+      'EFI_COB_GET_FAILED',
+      'Falha ao consultar cobrança Pix na Efí',
+      status && status < 500 ? status : 502,
+    );
+  }
+}
+
+/**
+ * GET /v2/pix?inicio=&fim=&txid= — lista Pix recebidos (escopo pix.read).
+ * `inicio` e `fim` em ISO 8601 (UTC).
+ *
+ * @param {{ inicioIso: string, fimIso: string, txid?: string }} params
+ * @returns {Promise<object>}
+ */
+async function listPixReceived(params) {
+  if (!isEfiPixConfigured()) {
+    throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
+  }
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
+    throw new EfiPixClientError(
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true',
+      403,
+    );
+  }
+  const inicioIso = String(params.inicioIso || '').trim();
+  const fimIso = String(params.fimIso || '').trim();
+  if (!inicioIso || !fimIso) {
+    throw new EfiPixClientError('EFI_PIX_LIST_RANGE', 'inicioIso e fimIso são obrigatórios', 400);
+  }
+  const httpsAgent = buildHttpsAgent();
+  const baseUrl = getBaseUrl();
+  const token = await fetchAccessToken(httpsAgent, baseUrl);
+  const q = new URLSearchParams({ inicio: inicioIso, fim: fimIso });
+  if (params.txid) {
+    q.append('txid', String(params.txid).trim());
+  }
+  const url = `${baseUrl}/v2/pix?${q.toString()}`;
+  try {
+    const res = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      httpsAgent,
+      timeout: 45000,
+    });
+    return res.data && typeof res.data === 'object' ? res.data : { pix: [] };
+  } catch (err) {
+    const status = err.response && err.response.status;
+    logger.error('efi_pix_received_list_failed', {
+      category: 'operational_error',
+      component: 'efiPixClient',
+      httpStatus: status || null,
+      message: err.message,
+    });
+    throw new EfiPixClientError(
+      'EFI_PIX_LIST_FAILED',
+      'Falha ao listar Pix recebidos na Efí',
+      status && status < 500 ? status : 502,
+    );
+  }
+}
+
 /** GET /v2/webhook/:chave — consulta webhook (escopo webhook.read). */
 async function getPixWebhook() {
   if (!isEfiPixConfigured()) {
@@ -427,6 +538,8 @@ module.exports = {
   isProductionPixAllowed,
   generateTxid,
   createImmediateCob,
+  getCobByTxid,
+  listPixReceived,
   putPixWebhook,
   getPixWebhook,
 };

@@ -29,6 +29,7 @@ const chargeRoutes = require('./routes/charges');
 const emailRoutes = require('./routes/email');
 const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, isRedisAvailable, getRedis } = require('./utils/redis');
+const { sanitizeUrlForAccessLog } = require('./utils/logSanitizer');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -207,7 +208,8 @@ app.use((req, res, next) => {
 
 // Logging (simplificado)
 morgan.token('request-id', (req) => req.requestId || '-');
-app.use(morgan(':method :url :status :response-time ms reqId=:request-id'));
+morgan.token('safe-url', (req) => sanitizeUrlForAccessLog(req.originalUrl || req.url || req.path || '/'));
+app.use(morgan(':method :safe-url :status :response-time ms reqId=:request-id'));
 
 async function runDatabaseReadinessProbe() {
   const startedAt = Date.now();
