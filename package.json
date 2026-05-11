@@ -16,6 +16,7 @@
     "validate:k1-ops-credit": "node scripts/validate-k1-ops-credit-staging.js",
     "efi:o1-webhook": "node scripts/efi-o1-register-pix-webhook.js",
     "o2:webhook-verify": "node scripts/o2-verify-pix-webhook-readonly.js",
+    "q1:pix-provider-validate": "node scripts/q1-validate-pix-provider-railway-readonly.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
