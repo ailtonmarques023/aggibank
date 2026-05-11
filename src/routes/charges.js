@@ -111,6 +111,30 @@ async function hasBoletoForShipment(shipmentId) {
   return !!row;
 }
 
+/** Pix exibido no detalhe: prioriza cobrança paga (webhook Fase O); senão, cob ativa e não expirada. */
+async function findPixCobrancaForChargeDetail(userId, linkedEntityType, linkedEntityId) {
+  const paid = await prisma.pixCobranca.findFirst({
+    where: {
+      userId,
+      linkedEntityType,
+      linkedEntityId,
+      status: { in: ['PAGA', 'CONCILIADA'] },
+    },
+    orderBy: { paidAt: 'desc' },
+  });
+  if (paid) return paid;
+  return prisma.pixCobranca.findFirst({
+    where: {
+      userId,
+      linkedEntityType,
+      linkedEntityId,
+      status: { in: ['CRIADA', 'ATIVA'] },
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 function toPublicChargeSummary(row) {
   if (row.kind === 'boleto') {
     const b = row.boleto;
@@ -373,21 +397,13 @@ router.get('/:id', async (req, res) => {
     };
     const linkedEntityType = linkedMap[parsed.kind];
     if (linkedEntityType) {
-      const pixRow = await prisma.pixCobranca.findFirst({
-        where: {
-          userId,
-          linkedEntityType,
-          linkedEntityId: parsed.id,
-          status: { in: ['CRIADA', 'ATIVA'] },
-          expiresAt: { gt: new Date() },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      const pixRow = await findPixCobrancaForChargeDetail(userId, linkedEntityType, parsed.id);
       if (pixRow) {
         payload.charge.pixStatus = pixRow.status;
         payload.charge.pixCopiaECola = pixRow.pixCopiaECola;
         payload.charge.qrCodePix = pixRow.qrCodePix;
         payload.charge.txid = pixRow.txid;
+        payload.charge.pixEndToEndId = pixRow.endToEndId || null;
         payload.charge.providerReference = pixRow.providerReference;
         payload.charge.pixExpiresAt = pixRow.expiresAt.toISOString();
         payload.charge.pixPaidAt = pixRow.paidAt ? pixRow.paidAt.toISOString() : null;
@@ -396,6 +412,7 @@ router.get('/:id', async (req, res) => {
         payload.charge.pixCopiaECola = null;
         payload.charge.qrCodePix = null;
         payload.charge.txid = null;
+        payload.charge.pixEndToEndId = null;
         payload.charge.providerReference = null;
         payload.charge.pixExpiresAt = null;
         payload.charge.pixPaidAt = null;

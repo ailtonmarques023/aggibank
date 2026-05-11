@@ -88,23 +88,26 @@ describe('GET /api/charges/:id', () => {
       paidAt: null,
       idempotencyKey: null,
     });
-    prisma.pixCobranca.findFirst.mockResolvedValue({
-      id: 'pc1',
-      userId: global.testUser.id,
-      linkedEntityType: 'loan_insurance',
-      linkedEntityId: 'charge-lic-1',
-      amount: 39.9,
-      status: 'ATIVA',
-      txid: 'txidFaseNUnitTestChargeGet01',
-      providerReference: '77',
-      pixCopiaECola: '00020101021226840014BR.GOV.BCB.PIX2564',
-      qrCodePix: null,
-      expiresAt: new Date('2026-12-01T12:00:00.000Z'),
-      paidAt: null,
-      idempotencyKey: 'k1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    prisma.pixCobranca.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'pc1',
+        userId: global.testUser.id,
+        linkedEntityType: 'loan_insurance',
+        linkedEntityId: 'charge-lic-1',
+        amount: 39.9,
+        status: 'ATIVA',
+        txid: 'txidFaseNUnitTestChargeGet01',
+        endToEndId: null,
+        providerReference: '77',
+        pixCopiaECola: '00020101021226840014BR.GOV.BCB.PIX2564',
+        qrCodePix: null,
+        expiresAt: new Date('2026-12-01T12:00:00.000Z'),
+        paidAt: null,
+        idempotencyKey: 'k1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
     const res = await request(app)
       .get('/api/charges/lic_charge-lic-1')

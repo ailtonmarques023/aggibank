@@ -462,26 +462,47 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-/// Cobrança Pix emitida na Efí (Cob imediata). Fase N: emissão e persistência; sem settlement via webhook.
+/// Cobrança Pix emitida na Efí (Cob imediata). Fase N: emissão; Fase O: confirmação via webhook (sem settlement de negócio).
 model PixCobranca {
-  id                 String    @id @default(cuid())
+  id                 String             @id @default(cuid())
   userId             String
   linkedEntityType   String
   linkedEntityId     String
-  amount             Decimal   @db.Decimal(10, 2)
-  status             String    @default("ATIVA")
-  txid               String    @unique
+  amount             Decimal            @db.Decimal(10, 2)
+  status             String             @default("ATIVA")
+  txid               String             @unique
+  endToEndId         String?            @unique
   providerReference  String?
-  pixCopiaECola      String?   @db.Text
-  qrCodePix          String?   @db.Text
+  pixCopiaECola      String?            @db.Text
+  qrCodePix          String?            @db.Text
   expiresAt          DateTime
   paidAt             DateTime?
-  idempotencyKey     String    @unique
+  idempotencyKey     String             @unique
   rawProviderPayload Json?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhookEvents      PixWebhookEvent[]
 
   @@index([userId, linkedEntityType, linkedEntityId])
   @@map("pix_cobrancas")
+}
+
+/// Evento recebido do webhook Pix Efí (Fase O). Idempotência por idempotencyKey (ex.: endToEndId).
+model PixWebhookEvent {
+  id                 String       @id @default(cuid())
+  idempotencyKey     String       @unique
+  txid               String?
+  endToEndId         String?
+  amountReceived     String?
+  processingResult   String
+  pixCobrancaId      String?
+  metadata           Json?
+  createdAt          DateTime     @default(now())
+  pixCobranca        PixCobranca? @relation(fields: [pixCobrancaId], references: [id], onDelete: SetNull)
+
+  @@index([txid])
+  @@index([endToEndId])
+  @@index([pixCobrancaId])
+  @@map("pix_webhook_events")
 }

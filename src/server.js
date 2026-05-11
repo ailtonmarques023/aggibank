@@ -20,6 +20,7 @@ const adminLoanRoutes = require('./routes/adminLoans');
 const internalCreditLoanRoutes = require('./routes/internalCreditLoans');
 const internalShipmentRoutes = require('./routes/internalShipments');
 const internalOpsCreditRoutes = require('./routes/internalOpsCredit');
+const internalEfiPixRoutes = require('./routes/internalEfiPix');
 const pixRoutes = require('./routes/pix');
 const boletoRoutes = require('./routes/boletos');
 const notificationRoutes = require('./routes/notifications');
@@ -90,7 +91,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-request-id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-request-id', 'x-internal-key'],
   optionsSuccessStatus: 200,
 }));
 
@@ -346,6 +347,7 @@ app.use('/api/loans', loanRoutes);
 app.use('/api/internal/credit/loans', internalCreditLoanRoutes);
 app.use('/api/internal/shipments', internalShipmentRoutes);
 app.use('/api/internal/ops', internalOpsCreditRoutes);
+app.use('/api/internal/efi/pix', internalEfiPixRoutes);
 app.use('/api/admin/loans', adminLoanRoutes);
 app.use('/api/pix', pixRoutes);
 app.use('/api/boletos', boletoRoutes);

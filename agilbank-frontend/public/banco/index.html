@@ -4907,6 +4907,10 @@
                         <span class="label">Situação da Solicitação:</span>
                         <span class="valor" id="gruDetalheSituacao">—</span>
                     </div>
+                    <div class="detalhe-pagamento" id="gruDetalhePixEfiWrap" style="display:none;">
+                        <span class="label">Pix (Efí):</span>
+                        <span class="valor" id="gruDetalhePixEfi">—</span>
+                    </div>
                     <div class="detalhe-pagamento">
                         <span class="label">Data da Solicitação:</span>
                         <span class="valor" id="gruDetalheData">—</span>
@@ -8485,6 +8489,26 @@
         set('gruDetalheCpf', u.cpf || '—');
         set('gruDetalheNome', u.name || '—');
         set('gruDetalheValor', agilbankFormatMoneyBr(c.amount));
+        var pixWrap = document.getElementById('gruDetalhePixEfiWrap');
+        var pixEfi = document.getElementById('gruDetalhePixEfi');
+        if (c.pixStatus && String(c.pixStatus).toUpperCase() === 'PAGA' && c.pixPaidAt) {
+            var ptxt = 'Pago (Efí)';
+            try {
+                var pd = new Date(c.pixPaidAt);
+                if (!isNaN(pd.getTime())) ptxt += ' em ' + pd.toLocaleString('pt-BR');
+            } catch (e1) { /* ignore */ }
+            if (c.pixEndToEndId && String(c.pixEndToEndId).length > 8) {
+                ptxt += ' · ID ' + String(c.pixEndToEndId).slice(0, 8) + '…';
+            }
+            if (pixEfi) pixEfi.textContent = ptxt;
+            if (pixWrap) pixWrap.style.display = '';
+        } else if (c.pixStatus && String(c.pixStatus).toUpperCase() !== 'PAGA') {
+            if (pixEfi) pixEfi.textContent = 'Status Pix: ' + String(c.pixStatus);
+            if (pixWrap) pixWrap.style.display = '';
+        } else {
+            if (pixWrap) pixWrap.style.display = 'none';
+            if (pixEfi) pixEfi.textContent = '—';
+        }
         agilbankChargeSetVisible('gruPixResultPanel', false);
         var ta = document.getElementById('gruPixPayload');
         if (ta) { ta.value = ''; ta.style.display = 'none'; }
