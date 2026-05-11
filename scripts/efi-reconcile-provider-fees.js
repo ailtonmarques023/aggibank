@@ -5,14 +5,17 @@
  * Fase S.4 — Conciliação financeira Efí: preenche `providerFeeAmount` e `netAmount` em `PixCobranca`
  * usando o Extrato de Conciliação API Pix (POST/GET /v2/gn/relatorios/*), layout CSV v4.0.
  *
- * Fonte: documentação Efí — `POST /v2/gn/relatorios/extrato-conciliacao` + `GET /v2/gn/relatorios/:id`.
- * Requer escopos `gn.reports.write` e `gn.reports.read` na aplicação Efí.
+ * `dataMovimento` enviado à Efí:
+ * - Com `--date=AAAA-MM-DD`: usa **exatamente** esse dia (não deriva de `paidAt`).
+ * - Sem `--date`: deriva de `paidAt` em **America/Sao_Paulo** por cobrança.
+ * - A Efí exige data **anterior** ao dia corrente em SP; o script valida antes da chamada (`DATE_NOT_AVAILABLE_YET`).
  *
  * Uso:
  *   node scripts/efi-reconcile-provider-fees.js --dry-run
- *   node scripts/efi-reconcile-provider-fees.js --dry-run --date=2026-05-11
+ *   node scripts/efi-reconcile-provider-fees.js --dry-run --date=2026-05-10
  *   node scripts/efi-reconcile-provider-fees.js --dry-run --txid=SEU_TXID
- *   node scripts/efi-reconcile-provider-fees.js --apply --date=2026-05-11
+ *   node scripts/efi-reconcile-provider-fees.js --dry-run --date=2026-05-10 --txid=SEU_TXID
+ *   node scripts/efi-reconcile-provider-fees.js --apply --date=2026-05-10
  *
  * Padrão: --dry-run (não grava no banco).
  * Não imprime segredos, certificado, pixCopiaECola nem JWT.
@@ -23,22 +26,18 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const { prisma } = require('../src/config/database');
 const efiPixClient = require('../src/services/efiPixClient');
 const { matchPrAndTprForCob, extractGrossFeeNetFromMatch } = require('../src/utils/efiExtratoConciliacaoCsv');
+const {
+  saoPauloDateKey,
+  todaySaoPauloDateKey,
+  resolveDataMovimento,
+  validateDataMovimentoBeforeExtrato,
+} = require('../src/utils/efiReconcileFeeExtratoDate');
 const { recordAudit } = require('../src/utils/auditLog');
 
 function maskTxid(t) {
   const s = String(t || '');
   if (s.length <= 8) return '***';
   return `${s.slice(0, 3)}…${s.slice(-4)}`;
-}
-
-function movementDateKeySaoPaulo(d) {
-  if (!d || !(d instanceof Date) || Number.isNaN(d.getTime())) return null;
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
 }
 
 function parseArgs() {
@@ -53,6 +52,20 @@ function parseArgs() {
     }
   }
   return out;
+}
+
+async function fetchExtratoCsvIntoCache(csvCache, dataMovimento) {
+  const post = await efiPixClient.postExtratoConciliacao({ dataMovimento });
+  const rid = post && post.id != null ? String(post.id).trim() : '';
+  if (!rid) {
+    return { ok: false, code: 'EXTRATO_NO_ID', post: { status: post && post.status ? String(post.status) : null } };
+  }
+  const dl = await efiPixClient.downloadRelatorioById(rid, { maxWaitMs: 120000, pollMs: 5000 });
+  if (!dl.ok || !dl.csv) {
+    return { ok: false, code: dl.code || 'EXTRATO_DOWNLOAD_FAILED', httpStatus: dl.status };
+  }
+  csvCache.set(dataMovimento, dl.csv);
+  return { ok: true };
 }
 
 async function main() {
@@ -81,13 +94,35 @@ async function main() {
     process.exit(2);
   }
 
+  if (opts.date) {
+    const chk = validateDataMovimentoBeforeExtrato(opts.date);
+    if (!chk.ok) {
+      console.error(
+        JSON.stringify({
+          ok: false,
+          code: chk.code,
+          message:
+            chk.code === 'DATE_NOT_AVAILABLE_YET'
+              ? 'dataMovimento deve ser anterior ao dia corrente em America/Sao_Paulo (regra Efí). Nenhuma chamada à API Efí foi feita.'
+              : 'Formato de data inválido; use AAAA-MM-DD.',
+          dataMovimentoRequested: opts.date,
+          dataMovimentoUsed: opts.date,
+          todaySaoPaulo: chk.todaySaoPaulo,
+        }),
+      );
+      process.exit(3);
+    }
+  }
+
+  const where = {
+    status: 'PAGA',
+    provider: 'EFI',
+    providerFeeAmount: null,
+    ...(opts.txid ? { txid: opts.txid } : {}),
+  };
+
   const rows = await prisma.pixCobranca.findMany({
-    where: {
-      status: 'PAGA',
-      provider: 'EFI',
-      providerFeeAmount: null,
-      ...(opts.txid ? { txid: opts.txid } : {}),
-    },
+    where,
     orderBy: { paidAt: 'desc' },
     take: opts.limit,
     select: {
@@ -101,60 +136,100 @@ async function main() {
     },
   });
 
-  const filtered = opts.date
-    ? rows.filter((r) => r.paidAt && movementDateKeySaoPaulo(r.paidAt) === opts.date)
-    : rows;
+  let filtered;
+  if (opts.date && opts.txid) {
+    // `--date` força o dia do extrato na Efí; `--txid` seleciona a cobrança (sem exigir paidAt no mesmo dia).
+    filtered = rows;
+  } else if (opts.date) {
+    filtered = rows.filter((r) => r.paidAt && saoPauloDateKey(r.paidAt) === opts.date);
+  } else {
+    filtered = rows;
+  }
+
+  const todaySp = todaySaoPauloDateKey();
 
   const report = {
     ok: true,
     mode: opts.dryRun ? 'dry-run' : 'apply',
+    todaySaoPaulo: todaySp,
+    /** Valor de `--date` quando informado; define o `dataMovimento` do POST na Efí para todas as linhas. */
+    dataMovimentoExplicitArg: opts.date || null,
+    /**
+     * Resumo do `dataMovimento` enviado à Efí: com `--date`, é o próprio argumento; sem `--date`, varia por linha (`results[].dataMovimentoUsed`).
+     */
+    dataMovimentoSentToEfiSummary: opts.date
+      ? { type: 'fixed', value: opts.date }
+      : { type: 'per_row_from_paid_at_sao_paulo', see: 'results[].dataMovimentoUsed' },
+    dataMovimentoResolution: opts.date
+      ? 'explicit_arg (POST extrato usa exatamente --date)'
+      : 'from_paid_at_per_row (POST extrato usa dia SP de paidAt)',
     scanned: filtered.length,
     results: [],
   };
 
   const csvCache = new Map();
 
+  if (opts.date && filtered.length > 0) {
+    const fetchRes = await fetchExtratoCsvIntoCache(csvCache, opts.date);
+    if (!fetchRes.ok) {
+      report.ok = false;
+      report.code = fetchRes.code;
+      report.dataMovimentoUsed = opts.date;
+      if (fetchRes.post) report.post = fetchRes.post;
+      if (fetchRes.httpStatus != null) report.httpStatus = fetchRes.httpStatus;
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(4);
+    }
+  }
+
   for (const cob of filtered) {
+    const paidAtSp = cob.paidAt ? saoPauloDateKey(cob.paidAt) : null;
+    const dataMovimentoForApi = resolveDataMovimento({
+      explicitDate: opts.date,
+      paidAt: cob.paidAt,
+    });
+
     const line = {
       pixCobrancaId: cob.id,
       txidMask: maskTxid(cob.txid),
       paidAt: cob.paidAt ? cob.paidAt.toISOString() : null,
+      paidAtSaoPaulo: paidAtSp,
+      dataMovimentoUsed: dataMovimentoForApi,
+      dataMovimentoResolution: opts.date ? 'explicit_arg' : 'from_paid_at',
     };
 
-    const movDate = cob.paidAt ? movementDateKeySaoPaulo(cob.paidAt) : null;
-    if (!movDate) {
+    if (!dataMovimentoForApi) {
       line.outcome = 'SKIPPED';
-      line.code = 'MISSING_PAID_AT';
+      line.code = 'MISSING_PAID_AT_OR_DATE';
       report.results.push(line);
-      // eslint-disable-next-line no-continue
       continue;
     }
 
+    if (!opts.date) {
+      const chk = validateDataMovimentoBeforeExtrato(dataMovimentoForApi);
+      if (!chk.ok) {
+        line.outcome = 'SKIPPED';
+        line.code = chk.code;
+        line.todaySaoPaulo = chk.todaySaoPaulo;
+        report.results.push(line);
+        continue;
+      }
+    }
+
     try {
-      if (!csvCache.has(movDate)) {
-        const post = await efiPixClient.postExtratoConciliacao({ dataMovimento: movDate });
-        const rid = post && post.id != null ? String(post.id).trim() : '';
-        if (!rid) {
+      if (!csvCache.has(dataMovimentoForApi)) {
+        const fetchRes = await fetchExtratoCsvIntoCache(csvCache, dataMovimentoForApi);
+        if (!fetchRes.ok) {
           line.outcome = 'ERROR';
-          line.code = 'EXTRATO_NO_ID';
-          line.post = { status: post && post.status ? String(post.status) : null };
+          line.code = fetchRes.code || 'EXTRATO_FETCH_FAILED';
+          if (fetchRes.post) line.post = fetchRes.post;
+          if (fetchRes.httpStatus != null) line.httpStatus = fetchRes.httpStatus;
           report.results.push(line);
-          // eslint-disable-next-line no-continue
           continue;
         }
-        const dl = await efiPixClient.downloadRelatorioById(rid, { maxWaitMs: 120000, pollMs: 5000 });
-        if (!dl.ok || !dl.csv) {
-          line.outcome = 'ERROR';
-          line.code = dl.code || 'EXTRATO_DOWNLOAD_FAILED';
-          line.httpStatus = dl.status;
-          report.results.push(line);
-          // eslint-disable-next-line no-continue
-          continue;
-        }
-        csvCache.set(movDate, dl.csv);
       }
 
-      const csvText = csvCache.get(movDate);
+      const csvText = csvCache.get(dataMovimentoForApi);
       const cobForMatch = {
         txid: cob.txid,
         endToEndId: cob.endToEndId,
@@ -173,7 +248,6 @@ async function main() {
         }
         line.code = m.code;
         report.results.push(line);
-        // eslint-disable-next-line no-continue
         continue;
       }
 
@@ -182,7 +256,6 @@ async function main() {
         line.outcome = 'NO_FEE_ROW';
         line.code = m.code === 'NO_TPR' ? 'NO_TPR' : 'NO_FEE_VALUE';
         report.results.push(line);
-        // eslint-disable-next-line no-continue
         continue;
       }
 
@@ -196,7 +269,6 @@ async function main() {
       if (opts.dryRun) {
         line.outcome = 'DRY_RUN_OK';
         report.results.push(line);
-        // eslint-disable-next-line no-continue
         continue;
       }
 
@@ -217,7 +289,7 @@ async function main() {
         entity: 'PixCobranca',
         entityId: cob.id,
         metadata: {
-          movementDate: movDate,
+          dataMovimentoUsed: dataMovimentoForApi,
           providerFeeAmount: amounts.fee,
           netAmount: amounts.net,
           matchCode: m.code,
