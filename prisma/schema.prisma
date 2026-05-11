@@ -472,6 +472,19 @@ model PixCobranca {
   /// PSP emissor (ex.: EFI). Taxas líquidas/brutas: futuro quando a API do PSP informar valores confiáveis.
   provider           String             @default("EFI")
   status             String             @default("ATIVA")
+  /// Fase S.3 — Observabilidade financeira do provedor.
+  /// grossAmount: valor bruto confirmado como pago (valor do webhook; fonte: PSP).
+  /// providerFeeAmount: tarifa PSP — null até fonte confiável (API Efí não retorna no payload Pix).
+  /// netAmount: valor líquido = gross - fee — null enquanto fee for null.
+  /// providerFeeCurrency: moeda da tarifa (padrão BRL).
+  /// providerFeeSource: origem do dado de tarifa — ex: efi_pix_payload, efi_financial_report, manual_reconciliation.
+  /// providerFeeCapturedAt: quando o dado de tarifa foi capturado.
+  grossAmount        Decimal?           @db.Decimal(12, 4)
+  providerFeeAmount  Decimal?           @db.Decimal(12, 4)
+  netAmount          Decimal?           @db.Decimal(12, 4)
+  providerFeeCurrency String?           @default("BRL")
+  providerFeeSource  String?
+  providerFeeCapturedAt DateTime?
   txid               String             @unique
   endToEndId         String?            @unique
   providerReference  String?

@@ -197,6 +197,12 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
         }
 
         const paidAt = horario ? new Date(horario) : new Date();
+
+        // grossAmount: valor bruto confirmado pelo PSP no webhook (única fonte confiável disponível).
+        // providerFeeAmount e netAmount permanecem null — API Efí Pix não fornece taxa no payload.
+        // Serão preenchidos futuramente via extrato financeiro Efí (providerFeeSource: efi_financial_report).
+        const grossAmountDecimal = moneyCents(valor) != null ? Number(String(valor).replace(',', '.')) : null;
+
         const updated = await tx.pixCobranca.update({
           where: { id: cob.id },
           data: {
@@ -204,6 +210,14 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
             paidAt,
             endToEndId,
             rawProviderPayload: sanitizeForStorage(item),
+            ...(grossAmountDecimal != null && {
+              grossAmount: grossAmountDecimal,
+              providerFeeAmount: null,
+              netAmount: null,
+              providerFeeCurrency: 'BRL',
+              providerFeeSource: 'efi_pix_payload',
+              providerFeeCapturedAt: paidAt,
+            }),
           },
         });
 
