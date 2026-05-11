@@ -1,19 +1,13 @@
 'use strict';
 
 const express = require('express');
-const { requireInternalApiKey } = require('../middleware/auth');
+const { requireEfiPixWebhookAuth } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const pixEfiWebhookService = require('../services/pixEfiWebhookService');
 
 const router = express.Router();
 
-/**
- * POST /api/internal/efi/pix/webhook
- * Recebimento de notificação Pix Efí (corpo com array `pix`).
- * Autenticação: header `x-internal-key` = `EFI_PIX_WEBHOOK_INTERNAL_KEY`.
- * Não altera saldo nem liquida seguro/frete/cartão (Fase O).
- */
-router.post('/webhook', requireInternalApiKey('EFI_PIX_WEBHOOK_INTERNAL_KEY'), async (req, res) => {
+async function handleEfiPixWebhookPost(req, res) {
   try {
     const parsed = await pixEfiWebhookService.processEfiPixWebhookBody(req.body, {
       requestId: req.requestId,
@@ -48,6 +42,19 @@ router.post('/webhook', requireInternalApiKey('EFI_PIX_WEBHOOK_INTERNAL_KEY'), a
       code: 'INTERNAL_ERROR',
     });
   }
-});
+}
+
+/**
+ * POST /api/internal/efi/pix/webhook
+ * Efí com `?ignorar=` envia POST para esta URL (sem sufixo /pix).
+ * Autenticação: `x-internal-key` **ou** query `efiwk` (= EFI_PIX_WEBHOOK_CALLBACK_TOKEN).
+ */
+router.post('/webhook', requireEfiPixWebhookAuth, handleEfiPixWebhookPost);
+
+/**
+ * POST /api/internal/efi/pix/webhook/pix
+ * Efí padrão (sem `?ignorar=`) envia POST para {webhookUrl}/pix.
+ */
+router.post('/webhook/pix', requireEfiPixWebhookAuth, handleEfiPixWebhookPost);
 
 module.exports = router;

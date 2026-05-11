@@ -5,11 +5,13 @@ const app = require('../src/server');
 const pixSvc = require('../src/services/pixEfiWebhookService');
 
 describe('POST /api/internal/efi/pix/webhook', () => {
-  const prev = process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
+  const prevInternal = process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
+  const prevCallback = process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN;
   let spy;
 
   beforeEach(() => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'test-internal-webhook-key-fase-o';
+    delete process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN;
     spy = jest.spyOn(pixSvc, 'processEfiPixWebhookBody').mockResolvedValue({
       ok: true,
       code: 'OK',
@@ -19,12 +21,15 @@ describe('POST /api/internal/efi/pix/webhook', () => {
 
   afterEach(() => {
     spy.mockRestore();
-    if (prev !== undefined) process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = prev;
+    if (prevInternal !== undefined) process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = prevInternal;
     else delete process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
+    if (prevCallback !== undefined) process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN = prevCallback;
+    else delete process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN;
   });
 
-  it('retorna 503 quando chave interna não configurada', async () => {
+  it('retorna 503 quando nenhuma chave de webhook está configurada', async () => {
     delete process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
+    delete process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN;
     const res = await request(app)
       .post('/api/internal/efi/pix/webhook')
       .set('x-internal-key', 'x')
@@ -33,7 +38,7 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(res.body.code).toBe('INTERNAL_OPERATION_UNAVAILABLE');
   });
 
-  it('retorna 403 quando x-internal-key inválida', async () => {
+  it('retorna 403 quando x-internal-key inválida e sem efiwk', async () => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
     const res = await request(app)
       .post('/api/internal/efi/pix/webhook')
@@ -42,7 +47,7 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(res.status).toBe(403);
   });
 
-  it('retorna 200 e repassa resultado do serviço', async () => {
+  it('retorna 200 e repassa resultado do serviço com x-internal-key', async () => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
     const res = await request(app)
       .post('/api/internal/efi/pix/webhook')
@@ -52,6 +57,27 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.results[0].result).toBe('PROCESSED');
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('retorna 200 com query efiwk quando EFI_PIX_WEBHOOK_CALLBACK_TOKEN está definido', async () => {
+    delete process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
+    process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN = 'callback-token-o1';
+    const res = await request(app)
+      .post('/api/internal/efi/pix/webhook')
+      .query({ efiwk: 'callback-token-o1' })
+      .send({ pix: [{ endToEndId: 'E1', txid: 't1', valor: '1.00' }] });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('POST /webhook/pix aceita o mesmo auth', async () => {
+    process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
+    const res = await request(app)
+      .post('/api/internal/efi/pix/webhook/pix')
+      .set('x-internal-key', 'secret-webhook-o')
+      .send({ pix: [] });
+    expect(res.status).toBe(200);
   });
 
   it('retorna 400 quando serviço sinaliza corpo inválido', async () => {

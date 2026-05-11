@@ -31,6 +31,7 @@ const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, isRedisAvailable, getRedis } = require('./utils/redis');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 const hasRedisUrl = !!(process.env.REDIS_URL && String(process.env.REDIS_URL).trim());

@@ -319,6 +319,47 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
+/** Compara segredo fornecido com o esperado sem vazar por tempo (SHA-256 + timingSafeEqual). */
+function secretMatchesSha256(provided, expected) {
+  if (provided == null || expected == null) return false;
+  const a = String(provided);
+  const b = String(expected);
+  if (!a || !b) return false;
+  const ah = crypto.createHash('sha256').update(a, 'utf8').digest();
+  const bh = crypto.createHash('sha256').update(b, 'utf8').digest();
+  return crypto.timingSafeEqual(ah, bh);
+}
+
+/**
+ * Webhook Pix Efí (Fase O / O.1): aceita `x-internal-key` (testes/operador) **ou**
+ * query `efiwk` igual a `EFI_PIX_WEBHOOK_CALLBACK_TOKEN` (URL cadastrada na Efí com `?ignorar=&efiwk=…`).
+ * A Efí não envia header customizado na chamada recebida.
+ */
+const requireEfiPixWebhookAuth = (req, res, next) => {
+  const internal = process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY;
+  const callbackToken = process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN;
+  if (!String(internal || '').trim() && !String(callbackToken || '').trim()) {
+    return res.status(503).json({
+      success: false,
+      message: 'Webhook Pix não configurado (defina EFI_PIX_WEBHOOK_INTERNAL_KEY e/ou EFI_PIX_WEBHOOK_CALLBACK_TOKEN)',
+      code: 'INTERNAL_OPERATION_UNAVAILABLE',
+    });
+  }
+  const providedHeader = req.get('x-internal-key');
+  if (internal && secretMatchesSha256(providedHeader, internal)) {
+    return next();
+  }
+  const q = req.query && req.query.efiwk != null ? String(req.query.efiwk) : '';
+  if (callbackToken && secretMatchesSha256(q, callbackToken)) {
+    return next();
+  }
+  return res.status(403).json({
+    success: false,
+    message: 'Acesso negado',
+    code: 'ACCESS_DENIED',
+  });
+};
+
 module.exports = {
   authenticateToken,
   requireVerification,
@@ -326,6 +367,7 @@ module.exports = {
   requirePermission,
   requireOwnershipOrAdmin,
   requireInternalApiKey,
+  requireEfiPixWebhookAuth,
   userRateLimit,
   logCriticalOperation,
   generateToken,

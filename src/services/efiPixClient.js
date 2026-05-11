@@ -301,6 +301,122 @@ async function createImmediateCob(params) {
   };
 }
 
+/**
+ * PUT /v2/webhook/:chave — cadastra URL de notificação Pix (escopo webhook.write).
+ * @param {{ webhookUrl: string, skipMtlsChecking?: boolean }} params
+ */
+async function putPixWebhook(params) {
+  if (!isEfiPixConfigured()) {
+    throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
+  }
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
+    throw new EfiPixClientError(
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true',
+      403,
+    );
+  }
+  const webhookUrl = String(params.webhookUrl || '').trim();
+  if (!webhookUrl) {
+    throw new EfiPixClientError('EFI_WEBHOOK_URL_INVALID', 'webhookUrl obrigatório', 400);
+  }
+  const skipMtlsDefault = String(process.env.EFI_PIX_WEBHOOK_SKIP_MTLS || 'true').toLowerCase() === 'true';
+  const skipMtls =
+    params.skipMtlsChecking === undefined ? skipMtlsDefault : Boolean(params.skipMtlsChecking);
+  const pixKey = String(process.env.EFI_PIX_KEY).trim();
+  const httpsAgent = buildHttpsAgent();
+  const baseUrl = getBaseUrl();
+  const token = await fetchAccessToken(httpsAgent, baseUrl);
+  const pathKey = encodeURIComponent(pixKey);
+  const url = `${baseUrl}/v2/webhook/${pathKey}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+  if (skipMtls) {
+    headers['x-skip-mtls-checking'] = 'true';
+  }
+  try {
+    const res = await axios.put(
+      url,
+      { webhookUrl },
+      {
+        headers,
+        httpsAgent,
+        timeout: 45000,
+      },
+    );
+    return { httpStatus: res.status, data: res.data };
+  } catch (err) {
+    if (err instanceof EfiPixClientError) throw err;
+    const status = err.response && err.response.status;
+    const detail = err.response && err.response.data;
+    logger.error('efi_pix_webhook_put_failed', {
+      category: 'operational_error',
+      component: 'efiPixClient',
+      httpStatus: status || null,
+      message: err.message,
+      detail: detail ? JSON.stringify(detail).slice(0, 500) : null,
+    });
+    throw new EfiPixClientError(
+      'EFI_WEBHOOK_PUT_FAILED',
+      'Falha ao cadastrar webhook Pix na Efí',
+      status && status < 500 ? status : 502,
+    );
+  }
+}
+
+/** GET /v2/webhook/:chave — consulta webhook (escopo webhook.read). */
+async function getPixWebhook() {
+  if (!isEfiPixConfigured()) {
+    throw new EfiPixClientError('EFI_NOT_CONFIGURED', 'Integração Efí Pix não configurada', 503);
+  }
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
+    throw new EfiPixClientError(
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true',
+      403,
+    );
+  }
+  const pixKey = String(process.env.EFI_PIX_KEY).trim();
+  const httpsAgent = buildHttpsAgent();
+  const baseUrl = getBaseUrl();
+  const token = await fetchAccessToken(httpsAgent, baseUrl);
+  const pathKey = encodeURIComponent(pixKey);
+  const url = `${baseUrl}/v2/webhook/${pathKey}`;
+  const skipMtls = String(process.env.EFI_PIX_WEBHOOK_SKIP_MTLS || 'true').toLowerCase() === 'true';
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+  if (skipMtls) {
+    headers['x-skip-mtls-checking'] = 'true';
+  }
+  try {
+    const res = await axios.get(url, {
+      headers,
+      httpsAgent,
+      timeout: 45000,
+    });
+    return { httpStatus: res.status, data: res.data };
+  } catch (err) {
+    if (err instanceof EfiPixClientError) throw err;
+    const status = err.response && err.response.status;
+    const detail = err.response && err.response.data;
+    logger.error('efi_pix_webhook_get_failed', {
+      category: 'operational_error',
+      component: 'efiPixClient',
+      httpStatus: status || null,
+      message: err.message,
+      detail: detail ? JSON.stringify(detail).slice(0, 500) : null,
+    });
+    throw new EfiPixClientError(
+      'EFI_WEBHOOK_GET_FAILED',
+      'Falha ao consultar webhook Pix na Efí',
+      status && status < 500 ? status : 502,
+    );
+  }
+}
+
 module.exports = {
   EfiPixClientError,
   isEfiPixConfigured,
@@ -311,4 +427,6 @@ module.exports = {
   isProductionPixAllowed,
   generateTxid,
   createImmediateCob,
+  putPixWebhook,
+  getPixWebhook,
 };

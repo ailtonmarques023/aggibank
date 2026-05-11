@@ -14,6 +14,7 @@
     "email:templates-demo": "node src/scripts/sendEmailTemplatesSample.js",
     "test": "jest",
     "validate:k1-ops-credit": "node scripts/validate-k1-ops-credit-staging.js",
+    "efi:o1-webhook": "node scripts/efi-o1-register-pix-webhook.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
