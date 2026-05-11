@@ -768,7 +768,8 @@
         .movimente {
             background: #f0f2f5;
             padding: 15px;
-            height: 245px;
+            min-height: 245px;
+            height: auto;
         }
 
         /* Animação para os ícones */
@@ -791,6 +792,35 @@
             margin-bottom: 5px;
             margin-top: 0%;
             color: #333;
+        }
+        /* Fase V — acesso à grade completa de serviços (modulos.html), logo abaixo do título */
+        .movimente > .agilbank-services-link-row {
+            margin-top: 8px;
+            margin-bottom: 4px;
+            text-align: left;
+            padding: 0 2px;
+            position: relative;
+            z-index: 2;
+        }
+        .movimente > .agilbank-services-link-row .agilbank-services-link {
+            display: inline-block;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1351B4;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            min-height: 44px;
+            line-height: 44px;
+            padding: 0 2px 0 0;
+            -webkit-tap-highlight-color: rgba(19, 81, 180, 0.15);
+        }
+        .movimente > .agilbank-services-link-row .agilbank-services-link:hover {
+            color: #0d3d88;
+        }
+        .movimente > .agilbank-services-link-row .agilbank-services-link:focus-visible {
+            outline: 2px solid #1351B4;
+            outline-offset: 3px;
+            border-radius: 4px;
         }
         /* banner-divulgação */
         .banner-divulgação {
