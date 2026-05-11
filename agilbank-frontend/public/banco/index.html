@@ -8830,8 +8830,14 @@
         });
 
         const dataHoraFormatada = `${diaSemana} ${data} às ${hora} (GRU gerado automaticamente)`;
-        document.getElementById('dataPix').textContent = dataHoraFormatada;
-        document.getElementById('horaPix').textContent = ''; // Limpa o conteúdo do segundo elemento
+        var elDataPix = document.getElementById('dataPix');
+        var elHoraPix = document.getElementById('horaPix');
+        if (elDataPix) {
+            elDataPix.textContent = dataHoraFormatada;
+        }
+        if (elHoraPix) {
+            elHoraPix.textContent = '';
+        }
     }
 
             // Atualiza a cada segundo
