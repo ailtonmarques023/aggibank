@@ -8,8 +8,8 @@ const logger = require('../utils/logger');
 
 /** Homologação Efí Pix. */
 const SANDBOX_BASE = 'https://pix-h.api.efipay.com.br';
-/** Produção Efí — só usado com `EFI_ENVIRONMENT=production` e `EFI_PIX_ENABLE_PRODUCTION=true`. */
-const PRODUCTION_BASE = 'https://api.efipay.com.br';
+/** Produção Efí Pix (doc Efí: mesma família de host que homologação `pix-h`). */
+const PRODUCTION_BASE = 'https://pix.api.efipay.com.br';
 
 class EfiPixClientError extends Error {
   constructor(code, message, httpStatus = 502) {

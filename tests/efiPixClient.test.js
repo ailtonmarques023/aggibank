@@ -71,7 +71,7 @@ describe('efiPixClient — Fase N / N-PROD', () => {
   it('com production + EFI_PIX_ENABLE_PRODUCTION=true, getBaseUrl usa host produção', () => {
     process.env.EFI_ENVIRONMENT = 'production';
     process.env.EFI_PIX_ENABLE_PRODUCTION = 'true';
-    expect(efi.getBaseUrl()).toBe('https://api.efipay.com.br');
+    expect(efi.getBaseUrl()).toBe('https://pix.api.efipay.com.br');
   });
 
   it('com production + flag, isEfiPixConfigured verdadeiro quando credenciais completas', () => {
