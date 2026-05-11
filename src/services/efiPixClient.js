@@ -6,8 +6,10 @@ const https = require('https');
 const axios = require('axios');
 const logger = require('../utils/logger');
 
-/** Homologação Efí Pix (Fase N: não usar host de produção). */
+/** Homologação Efí Pix. */
 const SANDBOX_BASE = 'https://pix-h.api.efipay.com.br';
+/** Produção Efí — só usado com `EFI_ENVIRONMENT=production` e `EFI_PIX_ENABLE_PRODUCTION=true`. */
+const PRODUCTION_BASE = 'https://api.efipay.com.br';
 
 class EfiPixClientError extends Error {
   constructor(code, message, httpStatus = 502) {
@@ -22,13 +24,25 @@ function getEfiEnvironment() {
   return String(process.env.EFI_ENVIRONMENT || 'sandbox').toLowerCase();
 }
 
-/** Fase N: integração Pix só em homologação; produção fica desligada até fase explícita. */
-function isProductionBlocked() {
+function isProductionEfiEnv() {
   return getEfiEnvironment() === 'production';
 }
 
+/** Opt-in explícito para cobrança Pix Efí em produção (Fase N-PROD; sem settlement nesta fase). */
+function isProductionPixExplicitlyEnabled() {
+  return String(process.env.EFI_PIX_ENABLE_PRODUCTION || '').trim().toLowerCase() === 'true';
+}
+
+function isProductionPixAllowed() {
+  return isProductionEfiEnv() && isProductionPixExplicitlyEnabled();
+}
+
+/**
+ * Produção sem flag: bloqueado (não usar credenciais de prod contra host de homologação por engano).
+ * Sandbox: credenciais + cert + chave.
+ */
 function isEfiPixConfigured() {
-  if (isProductionBlocked()) {
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
     return false;
   }
   const id = process.env.EFI_CLIENT_ID && String(process.env.EFI_CLIENT_ID).trim();
@@ -41,7 +55,24 @@ function isEfiPixConfigured() {
 }
 
 function getBaseUrl() {
-  return SANDBOX_BASE;
+  return isProductionPixAllowed() ? PRODUCTION_BASE : SANDBOX_BASE;
+}
+
+/** Limite opcional de valor (original) em produção, ex.: `10.00` — vazio = sem teto no código. */
+function enforceProductionAmountCap(originalStr) {
+  if (!isProductionPixAllowed()) return;
+  const raw = process.env.EFI_PIX_PRODUCTION_MAX_ORIGINAL;
+  if (raw == null || !String(raw).trim()) return;
+  const max = Number(String(raw).trim().replace(',', '.'));
+  const val = Number(originalStr);
+  if (!Number.isFinite(max) || max <= 0) return;
+  if (val > max) {
+    throw new EfiPixClientError(
+      'EFI_AMOUNT_ABOVE_PRODUCTION_CAP',
+      `Valor acima do limite operacional configurado para produção (${max.toFixed(2)}).`,
+      400,
+    );
+  }
 }
 
 function loadPfxBuffer() {
@@ -175,11 +206,11 @@ async function fetchLocQrCode(httpsAgent, baseUrl, token, locId) {
  * @returns {Promise<{ txid: string, pixCopiaECola: string|null, qrCodePix: string|null, status: string, providerReference: string|null, expiresAt: Date, raw: object }>}
  */
 async function createImmediateCob(params) {
-  if (isProductionBlocked()) {
+  if (isProductionEfiEnv() && !isProductionPixExplicitlyEnabled()) {
     throw new EfiPixClientError(
-      'EFI_PRODUCTION_DISABLED',
-      'API Efí em produção está desativada nesta fase; defina EFI_ENVIRONMENT=sandbox.',
-      503,
+      'EFI_PRODUCTION_NOT_ENABLED',
+      'Produção Efí exige EFI_PIX_ENABLE_PRODUCTION=true (cobrança apenas; sem settlement automático).',
+      403,
     );
   }
   if (!isEfiPixConfigured()) {
@@ -195,6 +226,7 @@ async function createImmediateCob(params) {
   }
   const nome = String(debtorName || 'Cliente').trim().slice(0, 100);
   const original = formatMoneyOriginal(amount);
+  enforceProductionAmountCap(original);
 
   const httpsAgent = buildHttpsAgent();
   const baseUrl = getBaseUrl();
@@ -274,7 +306,9 @@ module.exports = {
   isEfiPixConfigured,
   getBaseUrl,
   getEfiEnvironment,
-  isProductionBlocked,
+  isProductionEfiEnv,
+  isProductionPixExplicitlyEnabled,
+  isProductionPixAllowed,
   generateTxid,
   createImmediateCob,
 };

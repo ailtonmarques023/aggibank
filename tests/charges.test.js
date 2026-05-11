@@ -146,6 +146,8 @@ describe('POST /api/charges/:id/pix', () => {
     delete process.env.EFI_PIX_KEY;
     delete process.env.EFI_CERTIFICATE_BASE64;
     delete process.env.EFI_CERTIFICATE_PATH;
+    delete process.env.EFI_PIX_ENABLE_PRODUCTION;
+    process.env.EFI_ENVIRONMENT = 'sandbox';
     process.env.PIX_RECEIVER_KEY = 'recebedor@agilbank.com';
   });
 
@@ -185,6 +187,8 @@ describe('POST /api/charges/:id/pix com Efí (serviço mockado)', () => {
     key: process.env.EFI_PIX_KEY,
     b64: process.env.EFI_CERTIFICATE_BASE64,
     path: process.env.EFI_CERTIFICATE_PATH,
+    env: process.env.EFI_ENVIRONMENT,
+    enableProd: process.env.EFI_PIX_ENABLE_PRODUCTION,
   };
   let spy;
 
@@ -201,6 +205,8 @@ describe('POST /api/charges/:id/pix com Efí (serviço mockado)', () => {
       idempotencyKey: null,
     });
     delete process.env.PIX_RECEIVER_KEY;
+    process.env.EFI_ENVIRONMENT = 'sandbox';
+    delete process.env.EFI_PIX_ENABLE_PRODUCTION;
     process.env.EFI_CLIENT_ID = 'efi-test-client';
     process.env.EFI_CLIENT_SECRET = 'efi-test-secret';
     process.env.EFI_PIX_KEY = 'efipay-dev-key';
@@ -234,6 +240,10 @@ describe('POST /api/charges/:id/pix com Efí (serviço mockado)', () => {
     else delete process.env.EFI_CERTIFICATE_BASE64;
     if (prevEfi.path !== undefined) process.env.EFI_CERTIFICATE_PATH = prevEfi.path;
     else delete process.env.EFI_CERTIFICATE_PATH;
+    if (prevEfi.env !== undefined) process.env.EFI_ENVIRONMENT = prevEfi.env;
+    else delete process.env.EFI_ENVIRONMENT;
+    if (prevEfi.enableProd !== undefined) process.env.EFI_PIX_ENABLE_PRODUCTION = prevEfi.enableProd;
+    else delete process.env.EFI_PIX_ENABLE_PRODUCTION;
   });
 
   it('retorna BR Code da Efí e não usa PIX_RECEIVER_KEY', async () => {
