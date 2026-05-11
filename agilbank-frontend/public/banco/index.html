@@ -2384,33 +2384,7 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" placeholder="Buscar conversa">
         </div>
-        <div class="dashboard-feature-cards dashboard-feature-cards--no-cartao" id="dashboardFeatureCards" role="region" aria-label="Cartão e empréstimos">
-            <div id="dashboardCardApprovedMiniWrap" class="dashboard-card-approved-mini-wrap" style="display:none;">
-                <button type="button" class="dashboard-card-approved-mini" id="dashboardCardApprovedMiniBtn" aria-label="Cartão aprovado. Abrir Meus cartões." onclick="if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();}">
-                    <span class="dashboard-card-mini-icon" aria-hidden="true">
-                        <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="" width="34" height="24" />
-                    </span>
-                    <span class="dashboard-card-mini-copy">
-                        <strong>Cartão aprovado</strong>
-                        <small>Compras e pagamentos com um só cartão.</small>
-                    </span>
-                </button>
-            </div>
-            <div class="dashboard-emprestimo-card-wrap" aria-label="Empréstimos e crédito pessoal">
-                <div class="dashboard-emprestimo-card-inner">
-                    <div class="dashboard-emprestimo-card-head">
-                        <h3 class="dashboard-emprestimo-card-title">Empréstimos</h3>
-                        <button type="button" class="dashboard-emprestimo-card-link" onclick="activateCredito()">Consultar →</button>
-                    </div>
-                    <p class="dashboard-emprestimo-card-lead">Crédito pessoal para sua conta</p>
-                    <p class="dashboard-emprestimo-card-desc">Consulte opções disponíveis para sua conta.</p>
-                    <button type="button" class="dashboard-emprestimo-card-cta" onclick="activateCredito()">Simular</button>
-                </div>
-            </div>
-        </div>
-        <!--movimente sua conta -->
-        <div class="movimente"> 
-            <h3>Movimente sua conta</h3>
+        <div class="dashboard-quickstrip-host">
             <div class="movimente-quickstrip" role="region" aria-label="Atalhos rápidos do AgilBank">
                 <div class="movimente-quickstrip-scroll">
                     <button type="button" class="movimente-quickchip" aria-label="Abrir área Pix" onclick="if(typeof showPixContainer==='function')showPixContainer();">
@@ -2443,6 +2417,33 @@
                     </a>
                 </div>
             </div>
+        </div>
+        <div class="dashboard-feature-cards dashboard-feature-cards--no-cartao" id="dashboardFeatureCards" role="region" aria-label="Cartão e empréstimos">
+            <div id="dashboardCardApprovedMiniWrap" class="dashboard-card-approved-mini-wrap" style="display:none;">
+                <button type="button" class="dashboard-card-approved-mini" id="dashboardCardApprovedMiniBtn" aria-label="Cartão aprovado. Abrir Meus cartões." onclick="if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();}">
+                    <span class="dashboard-card-mini-icon" aria-hidden="true">
+                        <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="" width="34" height="24" />
+                    </span>
+                    <span class="dashboard-card-mini-copy">
+                        <strong>Cartão aprovado</strong>
+                        <small>Compras e pagamentos com um só cartão.</small>
+                    </span>
+                </button>
+            </div>
+            <div class="dashboard-emprestimo-card-wrap" aria-label="Empréstimos e crédito pessoal">
+                <div class="dashboard-emprestimo-card-inner">
+                    <div class="dashboard-emprestimo-card-head">
+                        <h3 class="dashboard-emprestimo-card-title">Empréstimos</h3>
+                        <button type="button" class="dashboard-emprestimo-card-link" onclick="activateCredito()">Consultar →</button>
+                    </div>
+                    <p class="dashboard-emprestimo-card-lead">Crédito pessoal para sua conta</p>
+                    <p class="dashboard-emprestimo-card-desc">Consulte opções disponíveis para sua conta.</p>
+                    <button type="button" class="dashboard-emprestimo-card-cta" onclick="activateCredito()">Simular</button>
+                </div>
+            </div>
+        </div>
+        <!-- Atalhos adicionais (grade) — sem título “Movimente sua conta” -->
+        <div class="movimente">
             <!--menu de opçoes -->
             <div class="menu"> 
                 <div class="menu-item" id="pixButton" onclick="showPixContainer()">
