@@ -47,7 +47,52 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(res.status).toBe(403);
   });
 
-  it('retorna 200 e repassa resultado do serviço com x-internal-key', async () => {
+  it('POST autenticado com corpo vazio retorna 200 EFI_WEBHOOK_VALIDATION_OK e não chama o serviço', async () => {
+    process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
+    const res = await request(app)
+      .post('/api/internal/efi/pix/webhook')
+      .set('x-internal-key', 'secret-webhook-o')
+      .set('Content-Type', 'application/json')
+      .send();
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, code: 'EFI_WEBHOOK_VALIDATION_OK' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('POST autenticado com {} retorna 200 EFI_WEBHOOK_VALIDATION_OK e não chama o serviço', async () => {
+    process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
+    const res = await request(app)
+      .post('/api/internal/efi/pix/webhook')
+      .set('x-internal-key', 'secret-webhook-o')
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, code: 'EFI_WEBHOOK_VALIDATION_OK' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('POST com pix que não é array retorna 400 INVALID_BODY e não chama o serviço', async () => {
+    process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
+    const res = await request(app)
+      .post('/api/internal/efi/pix/webhook')
+      .set('x-internal-key', 'secret-webhook-o')
+      .send({ pix: 'abc' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_BODY');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('retorna 200 NO_PIX_ITEMS com pix [] sem chamar o serviço', async () => {
+    process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
+    const res = await request(app)
+      .post('/api/internal/efi/pix/webhook')
+      .set('x-internal-key', 'secret-webhook-o')
+      .send({ pix: [] });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, code: 'NO_PIX_ITEMS' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('retorna 200 e processa quando pix tem itens (chama o serviço)', async () => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
     const res = await request(app)
       .post('/api/internal/efi/pix/webhook')
@@ -71,23 +116,26 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  it('POST /webhook/pix aceita o mesmo auth', async () => {
+  it('POST /webhook/pix aceita o mesmo auth e NO_PIX_ITEMS', async () => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
     const res = await request(app)
       .post('/api/internal/efi/pix/webhook/pix')
       .set('x-internal-key', 'secret-webhook-o')
       .send({ pix: [] });
     expect(res.status).toBe(200);
+    expect(res.body.code).toBe('NO_PIX_ITEMS');
+    expect(spy).not.toHaveBeenCalled();
   });
 
-  it('retorna 400 quando serviço sinaliza corpo inválido', async () => {
+  it('retorna 400 quando serviço sinaliza erro após passar na classificação (payload com itens)', async () => {
     process.env.EFI_PIX_WEBHOOK_INTERNAL_KEY = 'secret-webhook-o';
     spy.mockResolvedValueOnce({ ok: false, code: 'INVALID_BODY', results: [] });
     const res = await request(app)
       .post('/api/internal/efi/pix/webhook')
       .set('x-internal-key', 'secret-webhook-o')
-      .send({});
+      .send({ pix: [{ endToEndId: 'E1', txid: 't1', valor: '1.00' }] });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_BODY');
+    expect(spy).toHaveBeenCalled();
   });
 });
