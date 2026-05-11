@@ -2,8 +2,10 @@
 'use strict';
 
 /**
- * Fase O.1 — Cadastra e consulta webhook Pix na Efí (PUT/GET /v2/webhook/:chave).
- * Usa credenciais do ambiente (Railway: `railway run node scripts/efi-o1-register-pix-webhook.js`).
+ * Fase O.1 / O.2 — Cadastra e consulta webhook Pix na Efí (PUT/GET /v2/webhook/:chave).
+ * URL cadastrada: `.../api/internal/efi/pix/webhook/pix?ignorar=&efiwk=` para a Efí não
+ * sufixar `/pix` ao path e corromper o query param `efiwk` (ver relatório O.2).
+ * Railway: `railway run npm run efi:o1-webhook`.
  * Não imprime segredos, certificados nem token completo na URL.
  */
 
@@ -27,7 +29,7 @@ async function main() {
     'https://aggibank-production.up.railway.app';
   const baseTrim = String(base).replace(/\/+$/, '');
   const token = String(process.env.EFI_PIX_WEBHOOK_CALLBACK_TOKEN || '').trim();
-  const pathSuffix = '/api/internal/efi/pix/webhook';
+  const pathSuffix = '/api/internal/efi/pix/webhook/pix';
   let webhookUrl;
   if (token) {
     webhookUrl = `${baseTrim}${pathSuffix}?ignorar=&efiwk=${encodeURIComponent(token)}`;
@@ -35,7 +37,7 @@ async function main() {
     webhookUrl = `${baseTrim}${pathSuffix}`;
     console.warn(
       '[efi-o1] EFI_PIX_WEBHOOK_CALLBACK_TOKEN ausente: cadastrando URL sem query. ' +
-        'Notificações reais da Efí tendem a receber 403 até definir o token na Railway e recadastrar com ?ignorar=&efiwk=…',
+        'Defina o token na Railway e recadastre com .../webhook/pix?ignorar=&efiwk=…',
     );
   }
 
