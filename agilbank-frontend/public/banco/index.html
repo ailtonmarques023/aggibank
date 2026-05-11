@@ -2391,7 +2391,7 @@
                         <span class="movimente-quickchip-circle"><i class="fa-solid fa-qrcode" aria-hidden="true"></i></span>
                         <span class="movimente-quickchip-label">Pix</span>
                     </button>
-                    <button type="button" class="movimente-quickchip" aria-label="Adicionar dinheiro — em breve" onclick="if(window.agilbankAviso){window.agilbankAviso('Depósito e adição de saldo estarão disponíveis em breve, com integração segura ao backend.','Em breve');}else{alert('Em breve');}">
+                    <button type="button" class="movimente-quickchip" aria-label="Adicionar dinheiro via Pix" onclick="if(typeof abrirModalDepositoPix==='function')abrirModalDepositoPix();else if(window.agilbankAviso){window.agilbankAviso('Carregue a página completa para usar o depósito Pix.','AgilBank');}else{alert('Indisponível');}">
                         <span class="movimente-quickchip-circle"><i class="fa-solid fa-upload" aria-hidden="true"></i></span>
                         <span class="movimente-quickchip-label movimente-quickchip-label--twoline">
                             <span class="movimente-quickchip-label-row">Adicionar</span>
@@ -3910,6 +3910,52 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn-secondary" onclick="fecharModalLimitesPix()">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Depósito Pix (Fase U) -->
+        <div id="modalDepositoPix" class="modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modalDepositoPixTitle">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalDepositoPixTitle">Adicionar dinheiro</h2>
+                    <span class="close" onclick="fecharModalDepositoPix()" aria-label="Fechar">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size: 13px; color: #555; margin-top: 0;">Informe o valor (R$). A confirmação final é feita no servidor (mín. R$&nbsp;1,00 — máx. R$&nbsp;5.000,00 por depósito).</p>
+                    <div id="depositoPixSuccessBanner" style="display: none; padding: 10px 12px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; color: #155724; margin-bottom: 12px;">
+                        Saldo creditado com sucesso. O extrato e o saldo exibidos na conta serão atualizados quando você consultar os dados na API.
+                    </div>
+                    <div id="depositoPixFormStep">
+                        <label for="depositoPixValorInput" class="form-label">Valor (R$)</label>
+                        <input type="text" inputmode="decimal" id="depositoPixValorInput" class="form-control" placeholder="Ex.: 50,00" autocomplete="off" />
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0;">
+                            <button type="button" class="btn-secondary" onclick="agilbankDepositoPixValorRapido(20)">R$&nbsp;20</button>
+                            <button type="button" class="btn-secondary" onclick="agilbankDepositoPixValorRapido(50)">R$&nbsp;50</button>
+                            <button type="button" class="btn-secondary" onclick="agilbankDepositoPixValorRapido(100)">R$&nbsp;100</button>
+                            <button type="button" class="btn-secondary" onclick="agilbankDepositoPixValorRapido(200)">R$&nbsp;200</button>
+                        </div>
+                        <p id="depositoPixErroLocal" style="color: #b00020; font-size: 13px; min-height: 1.2em; margin: 6px 0;"></p>
+                        <div class="form-actions" style="margin-top: 12px;">
+                            <button type="button" class="btn-primary" id="depositoPixBtnGerar" onclick="agilbankDepositoPixGerar()">Gerar Pix</button>
+                            <button type="button" class="btn-secondary" onclick="fecharModalDepositoPix()">Fechar</button>
+                        </div>
+                    </div>
+                    <div id="depositoPixPixStep" style="display: none;">
+                        <p id="depositoPixStatusText" style="font-weight: 600; color: #0066b3;">Aguardando pagamento</p>
+                        <p id="depositoPixExpira" style="font-size: 13px; color: #666;"></p>
+                        <div style="text-align: center; margin: 12px 0;">
+                            <img id="depositoPixQrImg" alt="QR Code Pix" style="max-width: 220px; height: auto; display: none;" />
+                        </div>
+                        <label for="depositoPixCopiaInput" class="form-label">Pix copia e cola</label>
+                        <textarea id="depositoPixCopiaInput" class="form-control" rows="3" readonly style="font-size: 12px;"></textarea>
+                        <div class="form-actions" style="margin-top: 12px; flex-wrap: wrap; gap: 8px;">
+                            <button type="button" class="btn-secondary" onclick="agilbankDepositoPixCopiar()">Copiar código</button>
+                            <button type="button" class="btn-primary" id="depositoPixBtnAtualizar" onclick="agilbankDepositoPixAtualizarStatus()">Atualizar status</button>
+                            <button type="button" class="btn-secondary" onclick="fecharModalDepositoPix()">Fechar</button>
+                        </div>
+                        <p id="depositoPixErroApi" style="color: #b00020; font-size: 13px; min-height: 1.2em; margin-top: 10px;"></p>
                     </div>
                 </div>
             </div>
@@ -9067,6 +9113,224 @@
             modal.style.display = 'none';
             modal.classList.remove('show');
         }
+
+        /** Estado do fluxo Depósito Pix (Fase U); não altera saldo localmente. */
+        window.__agilbankDepositoPixState = window.__agilbankDepositoPixState || { depositId: null };
+
+        function abrirModalDepositoPix() {
+            window.__agilbankDepositoPixState.depositId = null;
+            var modal = document.getElementById('modalDepositoPix');
+            if (!modal) return;
+            var formStep = document.getElementById('depositoPixFormStep');
+            var pixStep = document.getElementById('depositoPixPixStep');
+            var okBanner = document.getElementById('depositoPixSuccessBanner');
+            if (formStep) formStep.style.display = 'block';
+            if (pixStep) pixStep.style.display = 'none';
+            if (okBanner) okBanner.style.display = 'none';
+            var inp = document.getElementById('depositoPixValorInput');
+            if (inp) inp.value = '';
+            var e1 = document.getElementById('depositoPixErroLocal');
+            var e2 = document.getElementById('depositoPixErroApi');
+            if (e1) e1.textContent = '';
+            if (e2) e2.textContent = '';
+            var qr = document.getElementById('depositoPixQrImg');
+            if (qr) {
+                qr.style.display = 'none';
+                qr.removeAttribute('src');
+            }
+            modal.style.display = 'flex';
+            modal.classList.add('show');
+        }
+
+        function fecharModalDepositoPix() {
+            var modal = document.getElementById('modalDepositoPix');
+            if (!modal) return;
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+
+        function agilbankDepositoPixValorRapido(valor) {
+            var inp = document.getElementById('depositoPixValorInput');
+            if (!inp) return;
+            inp.value = String(Number(valor)).replace('.', ',');
+        }
+
+        function agilbankDepositoPixParseValorDigitado(raw) {
+            var t = String(raw || '').trim().replace(/\./g, '').replace(',', '.');
+            var n = Number(t);
+            return Number.isFinite(n) ? n : NaN;
+        }
+
+        function agilbankDepositoPixGerar() {
+            var inp = document.getElementById('depositoPixValorInput');
+            var errLocal = document.getElementById('depositoPixErroLocal');
+            var errApi = document.getElementById('depositoPixErroApi');
+            if (errApi) errApi.textContent = '';
+            var n = agilbankDepositoPixParseValorDigitado(inp && inp.value);
+            if (!Number.isFinite(n) || n <= 0) {
+                if (errLocal) errLocal.textContent = 'Informe um valor válido em reais.';
+                return;
+            }
+            if (n < 1 || n > 5000) {
+                if (errLocal) errLocal.textContent = 'Use entre R$ 1,00 e R$ 5.000,00 (validação final no servidor).';
+                return;
+            }
+            var parts = String(inp.value).replace(',', '.').split('.');
+            if (parts.length > 1 && parts[parts.length - 1].length > 2) {
+                if (errLocal) errLocal.textContent = 'Use no máximo duas casas decimais.';
+                return;
+            }
+            if (errLocal) errLocal.textContent = '';
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                mostrarAgilbankAviso('Cliente de API indisponível.', 'AgilBank');
+                return;
+            }
+            var btn = document.getElementById('depositoPixBtnGerar');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Gerando…';
+            }
+            window.AgilBank.api
+                .request('deposits/pix', {
+                    method: 'POST',
+                    body: JSON.stringify({ amount: Math.round(n * 100) / 100 }),
+                })
+                .then(function (res) {
+                    return res.json().then(function (body) {
+                        return { res: res, body: body };
+                    });
+                })
+                .then(function (pack) {
+                    if (!pack.res.ok) {
+                        var code = (pack.body && pack.body.code) || 'ERRO';
+                        var msg = (pack.body && pack.body.message) || 'Não foi possível gerar o Pix.';
+                        if (errApi) errApi.textContent = msg + (code ? ' (' + code + ')' : '');
+                        return;
+                    }
+                    var d = pack.body && pack.body.data;
+                    if (!d || !d.deposit || !d.pix) {
+                        if (errApi) errApi.textContent = 'Resposta inválida do servidor.';
+                        return;
+                    }
+                    window.__agilbankDepositoPixState.depositId = d.deposit.id;
+                    var formStep = document.getElementById('depositoPixFormStep');
+                    var pixStep = document.getElementById('depositoPixPixStep');
+                    if (formStep) formStep.style.display = 'none';
+                    if (pixStep) pixStep.style.display = 'block';
+                    var copia = document.getElementById('depositoPixCopiaInput');
+                    if (copia) copia.value = d.pix.pixCopiaECola || '';
+                    var st = document.getElementById('depositoPixStatusText');
+                    if (st) st.textContent = 'Aguardando pagamento';
+                    var ex = document.getElementById('depositoPixExpira');
+                    if (ex && d.pix.expiresAt) {
+                        try {
+                            ex.textContent = 'Expira em: ' + new Date(d.pix.expiresAt).toLocaleString('pt-BR');
+                        } catch (e) {
+                            ex.textContent = '';
+                        }
+                    }
+                    var qrImg = document.getElementById('depositoPixQrImg');
+                    if (qrImg && d.pix.qrCodePix) {
+                        var q = String(d.pix.qrCodePix).trim();
+                        if (/^https?:\/\//i.test(q)) {
+                            qrImg.src = q;
+                        } else if (/^data:image\//i.test(q)) {
+                            qrImg.src = q;
+                        } else {
+                            qrImg.src = 'data:image/png;base64,' + q;
+                        }
+                        qrImg.style.display = 'block';
+                    } else if (qrImg) {
+                        qrImg.style.display = 'none';
+                    }
+                })
+                .catch(function () {
+                    if (errApi) errApi.textContent = 'Falha de conexão. Tente novamente.';
+                })
+                .finally(function () {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Gerar Pix';
+                    }
+                });
+        }
+
+        function agilbankDepositoPixCopiar() {
+            var copia = document.getElementById('depositoPixCopiaInput');
+            if (!copia || !copia.value) {
+                mostrarAgilbankAviso('Não há código Pix para copiar.', 'AgilBank');
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(copia.value).then(function () {
+                    mostrarAgilbankAviso('Código Pix copiado.', 'AgilBank');
+                }).catch(function () {
+                    mostrarAgilbankAviso('Não foi possível copiar automaticamente.', 'AgilBank');
+                });
+            } else {
+                copia.select();
+                document.execCommand('copy');
+                mostrarAgilbankAviso('Código selecionado; use Ctrl+C se necessário.', 'AgilBank');
+            }
+        }
+
+        function agilbankDepositoPixAtualizarStatus() {
+            var id = window.__agilbankDepositoPixState.depositId;
+            var errApi = document.getElementById('depositoPixErroApi');
+            if (errApi) errApi.textContent = '';
+            if (!id) {
+                if (errApi) errApi.textContent = 'Nenhum depósito ativo.';
+                return;
+            }
+            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') return;
+            var btn = document.getElementById('depositoPixBtnAtualizar');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Atualizando…';
+            }
+            window.AgilBank.api
+                .request('deposits/' + encodeURIComponent(id), { method: 'GET' })
+                .then(function (res) {
+                    return res.json().then(function (body) {
+                        return { res: res, body: body };
+                    });
+                })
+                .then(function (pack) {
+                    if (!pack.res.ok) {
+                        var msg = (pack.body && pack.body.message) || 'Erro ao consultar depósito.';
+                        if (errApi) errApi.textContent = msg;
+                        return;
+                    }
+                    var dep = pack.body && pack.body.data && pack.body.data.deposit;
+                    if (!dep) return;
+                    var okBanner = document.getElementById('depositoPixSuccessBanner');
+                    if (dep.status === 'CREDITADO') {
+                        if (okBanner) okBanner.style.display = 'block';
+                        var st = document.getElementById('depositoPixStatusText');
+                        if (st) st.textContent = 'Pagamento confirmado e saldo creditado';
+                    } else {
+                        if (okBanner) okBanner.style.display = 'none';
+                        var st2 = document.getElementById('depositoPixStatusText');
+                        if (st2) st2.textContent = 'Aguardando pagamento';
+                    }
+                })
+                .catch(function () {
+                    if (errApi) errApi.textContent = 'Falha de conexão ao atualizar.';
+                })
+                .finally(function () {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Atualizar status';
+                    }
+                });
+        }
+
+        window.abrirModalDepositoPix = abrirModalDepositoPix;
+        window.fecharModalDepositoPix = fecharModalDepositoPix;
+        window.agilbankDepositoPixValorRapido = agilbankDepositoPixValorRapido;
+        window.agilbankDepositoPixGerar = agilbankDepositoPixGerar;
+        window.agilbankDepositoPixCopiar = agilbankDepositoPixCopiar;
+        window.agilbankDepositoPixAtualizarStatus = agilbankDepositoPixAtualizarStatus;
 
         function pixBody(body) {
             if (body && typeof body === 'object' && body.data !== undefined && body.data !== null) {

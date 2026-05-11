@@ -8,6 +8,7 @@ const NOTIFICATION_TYPE = {
   LOAN_GUARANTEE_CREDIT_RELEASED: 'loan_guarantee_credit_released',
   LOAN_INSURANCE_SETTLED: 'loan_insurance_settled',
   CARD_SHIPMENT_FRETE_PIX: 'card_shipment_frete_pix',
+  ACCOUNT_DEPOSIT_PIX_CREDITED: 'account_deposit_pix_credited',
 };
 
 function loanApprovedBlockedDedupeKey(loanId) {
@@ -32,6 +33,10 @@ function loanInsuranceSettledDedupeKey(loanId) {
 
 function cardShipmentFretePixDedupeKey(shipmentId) {
   return `card_shipment_frete_pix:${shipmentId}`;
+}
+
+function accountDepositPixCreditedDedupeKey(depositId) {
+  return `account_deposit_pix_credited:${depositId}`;
 }
 
 function formatLimiteMensagemBRL(limite) {
@@ -381,6 +386,67 @@ async function notifyCardShipmentFreightPixSettled({ userId, shipmentId, pixCobr
   }
 }
 
+/**
+ * Depósito Pix confirmado e creditado no saldo (fora da transação do webhook).
+ * Idempotente por depositId.
+ */
+async function notifyAccountDepositPixCredited({
+  userId,
+  depositId,
+  movimentacaoId,
+  amount,
+  pixCobrancaId,
+}) {
+  if (!userId || !depositId || !movimentacaoId) {
+    logger.warn(
+      { userId, depositId, movimentacaoId },
+      'notifyAccountDepositPixCredited_skip_missing_ids',
+    );
+    return null;
+  }
+
+  const dedupeKey = accountDepositPixCreditedDedupeKey(depositId);
+  const valorFmt = formatLimiteMensagemBRL(amount);
+  const titulo = 'Depósito Pix creditado';
+  const mensagem = `Seu depósito de R$ ${valorFmt} foi confirmado e creditado no saldo disponível. Consulte o extrato.`;
+  const valorNum = Number(amount);
+  const metadata = {
+    depositId,
+    movimentacaoId,
+    valor: Number.isFinite(valorNum) ? valorNum : amount,
+    action: 'view_statement',
+  };
+  if (pixCobrancaId) metadata.pixCobrancaId = pixCobrancaId;
+
+  try {
+    const existing = await prisma.notificacao.findUnique({
+      where: { dedupeKey },
+      select: { id: true, metadata: true, userId: true },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    return await prisma.notificacao.create({
+      data: {
+        userId,
+        titulo,
+        mensagem,
+        tipo: NOTIFICATION_TYPE.ACCOUNT_DEPOSIT_PIX_CREDITED,
+        metadata,
+        dedupeKey,
+      },
+    });
+  } catch (err) {
+    if (err && err.code === 'P2002') {
+      logger.info({ dedupeKey }, 'notifyAccountDepositPixCredited_duplicate_ignored');
+      return null;
+    }
+    logger.error({ err: err.message, dedupeKey, userId }, 'notifyAccountDepositPixCredited_failed');
+    return null;
+  }
+}
+
 module.exports = {
   NOTIFICATION_TYPE,
   loanApprovedBlockedDedupeKey,
@@ -389,10 +455,12 @@ module.exports = {
   loanGuaranteeCreditReleasedDedupeKey,
   loanInsuranceSettledDedupeKey,
   cardShipmentFretePixDedupeKey,
+  accountDepositPixCreditedDedupeKey,
   notifyLoanApprovedBlockedFunds,
   notifyCardApproved,
   notifyBoletoPago,
   notifyLoanGuaranteeCreditReleased,
   notifyLoanInsuranceSettled,
   notifyCardShipmentFreightPixSettled,
+  notifyAccountDepositPixCredited,
 };

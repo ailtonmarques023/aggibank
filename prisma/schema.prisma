@@ -51,8 +51,31 @@ model User {
   cardShipments       CardShipment[]
   cardShipmentEvents  CardShipmentEvent[]
   pixCobrancas        PixCobranca[]
+  accountDeposits     AccountDeposit[]
 
   @@map("usuarios")
+}
+
+/// Depósito em conta via Pix (valor escolhido pelo titular; crédito só após confirmação PSP — Fase U).
+model AccountDeposit {
+  id                   String       @id @default(cuid())
+  userId               String
+  amount               Decimal      @db.Decimal(10, 2)
+  /// PENDENTE | PIX_GERADO | PAGO | CREDITADO | CANCELADO | EXPIRADO
+  status               String       @default("PENDENTE")
+  provider             String       @default("EFI")
+  pixCobrancaId        String?      @unique
+  creditedMovementId String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  paidAt               DateTime?
+  creditedAt           DateTime?
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pixCobranca          PixCobranca? @relation(fields: [pixCobrancaId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@map("account_deposits")
 }
 
 model Endereco {
@@ -498,6 +521,7 @@ model PixCobranca {
   updatedAt          DateTime           @updatedAt
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   webhookEvents      PixWebhookEvent[]
+  accountDeposit     AccountDeposit?
 
   @@index([userId, linkedEntityType, linkedEntityId])
   @@map("pix_cobrancas")

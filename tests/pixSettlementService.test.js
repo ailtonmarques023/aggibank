@@ -8,6 +8,7 @@ jest.mock('../src/services/inAppNotificationService', () => ({
   notifyLoanInsuranceSettled: jest.fn(),
   notifyBoletoPago: jest.fn(),
   notifyCardShipmentFreightPixSettled: jest.fn(),
+  notifyAccountDepositPixCredited: jest.fn(),
 }));
 
 jest.mock('../src/services/ledgerService', () => {
@@ -24,10 +25,15 @@ jest.mock('../src/services/ledgerService', () => {
     registrarCreditoLiberadoDeBloqueado: jest.fn(),
     registrarDebitoSaldoAtual: jest.fn(),
     registrarCreditoSaldoBloqueado: jest.fn(),
+    registrarCreditoSaldoAtual: jest.fn(),
   };
 });
 
-const { registrarCreditoLiberadoDeBloqueado, LedgerError } = require('../src/services/ledgerService');
+const {
+  registrarCreditoLiberadoDeBloqueado,
+  registrarCreditoSaldoAtual,
+  LedgerError,
+} = require('../src/services/ledgerService');
 const { settlePaidPixCobrancaInTx, amountsMatch } = require('../src/services/pixSettlementService');
 
 describe('pixSettlementService', () => {
@@ -38,6 +44,7 @@ describe('pixSettlementService', () => {
     boleto: { findFirst: jest.fn(), updateMany: jest.fn() },
     cardShipment: { findFirst: jest.fn(), updateMany: jest.fn() },
     cardShipmentEvent: { create: jest.fn() },
+    accountDeposit: { findFirst: jest.fn(), updateMany: jest.fn(), update: jest.fn() },
   });
 
   beforeEach(() => {
@@ -234,6 +241,73 @@ describe('pixSettlementService', () => {
       }),
     );
     expect(registrarCreditoLiberadoDeBloqueado).not.toHaveBeenCalled();
+  });
+
+  it('account_deposit SETTLED credita saldo via ledger com idempotência', async () => {
+    const prismaTx = tx();
+    prismaTx.movimentacao.findUnique.mockResolvedValue(null);
+    prismaTx.accountDeposit.findFirst.mockResolvedValue({
+      id: 'dep1',
+      userId: 'u1',
+      amount: 50,
+      status: 'PIX_GERADO',
+      pixCobrancaId: 'pix1',
+    });
+    prismaTx.accountDeposit.updateMany.mockResolvedValue({ count: 1 });
+    registrarCreditoSaldoAtual.mockResolvedValue({ id: 'movDep1' });
+    prismaTx.accountDeposit.update.mockResolvedValue({});
+
+    const r = await settlePaidPixCobrancaInTx(prismaTx, {
+      pixCobranca: {
+        id: 'pix1',
+        status: 'PAGA',
+        userId: 'u1',
+        linkedEntityType: 'account_deposit',
+        linkedEntityId: 'dep1',
+        amount: 50,
+        paidAt: new Date(),
+        grossAmount: 50,
+      },
+    });
+
+    expect(r.settlementResult).toBe('SETTLED');
+    expect(registrarCreditoSaldoAtual).toHaveBeenCalledWith(
+      prismaTx,
+      expect.objectContaining({
+        userId: 'u1',
+        valorCredito: 50,
+        idempotencyKey: 'pix_deposit_credit:pix1',
+        categoria: 'deposito_pix',
+      }),
+    );
+    expect(typeof r.postCommit).toBe('function');
+  });
+
+  it('account_deposit AMOUNT_MISMATCH não chama ledger', async () => {
+    const prismaTx = tx();
+    prismaTx.movimentacao.findUnique.mockResolvedValue(null);
+    prismaTx.accountDeposit.findFirst.mockResolvedValue({
+      id: 'dep1',
+      userId: 'u1',
+      amount: 51,
+      status: 'PIX_GERADO',
+      pixCobrancaId: 'pix1',
+    });
+
+    const r = await settlePaidPixCobrancaInTx(prismaTx, {
+      pixCobranca: {
+        id: 'pix1',
+        status: 'PAGA',
+        userId: 'u1',
+        linkedEntityType: 'account_deposit',
+        linkedEntityId: 'dep1',
+        amount: 50,
+        paidAt: new Date(),
+      },
+    });
+
+    expect(r.settlementResult).toBe('AMOUNT_MISMATCH');
+    expect(registrarCreditoSaldoAtual).not.toHaveBeenCalled();
   });
 
   it('boleto com CARD_SHIPMENT aciona frete sem duplicar débito ledger', async () => {

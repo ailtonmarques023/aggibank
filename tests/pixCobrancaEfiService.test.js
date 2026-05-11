@@ -99,6 +99,41 @@ describe('pixCobrancaEfiService.getOrCreateEfiPixForCharge', () => {
     expect(out.pixCopiaECola).toContain('000201');
   });
 
+  it('account_deposit persiste linkedEntityType account_deposit', async () => {
+    prisma.pixCobranca.findFirst.mockResolvedValue(null);
+    prisma.pixCobranca.create.mockResolvedValue({
+      id: 'newDep',
+      userId: 'u1',
+      linkedEntityType: 'account_deposit',
+      linkedEntityId: 'dep1',
+      amount: 100,
+      status: 'ATIVA',
+      txid: 'txidFromEfiMockUnitTest0001',
+      providerReference: '100',
+      pixCopiaECola: '00020101021226840014BR.GOV.BCB.PIX2564UNITMOCK',
+      qrCodePix: null,
+      expiresAt: new Date(Date.now() + 3600000),
+      paidAt: null,
+      idempotencyKey: 'efi_emit:account_deposit:dep1:txidFromEfiMockUnitTest0001',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await getOrCreateEfiPixForCharge({
+      userId: 'u1',
+      chargeKind: 'account_deposit',
+      linkedEntityId: 'dep1',
+      amount: 100,
+      debtorCpf: '09516717008',
+      debtorName: 'Teste',
+    });
+
+    const createArg = prisma.pixCobranca.create.mock.calls[0][0];
+    expect(createArg.data.linkedEntityType).toBe('account_deposit');
+    expect(createArg.data.linkedEntityId).toBe('dep1');
+    expect(createArg.data.amount).toBe(100);
+  });
+
   it('lança quando Efí não está configurada', async () => {
     jest.spyOn(efiPixClient, 'isEfiPixConfigured').mockReturnValue(false);
     await expect(

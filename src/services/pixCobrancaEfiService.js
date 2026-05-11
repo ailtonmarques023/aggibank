@@ -11,6 +11,7 @@ function linkedTypeFromChargeKind(kind) {
   if (kind === 'loan_insurance') return 'loan_insurance';
   if (kind === 'card_shipment') return 'card_shipment';
   if (kind === 'boleto') return 'boleto';
+  if (kind === 'account_deposit') return 'account_deposit';
   return null;
 }
 

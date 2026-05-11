@@ -4,12 +4,14 @@ const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
 const {
   registrarCreditoLiberadoDeBloqueado,
+  registrarCreditoSaldoAtual,
   LedgerError,
 } = require('./ledgerService');
 const {
   notifyLoanInsuranceSettled,
   notifyBoletoPago,
   notifyCardShipmentFreightPixSettled,
+  notifyAccountDepositPixCredited,
 } = require('./inAppNotificationService');
 
 function moneyCents(n) {
@@ -27,6 +29,10 @@ function amountsMatch(a, b) {
 
 function releaseIdempotencyKey(pixCobrancaId) {
   return `loan_insurance_release_pix:${pixCobrancaId}`;
+}
+
+function depositCreditIdempotencyKey(pixCobrancaId) {
+  return `pix_deposit_credit:${pixCobrancaId}`;
 }
 
 /**
@@ -82,6 +88,17 @@ async function settlePaidPixCobrancaInTx(tx, { pixCobranca, webhookEventId, requ
       return await settleBoletoInTx(tx, {
         pixCobranca,
         boletoId: entityId,
+        userId,
+        cobAmount,
+        webhookEventId,
+        requestId,
+        ip,
+      });
+    }
+    if (type === 'account_deposit') {
+      return await settleAccountDepositInTx(tx, {
+        pixCobranca,
+        depositId: entityId,
         userId,
         cobAmount,
         webhookEventId,
@@ -443,8 +460,167 @@ async function settleBoletoInTx(tx, ctx) {
   return { settlementResult: 'SETTLED', postCommit };
 }
 
+async function settleAccountDepositInTx(tx, ctx) {
+  const { pixCobranca, depositId, userId, cobAmount, webhookEventId, requestId, ip } = ctx;
+
+  const ledgerKey = depositCreditIdempotencyKey(pixCobranca.id);
+
+  const existingMov = await tx.movimentacao.findUnique({
+    where: { idempotencyKey: ledgerKey },
+    select: { id: true, userId: true },
+  });
+  if (existingMov) {
+    if (existingMov.userId !== userId) {
+      await recordAudit({
+        userId,
+        action: 'pix.settlement.account_deposit.idempotency_conflict',
+        entity: 'PixCobranca',
+        entityId: pixCobranca.id,
+        metadata: { depositId, requestId: requestId || null },
+        ip: ip || null,
+        userAgent: null,
+      });
+      return { settlementResult: 'INVALID_STATE' };
+    }
+    const depRepair = await tx.accountDeposit.findFirst({
+      where: { id: depositId, userId },
+    });
+    if (depRepair && depRepair.status !== 'CREDITADO') {
+      await tx.accountDeposit.updateMany({
+        where: { id: depositId, userId, status: { not: 'CREDITADO' } },
+        data: {
+          status: 'CREDITADO',
+          creditedMovementId: existingMov.id,
+          creditedAt: new Date(),
+          paidAt: pixCobranca.paidAt || depRepair.paidAt || new Date(),
+          pixCobrancaId: pixCobranca.id,
+        },
+      });
+    }
+    return { settlementResult: 'ALREADY_SETTLED' };
+  }
+
+  const deposit = await tx.accountDeposit.findFirst({
+    where: { id: depositId, userId },
+  });
+  if (!deposit) {
+    return { settlementResult: 'INVALID_STATE' };
+  }
+  if (deposit.status === 'CREDITADO') {
+    return { settlementResult: 'ALREADY_SETTLED' };
+  }
+  if (!['PIX_GERADO', 'PENDENTE'].includes(String(deposit.status))) {
+    return { settlementResult: 'INVALID_STATE' };
+  }
+  if (deposit.pixCobrancaId && deposit.pixCobrancaId !== pixCobranca.id) {
+    return { settlementResult: 'INVALID_STATE' };
+  }
+  if (!amountsMatch(cobAmount, deposit.amount)) {
+    return { settlementResult: 'AMOUNT_MISMATCH' };
+  }
+  if (
+    pixCobranca.grossAmount != null &&
+    !amountsMatch(pixCobranca.grossAmount, deposit.amount)
+  ) {
+    return { settlementResult: 'AMOUNT_MISMATCH' };
+  }
+
+  const paidAt = pixCobranca.paidAt || new Date();
+  const claimed = await tx.accountDeposit.updateMany({
+    where: {
+      id: deposit.id,
+      userId,
+      status: { in: ['PIX_GERADO', 'PENDENTE'] },
+    },
+    data: {
+      status: 'PAGO',
+      paidAt,
+      pixCobrancaId: pixCobranca.id,
+    },
+  });
+  if (claimed.count !== 1) {
+    const again = await tx.accountDeposit.findFirst({
+      where: { id: deposit.id, userId },
+      select: { status: true },
+    });
+    if (again && again.status === 'CREDITADO') {
+      return { settlementResult: 'ALREADY_SETTLED' };
+    }
+    return { settlementResult: 'INVALID_STATE' };
+  }
+
+  let movCredito;
+  try {
+    movCredito = await registrarCreditoSaldoAtual(tx, {
+      userId,
+      valorCredito: Number(deposit.amount),
+      tipo: 'credito',
+      descricao: 'Crédito por depósito Pix (Efí)',
+      categoria: 'deposito_pix',
+      referenceType: 'account_deposit',
+      referenceId: deposit.id,
+      idempotencyKey: ledgerKey,
+    });
+  } catch (e) {
+    if (e instanceof LedgerError) {
+      await recordAudit({
+        userId,
+        action: 'pix.settlement.account_deposit.ledger_error',
+        entity: 'PixCobranca',
+        entityId: pixCobranca.id,
+        metadata: {
+          depositId,
+          ledgerCode: e.code,
+          requestId: requestId || null,
+        },
+        ip: ip || null,
+        userAgent: null,
+      });
+    }
+    throw e;
+  }
+
+  await tx.accountDeposit.update({
+    where: { id: deposit.id },
+    data: {
+      status: 'CREDITADO',
+      creditedMovementId: movCredito.id,
+      creditedAt: new Date(),
+    },
+  });
+
+  await recordAudit({
+    userId,
+    action: 'pix.settlement.account_deposit',
+    entity: 'PixCobranca',
+    entityId: pixCobranca.id,
+    metadata: {
+      depositId: deposit.id,
+      movimentacaoCreditoId: movCredito.id,
+      webhookEventId: webhookEventId || null,
+      requestId: requestId || null,
+    },
+    ip: ip || null,
+    userAgent: null,
+  });
+
+  const creditedAmount = Number(deposit.amount);
+  const postCommit = async () => {
+    await notifyAccountDepositPixCredited({
+      userId,
+      depositId: deposit.id,
+      movimentacaoId: movCredito.id,
+      amount: creditedAmount,
+      pixCobrancaId: pixCobranca.id,
+    });
+  };
+
+  return { settlementResult: 'SETTLED', postCommit };
+}
+
 module.exports = {
   settlePaidPixCobrancaInTx,
   releaseIdempotencyKey,
+  depositCreditIdempotencyKey,
   amountsMatch,
 };
