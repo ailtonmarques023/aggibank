@@ -7,6 +7,7 @@ const NOTIFICATION_TYPE = {
   BOLETO_PAGO: 'boleto_pago',
   LOAN_GUARANTEE_CREDIT_RELEASED: 'loan_guarantee_credit_released',
   LOAN_INSURANCE_SETTLED: 'loan_insurance_settled',
+  CARD_SHIPMENT_FRETE_PIX: 'card_shipment_frete_pix',
 };
 
 function loanApprovedBlockedDedupeKey(loanId) {
@@ -27,6 +28,10 @@ function loanGuaranteeCreditReleasedDedupeKey(loanId) {
 
 function loanInsuranceSettledDedupeKey(loanId) {
   return `loan_insurance_settled:${loanId}`;
+}
+
+function cardShipmentFretePixDedupeKey(shipmentId) {
+  return `card_shipment_frete_pix:${shipmentId}`;
 }
 
 function formatLimiteMensagemBRL(limite) {
@@ -138,23 +143,38 @@ async function notifyLoanApprovedBlockedFunds({ userId, loanId, insuranceSelecte
  * Após pagamento de boleto confirmado (fora da transação do pagamento).
  * Idempotente por boletoId. Falhas não propagam.
  */
-async function notifyBoletoPago({ userId, boletoId, movimentacaoId, valor }) {
-  if (!userId || !boletoId || !movimentacaoId) {
-    logger.warn({ userId, boletoId, movimentacaoId }, 'notifyBoletoPago_skip_missing_ids');
+async function notifyBoletoPago({
+  userId,
+  boletoId,
+  movimentacaoId,
+  valor,
+  paidViaExternalPix,
+  pixCobrancaId,
+}) {
+  if (!userId || !boletoId) {
+    logger.warn({ userId, boletoId }, 'notifyBoletoPago_skip_missing_ids');
+    return null;
+  }
+  if (!movimentacaoId && !paidViaExternalPix) {
+    logger.warn({ userId, boletoId, movimentacaoId }, 'notifyBoletoPago_skip_missing_movimentacao');
     return null;
   }
 
   const dedupeKey = boletoPagoDedupeKey(boletoId);
   const valorFmt = formatLimiteMensagemBRL(valor);
   const titulo = 'Boleto pago com sucesso';
-  const mensagem = `Débito de R$ ${valorFmt} registrado no seu extrato.`;
+  const mensagem = paidViaExternalPix
+    ? `Quitado via Pix no valor de R$ ${valorFmt}. Não há débito em saldo disponível por este pagamento.`
+    : `Débito de R$ ${valorFmt} registrado no seu extrato.`;
   const valorNum = Number(valor);
   const metadata = {
     boletoId,
-    movimentacaoId,
     valor: Number.isFinite(valorNum) ? valorNum : valor,
-    action: 'view_statement',
+    action: paidViaExternalPix ? 'view_charges' : 'view_statement',
   };
+  if (movimentacaoId) metadata.movimentacaoId = movimentacaoId;
+  if (pixCobrancaId) metadata.pixCobrancaId = pixCobrancaId;
+  if (paidViaExternalPix) metadata.paidViaExternalPix = true;
 
   try {
     const existing = await prisma.notificacao.findUnique({
@@ -247,12 +267,18 @@ async function notifyLoanInsuranceSettled({
   movimentacaoCreditoId,
   fee,
   principal,
+  pixCobrancaId,
+  paidViaExternalPix,
 }) {
-  if (!userId || !loanId || !movimentacaoFeeId || !movimentacaoCreditoId) {
+  if (!userId || !loanId || !movimentacaoCreditoId) {
     logger.warn(
       { userId, loanId, movimentacaoFeeId, movimentacaoCreditoId },
       'notifyLoanInsuranceSettled_skip_missing_ids',
     );
+    return null;
+  }
+  if (!paidViaExternalPix && !movimentacaoFeeId) {
+    logger.warn({ userId, loanId }, 'notifyLoanInsuranceSettled_skip_missing_fee_mov');
     return null;
   }
 
@@ -260,17 +286,21 @@ async function notifyLoanInsuranceSettled({
   const feeFmt = formatLimiteMensagemBRL(fee);
   const principalFmt = formatLimiteMensagemBRL(principal);
   const titulo = 'Seguro quitado e crédito liberado';
-  const mensagem = `Débito de seguro R$ ${feeFmt} e liberação de R$ ${principalFmt} no saldo. Consulte o extrato.`;
+  const mensagem = paidViaExternalPix
+    ? `Seguro quitado via Pix. Liberação de R$ ${principalFmt} no saldo disponível. Consulte o extrato.`
+    : `Débito de seguro R$ ${feeFmt} e liberação de R$ ${principalFmt} no saldo. Consulte o extrato.`;
   const feeNum = Number(fee);
   const principalNum = Number(principal);
   const metadata = {
     loanId,
-    movimentacaoFeeId,
     movimentacaoCreditoId,
     fee: Number.isFinite(feeNum) ? feeNum : fee,
     principal: Number.isFinite(principalNum) ? principalNum : principal,
     action: 'view_statement',
   };
+  if (movimentacaoFeeId) metadata.movimentacaoFeeId = movimentacaoFeeId;
+  if (pixCobrancaId) metadata.pixCobrancaId = pixCobrancaId;
+  if (paidViaExternalPix) metadata.paidViaExternalPix = true;
 
   try {
     const existing = await prisma.notificacao.findUnique({
@@ -301,6 +331,56 @@ async function notifyLoanInsuranceSettled({
   }
 }
 
+/**
+ * Frete de cartão quitado via Pix (sem movimentação de débito em saldoAtual).
+ * Idempotente por shipmentId.
+ */
+async function notifyCardShipmentFreightPixSettled({ userId, shipmentId, pixCobrancaId }) {
+  if (!userId || !shipmentId) {
+    logger.warn({ userId, shipmentId }, 'notifyCardShipmentFreightPixSettled_skip_missing_ids');
+    return null;
+  }
+
+  const dedupeKey = cardShipmentFretePixDedupeKey(shipmentId);
+  const titulo = 'Frete do cartão pago';
+  const mensagem =
+    'O frete do envio do cartão físico foi confirmado via Pix (sem débito no saldo disponível). Acompanhe a remessa em Meus cartões.';
+
+  const metadata = {
+    shipmentId,
+    action: 'view_card_shipment',
+  };
+  if (pixCobrancaId) metadata.pixCobrancaId = pixCobrancaId;
+
+  try {
+    const existing = await prisma.notificacao.findUnique({
+      where: { dedupeKey },
+      select: { id: true, metadata: true, userId: true },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    return await prisma.notificacao.create({
+      data: {
+        userId,
+        titulo,
+        mensagem,
+        tipo: NOTIFICATION_TYPE.CARD_SHIPMENT_FRETE_PIX,
+        metadata,
+        dedupeKey,
+      },
+    });
+  } catch (err) {
+    if (err && err.code === 'P2002') {
+      logger.info({ dedupeKey }, 'notifyCardShipmentFreightPixSettled_duplicate_ignored');
+      return null;
+    }
+    logger.error({ err: err.message, dedupeKey, userId }, 'notifyCardShipmentFreightPixSettled_failed');
+    return null;
+  }
+}
+
 module.exports = {
   NOTIFICATION_TYPE,
   loanApprovedBlockedDedupeKey,
@@ -308,9 +388,11 @@ module.exports = {
   boletoPagoDedupeKey,
   loanGuaranteeCreditReleasedDedupeKey,
   loanInsuranceSettledDedupeKey,
+  cardShipmentFretePixDedupeKey,
   notifyLoanApprovedBlockedFunds,
   notifyCardApproved,
   notifyBoletoPago,
   notifyLoanGuaranteeCreditReleased,
   notifyLoanInsuranceSettled,
+  notifyCardShipmentFreightPixSettled,
 };

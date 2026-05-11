@@ -3,6 +3,7 @@
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
+const { settlePaidPixCobrancaInTx } = require('./pixSettlementService');
 
 const SENSITIVE_KEYS = new Set([
   'pixcopiaecola',
@@ -53,9 +54,9 @@ function buildIdempotencyKey(endToEndId) {
 
 /**
  * Processa corpo do webhook Pix Efí (array `pix`).
- * Atualiza apenas PixCobranca; não altera saldo nem entidades de negócio.
+ * Atualiza PixCobranca para PAGA e executa settlement de negócio (Fase P) conforme `linkedEntityType`.
  *
- * @returns {Promise<{ results: Array<{ txid?: string, endToEndId?: string, result: string }> }>}
+ * @returns {Promise<{ results: Array<{ txid?: string, endToEndId?: string, result: string, settlementResult?: string }> }>}
  */
 async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
   const results = [];
@@ -232,14 +233,64 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
           userAgent: null,
         });
 
-        return { result: 'PROCESSED', event: ev, cob: updated };
+        const settlementPack = await settlePaidPixCobrancaInTx(tx, {
+          pixCobranca: updated,
+          webhookEventId: ev.id,
+          requestId: requestId || null,
+          ip: ip || null,
+        });
+
+        return {
+          result: 'PROCESSED',
+          event: ev,
+          cob: updated,
+          settlementResult: settlementPack.settlementResult,
+          postCommit: settlementPack.postCommit,
+        };
       });
 
-      results.push({
+      const row = {
         txid: txid || null,
         endToEndId,
         result: one.result,
-      });
+      };
+      if (one.settlementResult != null) {
+        row.settlementResult = one.settlementResult;
+      }
+      results.push(row);
+
+      if (one.result === 'PROCESSED' && typeof one.postCommit === 'function') {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await one.postCommit();
+        } catch (notifyErr) {
+          logger.error('efi_pix_webhook_settlement_post_commit_failed', {
+            category: 'operational_error',
+            component: 'pixEfiWebhookService',
+            requestId: requestId || null,
+            message: notifyErr.message,
+          });
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await recordAudit({
+              userId: one.cob?.userId || null,
+              action: 'pix.settlement.post_commit_failed',
+              entity: 'PixCobranca',
+              entityId: one.cob?.id || null,
+              metadata: {
+                requestId: requestId || null,
+                message: notifyErr.message,
+              },
+              ip: ip || null,
+              userAgent: null,
+            });
+          } catch (auditErr) {
+            logger.error('efi_pix_webhook_settlement_post_commit_audit_failed', {
+              message: auditErr.message,
+            });
+          }
+        }
+      }
     } catch (e) {
       const code = e && e.code ? e.code : '';
       if (code === 'P2002') {

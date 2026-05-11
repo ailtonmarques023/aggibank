@@ -4,7 +4,14 @@ jest.mock('../src/utils/auditLog', () => ({
   recordAudit: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('../src/services/pixSettlementService', () => ({
+  settlePaidPixCobrancaInTx: jest.fn().mockResolvedValue({
+    settlementResult: 'UNSUPPORTED_ENTITY',
+  }),
+}));
+
 const { prisma } = require('../src/config/database');
+const { settlePaidPixCobrancaInTx } = require('../src/services/pixSettlementService');
 const {
   processEfiPixWebhookBody,
   sanitizeForStorage,
@@ -15,6 +22,9 @@ describe('pixEfiWebhookService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
+    settlePaidPixCobrancaInTx.mockResolvedValue({
+      settlementResult: 'UNSUPPORTED_ENTITY',
+    });
   });
 
   it('sanitizeForStorage redige chave sensível', () => {
@@ -78,11 +88,13 @@ describe('pixEfiWebhookService', () => {
 
     expect(r.ok).toBe(true);
     expect(r.results[0].result).toBe('PROCESSED');
+    expect(r.results[0].settlementResult).toBe('UNSUPPORTED_ENTITY');
     expect(prisma.pixCobranca.update).toHaveBeenCalled();
     const up = prisma.pixCobranca.update.mock.calls[0][0];
     expect(up.data.status).toBe('PAGA');
     expect(up.data.endToEndId).toBe('E2EUnitTestPixWebhookFaseO01');
     expect(prisma.pixWebhookEvent.create).toHaveBeenCalled();
+    expect(settlePaidPixCobrancaInTx).toHaveBeenCalled();
   });
 
   it('ORPHAN_TXID quando txid não existe no banco', async () => {
