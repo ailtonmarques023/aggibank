@@ -50,6 +50,7 @@ model User {
   auditLogs           AuditLog[]
   cardShipments       CardShipment[]
   cardShipmentEvents  CardShipmentEvent[]
+  pixCobrancas        PixCobranca[]
 
   @@map("usuarios")
 }
@@ -459,4 +460,28 @@ model AuditLog {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
+}
+
+/// Cobrança Pix emitida na Efí (Cob imediata). Fase N: emissão e persistência; sem settlement via webhook.
+model PixCobranca {
+  id                 String    @id @default(cuid())
+  userId             String
+  linkedEntityType   String
+  linkedEntityId     String
+  amount             Decimal   @db.Decimal(10, 2)
+  status             String    @default("ATIVA")
+  txid               String    @unique
+  providerReference  String?
+  pixCopiaECola      String?   @db.Text
+  qrCodePix          String?   @db.Text
+  expiresAt          DateTime
+  paidAt             DateTime?
+  idempotencyKey     String    @unique
+  rawProviderPayload Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, linkedEntityType, linkedEntityId])
+  @@map("pix_cobrancas")
 }

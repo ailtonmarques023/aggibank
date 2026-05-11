@@ -13,6 +13,7 @@
     "db:seed": "node src/scripts/seed.js",
     "email:templates-demo": "node src/scripts/sendEmailTemplatesSample.js",
     "test": "jest",
+    "validate:k1-ops-credit": "node scripts/validate-k1-ops-credit-staging.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"

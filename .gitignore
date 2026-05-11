@@ -25,13 +25,8 @@ temp/
 # Subprojeto/legado fora do escopo do AgilBank.
 gov.br1/
 
-# Generated/project reports and agent docs
-docs/relatorios/
-docs/reports/
-docs/agent-bridge/
-docs/subagentes/
-docs/AGILBANK-CURSOR-SKILLS.md
-docs/AGILBANK-EMAIL-PROVIDER-RULE.md
-docs/AGILBANK_PROJECT_RULES.md
-docs/CODEX-CURSOR-AUTOMACAO.md
-docs/PROJECT_DOCS_EQUIVALENCE.md
+# Documentações e relatórios locais
+docs/
+
+
+

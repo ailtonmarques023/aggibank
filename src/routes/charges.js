@@ -6,6 +6,8 @@ const { authenticateToken, requireVerification } = require('../middleware/auth')
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const { resolvePixReceiverKey } = require('../utils/gruCharge');
+const efiPixClient = require('../services/efiPixClient');
+const pixCobrancaEfiService = require('../services/pixCobrancaEfiService');
 
 const router = express.Router();
 
@@ -364,6 +366,42 @@ router.get('/:id', async (req, res) => {
 
     const payload = buildChargeDetail(parsed.kind, entity, userRow);
 
+    const linkedMap = {
+      loan_insurance: 'loan_insurance',
+      boleto: 'boleto',
+      card_shipment: 'card_shipment',
+    };
+    const linkedEntityType = linkedMap[parsed.kind];
+    if (linkedEntityType) {
+      const pixRow = await prisma.pixCobranca.findFirst({
+        where: {
+          userId,
+          linkedEntityType,
+          linkedEntityId: parsed.id,
+          status: { in: ['CRIADA', 'ATIVA'] },
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (pixRow) {
+        payload.charge.pixStatus = pixRow.status;
+        payload.charge.pixCopiaECola = pixRow.pixCopiaECola;
+        payload.charge.qrCodePix = pixRow.qrCodePix;
+        payload.charge.txid = pixRow.txid;
+        payload.charge.providerReference = pixRow.providerReference;
+        payload.charge.pixExpiresAt = pixRow.expiresAt.toISOString();
+        payload.charge.pixPaidAt = pixRow.paidAt ? pixRow.paidAt.toISOString() : null;
+      } else {
+        payload.charge.pixStatus = null;
+        payload.charge.pixCopiaECola = null;
+        payload.charge.qrCodePix = null;
+        payload.charge.txid = null;
+        payload.charge.providerReference = null;
+        payload.charge.pixExpiresAt = null;
+        payload.charge.pixPaidAt = null;
+      }
+    }
+
     return res.json({
       success: true,
       data: payload,
@@ -442,6 +480,41 @@ router.post('/:id/pix', async (req, res) => {
     });
 
     const amount = detail.charge.amount;
+
+    if (efiPixClient.isEfiPixConfigured()) {
+      try {
+        const data = await pixCobrancaEfiService.getOrCreateEfiPixForCharge({
+          userId,
+          chargeKind: parsed.kind,
+          linkedEntityId: parsed.id,
+          amount,
+          debtorCpf: req.user.cpf,
+          debtorName: req.user.nomeCompleto,
+        });
+        return res.json({
+          success: true,
+          data,
+        });
+      } catch (err) {
+        if (err instanceof efiPixClient.EfiPixClientError) {
+          return res.status(err.httpStatus).json({
+            success: false,
+            message: err.message,
+            code: err.code,
+          });
+        }
+        logger.error('Erro ao gerar cobrança Pix Efí:', {
+          requestId: req.requestId,
+          error: err && err.message ? err.message : String(err || ''),
+        });
+        return res.status(500).json({
+          success: false,
+          message: 'Erro interno do servidor',
+          code: 'INTERNAL_ERROR',
+        });
+      }
+    }
+
     const receiver = resolvePixReceiverKey();
     const stored = detail.charge.pixCopiaEColaStored;
 
