@@ -259,6 +259,20 @@
     - `user_endereco_fallback`: remessa antiga sem snapshot útil, mas com `Endereco` real do usuário autenticado
     - `none`: nenhum endereço real disponível
   - O frontend não passou a inventar endereço. Ele apenas consome `shipment.addressSnapshot` do payload oficial e monta a linha com os campos disponíveis.
+- Publicação segura deste ajuste:
+  - branch isolada: `fix-cards-delivery-address`
+  - base confirmada do deploy: `origin/main`
+  - commit publicado: `83d84bf fix(cards): render real delivery address from shipment data`
+  - push executado sem `force` para `origin/main`
+- Evidência de produção publicada no frontend:
+  - `GET https://aggibank.vercel.app/banco/js/cartao.js?v=20260512-status-entrega-active`
+  - resultado `200`
+  - marcador novo encontrado: `if (!a) return 'sem dados.';`
+  - marcador antigo ausente: `Endereço não informado pela API`
+  - conclusão: o `cartao.js` publicado já recebeu a correção de renderização do endereço
+- Evidência de backend publicada:
+  - `origin/main` já aponta para `83d84bf`
+  - sem sessão autenticada de produção nesta rodada, ainda não foi possível comprovar em runtime o `addressSource` vindo do backend publicado
 - Teste automatizado de shipment reexecutado:
   - `npx jest tests/shipment.test.js --runInBand`
   - Resultado: `7/7` testes passando
@@ -311,14 +325,6 @@
   - status `ENTREGUE`
 - Obter credencial real válida ou sessão autenticada reaproveitável para inspecionar a tela após login.
 - Disponibilizar automação de browser autenticado ou validar manualmente no navegador do usuário com DevTools/Network.
-- Publicar o artefato correto do frontend legado (`agilbank-frontend/public/banco/*`) no ambiente realmente aberto pelo navegador.
-- Confirmar se o deploy ativo do usuário aponta para `https://aggibank.vercel.app/banco/index.html` ou para outro host/build equivalente.
-- Após a publicação, repetir a verificação em runtime de:
-  - `statusEntregaCardTitle`
-  - `statusEntregaTimelineHost`
-  - `statusEntregaEventos`
-  - `Acompanhar pedido`
-  - ausência do layout antigo em `Elements`
 - Revalidar em browser real com autenticação, porque nesta sessão não houve automação de navegador autenticado nem captura de DevTools/Network da tela clicada em runtime real.
 - Confirmar em `Network` do navegador publicado, após o deploy correto:
   - `GET /api/cards`
@@ -332,6 +338,7 @@
 - A timeline horizontal usa mapeamento honesto dos status existentes, mas precisa validação com dados reais do banco para todos os cenários operacionais.
 - O HTML único continua com acoplamento alto; futuras mudanças de cartão podem afetar a seção se não houver regressão visual monitorada.
 - O fallback `user_endereco_fallback` corrige remessas legadas sem snapshot útil, mas ainda precisa validação em runtime para confirmar aderência ao endereço efetivamente usado na entrega histórica daquele cartão.
+- O frontend publicado já recebeu a correção, mas a publicação efetiva do backend ainda depende de validação funcional autenticada para comprovar o `addressSource` e o endereço retornado no ambiente real.
 - Enquanto o deploy publicado continuar antigo, o usuário seguirá vendo a tela velha e o fluxo real continuará 100% reprovado em runtime, mesmo com a worktree local correta.
 - Como o ambiente real publicado ainda não foi atualizado nesta rodada, não há evidência de que o navegador do usuário deixou definitivamente de abrir a versão antiga fora desta worktree.
 - O artefato publicado já foi atualizado; o risco residual agora ficou concentrado exclusivamente na ausência de validação autenticada de runtime/Network com usuário real.
@@ -354,5 +361,7 @@
   - o deploy de produção agora já publica HTML, JS e CSS novos da tela de Status de Entrega;
   - nesta rodada, o código local passou a servir apenas a estrutura nova de Status de Entrega e teve o legado exclusivo removido de forma segura;
   - porém ainda não houve validação no navegador publicado com usuário autenticado e inspeção de `Network`;
+  - o commit `83d84bf` já foi publicado em `origin/main`, e o `cartao.js` de produção já reflete a correção do endereço no frontend;
+  - ainda falta comprovar em runtime autenticado que `GET /api/cards/:id/shipment` retorna o endereço real esperado e que o card o exibe na tela publicada;
   - além disso, continua faltando a evidência obrigatória de browser autenticado com backend real e dados reais/estado vazio real na própria tela;
   - sem inspeção de Network/DOM autenticada após a publicação, a governança não permite promover para APROVADO.
