@@ -35,8 +35,8 @@
     <link rel="stylesheet" href="css/style.container.notificacao.css .css">
     <link rel="stylesheet" href="css/style.pedirCartao.container.css">
     <link rel="stylesheet" href="css/style.gerenciamento.cartao.container.css">
-    <link rel="stylesheet" href="css/style.cartaoWizard.css?v=20260505-pin-native">
-    <link rel="stylesheet" href="css/style.cartao-status-card {pedidoCartaoAprovado}.css">
+    <link rel="stylesheet" href="css/style.cartaoWizard.css?v=20260512-status-entrega-active">
+    <link rel="stylesheet" href="css/style.cartao-status-card {pedidoCartaoAprovado}.css?v=20260512-status-entrega-active">
     <link rel="stylesheet" href="css/style.containerPrincipal.css">
     <link rel="stylesheet" href="css/style.rodape.css">
     <link rel="stylesheet" href="css/style.Extrato.container.css">
@@ -2398,7 +2398,7 @@
                             <span class="movimente-quickchip-label-row">dinheiro</span>
                         </span>
                     </button>
-                    <button type="button" class="movimente-quickchip" aria-label="Transferir entre contas AgilBank" onclick="window.location.href='transferir.html';">
+                    <button type="button" class="movimente-quickchip" aria-label="Transferir — em breve" onclick="if(window.agilbankAviso){window.agilbankAviso('Transferências entre contas serão habilitadas em breve.','Em breve');}else{alert('Em breve');}">
                         <span class="movimente-quickchip-circle"><i class="fa-solid fa-right-left" aria-hidden="true"></i></span>
                         <span class="movimente-quickchip-label">Transferir</span>
                     </button>
@@ -4378,32 +4378,90 @@
 
     <!--Status de entrega  08-->
     <div class="status-entrega-container" id="statusEntregaContainer">
-        <div class="header">
-            <div class="header-left">
-                <i class="fas fa-chevron-left" onclick="voltarParaCartao()"></i>
-                <h1 class="title">Status de Entrega</h1>
-            </div>
+        <div class="header status-entrega-header">
+            <button type="button" class="status-entrega-back" onclick="voltarParaCartao()" aria-label="Voltar">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h1 class="title">Status de Entrega</h1>
         </div>
 
-        <div class="status-timeline" id="statusEntregaTimelineHost"></div>
+        <div class="status-entrega-content">
+            <section class="status-entrega-hero" id="statusEntregaHero">
+                <div class="status-entrega-card-visual" aria-hidden="true">
+                    <div class="status-entrega-card-logo">agilbank</div>
+                    <div class="status-entrega-card-chip"></div>
+                    <div class="status-entrega-card-last4" id="statusEntregaCardLast4">••••</div>
+                    <div class="status-entrega-card-brand" id="statusEntregaCardBrand">VISA</div>
+                </div>
 
-        <div class="status-info" id="statusEntregaInfoHost">
-            <div class="status-info-item">
-                <h4>Informações da Entrega</h4>
-                <p id="statusEntregaLinha1">—</p>
-                <p id="statusEntregaLinha2">—</p>
-            </div>
+                <div class="status-entrega-hero-body">
+                    <div class="status-entrega-hero-text">
+                        <p class="status-entrega-eyebrow" id="statusEntregaCardEyebrow">Cartão físico</p>
+                        <h2 id="statusEntregaCardTitle">Cartão AgilBank</h2>
+                        <div class="status-entrega-status-line" id="statusEntregaStatusLine">
+                            <i class="fas fa-circle-info"></i>
+                            <span id="statusEntregaStatusLabel">Consultando entrega</span>
+                        </div>
+                        <p class="status-entrega-support" id="statusEntregaSupportText">Aguarde enquanto buscamos os dados reais da remessa.</p>
+                    </div>
 
-            <div class="status-info-item">
-                <h4>Endereço de Entrega</h4>
-                <p id="enderecoEntrega">Aguardando preenchimento do formulário...</p>
-            </div>
+                    <div class="status-entrega-timeline-horizontal" id="statusEntregaTimelineHost"></div>
+                </div>
+            </section>
 
-            <div class="status-info-item">
-                <h4>Observações</h4>
-                <p>- O cartão será entregue somente ao titular</p>
-                <p>- É necessário apresentar documento com foto</p>
-                <p>- Em caso de ausência, uma nova tentativa será realizada</p>
+            <div class="status-entrega-cards">
+                <article class="status-entrega-info-card">
+                    <div class="status-entrega-info-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <div class="status-entrega-info-body">
+                        <h4>Informações da Entrega</h4>
+                        <p id="statusEntregaLinha1">Frete: sem dados</p>
+                        <p id="statusEntregaLinha2">Status logístico: sem dados</p>
+                    </div>
+                </article>
+
+                <article class="status-entrega-info-card">
+                    <div class="status-entrega-info-icon">
+                        <i class="fas fa-location-dot"></i>
+                    </div>
+                    <div class="status-entrega-info-body">
+                        <h4>Endereço de Entrega</h4>
+                        <p id="enderecoEntrega">Endereço de entrega: sem dados.</p>
+                    </div>
+                </article>
+
+                <article class="status-entrega-info-card">
+                    <div class="status-entrega-info-icon">
+                        <i class="fas fa-circle-info"></i>
+                    </div>
+                    <div class="status-entrega-info-body">
+                        <h4>Observações</h4>
+                        <ul class="status-entrega-observacoes">
+                            <li>O cartão será entregue somente ao titular.</li>
+                            <li>É necessário apresentar documento com foto.</li>
+                            <li>Em caso de ausência, uma nova tentativa será realizada.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="status-entrega-info-card status-entrega-tracking-card" id="statusEntregaTrackingCard">
+                    <div class="status-entrega-info-icon">
+                        <i class="fas fa-box-open"></i>
+                    </div>
+                    <div class="status-entrega-info-body">
+                        <div class="status-entrega-action-head">
+                            <div>
+                                <h4>Acompanhar pedido</h4>
+                                <p class="status-entrega-action-subtitle">Veja o histórico e detalhes da entrega.</p>
+                            </div>
+                            <i class="fas fa-chevron-right status-entrega-action-arrow" aria-hidden="true"></i>
+                        </div>
+                        <div class="status-entrega-events" id="statusEntregaEventos">
+                            <p class="status-entrega-empty-copy">Ainda não há eventos de entrega registrados.</p>
+                        </div>
+                    </div>
+                </article>
             </div>
         </div>
     </div>
@@ -7705,62 +7763,6 @@
             return 'fas fa-receipt';
         }
 
-        /**
-         * Fase X — rótulos amigáveis só com dados do GET /api/user/statement (sem inventar movimentação).
-         * Usa descricao, origem e tipo públicos retornados pelo backend.
-         */
-        function agilbankExtratoPresentation(t) {
-            var descRaw = t.descricao != null ? String(t.descricao) : '';
-            var desc = descRaw.toLowerCase();
-            var origem = String(t.origem || '').toUpperCase();
-            var tipo = String(t.tipo || '').toUpperCase();
-            var isCredito = tipo === 'CREDITO';
-            var titulo = '';
-            var subtitulo = '';
-            var iconClass = 'fas fa-receipt';
-
-            if (desc.indexOf('crédito por depósito pix') !== -1 || desc.indexOf('credito por deposito pix') !== -1) {
-                titulo = 'Depósito via Pix';
-                subtitulo = 'Saldo adicionado à sua conta';
-                iconClass = 'fas fa-plus-circle';
-            } else if (desc.indexOf('transferência agilbank enviada') !== -1 || desc.indexOf('transferencia agilbank enviada') !== -1) {
-                titulo = 'Transferência enviada';
-                var mEnv = descRaw.match(/para\s+(.+)$/i);
-                subtitulo = mEnv && mEnv[1] ? ('Para ' + String(mEnv[1]).trim()) : 'Para outra conta AgilBank';
-                iconClass = 'fas fa-paper-plane';
-            } else if (desc.indexOf('transferência agilbank recebida') !== -1 || desc.indexOf('transferencia agilbank recebida') !== -1) {
-                titulo = 'Transferência recebida';
-                var mRec = descRaw.match(/de\s+(.+)$/i);
-                subtitulo = mRec && mRec[1] ? ('De ' + String(mRec[1]).trim()) : 'De outra conta AgilBank';
-                iconClass = 'fas fa-arrow-down';
-            } else if (origem === 'BOLETO' || desc.indexOf('boleto') !== -1) {
-                titulo = 'Pagamento realizado';
-                subtitulo = descRaw.trim() ? descRaw.trim() : 'Boleto / conta';
-                iconClass = 'fas fa-barcode';
-            } else if (origem === 'EMPRESTIMO' || desc.indexOf('empréstimo') !== -1 || desc.indexOf('emprestimo') !== -1 || desc.indexOf('desbloqueio') !== -1) {
-                titulo = 'Empréstimo liberado';
-                subtitulo = 'Valor disponibilizado em conta';
-                iconClass = 'fas fa-hand-holding-usd';
-            } else if (origem === 'FRETE' || desc.indexOf('frete') !== -1 || desc.indexOf('envio do cartão') !== -1) {
-                titulo = 'Frete do cartão';
-                subtitulo = descRaw.trim() ? descRaw.trim() : 'Envio do cartão físico';
-                iconClass = 'fas fa-truck';
-            } else if (origem === 'PIX') {
-                titulo = isCredito ? 'Movimentação Pix' : 'Pagamento Pix';
-                subtitulo = descRaw.trim() || (isCredito ? 'Crédito em conta' : 'Débito em conta');
-                iconClass = 'fas fa-qrcode';
-            } else if (origem === 'CARTAO' || desc.indexOf('cartão') !== -1 || desc.indexOf('cartao') !== -1) {
-                titulo = 'Cartão';
-                subtitulo = descRaw.trim() || 'Movimentação AgilBank';
-                iconClass = 'fas fa-credit-card';
-            } else {
-                titulo = origem && origem !== 'AJUSTE' ? origem.charAt(0) + origem.slice(1).toLowerCase() : (isCredito ? 'Entrada' : 'Saída');
-                subtitulo = descRaw.trim() || 'Movimentação AgilBank';
-                iconClass = extratoIconClassForOrigem(t.origem);
-            }
-            return { titulo: titulo, subtitulo: subtitulo, iconClass: iconClass };
-        }
-
         function renderExtratoPixDesdeCache() {
             var listaEl = document.getElementById('extratoPixListaReal');
             var msgEl = document.getElementById('extratoPixMensagem');
@@ -7778,12 +7780,7 @@
             } else if (filtro === 'entradas') {
                 arr = arr.filter(function (t) { return t && String(t.tipo).toUpperCase() === 'CREDITO'; });
             } else if (filtro === 'pix') {
-                arr = arr.filter(function (t) {
-                    if (!t) return false;
-                    var o = String(t.origem || '').toUpperCase();
-                    var d = String(t.descricao || '').toLowerCase();
-                    return o === 'PIX' || d.indexOf('depósito pix') !== -1 || d.indexOf('deposito pix') !== -1 || d.indexOf('pix (efí)') !== -1 || d.indexOf('pix (efi)') !== -1;
-                });
+                arr = arr.filter(function (t) { return t && String(t.origem || '').toUpperCase() === 'PIX'; });
             }
 
             listaEl.innerHTML = '';
@@ -7809,12 +7806,15 @@
                 if (!t) return;
                 var tipoMov = String(t.tipo || '').toUpperCase();
                 var isDebito = tipoMov === 'DEBITO';
-                var pres = agilbankExtratoPresentation(t);
+                var origemStr = t.origem != null ? String(t.origem) : '—';
+                var descTrim = (t.descricao != null && String(t.descricao).trim()) ? String(t.descricao).trim() : '';
+                var titulo = origemStr !== '—' ? origemStr : (isDebito ? 'Saída' : 'Entrada');
+                var desc = descTrim || (isDebito ? 'Movimentação de débito' : 'Movimentação de crédito');
                 var valNum = Number(t.valor);
                 if (isNaN(valNum)) valNum = 0;
                 var valorStr = 'R$ ' + valNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                var valorMostra = isDebito ? ('− ' + valorStr) : ('+ ' + valorStr);
-                var clsVal = isDebito ? 'movimentacao-valor movimentacao-valor--deb negativo' : 'movimentacao-valor movimentacao-valor--cred positivo';
+                var valorMostra = isDebito ? ('- ' + valorStr) : ('+ ' + valorStr);
+                var clsVal = isDebito ? 'movimentacao-valor negativo' : 'movimentacao-valor positivo';
                 var dataStr = '—';
                 if (t.data) {
                     var dt = new Date(t.data);
@@ -7825,10 +7825,10 @@
                         });
                     }
                 }
-                var st = t.status != null ? String(t.status) : 'CONCLUIDO';
+                var st = t.status != null ? String(t.status) : '—';
                 var refLine = '';
                 if (t.referenciaId != null && String(t.referenciaId).trim() !== '') {
-                    refLine = 'Ref. ' + String(t.referenciaId).trim();
+                    refLine = 'Ref: ' + String(t.referenciaId).trim();
                 }
 
                 var item = document.createElement('div');
@@ -7837,26 +7837,28 @@
                 var iconWrap = document.createElement('div');
                 iconWrap.className = 'movimentacao-icon';
                 var ic = document.createElement('i');
-                ic.className = pres.iconClass;
+                ic.className = extratoIconClassForOrigem(t.origem);
                 iconWrap.appendChild(ic);
 
                 var info = document.createElement('div');
                 info.className = 'movimentacao-info';
                 var h4 = document.createElement('h4');
-                h4.textContent = pres.titulo;
-                var pSub = document.createElement('p');
-                pSub.className = 'movimentacao-sub';
-                pSub.textContent = pres.subtitulo;
-                var pMeta = document.createElement('p');
-                pMeta.className = 'movimentacao-meta';
-                pMeta.textContent = dataStr + ' · status ' + (st || '—');
+                h4.textContent = titulo + ' · ' + tipoMov;
+                var pOrig = document.createElement('p');
+                pOrig.textContent = 'Origem: ' + origemStr;
+                var pDesc = document.createElement('p');
+                pDesc.textContent = desc;
+                var pData = document.createElement('p');
+                pData.textContent = 'Data: ' + dataStr + ' · Status: ' + st;
                 info.appendChild(h4);
-                info.appendChild(pSub);
-                info.appendChild(pMeta);
+                info.appendChild(pOrig);
+                info.appendChild(pDesc);
+                info.appendChild(pData);
                 if (refLine) {
                     var pRef = document.createElement('p');
-                    pRef.className = 'movimentacao-ref';
                     pRef.textContent = refLine;
+                    pRef.style.fontSize = '0.85em';
+                    pRef.style.opacity = '0.85';
                     info.appendChild(pRef);
                 }
 
@@ -8077,7 +8079,7 @@
 
         // Adicionar função para mostrar status de entrega
         function showStatusEntregaContainer() {
-            if (typeof window.agilbankCartaoAcaoStatus === 'function' && window.__agilbankCartoesLista && window.__agilbankCartoesLista.length) {
+            if (typeof window.agilbankCartaoAcaoStatus === 'function') {
                 window.agilbankCartaoAcaoStatus();
                 return;
             }
@@ -9631,7 +9633,7 @@
     <!-- Seus outros elementos HTML aqui -->
     <script src="js/ContainerPerfil.js"></script>
     <script src="js/ContainerConfiguraçoes.js"></script>
-    <script src="js/cartao.js"></script>
+    <script src="js/cartao.js?v=20260512-status-entrega-active"></script>
     <script src="js/creditoPessoal.js"></script>
     <script src="js/simulacaoChat.js"></script>
     <!-- <script src="js/containerEmprestimo.js"></script> -->

@@ -465,10 +465,6 @@ body.agilbank-cartao-wizard-open {
     background: #0066b3 !important;
 }
 
-#statusEntregaTimelineHost .status-item {
-    margin-bottom: 12px;
-}
-
 @media (max-width: 420px) {
     #cartaoGerenciamentoContainer.cartao-gerenciamento--solicitacao-ativa {
         padding: 12px 8px 20px !important;
