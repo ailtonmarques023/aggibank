@@ -132,11 +132,11 @@ describe('W.1 validações autenticadas — sem sucesso financeiro (sem CONCLUID
     await expectNoFinancialSideEffects();
   });
 
-  it('amount 5001 → 400 INVALID_AMOUNT', async () => {
+  it('amount 10001 → 400 INVALID_AMOUNT', async () => {
     const res = await request(app)
       .post('/api/transfers/internal')
       .set('Authorization', BEARER)
-      .send({ to: peerUser.email, amount: 5001 })
+      .send({ to: peerUser.email, amount: 10001 })
       .expect(400);
     expect(res.body.code).toBe('INVALID_AMOUNT');
     await expectNoFinancialSideEffects();

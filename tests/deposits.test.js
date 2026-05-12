@@ -13,6 +13,10 @@ describe('POST /api/deposits/pix', () => {
 
   beforeEach(() => {
     prisma.user.findUnique.mockResolvedValue(global.testUser);
+    prisma.accountDeposit.aggregate.mockResolvedValue({
+      _sum: { amount: null },
+      _count: { _all: 0 },
+    });
     spyConfigured = jest.spyOn(pixProviderService, 'isPixChargeProviderConfigured').mockReturnValue(true);
     spyCreatePix = jest.spyOn(pixProviderService, 'createOrGetPixChargeForCharge').mockResolvedValue({
       pixMode: 'copiaecola',
@@ -132,11 +136,11 @@ describe('POST /api/deposits/pix', () => {
     expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
   });
 
-  it('400 AMOUNT_ABOVE_LIMIT para 5001', async () => {
+  it('400 AMOUNT_ABOVE_LIMIT para 10001', async () => {
     const res = await request(app)
       .post('/api/deposits/pix')
       .set('Authorization', BEARER)
-      .send({ amount: 5001 })
+      .send({ amount: 10001 })
       .expect(400);
 
     expect(res.body.code).toBe('AMOUNT_ABOVE_LIMIT');
@@ -180,6 +184,38 @@ describe('POST /api/deposits/pix', () => {
 
   it('401 sem token', async () => {
     await request(app).post('/api/deposits/pix').send({ amount: 10 }).expect(401);
+  });
+
+  it('400 DEPOSIT_DAILY_AMOUNT_LIMIT_EXCEEDED quando soma diária + proposta ultrapassa limite', async () => {
+    prisma.accountDeposit.aggregate.mockResolvedValueOnce({
+      _sum: { amount: 29950 },
+      _count: { _all: 0 },
+    });
+
+    const res = await request(app)
+      .post('/api/deposits/pix')
+      .set('Authorization', BEARER)
+      .send({ amount: 100 })
+      .expect(400);
+
+    expect(res.body.code).toBe('DEPOSIT_DAILY_AMOUNT_LIMIT_EXCEEDED');
+    expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
+  });
+
+  it('400 DEPOSIT_DAILY_COUNT_LIMIT_EXCEEDED quando quantidade diária já no teto', async () => {
+    prisma.accountDeposit.aggregate.mockResolvedValueOnce({
+      _sum: { amount: 100 },
+      _count: { _all: 20 },
+    });
+
+    const res = await request(app)
+      .post('/api/deposits/pix')
+      .set('Authorization', BEARER)
+      .send({ amount: 50 })
+      .expect(400);
+
+    expect(res.body.code).toBe('DEPOSIT_DAILY_COUNT_LIMIT_EXCEEDED');
+    expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
   });
 });
 

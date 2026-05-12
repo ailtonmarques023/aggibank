@@ -21,8 +21,9 @@ require('dotenv').config();
 const { Prisma } = require('@prisma/client');
 const { prisma } = require('../src/config/database');
 const { maskEmail } = require('../src/services/internalTransferService');
+const { getTransactionLimits } = require('../src/config/transactionLimits');
 
-const MAX_VALIDATE_AMOUNT = 5000;
+const MAX_VALIDATE_AMOUNT = getTransactionLimits().internalTransfer.maxAmount;
 
 function parseExpectedAmountFromEnv() {
   const raw = process.env.AGILBANK_W2_EXPECTED_AMOUNT;

@@ -16,7 +16,7 @@ describe('depositAmount.parseValidatedDepositAmount', () => {
     if (parseValidatedDepositAmount('1,50').ok) {
       expect(parseValidatedDepositAmount('1,50').value).toBe(1.5);
     }
-    expect(parseValidatedDepositAmount('5000.00').ok).toBe(true);
+    expect(parseValidatedDepositAmount('10000.00').ok).toBe(true);
   });
 
   it('rejeita mais de duas casas decimais', () => {
@@ -41,10 +41,10 @@ describe('depositAmount.parseValidatedDepositAmount', () => {
   });
 
   it('AMOUNT_ABOVE_LIMIT acima do máximo', () => {
-    const r = parseValidatedDepositAmount('5000.01');
+    const r = parseValidatedDepositAmount('10000.01');
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe('AMOUNT_ABOVE_LIMIT');
-    const r2 = parseValidatedDepositAmount('5001');
+    const r2 = parseValidatedDepositAmount('10001');
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.code).toBe('AMOUNT_ABOVE_LIMIT');
   });
@@ -57,6 +57,6 @@ describe('depositAmount.parseValidatedDepositAmount', () => {
 
   it('constantes de produto', () => {
     expect(DEPOSIT_AMOUNT_MIN_BRL).toBe(1);
-    expect(DEPOSIT_AMOUNT_MAX_BRL).toBe(5000);
+    expect(DEPOSIT_AMOUNT_MAX_BRL).toBe(10000);
   });
 });

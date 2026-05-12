@@ -152,6 +152,7 @@ jest.mock('@prisma/client', () => {
         updateMany: jest.fn(),
         delete: jest.fn(),
         count: jest.fn(),
+        aggregate: jest.fn(),
       },
       internalTransfer: {
         findUnique: jest.fn(),
@@ -162,6 +163,7 @@ jest.mock('@prisma/client', () => {
         updateMany: jest.fn(),
         delete: jest.fn(),
         count: jest.fn(),
+        aggregate: jest.fn(),
       },
       pixWebhookEvent: {
         findUnique: jest.fn(),

@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const pixProviderService = require('./pix/pixProviderService');
 const { parseValidatedDepositAmount } = require('../utils/depositAmount');
 const { EfiPixClientError } = require('./efiPixClient');
+const { assertDepositDailyLimits } = require('./operationalLimitsService');
 
 /**
  * Cria depósito em conta + PixCobranca Efí com o mesmo valor (sem crédito em saldo).
@@ -37,6 +38,16 @@ async function createAccountDepositWithPix({ userId, debtorCpf, debtorName, amou
   }
 
   const amountNum = parsed.value;
+
+  const dailyCheck = await assertDepositDailyLimits(prisma, userId, amountNum);
+  if (!dailyCheck.ok) {
+    return {
+      ok: false,
+      httpStatus: dailyCheck.httpStatus,
+      code: dailyCheck.code,
+      message: dailyCheck.message,
+    };
+  }
 
   const deposit = await prisma.accountDeposit.create({
     data: {

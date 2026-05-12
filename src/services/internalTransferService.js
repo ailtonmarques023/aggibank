@@ -9,9 +9,9 @@ const {
 } = require('./ledgerService');
 const { recordAudit } = require('../utils/auditLog');
 const logger = require('../utils/logger');
+const { getTransactionLimits } = require('../config/transactionLimits');
+const { assertInternalTransferDailyLimits } = require('./operationalLimitsService');
 
-const MIN_AMOUNT = 1;
-const MAX_AMOUNT = 5000;
 const IDEMPOTENCY_MAX_LEN = 200;
 const DESC_MAX_LEN = 500;
 
@@ -25,9 +25,11 @@ const recipientSelect = {
 
 /**
  * @param {unknown} raw
+ * @param {{ minAmount: number, maxAmount: number }} [perOpLimits]
  * @returns {{ ok: true, value: number } | { ok: false, code: string }}
  */
-function normalizeTransferAmount(raw) {
+function normalizeTransferAmount(raw, perOpLimits) {
+  const L = perOpLimits || getTransactionLimits().internalTransfer;
   if (raw == null || raw === '') {
     return { ok: false, code: 'INVALID_AMOUNT' };
   }
@@ -40,7 +42,7 @@ function normalizeTransferAmount(raw) {
     return { ok: false, code: 'INVALID_AMOUNT' };
   }
   const value = cents / 100;
-  if (value < MIN_AMOUNT || value > MAX_AMOUNT) {
+  if (value < L.minAmount || value > L.maxAmount) {
     return { ok: false, code: 'INVALID_AMOUNT' };
   }
   return { ok: true, value };
@@ -123,7 +125,9 @@ async function executeInternalTransfer(params) {
     idempotencyHeader,
   } = params;
 
-  const amount = normalizeTransferAmount(amountRaw);
+  const perOpLimits = getTransactionLimits({ userId: fromUserId }).internalTransfer;
+
+  const amount = normalizeTransferAmount(amountRaw, perOpLimits);
   if (!amount.ok) {
     return {
       ok: false,
@@ -131,7 +135,7 @@ async function executeInternalTransfer(params) {
       httpStatus: 400,
       message:
         amount.code === 'INVALID_AMOUNT'
-          ? `Valor inválido. Informe entre R$ ${MIN_AMOUNT.toFixed(2)} e R$ ${MAX_AMOUNT.toFixed(2)}, com até duas casas decimais.`
+          ? `Valor inválido. Informe entre R$ ${perOpLimits.minAmount.toFixed(2)} e R$ ${perOpLimits.maxAmount.toFixed(2)}, com até duas casas decimais.`
           : 'Valor inválido',
     };
   }
@@ -169,6 +173,16 @@ async function executeInternalTransfer(params) {
 
   if (existingDone) {
     return { ok: true, replay: true, transfer: existingDone };
+  }
+
+  const dailyCheck = await assertInternalTransferDailyLimits(prisma, fromUserId, amount.value);
+  if (!dailyCheck.ok) {
+    return {
+      ok: false,
+      code: dailyCheck.code,
+      httpStatus: dailyCheck.httpStatus,
+      message: dailyCheck.message,
+    };
   }
 
   try {
@@ -325,8 +339,12 @@ function serializeTransferPublic(transfer, viewerUserId) {
 }
 
 module.exports = {
-  MIN_AMOUNT,
-  MAX_AMOUNT,
+  get MIN_AMOUNT() {
+    return getTransactionLimits().internalTransfer.minAmount;
+  },
+  get MAX_AMOUNT() {
+    return getTransactionLimits().internalTransfer.maxAmount;
+  },
   normalizeTransferAmount,
   normalizeIdempotencyKey,
   findUserByTo,

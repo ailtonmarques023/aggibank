@@ -49,6 +49,8 @@ function mockUserFindForTransfer({ senderSaldo = 5000, recipientSaldo = 100 } = 
 }
 
 function mockHappyTransferPath() {
+  prisma.internalTransfer.aggregate.mockResolvedValue({ _sum: { amount: null } });
+  prisma.internalTransfer.count.mockResolvedValue(0);
   prisma.internalTransfer.findFirst.mockResolvedValueOnce(null);
 
   prisma.internalTransfer.create.mockResolvedValue({
@@ -224,6 +226,8 @@ describe('POST /api/transfers/internal', () => {
         digitoConta: peerUser.digitoConta,
       },
     };
+    prisma.internalTransfer.aggregate.mockClear();
+    prisma.internalTransfer.count.mockClear();
     prisma.internalTransfer.findFirst.mockReset();
     prisma.internalTransfer.findFirst.mockResolvedValue(existing);
 
@@ -238,6 +242,42 @@ describe('POST /api/transfers/internal', () => {
     expect(res.body.data.replay).toBe(true);
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.notificacao.create).not.toHaveBeenCalled();
+    expect(prisma.internalTransfer.aggregate).not.toHaveBeenCalled();
+    expect(prisma.internalTransfer.count).not.toHaveBeenCalled();
+  });
+
+  it('400 TRANSFER_DAILY_AMOUNT_LIMIT_EXCEEDED quando soma CONCLUIDA + proposta ultrapassa limite', async () => {
+    prisma.internalTransfer.aggregate.mockResolvedValueOnce({ _sum: { amount: 29950 } });
+    prisma.internalTransfer.count.mockResolvedValueOnce(0);
+    prisma.internalTransfer.findFirst.mockReset();
+    prisma.internalTransfer.findFirst.mockResolvedValueOnce(null);
+    prisma.$transaction.mockClear();
+
+    const res = await request(app)
+      .post('/api/transfers/internal')
+      .set('Authorization', BEARER)
+      .send({ to: peerUser.email, amount: 100 })
+      .expect(400);
+
+    expect(res.body.code).toBe('TRANSFER_DAILY_AMOUNT_LIMIT_EXCEEDED');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('400 TRANSFER_DAILY_COUNT_LIMIT_EXCEEDED quando quantidade PENDENTE+CONCLUIDA já no teto', async () => {
+    prisma.internalTransfer.aggregate.mockResolvedValueOnce({ _sum: { amount: 0 } });
+    prisma.internalTransfer.count.mockResolvedValueOnce(30);
+    prisma.internalTransfer.findFirst.mockReset();
+    prisma.internalTransfer.findFirst.mockResolvedValueOnce(null);
+    prisma.$transaction.mockClear();
+
+    const res = await request(app)
+      .post('/api/transfers/internal')
+      .set('Authorization', BEARER)
+      .send({ to: peerUser.email, amount: 50 })
+      .expect(400);
+
+    expect(res.body.code).toBe('TRANSFER_DAILY_COUNT_LIMIT_EXCEEDED');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('409 DUPLICATE_TRANSFER quando colisão e não concluída', async () => {

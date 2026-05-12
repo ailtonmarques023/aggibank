@@ -1,8 +1,6 @@
 'use strict';
 
-/** Mínimo e máximo por depósito (produto; validação obrigatória no backend). */
-const DEPOSIT_AMOUNT_MIN_BRL = 1;
-const DEPOSIT_AMOUNT_MAX_BRL = 5000;
+const { getTransactionLimits } = require('../config/transactionLimits');
 
 /**
  * Valida e normaliza valor de depósito Pix (BRL).
@@ -12,6 +10,8 @@ const DEPOSIT_AMOUNT_MAX_BRL = 5000;
  * @returns {{ ok: true, value: number, cents: number } | { ok: false, code: string, message: string }}
  */
 function parseValidatedDepositAmount(amountRaw) {
+  const depositLimits = getTransactionLimits().deposit;
+
   if (amountRaw === undefined || amountRaw === null) {
     return { ok: false, code: 'INVALID_AMOUNT', message: 'Informe o valor do depósito.' };
   }
@@ -67,18 +67,18 @@ function parseValidatedDepositAmount(amountRaw) {
   const cents = Math.round(n * 100);
   const value = cents / 100;
 
-  if (value < DEPOSIT_AMOUNT_MIN_BRL) {
+  if (value < depositLimits.minAmount) {
     return {
       ok: false,
       code: 'AMOUNT_BELOW_MINIMUM',
-      message: `O valor mínimo por depósito é R$ ${DEPOSIT_AMOUNT_MIN_BRL.toFixed(2).replace('.', ',')}.`,
+      message: `O valor mínimo por depósito é R$ ${depositLimits.minAmount.toFixed(2).replace('.', ',')}.`,
     };
   }
-  if (value > DEPOSIT_AMOUNT_MAX_BRL) {
+  if (value > depositLimits.maxAmount) {
     return {
       ok: false,
       code: 'AMOUNT_ABOVE_LIMIT',
-      message: `O valor máximo por depósito é R$ ${DEPOSIT_AMOUNT_MAX_BRL.toFixed(2).replace('.', ',')}.`,
+      message: `O valor máximo por depósito é R$ ${depositLimits.maxAmount.toFixed(2).replace('.', ',')}.`,
     };
   }
 
@@ -87,6 +87,10 @@ function parseValidatedDepositAmount(amountRaw) {
 
 module.exports = {
   parseValidatedDepositAmount,
-  DEPOSIT_AMOUNT_MIN_BRL,
-  DEPOSIT_AMOUNT_MAX_BRL,
+  get DEPOSIT_AMOUNT_MIN_BRL() {
+    return getTransactionLimits().deposit.minAmount;
+  },
+  get DEPOSIT_AMOUNT_MAX_BRL() {
+    return getTransactionLimits().deposit.maxAmount;
+  },
 };

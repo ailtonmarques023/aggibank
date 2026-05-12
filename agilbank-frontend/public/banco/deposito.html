@@ -276,7 +276,7 @@
 
     <main class="dep-card" id="depMainCard">
       <p class="dep-hint">
-        Validação na tela: R$&nbsp;1,00 a R$&nbsp;5.000,00 e até 2 decimais. A validação definitiva e o crédito ocorrem apenas no servidor após confirmação do Pix pela Efí — este fluxo não altera saldo localmente.
+        Validação na tela: R$&nbsp;1,00 a R$&nbsp;10.000,00 e até 2 decimais. Limites operacionais MVP — por depósito: até R$&nbsp;10.000,00; diário: até R$&nbsp;30.000,00; até 20 depósitos por dia. A validação definitiva e o crédito ocorrem apenas no servidor após confirmação do Pix pela Efí — este fluxo não altera saldo localmente.
       </p>
 
       <div id="depStepForm" class="dep-step-form">
@@ -461,9 +461,20 @@
         return Number.isFinite(n) ? n : NaN;
       }
 
+      function mapDepositApiError(code, message) {
+        var m = message || 'Não foi possível gerar o Pix.';
+        if (code === 'DEPOSIT_DAILY_AMOUNT_LIMIT_EXCEEDED') {
+          return 'Você atingiu o limite diário de depósitos.';
+        }
+        if (code === 'DEPOSIT_DAILY_COUNT_LIMIT_EXCEEDED') {
+          return 'Você atingiu a quantidade diária de depósitos.';
+        }
+        return m;
+      }
+
       function validarVisual(valorStr, n) {
         if (!Number.isFinite(n) || n <= 0) return 'Informe um valor válido em reais.';
-        if (n < 1 || n > 5000) return 'Use entre R$ 1,00 e R$ 5.000,00 (validação final no servidor).';
+        if (n < 1 || n > 10000) return 'Use entre R$ 1,00 e R$ 10.000,00 (validação final no servidor).';
         var parts = String(valorStr).replace(',', '.').split('.');
         if (parts.length > 1 && parts[parts.length - 1].length > 2) {
           return 'Use no máximo duas casas decimais.';
@@ -521,7 +532,7 @@
           .then(function (pack) {
             if (!pack.res.ok) {
               var code = (pack.body && pack.body.code) || '';
-              var m = (pack.body && pack.body.message) || 'Não foi possível gerar o Pix.';
+              var m = mapDepositApiError(code, pack.body && pack.body.message);
               if (errApi) errApi.textContent = m + (code ? ' (' + code + ')' : '');
               return;
             }
