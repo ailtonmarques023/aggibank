@@ -75,6 +75,14 @@
       align-items: center;
       justify-content: center;
       -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease, opacity 150ms ease;
+    }
+    .mov-back:active:not(:disabled):not(.is-loading),
+    .mov-header-share:active:not(:disabled):not(.is-loading) {
+      transform: scale(0.94);
+      filter: brightness(0.96);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     .mov-back:focus-visible, .mov-header-share:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
     .mov-header-title {
@@ -323,6 +331,31 @@
       flex-direction: column;
       gap: 10px;
     }
+    /* Fase X.3+ — microinterações (comprovante) */
+    .agilbank-receipt-action.mov-btn,
+    button.agilbank-receipt-action.mov-btn {
+      transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease, opacity 150ms ease;
+    }
+    .agilbank-receipt-action.mov-btn:active:not(:disabled):not(.is-loading) {
+      transform: scale(0.97);
+      filter: brightness(0.97);
+    }
+    .mov-btn-primary.agilbank-receipt-action:active:not(:disabled):not(.is-loading) {
+      box-shadow: 0 1px 4px rgba(0, 102, 179, 0.2);
+    }
+    .mov-btn-secondary.agilbank-receipt-action:active:not(:disabled):not(.is-loading) {
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+    .agilbank-receipt-action.is-loading {
+      opacity: 0.88;
+      pointer-events: none;
+      cursor: wait;
+      transform: scale(0.99);
+    }
+    .mov-btn:focus-visible {
+      outline: 2px solid #0066b3;
+      outline-offset: 2px;
+    }
     .mov-btn {
       width: 100%;
       padding: 14px 18px;
@@ -337,6 +370,10 @@
       opacity: 0.55;
       cursor: not-allowed;
     }
+    .mov-btn:disabled:active {
+      transform: none;
+      filter: none;
+    }
     .mov-btn-primary {
       background: #0066b3;
       color: #fff;
@@ -345,6 +382,23 @@
     .mov-btn-secondary {
       background: #e8ecf0;
       color: var(--mov-ink);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mov-back,
+      .mov-header-share,
+      .agilbank-receipt-action.mov-btn {
+        transition: none;
+      }
+      .mov-back:active:not(:disabled),
+      .mov-header-share:active:not(:disabled),
+      .agilbank-receipt-action.mov-btn:active:not(:disabled):not(.is-loading) {
+        transform: none;
+        filter: none;
+      }
+      .agilbank-receipt-action.is-loading {
+        transform: none;
+      }
     }
     .mov-note {
       font-size: 0.74rem;
@@ -390,13 +444,13 @@
   <div class="mov-app">
     <header>
       <div class="mov-header-top">
-        <button type="button" class="mov-back" id="movBack" aria-label="Voltar">
+        <button type="button" class="mov-back agilbank-receipt-action" id="movBack" aria-label="Voltar">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M15 18l-6-6 6-6"/>
           </svg>
         </button>
         <h1 class="mov-header-title">Comprovante</h1>
-        <button type="button" class="mov-header-share" id="movHeaderShare" aria-label="Compartilhar comprovante como imagem">
+        <button type="button" class="mov-header-share agilbank-receipt-action" id="movHeaderShare" aria-label="Compartilhar comprovante como imagem" title="Compartilhar imagem">
           <i class="fas fa-share-nodes" aria-hidden="true"></i>
         </button>
       </div>
@@ -511,13 +565,13 @@
         </div>
 
         <div class="mov-actions">
-          <button type="button" class="mov-btn mov-btn-primary" id="movBtnDownload">Baixar comprovante (PNG)</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnShare">Compartilhar comprovante (imagem)</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarTx">Copiar nº da transação</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarComp">Copiar dados</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnExtrato">Ver extrato</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnNota" disabled>Adicionar nota — Em breve</button>
-          <button type="button" class="mov-btn mov-btn-secondary mov-row--hidden" id="movBtnDenuncia" disabled>Denunciar golpe — Em breve</button>
+          <button type="button" class="mov-btn mov-btn-primary agilbank-receipt-action" id="movBtnDownload">Baixar comprovante (PNG)</button>
+          <button type="button" class="mov-btn mov-btn-secondary agilbank-receipt-action" id="movBtnShare">Compartilhar comprovante (imagem)</button>
+          <button type="button" class="mov-btn mov-btn-secondary agilbank-receipt-action" id="movBtnCopiarTx">Copiar nº da transação</button>
+          <button type="button" class="mov-btn mov-btn-secondary agilbank-receipt-action" id="movBtnCopiarComp">Copiar dados</button>
+          <button type="button" class="mov-btn mov-btn-secondary agilbank-receipt-action" id="movBtnExtrato">Ver extrato</button>
+          <button type="button" class="mov-btn mov-btn-secondary agilbank-receipt-action" id="movBtnNota" disabled>Adicionar nota — Em breve</button>
+          <button type="button" class="mov-btn mov-btn-secondary agilbank-receipt-action mov-row--hidden" id="movBtnDenuncia" disabled>Denunciar golpe — Em breve</button>
           <p class="mov-note" id="docNote"></p>
         </div>
       </div>
@@ -530,7 +584,8 @@
       'use strict';
 
       var SESSION_ITEM = 'agilbank_movimentacao_detail_item';
-      var state = { item: null, receiptText: '', variant: 'fallback', fmt: null };
+      var state = { item: null, receiptText: '', variant: 'fallback', fmt: null, pngOpInFlight: false };
+      var flashTimeouts = {};
 
       function showToast(msg) {
         var el = document.getElementById('movToast');
@@ -962,6 +1017,52 @@
         }, 2500);
       }
 
+      function flashButtonLabel(el, tempText, ms) {
+        if (!el || !el.id) return;
+        var prev = el.dataset.defaultLabel;
+        if (prev == null || prev === '') {
+          el.dataset.defaultLabel = el.textContent.trim();
+        }
+        el.textContent = tempText;
+        if (flashTimeouts[el.id]) clearTimeout(flashTimeouts[el.id]);
+        flashTimeouts[el.id] = setTimeout(function () {
+          el.textContent = el.dataset.defaultLabel || '';
+          flashTimeouts[el.id] = null;
+        }, ms || 1600);
+      }
+
+      function syncReceiptButtonDefaultLabels() {
+        var ids = [
+          'movBtnDownload',
+          'movBtnShare',
+          'movBtnCopiarTx',
+          'movBtnCopiarComp',
+          'movBtnExtrato',
+          'movBtnNota',
+          'movBtnDenuncia',
+        ];
+        ids.forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el && el.textContent != null) {
+            el.dataset.defaultLabel = el.textContent.trim();
+          }
+        });
+      }
+
+      function setPngActionsLoading(loading) {
+        ['movBtnDownload', 'movBtnShare', 'movHeaderShare'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          if (loading) {
+            el.classList.add('is-loading');
+            el.setAttribute('aria-busy', 'true');
+          } else {
+            el.classList.remove('is-loading');
+            el.removeAttribute('aria-busy');
+          }
+        });
+      }
+
       function copyTextFallback() {
         var txt = state.receiptText;
         if (!txt) return Promise.reject();
@@ -972,51 +1073,81 @@
       }
 
       function shareOrDownloadPng(opts) {
-        var preferShare = opts && opts.preferShare;
+        opts = opts || {};
+        var preferShare = !!opts.preferShare;
+        var trigger = opts.trigger === 'download' ? 'download' : 'share';
+
+        if (state.pngOpInFlight) {
+          showToast('Aguarde, gerando comprovante…');
+          return Promise.resolve();
+        }
+
         var item = state.item;
         if (!item) {
           showToast('Movimentação indisponível.');
           return Promise.resolve();
         }
-        return generateReceiptPngBlob().then(function (blob) {
-          var name = receiptFilename(item);
-          var file = new File([blob], name, { type: 'image/png' });
-          if (
-            preferShare &&
-            typeof navigator !== 'undefined' &&
-            typeof navigator.share === 'function' &&
-            typeof navigator.canShare === 'function' &&
-            navigator.canShare({ files: [file] })
-          ) {
-            return navigator
-              .share({
-                files: [file],
-                title: 'AgilBank — Comprovante',
-                text: 'Comprovante de movimentação AgilBank',
-              })
+
+        state.pngOpInFlight = true;
+        setPngActionsLoading(true);
+
+        var dl = document.getElementById('movBtnDownload');
+        var sh = document.getElementById('movBtnShare');
+
+        return generateReceiptPngBlob()
+          .then(function (blob) {
+            var name = receiptFilename(item);
+            var file = new File([blob], name, { type: 'image/png' });
+            var canFileShare =
+              preferShare &&
+              typeof navigator !== 'undefined' &&
+              typeof navigator.share === 'function' &&
+              typeof navigator.canShare === 'function' &&
+              navigator.canShare({ files: [file] });
+
+            if (canFileShare) {
+              return navigator
+                .share({
+                  files: [file],
+                  title: 'AgilBank — Comprovante',
+                  text: 'Comprovante de movimentação AgilBank',
+                })
+                .then(function () {
+                  showToast('Comprovante compartilhado.');
+                  if (sh) flashButtonLabel(sh, 'Compartilhado', 1700);
+                })
+                .catch(function (err) {
+                  if (err && err.name === 'AbortError') {
+                    showToast('Compartilhamento cancelado.');
+                    return;
+                  }
+                  downloadBlob(blob, name);
+                  showToast('Não foi possível compartilhar o arquivo; imagem salva.');
+                  if (trigger === 'download' && dl) flashButtonLabel(dl, 'Baixado', 1700);
+                  else if (sh) flashButtonLabel(sh, 'Baixado', 1700);
+                });
+            }
+            downloadBlob(blob, name);
+            showToast('Comprovante baixado. Você pode anexar a imagem onde quiser.');
+            if (trigger === 'download' && dl) flashButtonLabel(dl, 'Baixado', 1700);
+            else if (sh) flashButtonLabel(sh, 'Baixado', 1700);
+          })
+          .catch(function () {
+            showToast('Não foi possível gerar a imagem. Use Copiar dados.');
+            return copyTextFallback()
               .then(function () {
-                showToast('Comprovante compartilhado.');
+                showToast('Texto do comprovante copiado.');
+                var cp = document.getElementById('movBtnCopiarComp');
+                if (cp) flashButtonLabel(cp, 'Copiado', 1700);
               })
-              .catch(function (err) {
-                if (err && err.name === 'AbortError') {
-                  showToast('Compartilhamento cancelado.');
-                  return;
-                }
-                downloadBlob(blob, name);
-                showToast('Não foi possível compartilhar o arquivo; imagem salva.');
+              .catch(function () {
+                showToast('Tente novamente ou use Copiar dados.');
               });
-          }
-          downloadBlob(blob, name);
-          showToast('Comprovante baixado. Você pode anexar a imagem onde quiser.');
-          return Promise.resolve();
-        }).catch(function () {
-          showToast('Não foi possível gerar a imagem. Use Copiar dados.');
-          return copyTextFallback().then(function () {
-            showToast('Texto do comprovante copiado.');
-          }).catch(function () {
-            showToast('Tente novamente ou use Copiar dados.');
+          })
+          .finally(function () {
+            state.pngOpInFlight = false;
+            setPngActionsLoading(false);
           });
-        });
       }
 
       function render(item) {
@@ -1065,6 +1196,8 @@
         document.getElementById('docNote').textContent =
           'Comprovante em imagem (PNG) via html2canvas no navegador. PDF não é gerado nesta versão — ver relatório Fase X.3. Dados sensíveis (Pix copia e cola, CPF completo, tokens) não entram no extrato.';
 
+        syncReceiptButtonDefaultLabels();
+
         document.getElementById('movContent').style.display = 'block';
       }
 
@@ -1111,11 +1244,11 @@
       });
 
       document.getElementById('movHeaderShare').addEventListener('click', function () {
-        shareOrDownloadPng({ preferShare: true });
+        shareOrDownloadPng({ preferShare: true, trigger: 'share' });
       });
 
       document.getElementById('movBtnDownload').addEventListener('click', function () {
-        shareOrDownloadPng({ preferShare: false });
+        shareOrDownloadPng({ preferShare: false, trigger: 'download' });
       });
 
       document.getElementById('movBtnCopiarTx').addEventListener('click', function () {
@@ -1127,6 +1260,8 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(String(id)).then(function () {
             showToast('Número da transação copiado.');
+            var el = document.getElementById('movBtnCopiarTx');
+            if (el) flashButtonLabel(el, 'Copiado', 1600);
           }).catch(function () {
             showToast('Não foi possível copiar.');
           });
@@ -1144,6 +1279,8 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(txt).then(function () {
             showToast('Dados copiados.');
+            var el = document.getElementById('movBtnCopiarComp');
+            if (el) flashButtonLabel(el, 'Copiado', 1600);
           }).catch(function () {
             showToast('Não foi possível copiar.');
           });
@@ -1153,7 +1290,7 @@
       });
 
       document.getElementById('movBtnShare').addEventListener('click', function () {
-        shareOrDownloadPng({ preferShare: true });
+        shareOrDownloadPng({ preferShare: true, trigger: 'share' });
       });
 
       document.getElementById('movBtnExtrato').addEventListener('click', function () {
