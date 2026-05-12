@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0066b3">
   <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
-  <title>Detalhe da movimentação — AgilBank</title>
+  <title>Comprovante — AgilBank</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="js/legacyAuthStore.js"></script>
@@ -34,6 +34,7 @@
       --mov-radius: 12px;
       --mov-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       --mov-max: 480px;
+      --ab-blue: #0066b3;
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -53,7 +54,7 @@
     }
     .mov-header-top {
       display: grid;
-      grid-template-columns: 44px 1fr auto;
+      grid-template-columns: 44px 1fr 44px;
       align-items: center;
       gap: 8px;
       min-height: 50px;
@@ -62,7 +63,7 @@
       background: var(--mov-header);
       color: #fff;
     }
-    .mov-back {
+    .mov-back, .mov-header-share {
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -75,91 +76,200 @@
       justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
-    .mov-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    .mov-brand {
+    .mov-back:focus-visible, .mov-header-share:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .mov-header-title {
       text-align: center;
       font-weight: 700;
-      font-size: 1.02rem;
+      font-size: 1.08rem;
       margin: 0;
-    }
-    .mov-header-sub {
-      background: var(--mov-header-grad);
-      padding: 12px 15px 14px;
-      color: #fff;
-    }
-    .mov-header-sub h1 {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-    .mov-header-sub p {
-      margin: 6px 0 0;
-      font-size: 0.8rem;
-      opacity: 0.94;
-      line-height: 1.4;
+      letter-spacing: 0.02em;
     }
     .mov-body {
       padding: 14px 15px calc(24px + env(safe-area-inset-bottom, 0px));
     }
-    .mov-hero-card {
-      background: var(--mov-card);
-      border-radius: var(--mov-radius);
-      box-shadow: var(--mov-shadow);
-      padding: 22px 18px 20px;
-      text-align: center;
-      margin-bottom: 14px;
+
+    /* Fase X.3 — card comprovante (também fonte do PNG) */
+    .agilbank-receipt-wrap {
+      margin-bottom: 16px;
     }
-    .mov-icon-big {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: #e6f3ff;
+    #agilbankReceiptCard.agilbank-receipt-card {
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0, 40, 80, 0.1);
+      padding: 20px 18px 18px;
+      color: #1a1a1a;
+      text-align: left;
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .rcp-top-brand {
       display: flex;
       align-items: center;
-      justify-content: center;
-      margin: 0 auto 14px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
-    .mov-icon-big i {
-      font-size: 2rem;
-      color: #0066b3;
+    .rcp-brand-text {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ab-blue);
+      letter-spacing: -0.02em;
     }
-    .mov-valor {
-      font-size: 1.75rem;
+    .rcp-status-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .rcp-check {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+    }
+    .rcp-headlines {
+      flex: 1;
+      min-width: 0;
+    }
+    .rcp-main-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.25;
+      color: #1a1a1a;
+    }
+    .rcp-when-long {
+      margin: 6px 0 0;
+      font-size: 0.78rem;
+      color: #666;
+      line-height: 1.35;
+      text-transform: capitalize;
+    }
+    .rcp-divider {
+      height: 1px;
+      background: rgba(0, 0, 0, 0.08);
+      margin: 14px 0 12px;
+    }
+    .rcp-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .rcp-total-label {
+      font-size: 0.82rem;
+      color: #666;
+      font-weight: 500;
+    }
+    .rcp-total-val {
+      font-size: 1.5rem;
       font-weight: 800;
       letter-spacing: -0.03em;
-      margin: 0 0 8px;
-      line-height: 1.15;
+      color: #1a1a1a;
     }
-    .mov-valor--cred { color: #155fa0; }
-    .mov-valor--deb { color: #8b1c1c; }
-    .mov-titulo {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--mov-ink);
-      margin: 0 0 6px;
-      line-height: 1.25;
+    .rcp-total-val--cred { color: #155fa0; }
+    .rcp-total-val--deb { color: #8b1c1c; }
+    .rcp-flow-wrap {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
     }
-    .mov-sub {
-      font-size: 0.88rem;
-      color: var(--mov-muted);
-      margin: 0 0 8px;
-      line-height: 1.4;
+    .rcp-rail {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 14px;
+      flex-shrink: 0;
+      padding-top: 6px;
     }
-    .mov-when {
-      font-size: 0.82rem;
+    .rcp-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ab-blue);
+    }
+    .rcp-line {
+      flex: 1;
+      width: 2px;
+      min-height: 28px;
+      background: linear-gradient(180deg, var(--ab-blue), rgba(0, 102, 179, 0.25));
+      margin: 4px 0;
+    }
+    .rcp-parties {
+      flex: 1;
+      min-width: 0;
+    }
+    .rcp-party {
+      margin-bottom: 14px;
+    }
+    .rcp-party:last-child { margin-bottom: 0; }
+    .rcp-party-lbl {
+      font-size: 0.72rem;
+      font-weight: 600;
       color: #888;
-      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 0 0 4px;
     }
-    .mov-badge-status {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.78rem;
+    .rcp-party-name {
+      font-size: 0.9rem;
       font-weight: 700;
-      background: #e8f5ee;
-      color: #146c43;
+      margin: 0;
+      line-height: 1.3;
+      word-break: break-word;
     }
+    .rcp-party-sub {
+      font-size: 0.78rem;
+      color: #555;
+      margin: 4px 0 0;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .rcp-party--hidden { display: none !important; }
+    .rcp-meta-block {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .rcp-meta-row {
+      margin-bottom: 12px;
+    }
+    .rcp-meta-row:last-child { margin-bottom: 0; }
+    .rcp-meta-k {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #888;
+      margin: 0 0 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .rcp-meta-v {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin: 0;
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .rcp-meta-row--hidden { display: none !important; }
+    .rcp-footer {
+      margin-top: 16px;
+      padding: 12px 12px;
+      background: #f4f6f9;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+      font-size: 0.76rem;
+      color: #555;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .rcp-footer strong {
+      color: var(--ab-blue);
+      font-weight: 700;
+    }
+
     .mov-card {
       background: var(--mov-card);
       border-radius: var(--mov-radius);
@@ -197,6 +307,9 @@
       font-weight: 600;
       color: var(--mov-ink);
       word-break: break-word;
+    }
+    .mov-row-v i {
+      color: #0066b3;
     }
     .mov-row-v code {
       font-size: 0.78rem;
@@ -282,12 +395,10 @@
             <path d="M15 18l-6-6 6-6"/>
           </svg>
         </button>
-        <p class="mov-brand">AgilBank</p>
-        <span style="width:40px" aria-hidden="true"></span>
-      </div>
-      <div class="mov-header-sub">
-        <h1>Comprovante</h1>
-        <p>Detalhe da movimentação em conta</p>
+        <h1 class="mov-header-title">Comprovante</h1>
+        <button type="button" class="mov-header-share" id="movHeaderShare" aria-label="Compartilhar comprovante como imagem">
+          <i class="fas fa-share-nodes" aria-hidden="true"></i>
+        </button>
       </div>
     </header>
 
@@ -295,19 +406,80 @@
       <div id="movErr" role="alert"></div>
 
       <div id="movContent" style="display:none;">
-        <div class="mov-hero-card">
-          <div class="mov-icon-big" id="movIconWrap" aria-hidden="true">
-            <i id="movIcon" class="fas fa-receipt"></i>
+        <div class="agilbank-receipt-wrap">
+          <div id="agilbankReceiptCard" class="agilbank-receipt-card" aria-label="Comprovante visual AgilBank">
+            <div class="rcp-top-brand">
+              <span class="rcp-brand-text">AgilBank</span>
+            </div>
+            <div class="rcp-status-row">
+              <svg class="rcp-check" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="12" fill="#146c43"/>
+                <path d="M7 12.5l3 3 7-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div class="rcp-headlines">
+                <p class="rcp-main-title">Comprovante de movimentação</p>
+                <p class="rcp-when-long" id="rcpWhenLong"></p>
+              </div>
+            </div>
+            <div class="rcp-divider"></div>
+            <div class="rcp-total-row">
+              <span class="rcp-total-label">Total</span>
+              <span class="rcp-total-val" id="rcpTotalVal"></span>
+            </div>
+            <div class="rcp-flow-wrap">
+              <div class="rcp-rail" aria-hidden="true">
+                <span class="rcp-dot"></span>
+                <span class="rcp-line"></span>
+                <span class="rcp-dot"></span>
+              </div>
+              <div class="rcp-parties">
+                <div class="rcp-party" id="rcpPartyDe">
+                  <p class="rcp-party-lbl">De</p>
+                  <p class="rcp-party-name" id="rcpDeName"></p>
+                  <p class="rcp-party-sub rcp-party--hidden" id="rcpDeSub"></p>
+                </div>
+                <div class="rcp-party rcp-party--hidden" id="rcpPartyPara">
+                  <p class="rcp-party-lbl">Para</p>
+                  <p class="rcp-party-name" id="rcpParaName"></p>
+                  <p class="rcp-party-sub rcp-party--hidden" id="rcpParaSub"></p>
+                </div>
+              </div>
+            </div>
+            <div class="rcp-meta-block">
+              <div class="rcp-meta-row">
+                <p class="rcp-meta-k">Tipo</p>
+                <p class="rcp-meta-v" id="rcpTipoLinha"></p>
+              </div>
+              <div class="rcp-meta-row">
+                <p class="rcp-meta-k">Status</p>
+                <p class="rcp-meta-v" id="rcpStatusLinha"></p>
+              </div>
+              <div class="rcp-meta-row">
+                <p class="rcp-meta-k">Nº da transação</p>
+                <p class="rcp-meta-v" id="rcpTxLinha"></p>
+              </div>
+              <div class="rcp-meta-row rcp-meta-row--hidden" id="rcpRowRef">
+                <p class="rcp-meta-k">Código de referência</p>
+                <p class="rcp-meta-v" id="rcpRefVal"></p>
+              </div>
+              <div class="rcp-meta-row rcp-meta-row--hidden" id="rcpRowE2e">
+                <p class="rcp-meta-k">ID Pix (E2E)</p>
+                <p class="rcp-meta-v" id="rcpE2eVal"></p>
+              </div>
+            </div>
+            <div class="rcp-footer">
+              <strong>AgilBank</strong><br>
+              Este comprovante foi gerado pelo AgilBank. Para suporte, utilize os canais oficiais do aplicativo.
+            </div>
           </div>
-          <p class="mov-valor" id="movValor"></p>
-          <h2 class="mov-titulo" id="movTitulo"></h2>
-          <p class="mov-sub" id="movSub"></p>
-          <p class="mov-when" id="movWhen"></p>
-          <span class="mov-badge-status" id="movStatusBadge"></span>
         </div>
 
         <div class="mov-card">
           <h2>Detalhes</h2>
+          <div class="mov-row">
+            <span class="mov-row-k">Descrição</span>
+            <span class="mov-row-v" id="movDescricaoLinha"></span>
+          </div>
           <div class="mov-row">
             <span class="mov-row-k">Categoria</span>
             <span class="mov-row-v" id="movCategoria"></span>
@@ -339,10 +511,11 @@
         </div>
 
         <div class="mov-actions">
+          <button type="button" class="mov-btn mov-btn-primary" id="movBtnDownload">Baixar comprovante (PNG)</button>
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnShare">Compartilhar comprovante (imagem)</button>
           <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarTx">Copiar nº da transação</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarComp">Copiar comprovante</button>
-          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnShare">Compartilhar comprovante</button>
-          <button type="button" class="mov-btn mov-btn-primary" id="movBtnExtrato">Ver extrato</button>
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarComp">Copiar dados</button>
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnExtrato">Ver extrato</button>
           <button type="button" class="mov-btn mov-btn-secondary" id="movBtnNota" disabled>Adicionar nota — Em breve</button>
           <button type="button" class="mov-btn mov-btn-secondary mov-row--hidden" id="movBtnDenuncia" disabled>Denunciar golpe — Em breve</button>
           <p class="mov-note" id="docNote"></p>
@@ -357,7 +530,7 @@
       'use strict';
 
       var SESSION_ITEM = 'agilbank_movimentacao_detail_item';
-      var state = { item: null, receiptText: '', variant: 'fallback' };
+      var state = { item: null, receiptText: '', variant: 'fallback', fmt: null };
 
       function showToast(msg) {
         var el = document.getElementById('movToast');
@@ -367,7 +540,7 @@
         clearTimeout(showToast._t);
         showToast._t = setTimeout(function () {
           el.classList.remove('mov-toast--show');
-        }, 2800);
+        }, 3200);
       }
 
       function getApiBase() {
@@ -419,12 +592,37 @@
         }
       }
 
+      function formatDateLongPt(iso) {
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return String(iso || '');
+          var w = d.toLocaleDateString('pt-BR', { weekday: 'long' });
+          var rest = d.toLocaleString('pt-BR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+          return w.charAt(0).toUpperCase() + w.slice(1) + ', ' + rest;
+        } catch (e3) {
+          return formatDateReceipt(iso);
+        }
+      }
+
       function humanStatus(s) {
         var u = String(s || '').toUpperCase();
         if (u === 'CONCLUIDO' || u === 'CONCLUIDA') return 'Concluído';
         if (u === 'PENDENTE') return 'Pendente';
         if (u === 'APROVADO' || u === 'APROVADA') return 'Aprovado';
         return s ? String(s) : '—';
+      }
+
+      function statusForReceipt(s) {
+        var h = humanStatus(s);
+        if (h === 'Concluído') return 'Aprovado / Concluído';
+        return h;
       }
 
       function maskEndToEnd(e2e) {
@@ -434,10 +632,88 @@
         return s.slice(0, 4) + '…' + s.slice(-4);
       }
 
+      function maskSensitiveInline(s) {
+        return String(s || '').replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '***.***.***-**');
+      }
+
+      function tipoComprovanteLabel(fmt) {
+        if (fmt.variant === 'transferencia_enviada' || fmt.variant === 'transferencia_recebida') {
+          return 'Transferência interna AgilBank';
+        }
+        if (fmt.variant === 'deposito_pix') return 'Depósito via Pix';
+        if (fmt.variant === 'boleto_pago') return 'Pagamento';
+        if (fmt.variant === 'emprestimo_desbloqueio') return 'Empréstimo';
+        if (fmt.variant === 'card_shipment') return 'Cartão / envio';
+        return fmt.titulo;
+      }
+
       /**
-       * Fase X.1 — formato amigável só com campos reais do GET /api/user/statement.
-       * referenceType, counterparty, endToEndId: não faz parte do contrato atual do extrato → omitir linhas.
+       * De/Para só com texto vindo da movimentação (descrição) ou rótulos genéricos seguros.
        */
+      function agilbankReceiptParties(item, fmt) {
+        var descRaw = item.descricao != null ? String(item.descricao) : '';
+        var descSafe = maskSensitiveInline(descRaw);
+        var out = {
+          deName: 'Conta AgilBank',
+          deSub: '',
+          deSubShow: false,
+          paraName: '',
+          paraSub: '',
+          paraShow: false,
+          paraSubShow: false,
+        };
+
+        if (fmt.variant === 'transferencia_enviada') {
+          var mEnv = descRaw.match(/para\s+(.+)$/i);
+          var dest = mEnv && mEnv[1] ? maskSensitiveInline(String(mEnv[1]).trim()) : '';
+          out.paraName = dest || 'Conta AgilBank (destinatário)';
+          out.paraSub = 'Transferência interna';
+          out.paraSubShow = true;
+          out.paraShow = true;
+          out.deName = 'Sua conta AgilBank';
+          out.deSub = 'Origem';
+          out.deSubShow = false;
+        } else if (fmt.variant === 'transferencia_recebida') {
+          var mRec = descRaw.match(/de\s+(.+)$/i);
+          var orig = mRec && mRec[1] ? maskSensitiveInline(String(mRec[1]).trim()) : '';
+          out.deName = orig || 'Conta AgilBank (remetente)';
+          out.deSub = 'Transferência interna';
+          out.deSubShow = true;
+          out.paraName = 'Sua conta AgilBank';
+          out.paraShow = true;
+        } else if (fmt.variant === 'deposito_pix') {
+          out.deName = 'Pix — origem externa';
+          out.deSub = 'Pagamento recebido via Pix';
+          out.deSubShow = true;
+          out.paraName = 'Conta AgilBank';
+          out.paraSub = 'Crédito em conta';
+          out.paraSubShow = true;
+          out.paraShow = true;
+        } else if (fmt.variant === 'credito_pix' || fmt.variant === 'debito_pix') {
+          out.deName = fmt.isCredito ? 'Pix — origem' : 'Conta AgilBank';
+          out.paraName = fmt.isCredito ? 'Conta AgilBank' : 'Destino Pix';
+          out.paraShow = true;
+          if (descSafe.trim()) {
+            out.deSub = descSafe.trim();
+            out.deSubShow = !fmt.isCredito;
+            if (fmt.isCredito) {
+              out.paraSub = descSafe.trim();
+              out.paraSubShow = true;
+            }
+          }
+        } else {
+          out.deName = 'Conta AgilBank';
+          if (descSafe.trim()) {
+            out.paraSub = descSafe.trim();
+            out.paraSubShow = true;
+            out.paraName = 'Detalhe';
+            out.paraShow = true;
+          }
+        }
+
+        return out;
+      }
+
       function agilbankFormatMovementDetail(item) {
         var descRaw = item.descricao != null ? String(item.descricao) : '';
         var desc = descRaw.toLowerCase();
@@ -550,29 +826,211 @@
         ].join('\n');
       }
 
+      function fillReceiptCard(item, fmt) {
+        document.getElementById('rcpWhenLong').textContent = formatDateLongPt(item.data);
+
+        var absVal = Number(item.valor);
+        if (!Number.isFinite(absVal)) absVal = 0;
+        var totalEl = document.getElementById('rcpTotalVal');
+        totalEl.textContent = formatBrl(absVal);
+        totalEl.className = 'rcp-total-val ' + (fmt.isCredito ? 'rcp-total-val--cred' : 'rcp-total-val--deb');
+
+        var parties = agilbankReceiptParties(item, fmt);
+        document.getElementById('rcpDeName').textContent = parties.deName;
+        var deSub = document.getElementById('rcpDeSub');
+        if (parties.deSubShow && parties.deSub) {
+          deSub.textContent = parties.deSub;
+          deSub.classList.remove('rcp-party--hidden');
+        } else {
+          deSub.textContent = '';
+          deSub.classList.add('rcp-party--hidden');
+        }
+
+        var partyPara = document.getElementById('rcpPartyPara');
+        var paraName = document.getElementById('rcpParaName');
+        var paraSub = document.getElementById('rcpParaSub');
+        if (parties.paraShow) {
+          partyPara.classList.remove('rcp-party--hidden');
+          paraName.textContent = parties.paraName;
+          if (parties.paraSubShow && parties.paraSub) {
+            paraSub.textContent = parties.paraSub;
+            paraSub.classList.remove('rcp-party--hidden');
+          } else {
+            paraSub.textContent = '';
+            paraSub.classList.add('rcp-party--hidden');
+          }
+        } else {
+          partyPara.classList.add('rcp-party--hidden');
+        }
+
+        document.getElementById('rcpTipoLinha').textContent = tipoComprovanteLabel(fmt);
+        document.getElementById('rcpStatusLinha').textContent = statusForReceipt(item.status);
+        document.getElementById('rcpTxLinha').textContent = String(item.id || '—');
+
+        var ref = item.referenciaId != null && String(item.referenciaId).trim() !== '';
+        var rowRef = document.getElementById('rcpRowRef');
+        if (ref) {
+          rowRef.classList.remove('rcp-meta-row--hidden');
+          document.getElementById('rcpRefVal').textContent = String(item.referenciaId).trim();
+        } else {
+          rowRef.classList.add('rcp-meta-row--hidden');
+        }
+
+        var e2e = item.endToEndId != null && String(item.endToEndId).trim() !== '';
+        var rowE2e = document.getElementById('rcpRowE2e');
+        if (e2e) {
+          rowE2e.classList.remove('rcp-meta-row--hidden');
+          document.getElementById('rcpE2eVal').textContent = maskEndToEnd(item.endToEndId);
+        } else {
+          rowE2e.classList.add('rcp-meta-row--hidden');
+        }
+      }
+
       function toggleRow(el, show) {
         if (!el) return;
         if (show) el.classList.remove('mov-row--hidden');
         else el.classList.add('mov-row--hidden');
       }
 
+      function receiptFilename(item) {
+        var id = item && item.id ? String(item.id) : 'movimentacao';
+        return 'comprovante-agilbank-' + id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) + '.png';
+      }
+
+      function loadHtml2Canvas() {
+        return new Promise(function (resolve, reject) {
+          if (typeof window.html2canvas === 'function') {
+            resolve(window.html2canvas);
+            return;
+          }
+          var existing = document.querySelector('script[data-agilbank-h2c]');
+          if (existing) {
+            existing.addEventListener('load', function () {
+              resolve(window.html2canvas);
+            });
+            existing.addEventListener('error', reject);
+            return;
+          }
+          var s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.async = true;
+          s.setAttribute('data-agilbank-h2c', '1');
+          s.onload = function () {
+            if (typeof window.html2canvas === 'function') resolve(window.html2canvas);
+            else reject(new Error('html2canvas não disponível'));
+          };
+          s.onerror = function () {
+            reject(new Error('Falha ao carregar html2canvas'));
+          };
+          document.head.appendChild(s);
+        });
+      }
+
+      function generateReceiptPngBlob() {
+        var el = document.getElementById('agilbankReceiptCard');
+        if (!el) return Promise.reject(new Error('Card ausente'));
+        return loadHtml2Canvas().then(function (html2canvas) {
+          return html2canvas(el, {
+            backgroundColor: '#ffffff',
+            scale: Math.min(2, (window.devicePixelRatio || 1) * 1.25),
+            useCORS: true,
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+          });
+        }).then(function (canvas) {
+          return new Promise(function (resolve, reject) {
+            canvas.toBlob(function (blob) {
+              if (blob) resolve(blob);
+              else reject(new Error('toBlob falhou'));
+            }, 'image/png');
+          });
+        });
+      }
+
+      function downloadBlob(blob, name) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 2500);
+      }
+
+      function copyTextFallback() {
+        var txt = state.receiptText;
+        if (!txt) return Promise.reject();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(txt);
+        }
+        return Promise.reject();
+      }
+
+      function shareOrDownloadPng(opts) {
+        var preferShare = opts && opts.preferShare;
+        var item = state.item;
+        if (!item) {
+          showToast('Movimentação indisponível.');
+          return Promise.resolve();
+        }
+        return generateReceiptPngBlob().then(function (blob) {
+          var name = receiptFilename(item);
+          var file = new File([blob], name, { type: 'image/png' });
+          if (
+            preferShare &&
+            typeof navigator !== 'undefined' &&
+            typeof navigator.share === 'function' &&
+            typeof navigator.canShare === 'function' &&
+            navigator.canShare({ files: [file] })
+          ) {
+            return navigator
+              .share({
+                files: [file],
+                title: 'AgilBank — Comprovante',
+                text: 'Comprovante de movimentação AgilBank',
+              })
+              .then(function () {
+                showToast('Comprovante compartilhado.');
+              })
+              .catch(function (err) {
+                if (err && err.name === 'AbortError') {
+                  showToast('Compartilhamento cancelado.');
+                  return;
+                }
+                downloadBlob(blob, name);
+                showToast('Não foi possível compartilhar o arquivo; imagem salva.');
+              });
+          }
+          downloadBlob(blob, name);
+          showToast('Comprovante baixado. Você pode anexar a imagem onde quiser.');
+          return Promise.resolve();
+        }).catch(function () {
+          showToast('Não foi possível gerar a imagem. Use Copiar dados.');
+          return copyTextFallback().then(function () {
+            showToast('Texto do comprovante copiado.');
+          }).catch(function () {
+            showToast('Tente novamente ou use Copiar dados.');
+          });
+        });
+      }
+
       function render(item) {
         state.item = item;
         var fmt = agilbankFormatMovementDetail(item);
+        state.fmt = fmt;
         state.variant = fmt.variant;
 
-        var isDeb = !fmt.isCredito;
+        fillReceiptCard(item, fmt);
+
         var absVal = Number(item.valor);
         if (!Number.isFinite(absVal)) absVal = 0;
-        var valorEl = document.getElementById('movValor');
-        valorEl.textContent = (fmt.isCredito ? '+ ' : '− ') + formatBrl(absVal);
-        valorEl.className = 'mov-valor ' + (fmt.isCredito ? 'mov-valor--cred' : 'mov-valor--deb');
+        document.getElementById('movDescricaoLinha').textContent = maskSensitiveInline(item.descricao != null ? String(item.descricao) : '—');
 
-        document.getElementById('movIcon').className = fmt.iconClass;
-        document.getElementById('movTitulo').textContent = fmt.titulo;
-        document.getElementById('movSub').textContent = fmt.subtitulo;
-        document.getElementById('movWhen').textContent = formatDateTimeShort(item.data);
-        document.getElementById('movStatusBadge').textContent = humanStatus(item.status);
         document.getElementById('movCategoria').textContent = fmt.categoria;
         document.getElementById('movMeio').textContent = fmt.meioPagamento;
 
@@ -602,13 +1060,10 @@
           den.textContent = 'Denunciar golpe — Em breve';
         }
 
-        var shareBtn = document.getElementById('movBtnShare');
-        if (shareBtn) shareBtn.classList.remove('mov-row--hidden');
-
         state.receiptText = buildReceiptText(item, fmt);
 
         document.getElementById('docNote').textContent =
-          'Os dados vêm do extrato (somente leitura). referenceType, contraparte e endToEndId não são expostos neste endpoint — linhas correspondentes ficam ocultas.';
+          'Comprovante em imagem (PNG) via html2canvas no navegador. PDF não é gerado nesta versão — ver relatório Fase X.3. Dados sensíveis (Pix copia e cola, CPF completo, tokens) não entram no extrato.';
 
         document.getElementById('movContent').style.display = 'block';
       }
@@ -618,7 +1073,7 @@
           var raw = sessionStorage.getItem(SESSION_ITEM);
           if (!raw) return null;
           var o = JSON.parse(raw);
-          if (o && o.id === id) return o;
+          if (o && String(o.id) === String(id)) return o;
         } catch (e) {
           if (typeof console !== 'undefined' && console.warn) console.warn('mov_session_parse', e);
         }
@@ -636,7 +1091,7 @@
         if (!res.ok) return null;
         var items = Array.isArray(raw.items) ? raw.items : [];
         for (var i = 0; i < items.length; i++) {
-          if (items[i] && items[i].id === id) return items[i];
+          if (items[i] && String(items[i].id) === String(id)) return items[i];
         }
         return null;
       }
@@ -653,6 +1108,14 @@
         } else {
           window.location.href = 'index.html';
         }
+      });
+
+      document.getElementById('movHeaderShare').addEventListener('click', function () {
+        shareOrDownloadPng({ preferShare: true });
+      });
+
+      document.getElementById('movBtnDownload').addEventListener('click', function () {
+        shareOrDownloadPng({ preferShare: false });
       });
 
       document.getElementById('movBtnCopiarTx').addEventListener('click', function () {
@@ -680,7 +1143,7 @@
         }
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(txt).then(function () {
-            showToast('Comprovante copiado.');
+            showToast('Dados copiados.');
           }).catch(function () {
             showToast('Não foi possível copiar.');
           });
@@ -690,31 +1153,7 @@
       });
 
       document.getElementById('movBtnShare').addEventListener('click', function () {
-        var txt = state.receiptText;
-        if (!txt) {
-          showToast('Comprovante indisponível.');
-          return;
-        }
-        if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(txt).then(function () {
-              showToast('Compartilhar indisponível; comprovante copiado.');
-            }).catch(function () {
-              showToast('Compartilhar indisponível.');
-            });
-          } else {
-            showToast('Compartilhar indisponível.');
-          }
-          return;
-        }
-        navigator.share({
-          title: 'AgilBank — Comprovante',
-          text: txt,
-        }).then(function () {
-          showToast('Compartilhamento concluído.');
-        }).catch(function () {
-          showToast('Compartilhamento cancelado ou indisponível.');
-        });
+        shareOrDownloadPng({ preferShare: true });
       });
 
       document.getElementById('movBtnExtrato').addEventListener('click', function () {
