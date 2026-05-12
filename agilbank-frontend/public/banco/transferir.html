@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f7fb">
+  <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+  <title>Transferir — AgilBank</title>
+  <script src="js/legacyAuthStore.js"></script>
+  <script src="js/agilbankApiBase.js"></script>
+  <script src="js/legacyApiClient.js"></script>
+  <script>
+    (function enforceAuthTransferir() {
+      var authStore = window.AgilBank && window.AgilBank.auth;
+      var sessionToken = authStore && typeof authStore.getToken === 'function'
+        ? authStore.getToken()
+        : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
+          localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
+      if (!sessionToken) {
+        window.location.replace('/login');
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      --ab-blue: #1351B4;
+      --ab-blue-ink: #0c2d6b;
+      --ab-bg: #f5f7fb;
+      --ab-surface: #ffffff;
+      --ab-text: #0f172a;
+      --ab-muted: #64748b;
+      --ab-radius-xl: 22px;
+      --ab-radius-pill: 999px;
+      --ab-shadow-card: 0 8px 32px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Ubuntu, sans-serif;
+      background: var(--ab-bg);
+      color: var(--ab-text);
+    }
+    .dep-app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .dep-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .dep-back {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: var(--ab-radius-pill);
+      border: none;
+      background: var(--ab-surface);
+      box-shadow: 0 2px 14px rgba(15, 23, 42, 0.06);
+      color: var(--ab-text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dep-back:active { transform: scale(0.96); }
+    .dep-back:focus-visible { outline: 2px solid var(--ab-blue); outline-offset: 2px; }
+    .dep-head-text { flex: 1; min-width: 0; padding-top: 2px; }
+    .dep-kicker {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: var(--ab-blue);
+      margin-bottom: 4px;
+    }
+    .dep-head-text h1 {
+      margin: 0;
+      font-size: 1.38rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+    .dep-sub {
+      margin: 6px 0 0;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: var(--ab-muted);
+      font-weight: 500;
+    }
+    .dep-card {
+      background: var(--ab-surface);
+      border-radius: var(--ab-radius-xl);
+      box-shadow: var(--ab-shadow-card);
+      padding: 18px 16px 20px;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+    }
+    .dep-hint {
+      font-size: 0.78rem;
+      color: var(--ab-muted);
+      margin: 0 0 14px;
+      line-height: 1.45;
+    }
+    .dep-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--ab-blue-ink);
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+    .dep-label:first-of-type { margin-top: 0; }
+    .dep-input, .dep-textarea {
+      width: 100%;
+      padding: 14px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .dep-textarea {
+      min-height: 72px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      resize: vertical;
+    }
+    .dep-input:focus, .dep-textarea:focus {
+      outline: none;
+      border-color: var(--ab-blue);
+      box-shadow: 0 0 0 3px rgba(19, 81, 180, 0.15);
+    }
+    .dep-btn {
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 12px 18px;
+      border-radius: var(--ab-radius-pill);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    .dep-btn:active:not(:disabled) { transform: scale(0.98); }
+    .dep-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .dep-btn-secondary {
+      background: #eef2f7;
+      color: var(--ab-blue-ink);
+      width: 100%;
+      margin-top: 10px;
+    }
+    .dep-btn-primary {
+      background: linear-gradient(145deg, var(--ab-blue) 0%, #0a4a9e 100%);
+      color: #fff;
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px 20px;
+    }
+    .dep-err { color: #b00020; font-size: 0.84rem; min-height: 1.25em; margin: 8px 0 0; }
+    .dep-summary {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      margin: 0 0 8px;
+    }
+    .dep-summary strong { color: var(--ab-blue-ink); }
+    .dep-step-confirm { display: none; }
+    .dep-step-confirm.dep-step-confirm--show { display: block; }
+    .dep-step-form.dep-step-form--hide { display: none; }
+    .dep-step-done { display: none; }
+    .dep-step-done.dep-step-done--show { display: block; }
+    .dep-receipt {
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+    .dep-receipt code { font-size: 0.78rem; word-break: break-all; }
+    #trxToast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%) translateY(140%);
+      max-width: min(92vw, 360px);
+      padding: 14px 18px;
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 14px;
+      font-size: 0.86rem;
+      font-weight: 500;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+      z-index: 99999;
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.25s ease;
+      pointer-events: none;
+    }
+    #trxToast.trx-toast--show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="dep-app">
+    <header class="dep-top">
+      <button type="button" class="dep-back" id="trxBackBtn" aria-label="Voltar ao início">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <div class="dep-head-text">
+        <span class="dep-kicker">AGILBANK</span>
+        <h1>Transferir</h1>
+        <p class="dep-sub">Entre contas AgilBank (mesmo banco). O saldo só muda após confirmação do servidor.</p>
+      </div>
+    </header>
+
+    <main class="dep-card" id="trxMainCard">
+      <p class="dep-hint">
+        Informe e-mail cadastrado ou conta (ex.: 123456-7). Limite por operação: R$&nbsp;1,00 a R$&nbsp;5.000,00. Esta tela não altera saldo localmente.
+      </p>
+
+      <div id="trxStepForm" class="dep-step-form">
+        <label class="dep-label" for="trxDest">Destinatário</label>
+        <input type="text" class="dep-input" id="trxDest" autocomplete="off" placeholder="E-mail ou número da conta-dígito" />
+
+        <label class="dep-label" for="trxValor">Valor (R$)</label>
+        <input type="text" class="dep-input" id="trxValor" inputmode="decimal" placeholder="Ex.: 50,00" autocomplete="off" />
+
+        <label class="dep-label" for="trxDesc">Descrição (opcional)</label>
+        <textarea class="dep-textarea" id="trxDesc" maxlength="500" placeholder="Referência para o extrato"></textarea>
+
+        <p class="dep-err" id="trxErrLocal" aria-live="polite"></p>
+        <button type="button" class="dep-btn dep-btn-primary" id="trxBtnContinuar">Continuar</button>
+      </div>
+
+      <div id="trxStepConfirm" class="dep-step-confirm">
+        <p class="dep-summary" id="trxSummary"></p>
+        <p class="dep-err" id="trxErrConfirm" aria-live="polite"></p>
+        <button type="button" class="dep-btn dep-btn-primary" id="trxBtnConfirmar">Confirmar transferência</button>
+        <button type="button" class="dep-btn dep-btn-secondary" id="trxBtnVoltar">Voltar e editar</button>
+      </div>
+
+      <div id="trxStepDone" class="dep-step-done">
+        <p class="dep-hint" style="margin-top:0;font-weight:700;color:#155724;">Transferência registrada.</p>
+        <div class="dep-receipt" id="trxReceipt"></div>
+        <button type="button" class="dep-btn dep-btn-primary" id="trxBtnExtrato">Ver extrato</button>
+        <button type="button" class="dep-btn dep-btn-secondary" id="trxBtnNova">Nova transferência</button>
+      </div>
+
+      <p class="dep-err" id="trxErrApi" aria-live="polite"></p>
+    </main>
+  </div>
+  <div id="trxToast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var state = {
+        to: '',
+        amount: NaN,
+        description: '',
+        idempotencyKey: null,
+        lastTransfer: null,
+      };
+
+      function showToast(msg) {
+        var el = document.getElementById('trxToast');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.classList.add('trx-toast--show');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(function () {
+          el.classList.remove('trx-toast--show');
+        }, 2800);
+      }
+
+      function getApi() {
+        if (window.AgilBank && window.AgilBank.api && typeof window.AgilBank.api.request === 'function') {
+          return window.AgilBank.api;
+        }
+        if (window.legacyApiClient && typeof window.legacyApiClient.request === 'function') {
+          return window.legacyApiClient;
+        }
+        return null;
+      }
+
+      function parseValor(raw) {
+        var t = String(raw || '').trim().replace(/\./g, '').replace(',', '.');
+        var n = Number(t);
+        return Number.isFinite(n) ? n : NaN;
+      }
+
+      function validarVisual(valorStr, n) {
+        if (!Number.isFinite(n) || n <= 0) return 'Informe um valor válido em reais.';
+        if (n < 1 || n > 5000) return 'Use entre R$ 1,00 e R$ 5.000,00 (validação final no servidor).';
+        var parts = String(valorStr).replace(',', '.').split('.');
+        if (parts.length > 1 && parts[parts.length - 1].length > 2) {
+          return 'Use no máximo duas casas decimais.';
+        }
+        return '';
+      }
+
+      function formatBrl(n) {
+        if (!Number.isFinite(n)) return '—';
+        return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      function mapApiError(code, message) {
+        var m = message || 'Não foi possível concluir.';
+        if (code === 'INSUFFICIENT_BALANCE') return 'Saldo insuficiente para esta transferência.';
+        if (code === 'RECIPIENT_NOT_FOUND') return 'Destinatário não encontrado. Verifique e-mail ou conta.';
+        if (code === 'SAME_ACCOUNT') return 'Não é possível transferir para a própria conta.';
+        if (code === 'INVALID_AMOUNT') return 'Valor inválido. Use entre R$ 1,00 e R$ 5.000,00.';
+        if (code === 'ACCOUNT_NOT_VERIFIED') return 'Conta não verificada. Confirme seu e-mail para transferir.';
+        if (code === 'DUPLICATE_TRANSFER' || code === 'IDEMPOTENCY_CONFLICT') return 'Esta operação já foi enviada. Consulte o extrato ou tente novamente em instantes.';
+        return m;
+      }
+
+      function randomIdempotencyKey() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return window.crypto.randomUUID();
+        }
+        return 'trx-' + String(Date.now()) + '-' + Math.random().toString(36).slice(2, 12);
+      }
+
+      function showForm() {
+        document.getElementById('trxStepForm').classList.remove('dep-step-form--hide');
+        document.getElementById('trxStepConfirm').classList.remove('dep-step-confirm--show');
+        document.getElementById('trxStepDone').classList.remove('dep-step-done--show');
+      }
+
+      function showConfirm() {
+        document.getElementById('trxStepForm').classList.add('dep-step-form--hide');
+        document.getElementById('trxStepConfirm').classList.add('dep-step-confirm--show');
+        document.getElementById('trxStepDone').classList.remove('dep-step-done--show');
+      }
+
+      function showDone() {
+        document.getElementById('trxStepForm').classList.add('dep-step-form--hide');
+        document.getElementById('trxStepConfirm').classList.remove('dep-step-confirm--show');
+        document.getElementById('trxStepDone').classList.add('dep-step-done--show');
+      }
+
+      document.getElementById('trxBackBtn').addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+
+      document.getElementById('trxBtnContinuar').addEventListener('click', function () {
+        var dest = document.getElementById('trxDest');
+        var valorInp = document.getElementById('trxValor');
+        var descEl = document.getElementById('trxDesc');
+        var errLocal = document.getElementById('trxErrLocal');
+        var errApi = document.getElementById('trxErrApi');
+        if (errApi) errApi.textContent = '';
+
+        var to = String(dest && dest.value || '').trim();
+        if (!to) {
+          if (errLocal) errLocal.textContent = 'Informe o destinatário.';
+          return;
+        }
+
+        var n = parseValor(valorInp && valorInp.value);
+        var msg = validarVisual(valorInp && valorInp.value, n);
+        if (msg) {
+          if (errLocal) errLocal.textContent = msg;
+          return;
+        }
+        if (errLocal) errLocal.textContent = '';
+
+        state.to = to;
+        state.amount = Math.round(n * 100) / 100;
+        state.description = String(descEl && descEl.value || '').trim();
+
+        var sum = document.getElementById('trxSummary');
+        if (sum) {
+          sum.innerHTML =
+            '<strong>Para:</strong> ' + escapeHtml(state.to) + '<br/>' +
+            '<strong>Valor:</strong> ' + formatBrl(state.amount) +
+            (state.description ? '<br/><strong>Descrição:</strong> ' + escapeHtml(state.description) : '');
+        }
+        document.getElementById('trxErrConfirm').textContent = '';
+        showConfirm();
+      });
+
+      function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      document.getElementById('trxBtnVoltar').addEventListener('click', function () {
+        showForm();
+      });
+
+      document.getElementById('trxBtnConfirmar').addEventListener('click', function () {
+        var api = getApi();
+        var errConfirm = document.getElementById('trxErrConfirm');
+        var errApi = document.getElementById('trxErrApi');
+        if (!api) {
+          if (errConfirm) errConfirm.textContent = 'Cliente de API indisponível. Recarregue a página.';
+          return;
+        }
+        if (errConfirm) errConfirm.textContent = '';
+        if (errApi) errApi.textContent = '';
+
+        if (!state.idempotencyKey) {
+          state.idempotencyKey = randomIdempotencyKey();
+        }
+
+        var btn = document.getElementById('trxBtnConfirmar');
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Processando…';
+        }
+
+        var body = {
+          to: state.to,
+          amount: state.amount,
+        };
+        if (state.description) body.description = state.description;
+
+        api
+          .request('transfers/internal', {
+            method: 'POST',
+            headers: { 'Idempotency-Key': state.idempotencyKey },
+            body: JSON.stringify(body),
+          })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { res: res, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Confirmar transferência';
+            }
+
+            if (pack.res.status === 403 && pack.body && pack.body.code === 'ACCOUNT_NOT_VERIFIED') {
+              var em = mapApiError(pack.body.code, pack.body.message);
+              if (errConfirm) errConfirm.textContent = em;
+              return;
+            }
+
+            if (!pack.res.ok || !pack.body.success) {
+              var code = (pack.body && pack.body.code) || '';
+              var em = mapApiError(code, pack.body && pack.body.message);
+              if (errConfirm) errConfirm.textContent = em + (code ? ' (' + code + ')' : '');
+              return;
+            }
+
+            var d = pack.body.data;
+            if (!d || !d.transfer) {
+              if (errConfirm) errConfirm.textContent = 'Resposta inválida do servidor.';
+              return;
+            }
+
+            state.lastTransfer = d.transfer;
+            var t = d.transfer;
+            var receipt = document.getElementById('trxReceipt');
+            if (receipt) {
+              receipt.innerHTML =
+                '<div><strong>Status:</strong> ' + escapeHtml(t.status || '') + '</div>' +
+                '<div><strong>Valor:</strong> ' + formatBrl(t.amount) + '</div>' +
+                '<div><strong>Quando:</strong> ' + escapeHtml(t.completedAt || t.createdAt || '') + '</div>' +
+                (t.counterparty && t.counterparty.label
+                  ? '<div><strong>Contraparte:</strong> ' + escapeHtml(t.counterparty.label) + '</div>'
+                  : '') +
+                '<div><strong>ID:</strong> <code>' + escapeHtml(t.id || '') + '</code></div>' +
+                (d.replay ? '<div class="dep-hint" style="margin:8px 0 0">Operação idempotente — retorno do registro já existente.</div>' : '');
+            }
+            showDone();
+            showToast('Transferência confirmada pelo servidor.');
+          })
+          .catch(function (err) {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Confirmar transferência';
+            }
+            if (errConfirm) errConfirm.textContent = 'Falha de conexão. Tente novamente.';
+            if (err && err.message) console.warn(err);
+          });
+      });
+
+      document.getElementById('trxBtnExtrato').addEventListener('click', function () {
+        try {
+          sessionStorage.setItem('agilbank_modulos_target', 'extrato');
+        } catch (e) {}
+        window.location.href = 'index.html';
+      });
+
+      document.getElementById('trxBtnNova').addEventListener('click', function () {
+        state.idempotencyKey = null;
+        state.lastTransfer = null;
+        document.getElementById('trxErrApi').textContent = '';
+        showForm();
+      });
+    })();
+  </script>
+</body>
+</html>

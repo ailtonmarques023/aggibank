@@ -52,8 +52,35 @@ model User {
   cardShipmentEvents  CardShipmentEvent[]
   pixCobrancas        PixCobranca[]
   accountDeposits     AccountDeposit[]
+  internalTransfersFrom InternalTransfer[] @relation("InternalTransferFrom")
+  internalTransfersTo   InternalTransfer[] @relation("InternalTransferTo")
 
   @@map("usuarios")
+}
+
+/// Transferência interna entre contas AgilBank (Fase W). Ledger obrigatório; sem Pix/TED.
+model InternalTransfer {
+  id               String    @id @default(cuid())
+  fromUserId       String
+  toUserId         String
+  amount           Decimal   @db.Decimal(10, 2)
+  /// PENDENTE | CONCLUIDA | FALHOU | CANCELADA
+  status           String    @default("PENDENTE")
+  idempotencyKey   String
+  debitMovementId  String?
+  creditMovementId String?
+  description      String?
+  failureReason    String?
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+  failedAt         DateTime?
+  fromUser         User      @relation("InternalTransferFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser           User      @relation("InternalTransferTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, idempotencyKey])
+  @@index([fromUserId, createdAt])
+  @@index([toUserId, createdAt])
+  @@map("internal_transfers")
 }
 
 /// Depósito em conta via Pix (valor escolhido pelo titular; crédito só após confirmação PSP — Fase U).

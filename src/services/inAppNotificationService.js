@@ -9,6 +9,8 @@ const NOTIFICATION_TYPE = {
   LOAN_INSURANCE_SETTLED: 'loan_insurance_settled',
   CARD_SHIPMENT_FRETE_PIX: 'card_shipment_frete_pix',
   ACCOUNT_DEPOSIT_PIX_CREDITED: 'account_deposit_pix_credited',
+  INTERNAL_TRANSFER_SENT: 'internal_transfer_sent',
+  INTERNAL_TRANSFER_RECEIVED: 'internal_transfer_received',
 };
 
 function loanApprovedBlockedDedupeKey(loanId) {
@@ -35,8 +37,90 @@ function cardShipmentFretePixDedupeKey(shipmentId) {
   return `card_shipment_frete_pix:${shipmentId}`;
 }
 
+function internalTransferSentDedupeKey(transferId) {
+  return `internal_transfer_sent:${transferId}`;
+}
+
+function internalTransferReceivedDedupeKey(transferId) {
+  return `internal_transfer_received:${transferId}`;
+}
+
 function accountDepositPixCreditedDedupeKey(depositId) {
   return `account_deposit_pix_credited:${depositId}`;
+}
+
+async function notifyInternalTransferSent({
+  userId,
+  transferId,
+  amount,
+  counterpartyLabel,
+}) {
+  if (!userId || !transferId) return null;
+  const dedupeKey = internalTransferSentDedupeKey(transferId);
+  const amt = Number(amount);
+  const fmt = Number.isFinite(amt)
+    ? amt.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : String(amount);
+  const titulo = 'Transferência enviada';
+  const mensagem = `Transferência de R$ ${fmt} para ${counterpartyLabel || 'destinatário'} registrada com sucesso.`;
+  try {
+    const existing = await prisma.notificacao.findUnique({
+      where: { dedupeKey },
+      select: { id: true },
+    });
+    if (existing) return existing;
+    return await prisma.notificacao.create({
+      data: {
+        userId,
+        titulo,
+        mensagem,
+        tipo: NOTIFICATION_TYPE.INTERNAL_TRANSFER_SENT,
+        metadata: { transferId, direction: 'sent' },
+        dedupeKey,
+      },
+    });
+  } catch (err) {
+    if (err && err.code === 'P2002') return null;
+    logger.error({ err: err.message, dedupeKey, userId }, 'notifyInternalTransferSent_failed');
+    return null;
+  }
+}
+
+async function notifyInternalTransferReceived({
+  userId,
+  transferId,
+  amount,
+  counterpartyLabel,
+}) {
+  if (!userId || !transferId) return null;
+  const dedupeKey = internalTransferReceivedDedupeKey(transferId);
+  const amt = Number(amount);
+  const fmt = Number.isFinite(amt)
+    ? amt.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : String(amount);
+  const titulo = 'Transferência recebida';
+  const mensagem = `Você recebeu R$ ${fmt} de ${counterpartyLabel || 'remetente'}.`;
+  try {
+    const existing = await prisma.notificacao.findUnique({
+      where: { dedupeKey },
+      select: { id: true },
+    });
+    if (existing) return existing;
+    return await prisma.notificacao.create({
+      data: {
+        userId,
+        titulo,
+        mensagem,
+        tipo: NOTIFICATION_TYPE.INTERNAL_TRANSFER_RECEIVED,
+        metadata: { transferId, direction: 'received' },
+        dedupeKey,
+      },
+    });
+  } catch (err) {
+    if (err && err.code === 'P2002') return null;
+    logger.error({ err: err.message, dedupeKey, userId }, 'notifyInternalTransferReceived_failed');
+    return null;
+  }
 }
 
 function formatLimiteMensagemBRL(limite) {
@@ -456,6 +540,8 @@ module.exports = {
   loanInsuranceSettledDedupeKey,
   cardShipmentFretePixDedupeKey,
   accountDepositPixCreditedDedupeKey,
+  internalTransferSentDedupeKey,
+  internalTransferReceivedDedupeKey,
   notifyLoanApprovedBlockedFunds,
   notifyCardApproved,
   notifyBoletoPago,
@@ -463,4 +549,6 @@ module.exports = {
   notifyLoanInsuranceSettled,
   notifyCardShipmentFreightPixSettled,
   notifyAccountDepositPixCredited,
+  notifyInternalTransferSent,
+  notifyInternalTransferReceived,
 };

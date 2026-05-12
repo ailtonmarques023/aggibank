@@ -27,6 +27,7 @@ const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
 const chargeRoutes = require('./routes/charges');
 const depositRoutes = require('./routes/deposits');
+const transferRoutes = require('./routes/transfers');
 const emailRoutes = require('./routes/email');
 const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, isRedisAvailable, getRedis } = require('./utils/redis');
@@ -94,7 +95,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-request-id', 'x-internal-key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-request-id', 'x-internal-key', 'Idempotency-Key'],
   optionsSuccessStatus: 200,
 }));
 
@@ -359,6 +360,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/charges', chargeRoutes);
 app.use('/api/deposits', depositRoutes);
+app.use('/api/transfers', transferRoutes);
 app.use('/api/email', emailRoutes);
 
 // Documentação Swagger

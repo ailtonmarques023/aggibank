@@ -102,6 +102,7 @@ const cleanTestData = async () => {
     await prisma.$transaction([
       prisma.auditLog.deleteMany(),
       prisma.token.deleteMany(),
+      prisma.internalTransfer.deleteMany(),
       prisma.pagamento.deleteMany(),
       prisma.boleto.deleteMany(),
       prisma.chavePix.deleteMany(),
