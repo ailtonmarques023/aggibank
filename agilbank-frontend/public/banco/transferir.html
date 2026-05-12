@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#fafafa">
+  <meta name="theme-color" content="#f5f7fb">
   <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
   <title>Transferir — AgilBank</title>
   <script src="js/legacyAuthStore.js"></script>
@@ -23,16 +23,22 @@
   </script>
   <style>
     :root {
+      /* Alinhado a deposito.html / modulos AgilBank */
       --trx-blue: #1351B4;
+      --trx-blue-accent: #0072ce;
+      --trx-blue-ink: #0c2d6b;
       --trx-violet: #3d2b8c;
-      --trx-accent: linear-gradient(145deg, #1351B4 0%, #3d2b8c 100%);
-      --trx-bg: #f2f4f8;
-      --trx-page: #fafafa;
+      --trx-accent: linear-gradient(145deg, #1351B4 0%, #4a2fb8 55%, #3d2b8c 100%);
+      --trx-bg: #f5f7fb;
+      --trx-surface: #ffffff;
+      --trx-icon-bg: #eaf4ff;
       --trx-text: #0f172a;
       --trx-muted: #64748b;
       --trx-radius-lg: 20px;
       --trx-radius-pill: 999px;
       --trx-max: 480px;
+      --trx-shadow-card: 0 8px 32px rgba(15, 23, 42, 0.08);
+      --trx-shadow-soft: 0 4px 20px rgba(19, 81, 180, 0.12);
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -50,17 +56,18 @@
       min-height: 100vh;
       min-height: 100dvh;
       position: relative;
-      background: var(--trx-page);
+      background: var(--trx-bg);
+      overflow-x: hidden;
     }
 
-    /* ——— Voltar circular ——— */
+    /* ——— Voltar circular (azul claro AgilBank) ——— */
     .trx-back {
       flex-shrink: 0;
       width: 44px;
       height: 44px;
       border-radius: var(--trx-radius-pill);
       border: none;
-      background: #e8ecf3;
+      background: var(--trx-icon-bg);
       color: var(--trx-blue);
       cursor: pointer;
       display: flex;
@@ -76,6 +83,10 @@
     .trx-view-form {
       padding: calc(12px + env(safe-area-inset-top, 0px)) 18px 28px;
       min-height: 100dvh;
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
     }
     .trx-view-form.trx-hidden { display: none !important; }
     .trx-toprow {
@@ -106,11 +117,11 @@
       font-weight: 500;
     }
     .trx-card {
-      background: #fff;
+      background: var(--trx-surface);
       border-radius: var(--trx-radius-lg);
       padding: 18px 16px 22px;
       border: 1px solid rgba(226, 232, 240, 0.9);
-      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+      box-shadow: var(--trx-shadow-card);
     }
     .trx-hint {
       font-size: 0.76rem;
@@ -122,7 +133,7 @@
       display: block;
       font-size: 0.74rem;
       font-weight: 700;
-      color: #0c2d6b;
+      color: var(--trx-blue-ink);
       margin-bottom: 6px;
       margin-top: 14px;
     }
@@ -169,56 +180,96 @@
       margin: 10px 0 0;
     }
 
-    /* ——— Etapa 2: revisão (estilo app bancário) ——— */
+    /* ——— Etapa 2: revisão (padrão visual AgilBank) ——— */
     .trx-view-review {
       display: none;
       flex-direction: column;
       min-height: 100dvh;
-      padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-      background: var(--trx-page);
+      padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+      background: var(--trx-bg);
     }
     .trx-view-review.trx-review--show {
       display: flex;
     }
     .trx-review-scroll {
       flex: 1;
-      padding: calc(10px + env(safe-area-inset-top, 0px)) 20px 24px;
+      width: 100%;
+      max-width: 100%;
+      padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 24px;
+      box-sizing: border-box;
     }
-    .trx-review-head {
+    .trx-review-hero {
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      margin-bottom: 28px;
+      margin-bottom: 20px;
+    }
+    .trx-review-hero-text {
+      flex: 1;
+      min-width: 0;
+      padding-top: 2px;
+    }
+    .trx-review-kicker {
+      display: block;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: var(--trx-blue);
+      margin-bottom: 6px;
     }
     .trx-review-title {
-      margin: 4px 0 0;
-      font-size: 1.45rem;
+      margin: 0;
+      font-size: 1.35rem;
       font-weight: 800;
-      letter-spacing: -0.035em;
-      line-height: 1.2;
-      color: var(--trx-text);
+      letter-spacing: -0.03em;
+      line-height: 1.18;
+      color: var(--trx-blue-ink);
+    }
+    .trx-review-lead {
+      margin: 8px 0 0;
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: var(--trx-muted);
+      font-weight: 500;
     }
 
-    .trx-review-block {
+    .trx-review-card {
+      background: var(--trx-surface);
+      border-radius: var(--trx-radius-lg);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: var(--trx-shadow-card);
+      padding: 16px 16px 18px;
+      margin-bottom: 12px;
+    }
+    .trx-review-card:last-of-type { margin-bottom: 0; }
+
+    .trx-review-card--recipient {
       display: flex;
       align-items: flex-start;
       gap: 14px;
-      padding: 16px 0;
-      border-bottom: 1px solid rgba(15, 23, 42, 0.06);
     }
-    .trx-review-block:last-of-type { border-bottom: none; }
     .trx-avatar {
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
-      background: linear-gradient(145deg, #0d9488 0%, #0f766e 100%);
-      color: #fef08a;
+      background: linear-gradient(145deg, var(--trx-blue) 0%, var(--trx-blue-accent) 100%);
+      color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.02em;
       flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(19, 81, 180, 0.25);
+    }
+    .trx-avatar--icononly {
+      padding: 0;
+    }
+    .trx-avatar--icononly svg {
+      width: 26px;
+      height: 26px;
+      opacity: 0.95;
     }
     .trx-review-main {
       flex: 1;
@@ -226,43 +277,60 @@
     }
     .trx-review-name {
       font-weight: 800;
-      font-size: 1.05rem;
+      font-size: 1.02rem;
       line-height: 1.25;
       word-break: break-word;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 8px;
+      color: var(--trx-text);
     }
     .trx-review-name-text { flex: 1; min-width: 0; }
     .trx-chevron {
       flex-shrink: 0;
       color: var(--trx-blue);
-      opacity: 0.65;
+      opacity: 0.55;
+      margin-top: 2px;
     }
     .trx-review-inst {
       font-size: 0.84rem;
       color: var(--trx-muted);
-      margin-top: 4px;
+      margin-top: 6px;
       line-height: 1.35;
+      font-weight: 600;
     }
 
+    .trx-detail-row {
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    .trx-detail-row:first-child { padding-top: 4px; }
+    .trx-detail-row:last-child {
+      border-bottom: none;
+      padding-bottom: 4px;
+    }
     .trx-review-row-label {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: var(--trx-muted);
-      text-transform: none;
-      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .trx-review-row-value {
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 600;
       margin-top: 6px;
+      color: var(--trx-blue-ink);
+      line-height: 1.35;
+      word-break: break-word;
     }
 
-    .trx-review-total-wrap {
-      margin-top: 28px;
-      padding-top: 8px;
+    .trx-review-card--total {
+      padding: 18px 18px 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+      border: 1px solid rgba(19, 81, 180, 0.1);
+      box-shadow: var(--trx-shadow-soft);
     }
     .trx-review-total-row {
       display: flex;
@@ -273,24 +341,21 @@
     .trx-review-total-label {
       font-size: 1rem;
       font-weight: 700;
+      color: var(--trx-blue-ink);
     }
     .trx-review-total-val {
-      font-size: 1.65rem;
+      font-size: 1.72rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1;
+      color: var(--trx-text);
     }
     .trx-review-total-sub {
       font-size: 0.82rem;
       color: var(--trx-muted);
-      margin-top: 8px;
+      margin-top: 10px;
       text-align: right;
-    }
-    .trx-desc-note {
-      font-size: 0.82rem;
-      color: var(--trx-muted);
-      margin-top: 16px;
-      line-height: 1.4;
+      font-weight: 500;
     }
 
     /* Barra inferior fixa */
@@ -301,10 +366,11 @@
       bottom: 0;
       width: 100%;
       max-width: var(--trx-max);
-      padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
-      background: linear-gradient(180deg, rgba(250,250,250,0) 0%, rgba(250,250,250,0.92) 18%, #fafafa 100%);
+      padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(180deg, rgba(245,247,251,0) 0%, rgba(245,247,251,0.85) 22%, var(--trx-bg) 100%);
       z-index: 50;
       display: none;
+      box-sizing: border-box;
     }
     .trx-foot.trx-foot--show { display: block; }
     .trx-btn-secure {
@@ -321,7 +387,7 @@
       cursor: pointer;
       color: #fff;
       background: var(--trx-accent);
-      box-shadow: 0 8px 28px rgba(61, 43, 140, 0.35);
+      box-shadow: 0 8px 24px rgba(19, 81, 180, 0.35), 0 2px 8px rgba(61, 43, 140, 0.2);
       -webkit-tap-highlight-color: transparent;
       transition: opacity 0.15s ease, transform 0.1s ease;
     }
@@ -341,6 +407,8 @@
       display: none;
       padding: calc(12px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
       min-height: 100dvh;
+      background: var(--trx-bg);
+      box-sizing: border-box;
     }
     .trx-view-done.trx-done--show { display: block; }
     .trx-done-badge {
@@ -368,7 +436,7 @@
       font-size: 0.9rem;
       cursor: pointer;
       background: #eef2f7;
-      color: #0c2d6b;
+      color: var(--trx-blue-ink);
     }
     .trx-muted-link {
       display: block;
@@ -376,7 +444,7 @@
       margin-top: 14px;
       font-size: 0.88rem;
       font-weight: 600;
-      color: var(--trx-blue);
+      color: var(--trx-blue-accent);
       background: none;
       border: none;
       cursor: pointer;
@@ -445,17 +513,21 @@
     <!-- Etapa 2: revisão -->
     <div id="trxViewReview" class="trx-view-review" aria-hidden="true">
       <div class="trx-review-scroll">
-        <div class="trx-review-head">
+        <div class="trx-review-hero">
           <button type="button" class="trx-back" id="trxBackReview" aria-label="Voltar e editar dados">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M15 18l-6-6 6-6"/>
             </svg>
           </button>
+          <div class="trx-review-hero-text">
+            <span class="trx-review-kicker">AGILBANK</span>
+            <h2 class="trx-review-title">Revise os dados antes de transferir</h2>
+            <p class="trx-review-lead">Confira as informações antes de confirmar.</p>
+          </div>
         </div>
-        <h2 class="trx-review-title">Revise os dados antes de transferir</h2>
 
-        <div class="trx-review-block" style="margin-top:22px;padding-top:0;">
-          <div class="trx-avatar" id="trxAvatarAb" aria-hidden="true">AB</div>
+        <div class="trx-review-card trx-review-card--recipient">
+          <div class="trx-avatar" id="trxAvatar" aria-hidden="true"></div>
           <div class="trx-review-main">
             <div class="trx-review-name">
               <span class="trx-review-name-text" id="trxReviewDestName"></span>
@@ -463,18 +535,26 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
               </span>
             </div>
-            <p class="trx-review-inst" id="trxReviewDestSub"></p>
+            <p class="trx-review-inst" id="trxReviewDestSub">Conta AgilBank</p>
           </div>
         </div>
 
-        <div class="trx-review-block" style="border-bottom:1px solid rgba(15,23,42,0.06);">
-          <div class="trx-review-main" style="padding-left:0;">
+        <div class="trx-review-card trx-review-card--details">
+          <div class="trx-detail-row">
             <div class="trx-review-row-label">Data</div>
             <div class="trx-review-row-value" id="trxReviewDate"></div>
           </div>
+          <div class="trx-detail-row" id="trxReviewDescRow" style="display:none;">
+            <div class="trx-review-row-label">Descrição</div>
+            <div class="trx-review-row-value" id="trxReviewDescVal"></div>
+          </div>
+          <div class="trx-detail-row">
+            <div class="trx-review-row-label">Tipo</div>
+            <div class="trx-review-row-value">Transferência interna</div>
+          </div>
         </div>
 
-        <div class="trx-review-total-wrap">
+        <div class="trx-review-card trx-review-card--total">
           <div class="trx-review-total-row">
             <span class="trx-review-total-label">Total</span>
             <span class="trx-review-total-val" id="trxReviewTotal"></span>
@@ -482,7 +562,6 @@
           <p class="trx-review-total-sub">Saldo em conta</p>
         </div>
 
-        <p class="trx-desc-note" id="trxReviewDescNote" style="display:none;"></p>
         <p class="trx-err" id="trxErrReview" aria-live="polite" style="margin-top:16px;"></p>
       </div>
     </div>
@@ -583,18 +662,31 @@
       function todayLabel() {
         var now = new Date();
         var day = now.getDate();
-        var mon = now.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+        var mon = now.toLocaleDateString('pt-BR', { month: 'short' }).replace(/\./g, '');
         return 'Hoje, ' + day + '/' + mon;
       }
 
-      function recipientDisplayLines(toRaw) {
-        var to = String(toRaw || '').trim();
-        var primary = to;
-        var sub = 'Conta AgilBank · transferência interna';
-        if (to.indexOf('@') !== -1) {
-          sub = to + ' · Conta AgilBank';
+      function initialsFromTo(toRaw) {
+        var s = String(toRaw || '').trim();
+        var alnum = s.replace(/[^a-zA-ZÀ-ÿ0-9]/g, '');
+        if (alnum.length >= 2) return alnum.slice(0, 2).toUpperCase();
+        if (alnum.length === 1) return (alnum + alnum).toUpperCase().slice(0, 2);
+        return '';
+      }
+
+      function setReviewAvatar(toRaw) {
+        var el = document.getElementById('trxAvatar');
+        if (!el) return;
+        var ini = initialsFromTo(toRaw);
+        el.className = 'trx-avatar';
+        el.removeAttribute('style');
+        if (ini) {
+          el.textContent = ini;
+          return;
         }
-        return { primary: primary, sub: sub };
+        el.classList.add('trx-avatar--icononly');
+        el.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
       }
 
       function mapApiError(code, message, httpStatus) {
@@ -707,19 +799,20 @@
         state.amount = Math.round(n * 100) / 100;
         state.description = String(descEl && descEl.value || '').trim();
 
-        var lines = recipientDisplayLines(state.to);
-        document.getElementById('trxReviewDestName').textContent = lines.primary;
-        document.getElementById('trxReviewDestSub').textContent = lines.sub;
+        document.getElementById('trxReviewDestName').textContent = state.to;
+        document.getElementById('trxReviewDestSub').textContent = 'Conta AgilBank';
+        setReviewAvatar(state.to);
         document.getElementById('trxReviewDate').textContent = todayLabel();
         document.getElementById('trxReviewTotal').textContent = formatBrl(state.amount);
 
-        var descNote = document.getElementById('trxReviewDescNote');
+        var descRow = document.getElementById('trxReviewDescRow');
+        var descVal = document.getElementById('trxReviewDescVal');
         if (state.description) {
-          descNote.style.display = 'block';
-          descNote.textContent = 'Descrição: ' + state.description;
+          descRow.style.display = 'block';
+          descVal.textContent = state.description;
         } else {
-          descNote.style.display = 'none';
-          descNote.textContent = '';
+          descRow.style.display = 'none';
+          descVal.textContent = '';
         }
 
         showReview();
