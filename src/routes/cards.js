@@ -196,19 +196,60 @@ function roundMoney(value) {
 }
 
 function sanitizeAddressSnapshot(address) {
+  const raw = address && typeof address === 'object' && !Array.isArray(address) ? address : {};
   return {
-    cep: String(address.cep || '').trim(),
-    logradouro: String(address.logradouro || '').trim(),
-    numero: String(address.numero || '').trim(),
-    complemento: address.complemento ? String(address.complemento).trim() : null,
-    bairro: String(address.bairro || '').trim(),
-    cidade: String(address.cidade || '').trim(),
-    estado: String(address.estado || '').trim().toUpperCase(),
+    cep: String(raw.cep || '').trim(),
+    logradouro: String(raw.logradouro || '').trim(),
+    numero: String(raw.numero || '').trim(),
+    complemento: raw.complemento ? String(raw.complemento).trim() : null,
+    bairro: String(raw.bairro || '').trim(),
+    cidade: String(raw.cidade || '').trim(),
+    estado: String(raw.estado || '').trim().toUpperCase(),
   };
 }
 
-function publicShipment(shipment) {
+function hasMeaningfulAddressSnapshot(address) {
+  const snap = sanitizeAddressSnapshot(address);
+  return ['cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado'].some((key) => {
+    const value = snap[key];
+    return value !== null && value !== undefined && String(value).trim() !== '';
+  });
+}
+
+function addressSnapshotFromEndereco(endereco) {
+  if (!endereco) return sanitizeAddressSnapshot(null);
+  return sanitizeAddressSnapshot({
+    cep: endereco.cep,
+    logradouro: endereco.logradouro,
+    numero: endereco.numero,
+    complemento: endereco.complemento,
+    bairro: endereco.bairro,
+    cidade: endereco.cidade,
+    estado: endereco.estado,
+  });
+}
+
+function resolveShipmentAddressSnapshot(shipment) {
+  const shipmentSnapshot = sanitizeAddressSnapshot(shipment && shipment.addressSnapshot);
+  if (hasMeaningfulAddressSnapshot(shipmentSnapshot)) {
+    return { addressSnapshot: shipmentSnapshot, addressSource: 'shipment_snapshot' };
+  }
+
+  const fallbackEndereco = shipment && shipment.user ? shipment.user.endereco : null;
+  const fallbackSnapshot = addressSnapshotFromEndereco(fallbackEndereco);
+  if (hasMeaningfulAddressSnapshot(fallbackSnapshot)) {
+    return { addressSnapshot: fallbackSnapshot, addressSource: 'user_endereco_fallback' };
+  }
+
+  return { addressSnapshot: shipmentSnapshot, addressSource: 'none' };
+}
+
+function publicShipment(shipment, options = {}) {
   if (!shipment) return null;
+  const addressSnapshot =
+    options.addressSnapshot !== undefined
+      ? sanitizeAddressSnapshot(options.addressSnapshot)
+      : sanitizeAddressSnapshot(shipment.addressSnapshot);
   return {
     id: shipment.id,
     cardId: shipment.cardId,
@@ -228,7 +269,8 @@ function publicShipment(shipment) {
     deliveryAttempts: shipment.deliveryAttempts,
     isSecondIssue: shipment.isSecondIssue,
     originShipmentId: shipment.originShipmentId,
-    addressSnapshot: shipment.addressSnapshot,
+    addressSnapshot,
+    addressSource: options.addressSource || 'shipment_snapshot',
     createdAt: shipment.createdAt,
     updatedAt: shipment.updatedAt,
   };
@@ -1684,6 +1726,11 @@ router.get('/:id/shipment', async (req, res) => {
       where: { cardId: id, userId: req.user.id },
       orderBy: { createdAt: 'desc' },
       include: {
+        user: {
+          select: {
+            endereco: true,
+          }
+        },
         events: {
           orderBy: { eventAt: 'desc' },
           take: 20
@@ -1699,11 +1746,13 @@ router.get('/:id/shipment', async (req, res) => {
       });
     }
 
+    const { addressSnapshot, addressSource } = resolveShipmentAddressSnapshot(shipment);
+
     return res.json({
       success: true,
       message: 'Status logístico do cartão consultado com sucesso',
       data: {
-        shipment: publicShipment(shipment),
+        shipment: publicShipment(shipment, { addressSnapshot, addressSource }),
         timeline: shipment.events
       }
     });

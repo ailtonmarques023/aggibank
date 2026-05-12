@@ -58,7 +58,14 @@
   - `CardShipmentEvent`
   - `Endereco`
   - `Movimentacao`
-- Nenhuma alteração backend foi necessária para atender à demanda; o endpoint existente já cumpre a regra de fonte de verdade.
+- Nesta rodada, o backend foi ajustado para corrigir o fluxo do endereço real da entrega:
+  - `GET /api/cards/:id/shipment` continua filtrando por `req.user.id`, mas agora resolve `addressSnapshot` efetivo antes de responder.
+  - Prioridade da fonte de endereço:
+    - `CardShipment.addressSnapshot` quando a remessa já tem snapshot real
+    - fallback controlado para `User.endereco` apenas quando o snapshot legado vier vazio
+    - `none` quando nenhum endereço real existir
+  - O payload público da remessa agora inclui `addressSource` para auditoria (`shipment_snapshot`, `user_endereco_fallback`, `none`).
+  - O serviço [`C:\Users\gordi\.codex\worktrees\5144\concurso\src\services\cardShipmentAutoCreateService.js`](C:\Users\gordi\.codex\worktrees\5144\concurso\src\services\cardShipmentAutoCreateService.js) deixou de gerar endereço placeholder; sem `Endereco` real, a remessa nasce sem dados inventados.
 
 10. Ação da LARGETHA
 - Refatorada a tela ativa em [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html).
@@ -89,12 +96,16 @@
     - `.status-dot`
     - definições antigas duplicadas de `.status-entrega-container`
 - Não foi removido o nome genérico `.status-item` porque ele é compartilhado com outro fluxo da tela de empréstimo.
+- Nesta rodada, o frontend da tela nova manteve o backend como fonte de verdade e só ajustou a montagem do texto do endereço:
+  - [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\js\cartao.js`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\js\cartao.js) agora renderiza o endereço com os campos disponíveis da API e exibe `sem dados.` apenas quando o payload oficial realmente vier vazio.
 
 11. Contrato API usado/criado
 - Usado sem criar endpoint novo:
   - `GET /api/cards/:id/shipment`
     - Auth: JWT obrigatório via middleware
     - Resposta de sucesso: `success`, `message`, `data.shipment`, `data.timeline`
+    - Endereço oficial retornado em `data.shipment.addressSnapshot`
+    - Origem resolvida do endereço exposta em `data.shipment.addressSource`
     - Erros observados: `CARD_NOT_FOUND`, `SHIPMENT_NOT_FOUND`, `INTERNAL_ERROR`
   - `GET /api/cards/:id/shipment/timeline?page=1&limit=20`
     - Auth: JWT obrigatório via middleware
@@ -107,7 +118,8 @@
 - [`C:\Users\gordi\.codex\worktrees\5144\concurso\prisma\schema.prisma`](C:\Users\gordi\.codex\worktrees\5144\concurso\prisma\schema.prisma)
 
 13. Arquivos backend alterados
-- Nenhum
+- [`C:\Users\gordi\.codex\worktrees\5144\concurso\src\routes\cards.js`](C:\Users\gordi\.codex\worktrees\5144\concurso\src\routes\cards.js)
+- [`C:\Users\gordi\.codex\worktrees\5144\concurso\src\services\cardShipmentAutoCreateService.js`](C:\Users\gordi\.codex\worktrees\5144\concurso\src\services\cardShipmentAutoCreateService.js)
 
 14. Arquivos frontend analisados
 - [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html)
@@ -135,6 +147,7 @@
 - `card_shipment_events`
 - `enderecos`
 - `movimentacoes`
+- Campo crítico deste ajuste: `card_shipments.addressSnapshot`
 
 18. Migrations criadas, se houver
 - Nenhuma
@@ -239,9 +252,18 @@
 - Build do frontend após a limpeza:
   - `npm run build` em `agilbank-frontend`
   - Resultado: build Vite concluído com sucesso fora da sandbox
+- Validação incremental do endereço real:
+  - O endpoint `GET /api/cards/:id/shipment` já retornava `shipment.addressSnapshot`; o problema estava na qualidade desse snapshot para remessas antigas.
+  - Após o ajuste de backend, o fluxo oficial passa a responder endereço útil em três cenários:
+    - `shipment_snapshot`: remessa com snapshot real persistido
+    - `user_endereco_fallback`: remessa antiga sem snapshot útil, mas com `Endereco` real do usuário autenticado
+    - `none`: nenhum endereço real disponível
+  - O frontend não passou a inventar endereço. Ele apenas consome `shipment.addressSnapshot` do payload oficial e monta a linha com os campos disponíveis.
 - Teste automatizado de shipment reexecutado:
   - `npx jest tests/shipment.test.js --runInBand`
-  - Resultado: `6/6` testes passando
+  - Resultado: `7/7` testes passando
+  - Nova evidência coberta por teste:
+    - `GET /api/cards/:id/shipment` retorna `addressSnapshot` efetivo e `addressSource = user_endereco_fallback` quando a remessa legada vier sem snapshot mas existir `Endereco` real no banco
 - Publicação validada na Vercel após push sem `force` para `origin/main`:
   - commit publicado: `29aa713 feat(cards): activate new delivery status layout`
   - `GET https://aggibank.vercel.app/banco/index.html`
@@ -275,6 +297,7 @@
 
 21. Pendências
 - Validar visualmente a tela em browser autenticado real.
+- Confirmar em sessão autenticada real que o card `Endereço de Entrega` exibe o endereço oficial retornado por `GET /api/cards/:id/shipment`.
 - Executar fluxo autenticado com:
   - cartão com remessa
   - cartão sem remessa
@@ -308,6 +331,7 @@
 - Sem sessão autenticada em browser real, há risco residual de ajuste fino visual, overflow ou conflito com CSS legado sob dados reais.
 - A timeline horizontal usa mapeamento honesto dos status existentes, mas precisa validação com dados reais do banco para todos os cenários operacionais.
 - O HTML único continua com acoplamento alto; futuras mudanças de cartão podem afetar a seção se não houver regressão visual monitorada.
+- O fallback `user_endereco_fallback` corrige remessas legadas sem snapshot útil, mas ainda precisa validação em runtime para confirmar aderência ao endereço efetivamente usado na entrega histórica daquele cartão.
 - Enquanto o deploy publicado continuar antigo, o usuário seguirá vendo a tela velha e o fluxo real continuará 100% reprovado em runtime, mesmo com a worktree local correta.
 - Como o ambiente real publicado ainda não foi atualizado nesta rodada, não há evidência de que o navegador do usuário deixou definitivamente de abrir a versão antiga fora desta worktree.
 - O artefato publicado já foi atualizado; o risco residual agora ficou concentrado exclusivamente na ausência de validação autenticada de runtime/Network com usuário real.
@@ -318,7 +342,10 @@
   - `agilbank-frontend/public/banco/js/cartao.js`
   - `agilbank-frontend/public/banco/css/style.cartao-status-card {pedidoCartaoAprovado}.css`
 - Reverter também `agilbank-frontend/public/banco/css/style.cartaoWizard.css` se for necessário restaurar o seletor legado removido.
-- Nenhum rollback de banco ou backend é necessário nesta entrega.
+- Reverter também os ajustes de backend abaixo se o fallback de endereço precisar ser desativado:
+  - `src/routes/cards.js`
+  - `src/services/cardShipmentAutoCreateService.js`
+- Nenhum rollback de banco ou migration é necessário nesta entrega.
 
 24. Decisão final do IVAR
 - REPROVADO

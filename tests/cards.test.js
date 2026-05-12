@@ -372,6 +372,15 @@ describe('Cards API — POST decisão e GET segurança', () => {
               status: 'AGUARDANDO_COBRANCA',
               shippingFeeStatus: 'PENDENTE',
               idempotencyKeyCharge: 'auto-card-shipment:cartao-test-id',
+              addressSnapshot: {
+                cep: '01001-000',
+                logradouro: 'Rua Teste',
+                numero: '100',
+                complemento: null,
+                bairro: 'Centro',
+                cidade: 'São Paulo',
+                estado: 'SP',
+              },
             }),
           }),
         );

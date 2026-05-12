@@ -10,29 +10,20 @@ function autoShipmentIdempotencyKey(cardId) {
 }
 
 function sanitizeAddressSnapshot(address) {
+  const raw = address && typeof address === 'object' && !Array.isArray(address) ? address : {};
   return {
-    cep: String(address.cep || '').trim(),
-    logradouro: String(address.logradouro || '').trim(),
-    numero: String(address.numero || '').trim(),
-    complemento: address.complemento ? String(address.complemento).trim() : null,
-    bairro: String(address.bairro || '').trim(),
-    cidade: String(address.cidade || '').trim(),
-    estado: String(address.estado || '').trim().toUpperCase(),
+    cep: String(raw.cep || '').trim(),
+    logradouro: String(raw.logradouro || '').trim(),
+    numero: String(raw.numero || '').trim(),
+    complemento: raw.complemento ? String(raw.complemento).trim() : null,
+    bairro: String(raw.bairro || '').trim(),
+    cidade: String(raw.cidade || '').trim(),
+    estado: String(raw.estado || '').trim().toUpperCase(),
   };
 }
 
 function addressSnapshotFromEndereco(endereco) {
-  if (!endereco) {
-    return sanitizeAddressSnapshot({
-      cep: '',
-      logradouro: 'Endereço não cadastrado — complete no perfil',
-      numero: 'S/N',
-      complemento: null,
-      bairro: 'N/I',
-      cidade: 'N/I',
-      estado: 'NI',
-    });
-  }
+  if (!endereco) return sanitizeAddressSnapshot(null);
   return sanitizeAddressSnapshot({
     cep: endereco.cep,
     logradouro: endereco.logradouro,
@@ -74,6 +65,9 @@ async function ensureCardShipmentOnApproval({ prisma: db, userId, cardId, cardTi
 
     const endereco = await db.endereco.findUnique({ where: { userId } });
     const addressSnapshot = addressSnapshotFromEndereco(endereco);
+    if (!endereco) {
+      logger.warn({ cardId, userId }, 'card_shipment_auto_create_without_endereco');
+    }
 
     const shipment = await db.cardShipment.create({
       data: {

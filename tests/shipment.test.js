@@ -269,6 +269,45 @@ describe('Shipment API — frete e rastreamento de cartão físico', () => {
     expect(timelineRes.body.data.pagination.total).toBe(1);
   });
 
+  it('retorna endereco efetivo da remessa com fallback controlado ao endereco do usuario quando snapshot vier vazio', async () => {
+    prisma.cartao.findFirst.mockResolvedValue(makeCard());
+    prisma.cardShipment.findFirst.mockResolvedValue({
+      ...makeShipment({
+        addressSnapshot: {},
+      }),
+      user: {
+        endereco: {
+          userId: 'test-user-id',
+          cep: '30130-110',
+          logradouro: 'Avenida Afonso Pena',
+          numero: '1200',
+          complemento: 'Sala 4',
+          bairro: 'Centro',
+          cidade: 'Belo Horizonte',
+          estado: 'MG',
+        },
+      },
+      events: [],
+    });
+
+    const statusRes = await request(app)
+      .get('/api/cards/card-shipment-1/shipment')
+      .set('Authorization', BEARER)
+      .expect(200);
+
+    expect(statusRes.body.success).toBe(true);
+    expect(statusRes.body.data.shipment.addressSource).toBe('user_endereco_fallback');
+    expect(statusRes.body.data.shipment.addressSnapshot).toEqual({
+      cep: '30130-110',
+      logradouro: 'Avenida Afonso Pena',
+      numero: '1200',
+      complemento: 'Sala 4',
+      bairro: 'Centro',
+      cidade: 'Belo Horizonte',
+      estado: 'MG',
+    });
+  });
+
   it('registra evento logístico interno com chave interna', async () => {
     prisma.cardShipment.findUnique.mockResolvedValue(makeShipment());
     prisma.cardShipment.update.mockResolvedValue(makeShipment({

@@ -1032,14 +1032,14 @@ function agilbankShipmentFormatDate(iso) {
 
 function agilbankShipmentAddressText(addressSnapshot) {
     var a = addressSnapshot && typeof addressSnapshot === 'object' ? addressSnapshot : null;
-    if (!a) return 'Endereço não informado pela API.';
+    if (!a) return 'sem dados.';
     var logradouro = [a.logradouro, a.numero].filter(function (x) { return x && String(x).trim(); }).join(', ');
     if (a.complemento && String(a.complemento).trim()) {
         logradouro = logradouro ? logradouro + ' - ' + a.complemento : String(a.complemento).trim();
     }
     var cidadeUf = [a.cidade, a.estado].filter(function (x) { return x && String(x).trim(); }).join('/');
     var parts = [logradouro, a.bairro, cidadeUf, a.cep].filter(function (x) { return x && String(x).trim(); });
-    return parts.length ? parts.join(' - ') : 'Endereço não informado pela API.';
+    return parts.length ? parts.join(' - ') : 'sem dados.';
 }
 
 function agilbankShipmentEscapeHtml(value) {
