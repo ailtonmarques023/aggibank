@@ -182,7 +182,9 @@ async function listEligiblePixCobrancas(opts, db = prisma, now = new Date()) {
       provider: 'EFI',
       status: 'ATIVA',
       linkedEntityType: { in: linkedTypes },
-      txid: { not: null },
+      // PixCobranca.txid e campo String obrigatorio no schema; Prisma rejeita `not: null`
+      // neste filtro. Exclui apenas txid vazio, se existir dado legado inconsistente.
+      txid: { not: '' },
       createdAt: { lte: cutoff },
     },
     orderBy: { createdAt: 'asc' },

@@ -81,7 +81,7 @@ describe('efi-reconcile-pending-pix-batch (Fase U.5)', () => {
           provider: 'EFI',
           status: 'ATIVA',
           linkedEntityType: { in: ['account_deposit'] },
-          txid: { not: null },
+          txid: { not: '' },
           createdAt: { lte: new Date('2026-05-12T13:50:00.000Z') },
         }),
         take: 7,
