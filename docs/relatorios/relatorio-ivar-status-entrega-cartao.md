@@ -272,6 +272,21 @@
   - verificação de sintaxe JavaScript passou após o ajuste de navegação
   - `npm run build` do frontend passou após o ajuste de navegação
   - não houve validação visual autenticada em browser real nesta sessão
+- Publicação segura da correção visual:
+  - branch de deploy confirmada: `origin/main`
+  - worktree isolada usada: `C:\Users\gordi\.codex\worktrees\delivery-publish-visual\concurso`
+  - commit publicado: `e199341 fix(cards): isolate delivery status screen from dashboard`
+  - push executado sem `force`
+- Evidência estática do deploy publicado:
+  - `GET https://aggibank.vercel.app/banco/index.html`
+    - `id="statusEntregaContainer" style="display: none;" = true`
+  - `GET https://aggibank.vercel.app/banco/js/cartao.js?v=20260512-status-entrega-active`
+    - `function agilbankShowExclusiveStatusEntrega() = true`
+    - referência a `document.getElementById('container') = true`
+  - `GET https://aggibank.vercel.app/banco/css/style.cartao-status-card%20%7BpedidoCartaoAprovado%7D.css?v=20260512-status-entrega-active`
+    - `position: fixed = true`
+    - `inset: 0 = true`
+  - conclusão: o artefato estático publicado já recebeu a correção visual da tela de Status de Entrega
 - Validação incremental do endereço real:
   - O endpoint `GET /api/cards/:id/shipment` já retornava `shipment.addressSnapshot`; o problema estava na qualidade desse snapshot para remessas antigas.
   - Após o ajuste de backend, o fluxo oficial passa a responder endereço útil em três cenários:
@@ -335,6 +350,7 @@
 - Confirmar em sessão autenticada real que `Serviços e Produtos` desaparece completamente ao abrir `Status de Entrega`.
 - Confirmar em sessão autenticada real que a tela começa diretamente no header azul `Status de Entrega`, sem conteúdo anterior acima.
 - Confirmar em sessão autenticada real que o botão voltar retorna ao painel de cartão sem duplicar conteúdo.
+- Confirmar em sessão autenticada real que não há sobreposição visual nem conteúdo duplicado acima do hero card.
 - Executar fluxo autenticado com:
   - cartão com remessa
   - cartão sem remessa
