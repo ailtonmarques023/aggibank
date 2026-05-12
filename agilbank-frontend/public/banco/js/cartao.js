@@ -929,6 +929,28 @@ function agilbankAbrirContainerCartao(containerId) {
     }
 }
 
+function agilbankShowExclusiveStatusEntrega() {
+    if (typeof ocultarTodosContainers === 'function') {
+        ocultarTodosContainers();
+    }
+
+    var dashboard = document.getElementById('container');
+    if (dashboard) dashboard.style.display = 'none';
+
+    var cartaoPanel = document.getElementById('cartaoGerenciamentoContainer');
+    if (cartaoPanel) cartaoPanel.style.display = 'none';
+
+    var statusPanel = document.getElementById('statusEntregaContainer');
+    if (statusPanel) {
+        statusPanel.style.display = 'block';
+        statusPanel.style.opacity = '1';
+        statusPanel.style.transform = 'translateX(-50%)';
+        statusPanel.scrollTop = 0;
+    }
+
+    if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+}
+
 function agilbankPopularDetalheCartaoNaUi(c, opts) {
     opts = opts || {};
     var virtual = !!opts.virtual;
@@ -1545,12 +1567,7 @@ async function agilbankCartaoAcaoStatus() {
         return;
     }
 
-    if (typeof ocultarTodosContainers === 'function') {
-        ocultarTodosContainers();
-    }
-    var hostContainer = document.getElementById('statusEntregaContainer');
-    if (hostContainer) hostContainer.style.display = 'block';
-    if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+    agilbankShowExclusiveStatusEntrega();
 
     agilbankRenderStatusEntregaParaCartao(c, { uiState: 'loading' });
     var btnStatus = document.getElementById('cartaoAcaoStatus');

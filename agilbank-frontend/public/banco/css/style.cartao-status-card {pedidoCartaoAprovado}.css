@@ -288,11 +288,19 @@
         }
 
         .status-entrega-container {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            max-width: 480px;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow-y: auto;
+            z-index: 900;
             background:
                 linear-gradient(180deg, #0a57c9 0 76px, #f4f7fb 76px 100%);
             min-height: 100vh;
             padding-bottom: 108px;
-            max-width: 600px;
             margin: 0 auto;
         }
 

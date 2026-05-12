@@ -29,6 +29,7 @@
 - A governança referenciou arquivos inexistentes nesta cópia do projeto, como `docs/CODEX-CURSOR-AUTOMACAO.md` e `docs/subagentes/*.md`, exigindo adaptação pela regra master efetivamente encontrada em `.cursor/rules/agilbank-master.mdc`.
 - A validação manual em navegador mostrou que a tela ativa publicada ainda exibe o layout antigo. A divergência não está no arquivo local já alterado, e sim no artefato realmente servido em runtime no host publicado.
 - O risco local de abrir a tela antiga pelo fluxo ativo foi reduzido no código fonte: `showStatusEntregaContainer()` agora delega sempre para `window.agilbankCartaoAcaoStatus()` quando a função existe, sem depender de `window.__agilbankCartoesLista.length`.
+- Em runtime, a navegação para `Status de Entrega` ainda podia deixar visível o `dashboard` (`#container`), exibindo `Serviços e Produtos` acima do header azul da tela nova.
 
 7. Causa técnica
 - A tela de entrega já havia sido ligada aos endpoints reais, mas a renderização permaneceu no formato legado do HTML único.
@@ -41,6 +42,10 @@
   - `css/style.cartaoWizard.css?v=20260512-status-entrega-active`
   - `css/style.cartao-status-card {pedidoCartaoAprovado}.css?v=20260512-status-entrega-active`
   - `js/cartao.js?v=20260512-status-entrega-active`
+- A causa do bug visual foi frontend:
+  - `#statusEntregaContainer` não nascia oculto por padrão como painel exclusivo.
+  - `agilbankCartaoAcaoStatus()` dependia do hide legado antes de abrir a tela, mas não forçava explicitamente a ocultação de `#container` e `#cartaoGerenciamentoContainer`.
+  - Isso permitia composição visual indevida entre a tela anterior e a tela nova no runtime.
 
 8. Impacto no sistema
 - Sem refatoração, a UX continuava pouco legível para status logístico e histórico real da remessa.
@@ -98,6 +103,15 @@
 - Não foi removido o nome genérico `.status-item` porque ele é compartilhado com outro fluxo da tela de empréstimo.
 - Nesta rodada, o frontend da tela nova manteve o backend como fonte de verdade e só ajustou a montagem do texto do endereço:
   - [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\js\cartao.js`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\js\cartao.js) agora renderiza o endereço com os campos disponíveis da API e exibe `sem dados.` apenas quando o payload oficial realmente vier vazio.
+- Nesta rodada, a navegação visual foi corrigida no frontend:
+  - `#statusEntregaContainer` em [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html) passou a nascer com `display: none`.
+  - `showStatusEntregaContainer()` passou a reaproveitar `window.agilbankShowExclusiveStatusEntrega()` quando disponível.
+  - [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\js\cartao.js`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\js\cartao.js) ganhou `agilbankShowExclusiveStatusEntrega()`, que força:
+    - ocultação de `#container`
+    - ocultação de `#cartaoGerenciamentoContainer`
+    - exibição exclusiva de `#statusEntregaContainer`
+    - reset de scroll
+  - [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\css\style.cartao-status-card {pedidoCartaoAprovado}.css`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\css\style.cartao-status-card%20%7BpedidoCartaoAprovado%7D.css) passou a tratar `#statusEntregaContainer` como painel exclusivo com `position: fixed`, `inset: 0`, `overflow-y: auto` e `z-index` próprio.
 
 11. Contrato API usado/criado
 - Usado sem criar endpoint novo:
@@ -252,6 +266,12 @@
 - Build do frontend após a limpeza:
   - `npm run build` em `agilbank-frontend`
   - Resultado: build Vite concluído com sucesso fora da sandbox
+- Validação incremental do bug visual:
+  - mapeado que `Serviços e Produtos` pertence ao `dashboard` (`#container`) em [`C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html`](C:\Users\gordi\.codex\worktrees\5144\concurso\agilbank-frontend\public\banco\index.html)
+  - mapeado que `Status de Entrega` renderiza em `#statusEntregaContainer`
+  - verificação de sintaxe JavaScript passou após o ajuste de navegação
+  - `npm run build` do frontend passou após o ajuste de navegação
+  - não houve validação visual autenticada em browser real nesta sessão
 - Validação incremental do endereço real:
   - O endpoint `GET /api/cards/:id/shipment` já retornava `shipment.addressSnapshot`; o problema estava na qualidade desse snapshot para remessas antigas.
   - Após o ajuste de backend, o fluxo oficial passa a responder endereço útil em três cenários:
@@ -312,6 +332,9 @@
 21. Pendências
 - Validar visualmente a tela em browser autenticado real.
 - Confirmar em sessão autenticada real que o card `Endereço de Entrega` exibe o endereço oficial retornado por `GET /api/cards/:id/shipment`.
+- Confirmar em sessão autenticada real que `Serviços e Produtos` desaparece completamente ao abrir `Status de Entrega`.
+- Confirmar em sessão autenticada real que a tela começa diretamente no header azul `Status de Entrega`, sem conteúdo anterior acima.
+- Confirmar em sessão autenticada real que o botão voltar retorna ao painel de cartão sem duplicar conteúdo.
 - Executar fluxo autenticado com:
   - cartão com remessa
   - cartão sem remessa
