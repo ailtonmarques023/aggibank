@@ -242,6 +242,36 @@
 - Teste automatizado de shipment reexecutado:
   - `npx jest tests/shipment.test.js --runInBand`
   - Resultado: `6/6` testes passando
+- Publicação validada na Vercel após push sem `force` para `origin/main`:
+  - commit publicado: `29aa713 feat(cards): activate new delivery status layout`
+  - `GET https://aggibank.vercel.app/banco/index.html`
+    - `statusEntregaCardTitle=True`
+    - `statusEntregaTimelineHost=True`
+    - `statusEntregaEventos=True`
+    - `Acompanhar pedido=True`
+    - `statusEntregaInfoHost=False`
+    - `status-timeline=False`
+    - `status-info-item=False`
+    - `js/cartao.js?v=20260512-status-entrega-active=True`
+    - `style.cartao-status-card {pedidoCartaoAprovado}.css?v=20260512-status-entrega-active=True`
+  - `GET https://aggibank.vercel.app/banco/js/cartao.js?v=20260512-status-entrega-active`
+    - `statusEntregaCardTitle=True`
+    - `statusEntregaTimelineHost=True`
+    - `statusEntregaEventos=True`
+    - `status-item active=False`
+    - `statusEntregaInfoHost=False`
+  - `GET https://aggibank.vercel.app/banco/css/style.cartao-status-card%20%7BpedidoCartaoAprovado%7D.css?v=20260512-status-entrega-active`
+    - `.status-entrega-header=True`
+    - `.status-entrega-card-visual=True`
+    - `.status-entrega-timeline-horizontal=True`
+    - `.status-entrega-events=True`
+    - `.status-timeline=False`
+    - `.status-info-item=False`
+  - Headers da publicação:
+    - `Last-Modified: Tue, 12 May 2026 21:04:12 GMT`
+    - `Age: 0`
+    - `X-Vercel-Cache: HIT`
+  - Conclusão: o artefato publicado em produção já foi atualizado para o layout novo da tela de Status de Entrega.
 
 21. Pendências
 - Validar visualmente a tela em browser autenticado real.
@@ -272,6 +302,7 @@
   - `GET /api/cards/:id/shipment`
   - `GET /api/cards/:id/shipment/timeline`
   - ausência de `{cardId}`, `:id`, `undefined` e `null` nas URLs efetivamente chamadas
+- Validar login com usuário real no publicado e abrir manualmente `Status de Entrega`, porque nesta sessão não havia browser autenticado nem credencial válida reaproveitável.
 
 22. Riscos residuais
 - Sem sessão autenticada em browser real, há risco residual de ajuste fino visual, overflow ou conflito com CSS legado sob dados reais.
@@ -279,6 +310,7 @@
 - O HTML único continua com acoplamento alto; futuras mudanças de cartão podem afetar a seção se não houver regressão visual monitorada.
 - Enquanto o deploy publicado continuar antigo, o usuário seguirá vendo a tela velha e o fluxo real continuará 100% reprovado em runtime, mesmo com a worktree local correta.
 - Como o ambiente real publicado ainda não foi atualizado nesta rodada, não há evidência de que o navegador do usuário deixou definitivamente de abrir a versão antiga fora desta worktree.
+- O artefato publicado já foi atualizado; o risco residual agora ficou concentrado exclusivamente na ausência de validação autenticada de runtime/Network com usuário real.
 
 23. Estratégia de rollback
 - Reverter apenas os três arquivos de frontend alterados:
@@ -292,8 +324,8 @@
 - REPROVADO
 - Motivo:
   - build backend, build frontend, testes de `shipment/cards`, serving local e checagem da API oficial foram concluídos com sucesso;
-  - o diagnóstico de runtime confirmou que o navegador ativo está carregando HTML, JS e CSS antigos no host publicado;
+  - o deploy de produção agora já publica HTML, JS e CSS novos da tela de Status de Entrega;
   - nesta rodada, o código local passou a servir apenas a estrutura nova de Status de Entrega e teve o legado exclusivo removido de forma segura;
-  - porém o novo layout ainda não foi comprovado no ambiente real publicado validado pelo usuário;
+  - porém ainda não houve validação no navegador publicado com usuário autenticado e inspeção de `Network`;
   - além disso, continua faltando a evidência obrigatória de browser autenticado com backend real e dados reais/estado vazio real na própria tela;
-  - sem deploy correto do arquivo ativo e sem inspeção de Network/DOM autenticada após a publicação, a governança não permite promover para APROVADO.
+  - sem inspeção de Network/DOM autenticada após a publicação, a governança não permite promover para APROVADO.
