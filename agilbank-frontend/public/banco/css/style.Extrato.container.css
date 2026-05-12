@@ -191,6 +191,22 @@
     padding: 14px 15px;
     border-bottom: 1px solid #eee;
 }
+/* Fase X.1 — item do extrato abre detalhe / comprovante */
+.movimentacao-item--clickable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(0, 102, 179, 0.12);
+    transition: background-color 0.15s ease;
+}
+.movimentacao-item--clickable:hover {
+    background-color: rgba(0, 102, 179, 0.04);
+}
+.movimentacao-item--clickable:focus {
+    outline: 2px solid #0066b3;
+    outline-offset: -2px;
+}
+.movimentacao-item--clickable:active {
+    background-color: rgba(0, 102, 179, 0.08);
+}
 /* movimentacao-item last-child */
 .movimentacao-item:last-child {
     border-bottom: none;

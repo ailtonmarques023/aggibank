@@ -7832,8 +7832,32 @@
                 }
 
                 var item = document.createElement('div');
-                item.className = 'movimentacao-item';
+                item.className = 'movimentacao-item movimentacao-item--clickable';
+                item.setAttribute('role', 'button');
+                item.setAttribute('tabindex', '0');
+                item.setAttribute('data-movimentacao-id', String(t.id || ''));
 
+                function abrirDetalheMovimentacao() {
+                    try {
+                        var filtroEl = document.querySelector('#extratoContainer .filtro-opcao.ativo');
+                        var filtro = filtroEl ? filtroEl.getAttribute('data-tipo') : 'todos';
+                        sessionStorage.setItem('agilbank_extrato_filtro_ativo', filtro || 'todos');
+                        sessionStorage.setItem('agilbank_movimentacao_detail_item', JSON.stringify(t));
+                    } catch (errSt) {
+                        if (typeof console !== 'undefined' && console.warn) console.warn('extrato_detalhe_storage', errSt);
+                    }
+                    window.location.href = 'movimentacao.html?id=' + encodeURIComponent(String(t.id || ''));
+                }
+
+                item.addEventListener('click', function () {
+                    abrirDetalheMovimentacao();
+                });
+                item.addEventListener('keydown', function (ev) {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        abrirDetalheMovimentacao();
+                    }
+                });
                 var iconWrap = document.createElement('div');
                 iconWrap.className = 'movimentacao-icon';
                 var ic = document.createElement('i');
@@ -11172,6 +11196,21 @@
                     showPixContainer();
                 } else if (target === 'extrato' && typeof showExtratoContainer === 'function') {
                     showExtratoContainer();
+                    setTimeout(function() {
+                        try {
+                            var fr =
+                                sessionStorage.getItem('agilbank_extrato_filtro_restore') ||
+                                sessionStorage.getItem('agilbank_extrato_filtro_ativo');
+                            sessionStorage.removeItem('agilbank_extrato_filtro_restore');
+                            if (!fr) return;
+                            var allowedFiltro = { todos: 1, entradas: 1, saidas: 1, pix: 1 };
+                            if (!allowedFiltro[fr]) return;
+                            var btn = document.querySelector('#extratoContainer .filtro-opcao[data-tipo="' + fr + '"]');
+                            if (btn) btn.click();
+                        } catch (eFr) {
+                            if (typeof console !== 'undefined' && console.warn) console.warn('extrato_filtro_restore', eFr);
+                        }
+                    }, 900);
                 } else if (target === 'cartoes' && typeof showCartaoGerenciamento === 'function') {
                     showCartaoGerenciamento();
                 } else if (target === 'pagar' && typeof levarboletoContainer === 'function') {

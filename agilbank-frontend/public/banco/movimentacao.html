@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0066b3">
+  <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+  <title>Detalhe da movimentação — AgilBank</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="js/legacyAuthStore.js"></script>
+  <script src="js/agilbankApiBase.js"></script>
+  <script src="js/legacyApiClient.js"></script>
+  <script>
+    (function enforceAuthMov() {
+      var authStore = window.AgilBank && window.AgilBank.auth;
+      var sessionToken = authStore && typeof authStore.getToken === 'function'
+        ? authStore.getToken()
+        : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
+          localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
+      if (!sessionToken) {
+        window.location.replace('/login');
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      --mov-header: #0066b3;
+      --mov-header-grad: linear-gradient(to right, #0066b3, #0072ce);
+      --mov-bg: #f0f2f5;
+      --mov-card: #ffffff;
+      --mov-ink: #1a1a1a;
+      --mov-muted: #666;
+      --mov-radius: 12px;
+      --mov-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      --mov-max: 480px;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--mov-bg);
+      color: #333;
+    }
+    .mov-app {
+      max-width: var(--mov-max);
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    .mov-header-top {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 50px;
+      padding: 8px 12px;
+      padding-top: calc(8px + env(safe-area-inset-top, 0px));
+      background: var(--mov-header);
+      color: #fff;
+    }
+    .mov-back {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.22);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mov-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .mov-brand {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.02rem;
+      margin: 0;
+    }
+    .mov-header-sub {
+      background: var(--mov-header-grad);
+      padding: 12px 15px 14px;
+      color: #fff;
+    }
+    .mov-header-sub h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .mov-header-sub p {
+      margin: 6px 0 0;
+      font-size: 0.8rem;
+      opacity: 0.94;
+      line-height: 1.4;
+    }
+    .mov-body {
+      padding: 14px 15px calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+    .mov-hero-card {
+      background: var(--mov-card);
+      border-radius: var(--mov-radius);
+      box-shadow: var(--mov-shadow);
+      padding: 22px 18px 20px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .mov-icon-big {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #e6f3ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+    }
+    .mov-icon-big i {
+      font-size: 2rem;
+      color: #0066b3;
+    }
+    .mov-valor {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin: 0 0 8px;
+      line-height: 1.15;
+    }
+    .mov-valor--cred { color: #155fa0; }
+    .mov-valor--deb { color: #8b1c1c; }
+    .mov-titulo {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--mov-ink);
+      margin: 0 0 6px;
+      line-height: 1.25;
+    }
+    .mov-sub {
+      font-size: 0.88rem;
+      color: var(--mov-muted);
+      margin: 0 0 8px;
+      line-height: 1.4;
+    }
+    .mov-when {
+      font-size: 0.82rem;
+      color: #888;
+      margin: 0;
+    }
+    .mov-badge-status {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #e8f5ee;
+      color: #146c43;
+    }
+    .mov-card {
+      background: var(--mov-card);
+      border-radius: var(--mov-radius);
+      box-shadow: var(--mov-shadow);
+      padding: 14px 15px;
+      margin-bottom: 14px;
+    }
+    .mov-card h2 {
+      margin: 0 0 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--mov-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .mov-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      font-size: 0.88rem;
+    }
+    .mov-row:last-child { border-bottom: none; }
+    .mov-row-k {
+      flex: 0 0 44%;
+      color: var(--mov-muted);
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+    .mov-row-v {
+      flex: 1;
+      text-align: right;
+      font-weight: 600;
+      color: var(--mov-ink);
+      word-break: break-word;
+    }
+    .mov-row-v code {
+      font-size: 0.78rem;
+      font-family: ui-monospace, monospace;
+      font-weight: 600;
+      color: #0066b3;
+    }
+    .mov-row--hidden { display: none !important; }
+    .mov-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .mov-btn {
+      width: 100%;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mov-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .mov-btn-primary {
+      background: #0066b3;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 102, 179, 0.25);
+    }
+    .mov-btn-secondary {
+      background: #e8ecf0;
+      color: var(--mov-ink);
+    }
+    .mov-note {
+      font-size: 0.74rem;
+      color: var(--mov-muted);
+      text-align: center;
+      margin: 8px 0 0;
+    }
+    #movErr {
+      background: #fdecea;
+      color: #611a15;
+      padding: 12px 14px;
+      border-radius: var(--mov-radius);
+      font-size: 0.86rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+    #movErr.mov-err--show { display: block; }
+    #movToast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%) translateY(120%);
+      max-width: min(92vw, 360px);
+      padding: 14px 18px;
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 12px;
+      font-size: 0.86rem;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+      z-index: 1000;
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.25s ease;
+      pointer-events: none;
+    }
+    #movToast.mov-toast--show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="mov-app">
+    <header>
+      <div class="mov-header-top">
+        <button type="button" class="mov-back" id="movBack" aria-label="Voltar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <p class="mov-brand">AgilBank</p>
+        <span style="width:40px" aria-hidden="true"></span>
+      </div>
+      <div class="mov-header-sub">
+        <h1>Comprovante</h1>
+        <p>Detalhe da movimentação em conta</p>
+      </div>
+    </header>
+
+    <main class="mov-body">
+      <div id="movErr" role="alert"></div>
+
+      <div id="movContent" style="display:none;">
+        <div class="mov-hero-card">
+          <div class="mov-icon-big" id="movIconWrap" aria-hidden="true">
+            <i id="movIcon" class="fas fa-receipt"></i>
+          </div>
+          <p class="mov-valor" id="movValor"></p>
+          <h2 class="mov-titulo" id="movTitulo"></h2>
+          <p class="mov-sub" id="movSub"></p>
+          <p class="mov-when" id="movWhen"></p>
+          <span class="mov-badge-status" id="movStatusBadge"></span>
+        </div>
+
+        <div class="mov-card">
+          <h2>Detalhes</h2>
+          <div class="mov-row">
+            <span class="mov-row-k">Categoria</span>
+            <span class="mov-row-v" id="movCategoria"></span>
+          </div>
+          <div class="mov-row">
+            <span class="mov-row-k">Meio de pagamento</span>
+            <span class="mov-row-v" id="movMeio"></span>
+          </div>
+          <div class="mov-row mov-row--hidden" id="rowSaldoAntes">
+            <span class="mov-row-k">Saldo antes</span>
+            <span class="mov-row-v" id="movSaldoAntes"></span>
+          </div>
+          <div class="mov-row mov-row--hidden" id="rowSaldoDepois">
+            <span class="mov-row-k">Saldo após</span>
+            <span class="mov-row-v" id="movSaldoDepois"></span>
+          </div>
+          <div class="mov-row mov-row--hidden" id="rowEndToEnd">
+            <span class="mov-row-k">ID Pix (E2E)</span>
+            <span class="mov-row-v"><code id="movEndToEnd"></code></span>
+          </div>
+          <div class="mov-row">
+            <span class="mov-row-k">Transação</span>
+            <span class="mov-row-v"><code id="movTxId"></code></span>
+          </div>
+          <div class="mov-row mov-row--hidden" id="rowReferencia">
+            <span class="mov-row-k">Referência</span>
+            <span class="mov-row-v"><code id="movReferencia"></code></span>
+          </div>
+        </div>
+
+        <div class="mov-actions">
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarTx">Copiar nº da transação</button>
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnCopiarComp">Copiar comprovante</button>
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnShare">Compartilhar comprovante</button>
+          <button type="button" class="mov-btn mov-btn-primary" id="movBtnExtrato">Ver extrato</button>
+          <button type="button" class="mov-btn mov-btn-secondary" id="movBtnNota" disabled>Adicionar nota — Em breve</button>
+          <button type="button" class="mov-btn mov-btn-secondary mov-row--hidden" id="movBtnDenuncia" disabled>Denunciar golpe — Em breve</button>
+          <p class="mov-note" id="docNote"></p>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="movToast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var SESSION_ITEM = 'agilbank_movimentacao_detail_item';
+      var state = { item: null, receiptText: '', variant: 'fallback' };
+
+      function showToast(msg) {
+        var el = document.getElementById('movToast');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.classList.add('mov-toast--show');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(function () {
+          el.classList.remove('mov-toast--show');
+        }, 2800);
+      }
+
+      function getApiBase() {
+        if (window.AgilBank && window.AgilBank.api && typeof window.AgilBank.api.getBaseUrl === 'function') {
+          return window.AgilBank.api.getBaseUrl().replace(/\/$/, '');
+        }
+        var meta = document.querySelector('meta[name="agilbank-api-base"]');
+        if (meta && meta.content) return String(meta.content).replace(/\/$/, '');
+        return 'https://aggibank-production.up.railway.app/api';
+      }
+
+      function getToken() {
+        if (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.getToken === 'function') {
+          return window.AgilBank.auth.getToken();
+        }
+        return (
+          sessionStorage.getItem('agilbank_token') ||
+          sessionStorage.getItem('govbr_token') ||
+          sessionStorage.getItem('token') ||
+          localStorage.getItem('agilbank_token') ||
+          null
+        );
+      }
+
+      function formatBrl(n) {
+        if (!Number.isFinite(n)) return '—';
+        return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      function formatDateReceipt(iso) {
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return String(iso || '');
+          var datePart = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          var timePart = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          return datePart + ' às ' + timePart;
+        } catch (e) {
+          return String(iso || '');
+        }
+      }
+
+      function formatDateTimeShort(iso) {
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return '—';
+          return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        } catch (e2) {
+          return '—';
+        }
+      }
+
+      function humanStatus(s) {
+        var u = String(s || '').toUpperCase();
+        if (u === 'CONCLUIDO' || u === 'CONCLUIDA') return 'Concluído';
+        if (u === 'PENDENTE') return 'Pendente';
+        if (u === 'APROVADO' || u === 'APROVADA') return 'Aprovado';
+        return s ? String(s) : '—';
+      }
+
+      function maskEndToEnd(e2e) {
+        var s = String(e2e || '').trim();
+        if (!s) return '';
+        if (s.length <= 10) return '••••' + s.slice(-4);
+        return s.slice(0, 4) + '…' + s.slice(-4);
+      }
+
+      /**
+       * Fase X.1 — formato amigável só com campos reais do GET /api/user/statement.
+       * referenceType, counterparty, endToEndId: não faz parte do contrato atual do extrato → omitir linhas.
+       */
+      function agilbankFormatMovementDetail(item) {
+        var descRaw = item.descricao != null ? String(item.descricao) : '';
+        var desc = descRaw.toLowerCase();
+        var origem = String(item.origem || '').toUpperCase();
+        var tipo = String(item.tipo || '').toUpperCase();
+        var isCredito = tipo === 'CREDITO';
+        var titulo = '';
+        var subtitulo = '';
+        var iconClass = 'fas fa-receipt';
+        var variant = 'fallback';
+        var categoria = 'Outros';
+
+        if (desc.indexOf('crédito por depósito pix') !== -1 || desc.indexOf('credito por deposito pix') !== -1) {
+          titulo = 'Depósito via Pix';
+          subtitulo = 'Saldo adicionado à sua conta';
+          iconClass = 'fas fa-plus-circle';
+          variant = 'deposito_pix';
+          categoria = 'Depósito';
+        } else if (desc.indexOf('transferência agilbank enviada') !== -1 || desc.indexOf('transferencia agilbank enviada') !== -1) {
+          titulo = 'Transferência enviada';
+          var mEnv = descRaw.match(/para\s+(.+)$/i);
+          subtitulo = mEnv && mEnv[1] ? ('Para ' + String(mEnv[1]).trim()) : 'Para outra conta AgilBank';
+          iconClass = 'fas fa-arrow-up';
+          variant = 'transferencia_enviada';
+          categoria = 'Transferência';
+        } else if (desc.indexOf('transferência agilbank recebida') !== -1 || desc.indexOf('transferencia agilbank recebida') !== -1) {
+          titulo = 'Transferência recebida';
+          var mRec = descRaw.match(/de\s+(.+)$/i);
+          subtitulo = mRec && mRec[1] ? ('De ' + String(mRec[1]).trim()) : 'De outra conta AgilBank';
+          iconClass = 'fas fa-arrow-down';
+          variant = 'transferencia_recebida';
+          categoria = 'Transferência';
+        } else if (origem === 'BOLETO' || desc.indexOf('boleto') !== -1) {
+          titulo = 'Pagamento realizado';
+          subtitulo = descRaw.trim() ? descRaw.trim() : 'Boleto / conta';
+          iconClass = 'fas fa-barcode';
+          variant = 'boleto_pago';
+          categoria = 'Pagamento';
+        } else if (origem === 'EMPRESTIMO' || desc.indexOf('empréstimo') !== -1 || desc.indexOf('emprestimo') !== -1 || desc.indexOf('desbloqueio') !== -1) {
+          titulo = 'Empréstimo liberado';
+          subtitulo = 'Valor disponibilizado em conta';
+          iconClass = 'fas fa-hand-holding-usd';
+          variant = 'emprestimo_desbloqueio';
+          categoria = 'Empréstimo';
+        } else if (origem === 'FRETE' || desc.indexOf('frete') !== -1 || desc.indexOf('envio do cartão') !== -1 || desc.indexOf('card_shipment') !== -1) {
+          titulo = 'Frete do cartão';
+          subtitulo = descRaw.trim() ? descRaw.trim() : 'Envio do cartão físico';
+          iconClass = 'fas fa-truck';
+          variant = 'card_shipment';
+          categoria = 'Cartão';
+        } else if (origem === 'PIX') {
+          titulo = isCredito ? 'Movimentação Pix' : 'Pagamento Pix';
+          subtitulo = descRaw.trim() || (isCredito ? 'Crédito em conta' : 'Débito em conta');
+          iconClass = 'fas fa-qrcode';
+          variant = isCredito ? 'credito_pix' : 'debito_pix';
+          categoria = 'Depósito';
+          if (!isCredito) categoria = 'Pagamento';
+        } else if (origem === 'CARTAO' || desc.indexOf('cartão') !== -1 || desc.indexOf('cartao') !== -1) {
+          titulo = 'Cartão';
+          subtitulo = descRaw.trim() || 'Movimentação AgilBank';
+          iconClass = 'fas fa-credit-card';
+          variant = 'cartao';
+          categoria = 'Cartão';
+        } else {
+          titulo = origem && origem !== 'AJUSTE' ? origem.charAt(0) + origem.slice(1).toLowerCase() : (isCredito ? 'Entrada' : 'Saída');
+          subtitulo = descRaw.trim() || 'Movimentação AgilBank';
+          if (origem === 'BOLETO') iconClass = 'fas fa-barcode';
+          else if (origem === 'EMPRESTIMO') iconClass = 'fas fa-hand-holding-usd';
+          else if (origem === 'CARTAO') iconClass = 'fas fa-credit-card';
+          else if (origem === 'FRETE') iconClass = 'fas fa-truck';
+          else iconClass = 'fas fa-receipt';
+        }
+
+        var meioPagamento = 'Saldo em conta';
+        if (variant === 'deposito_pix' || variant === 'credito_pix' || (origem === 'PIX' && isCredito && desc.indexOf('depósito') !== -1)) {
+          meioPagamento = 'Pix';
+        } else if (variant === 'debito_pix' || (origem === 'PIX' && !isCredito)) {
+          meioPagamento = 'Pix';
+        } else if (variant === 'transferencia_enviada' || variant === 'transferencia_recebida') {
+          meioPagamento = 'Saldo em conta';
+        }
+
+        return {
+          titulo: titulo,
+          subtitulo: subtitulo,
+          iconClass: iconClass,
+          categoria: categoria,
+          meioPagamento: meioPagamento,
+          variant: variant,
+          isCredito: isCredito,
+        };
+      }
+
+      function buildReceiptText(item, fmt) {
+        var absVal = Number(item.valor);
+        if (!Number.isFinite(absVal)) absVal = 0;
+        var valorLinha = 'Valor: ' + (fmt.isCredito ? '+ ' : '- ') + formatBrl(absVal);
+        var st = humanStatus(item.status);
+        var ref = item.referenciaId != null && String(item.referenciaId).trim() ? String(item.referenciaId).trim() : '—';
+        return [
+          'AgilBank',
+          'Comprovante de movimentação',
+          '',
+          'Tipo: ' + fmt.titulo,
+          valorLinha,
+          'Data: ' + formatDateReceipt(item.data),
+          'Status: ' + st,
+          'Transação: ' + String(item.id || ''),
+          'Referência: ' + ref,
+        ].join('\n');
+      }
+
+      function toggleRow(el, show) {
+        if (!el) return;
+        if (show) el.classList.remove('mov-row--hidden');
+        else el.classList.add('mov-row--hidden');
+      }
+
+      function render(item) {
+        state.item = item;
+        var fmt = agilbankFormatMovementDetail(item);
+        state.variant = fmt.variant;
+
+        var isDeb = !fmt.isCredito;
+        var absVal = Number(item.valor);
+        if (!Number.isFinite(absVal)) absVal = 0;
+        var valorEl = document.getElementById('movValor');
+        valorEl.textContent = (fmt.isCredito ? '+ ' : '− ') + formatBrl(absVal);
+        valorEl.className = 'mov-valor ' + (fmt.isCredito ? 'mov-valor--cred' : 'mov-valor--deb');
+
+        document.getElementById('movIcon').className = fmt.iconClass;
+        document.getElementById('movTitulo').textContent = fmt.titulo;
+        document.getElementById('movSub').textContent = fmt.subtitulo;
+        document.getElementById('movWhen').textContent = formatDateTimeShort(item.data);
+        document.getElementById('movStatusBadge').textContent = humanStatus(item.status);
+        document.getElementById('movCategoria').textContent = fmt.categoria;
+        document.getElementById('movMeio').textContent = fmt.meioPagamento;
+
+        var sa = Number(item.saldoAnterior);
+        var sd = Number(item.saldoAtual);
+        toggleRow(document.getElementById('rowSaldoAntes'), Number.isFinite(sa));
+        toggleRow(document.getElementById('rowSaldoDepois'), Number.isFinite(sd));
+        if (Number.isFinite(sa)) document.getElementById('movSaldoAntes').textContent = formatBrl(sa);
+        if (Number.isFinite(sd)) document.getElementById('movSaldoDepois').textContent = formatBrl(sd);
+
+        document.getElementById('movTxId').textContent = String(item.id || '—');
+
+        var ref = item.referenciaId != null && String(item.referenciaId).trim() !== '';
+        toggleRow(document.getElementById('rowReferencia'), ref);
+        if (ref) document.getElementById('movReferencia').textContent = String(item.referenciaId).trim();
+
+        var e2e = item.endToEndId != null && String(item.endToEndId).trim() !== '';
+        toggleRow(document.getElementById('rowEndToEnd'), e2e);
+        if (e2e) document.getElementById('movEndToEnd').textContent = maskEndToEnd(item.endToEndId);
+
+        var den = document.getElementById('movBtnDenuncia');
+        if (fmt.variant === 'transferencia_enviada' || fmt.variant === 'transferencia_recebida') {
+          den.classList.add('mov-row--hidden');
+        } else {
+          den.classList.remove('mov-row--hidden');
+          den.disabled = true;
+          den.textContent = 'Denunciar golpe — Em breve';
+        }
+
+        var shareBtn = document.getElementById('movBtnShare');
+        if (shareBtn) shareBtn.classList.remove('mov-row--hidden');
+
+        state.receiptText = buildReceiptText(item, fmt);
+
+        document.getElementById('docNote').textContent =
+          'Os dados vêm do extrato (somente leitura). referenceType, contraparte e endToEndId não são expostos neste endpoint — linhas correspondentes ficam ocultas.';
+
+        document.getElementById('movContent').style.display = 'block';
+      }
+
+      function loadFromSession(id) {
+        try {
+          var raw = sessionStorage.getItem(SESSION_ITEM);
+          if (!raw) return null;
+          var o = JSON.parse(raw);
+          if (o && o.id === id) return o;
+        } catch (e) {
+          if (typeof console !== 'undefined' && console.warn) console.warn('mov_session_parse', e);
+        }
+        return null;
+      }
+
+      async function loadFromStatement(id) {
+        var token = getToken();
+        if (!token) return null;
+        var base = getApiBase();
+        var res = await fetch(base + '/user/statement?page=1&limit=100', {
+          headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        });
+        var raw = await res.json().catch(function () { return {}; });
+        if (!res.ok) return null;
+        var items = Array.isArray(raw.items) ? raw.items : [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i] && items[i].id === id) return items[i];
+        }
+        return null;
+      }
+
+      function showErr(msg) {
+        var el = document.getElementById('movErr');
+        el.textContent = msg;
+        el.classList.add('mov-err--show');
+      }
+
+      document.getElementById('movBack').addEventListener('click', function () {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = 'index.html';
+        }
+      });
+
+      document.getElementById('movBtnCopiarTx').addEventListener('click', function () {
+        var id = state.item && state.item.id;
+        if (!id) {
+          showToast('Transação indisponível.');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(String(id)).then(function () {
+            showToast('Número da transação copiado.');
+          }).catch(function () {
+            showToast('Não foi possível copiar.');
+          });
+        } else {
+          showToast('Copiar indisponível neste navegador.');
+        }
+      });
+
+      document.getElementById('movBtnCopiarComp').addEventListener('click', function () {
+        var txt = state.receiptText;
+        if (!txt) {
+          showToast('Comprovante indisponível.');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(function () {
+            showToast('Comprovante copiado.');
+          }).catch(function () {
+            showToast('Não foi possível copiar.');
+          });
+        } else {
+          showToast('Copiar indisponível neste navegador.');
+        }
+      });
+
+      document.getElementById('movBtnShare').addEventListener('click', function () {
+        var txt = state.receiptText;
+        if (!txt) {
+          showToast('Comprovante indisponível.');
+          return;
+        }
+        if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(function () {
+              showToast('Compartilhar indisponível; comprovante copiado.');
+            }).catch(function () {
+              showToast('Compartilhar indisponível.');
+            });
+          } else {
+            showToast('Compartilhar indisponível.');
+          }
+          return;
+        }
+        navigator.share({
+          title: 'AgilBank — Comprovante',
+          text: txt,
+        }).then(function () {
+          showToast('Compartilhamento concluído.');
+        }).catch(function () {
+          showToast('Compartilhamento cancelado ou indisponível.');
+        });
+      });
+
+      document.getElementById('movBtnExtrato').addEventListener('click', function () {
+        try {
+          var filtro = sessionStorage.getItem('agilbank_extrato_filtro_ativo');
+          if (filtro) sessionStorage.setItem('agilbank_extrato_filtro_restore', filtro);
+          sessionStorage.setItem('agilbank_modulos_target', 'extrato');
+        } catch (e) {
+          if (typeof console !== 'undefined' && console.warn) console.warn('mov_extrato_nav', e);
+        }
+        window.location.href = 'index.html';
+      });
+
+      (async function init() {
+        var params = new URLSearchParams(window.location.search);
+        var id = String(params.get('id') || '').trim();
+        if (!id) {
+          showErr('Movimentação inválida. Abra o extrato e selecione um lançamento.');
+          return;
+        }
+
+        var item = loadFromSession(id);
+        if (!item) {
+          try {
+            item = await loadFromStatement(id);
+          } catch (e) {
+            if (typeof console !== 'undefined' && console.warn) console.warn('mov_load_statement', e);
+            item = null;
+          }
+        }
+
+        if (!item) {
+          showErr('Não encontramos esta movimentação no extrato carregado. Abra o extrato e toque no lançamento novamente (ou ela pode estar fora da primeira página de até 100 itens).');
+          return;
+        }
+
+        if (String(item.id) !== String(id)) {
+          showErr('Identificador não confere com o item salvo.');
+          return;
+        }
+
+        render(item);
+      })();
+    })();
+  </script>
+</body>
+</html>
