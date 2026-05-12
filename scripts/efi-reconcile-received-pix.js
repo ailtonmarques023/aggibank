@@ -22,19 +22,29 @@ const efiPixClient = require('../src/services/efiPixClient');
 const { processEfiPixWebhookBody } = require('../src/services/pixEfiWebhookService');
 const { recordAudit } = require('../src/utils/auditLog');
 const {
+  RECONCILE_ACTIVE_STATUSES,
+  RECONCILE_SUPPORTED_LINKED_TYPES,
+  isEfiReconcileEligible,
+  normalizeTxidInput,
   pickConfirmedPixFromCobPayload,
   pickPixFromReceivedListForCob,
   toWebhookPixItem,
 } = require('../src/utils/efiReconcilePix');
 
-const ACTIVE = ['ATIVA', 'CRIADA'];
+const ACTIVE = RECONCILE_ACTIVE_STATUSES;
+const SUPPORTED_LINKED_TYPES = RECONCILE_SUPPORTED_LINKED_TYPES;
 
 function parseArgs() {
   const out = { dryRun: true, txid: null, days: 14, limit: 15 };
-  for (const a of process.argv.slice(2)) {
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i += 1) {
+    const a = args[i];
     if (a === '--apply') out.dryRun = false;
     else if (a === '--dry-run') out.dryRun = true;
-    else if (a.startsWith('--txid=')) out.txid = a.slice('--txid='.length).trim();
+    else if (a === '--txid') {
+      out.txid = normalizeTxidInput(args[i + 1]);
+      i += 1;
+    } else if (a.startsWith('--txid=')) out.txid = normalizeTxidInput(a.slice('--txid='.length));
     else if (a.startsWith('--days=')) out.days = Math.max(1, parseInt(a.slice('--days='.length), 10) || 14);
     else if (a.startsWith('--limit=')) out.limit = Math.min(50, Math.max(1, parseInt(a.slice('--limit='.length), 10) || 15));
   }
@@ -118,6 +128,7 @@ async function main() {
   }
 
   let rows;
+  let txidDiagnostic = null;
   if (opts.txid) {
     const one = await prisma.pixCobranca.findUnique({
       where: { txid: opts.txid },
@@ -134,9 +145,16 @@ async function main() {
       },
     });
     rows = one ? [one] : [];
+    if (!one) {
+      txidDiagnostic = { outcome: 'TXID_NOT_FOUND' };
+    }
   } else {
     rows = await prisma.pixCobranca.findMany({
-      where: { status: { in: ACTIVE } },
+      where: {
+        provider: 'EFI',
+        status: { in: ACTIVE },
+        linkedEntityType: { in: SUPPORTED_LINKED_TYPES },
+      },
       orderBy: { createdAt: 'desc' },
       take: opts.limit,
       select: {
@@ -159,6 +177,7 @@ async function main() {
     scanned: rows.length,
     results: [],
   };
+  if (txidDiagnostic) report.txidDiagnostic = txidDiagnostic;
 
   for (const cob of rows) {
     const line = {
@@ -169,8 +188,17 @@ async function main() {
       linkedEntityType: cob.linkedEntityType,
     };
 
-    if (!ACTIVE.includes(String(cob.status))) {
-      line.skipped = 'not_active_status';
+    if (!isEfiReconcileEligible(cob)) {
+      line.skipped = 'not_reconcile_eligible';
+      if (String(cob.provider || '').toUpperCase() !== 'EFI') {
+        line.reason = 'provider_not_efi';
+      } else if (!ACTIVE.includes(String(cob.status || '').toUpperCase())) {
+        line.reason = 'status_not_active';
+      } else if (!SUPPORTED_LINKED_TYPES.includes(String(cob.linkedEntityType || ''))) {
+        line.reason = 'unsupported_linked_entity_type';
+      } else if (!normalizeTxidInput(cob.txid)) {
+        line.reason = 'missing_txid';
+      }
       report.results.push(line);
       // eslint-disable-next-line no-continue
       continue;

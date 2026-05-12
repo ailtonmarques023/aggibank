@@ -18,6 +18,47 @@ function amountsMatchCob(cobAmount, receivedValor) {
   return a === b;
 }
 
+const RECONCILE_ACTIVE_STATUSES = Object.freeze(['ATIVA', 'CRIADA']);
+const RECONCILE_SUPPORTED_LINKED_TYPES = Object.freeze([
+  'account_deposit',
+  'loan_insurance',
+  'boleto',
+  'card_shipment',
+]);
+
+function normalizeProvider(provider) {
+  return String(provider || '').trim().toUpperCase();
+}
+
+function normalizeStatus(status) {
+  return String(status || '').trim().toUpperCase();
+}
+
+function normalizeLinkedEntityType(linkedEntityType) {
+  return String(linkedEntityType || '').trim();
+}
+
+function normalizeTxidInput(txid) {
+  let out = String(txid || '').trim();
+  if (
+    (out.startsWith('"') && out.endsWith('"')) ||
+    (out.startsWith("'") && out.endsWith("'"))
+  ) {
+    out = out.slice(1, -1).trim();
+  }
+  return out;
+}
+
+function isEfiReconcileEligible(cob) {
+  if (!cob || typeof cob !== 'object') return false;
+  return (
+    normalizeProvider(cob.provider) === 'EFI' &&
+    RECONCILE_ACTIVE_STATUSES.includes(normalizeStatus(cob.status)) &&
+    RECONCILE_SUPPORTED_LINKED_TYPES.includes(normalizeLinkedEntityType(cob.linkedEntityType)) &&
+    !!normalizeTxidInput(cob.txid)
+  );
+}
+
 /**
  * @param {object} cob — linha PixCobranca (amount, txid)
  * @param {object} efiCobPayload — corpo GET /v2/cob/:txid
@@ -78,6 +119,10 @@ function toWebhookPixItem(p, fallbackTxid) {
 module.exports = {
   moneyCents,
   amountsMatchCob,
+  RECONCILE_ACTIVE_STATUSES,
+  RECONCILE_SUPPORTED_LINKED_TYPES,
+  normalizeTxidInput,
+  isEfiReconcileEligible,
   pickConfirmedPixFromCobPayload,
   pickPixFromReceivedListForCob,
   toWebhookPixItem,

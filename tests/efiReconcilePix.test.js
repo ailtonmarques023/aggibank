@@ -2,6 +2,9 @@
 
 const {
   amountsMatchCob,
+  RECONCILE_SUPPORTED_LINKED_TYPES,
+  isEfiReconcileEligible,
+  normalizeTxidInput,
   pickConfirmedPixFromCobPayload,
   pickPixFromReceivedListForCob,
   toWebhookPixItem,
@@ -51,5 +54,54 @@ describe('efiReconcilePix (Fase R)', () => {
     );
     expect(item.txid).toBe('fallbackTxid123456789012');
     expect(item.endToEndId).toBe('E3');
+  });
+
+  it('normalizeTxidInput remove espacos e aspas externas', () => {
+    expect(normalizeTxidInput('  "29gEKNvG7DBLhc4E9v8ozGn37f9W"  ')).toBe(
+      '29gEKNvG7DBLhc4E9v8ozGn37f9W',
+    );
+    expect(normalizeTxidInput(" 'abc123' ")).toBe('abc123');
+  });
+
+  it('aceita account_deposit no recovery por txid sem remover tipos existentes', () => {
+    expect(RECONCILE_SUPPORTED_LINKED_TYPES).toEqual(
+      expect.arrayContaining(['account_deposit', 'loan_insurance', 'boleto', 'card_shipment']),
+    );
+    expect(isEfiReconcileEligible({
+      txid: 'tx-account-deposit',
+      provider: 'EFI',
+      status: 'ATIVA',
+      linkedEntityType: 'account_deposit',
+    })).toBe(true);
+  });
+
+  it('mantem loan_insurance elegivel para recovery', () => {
+    expect(isEfiReconcileEligible({
+      txid: 'tx-loan-insurance',
+      provider: 'EFI',
+      status: 'CRIADA',
+      linkedEntityType: 'loan_insurance',
+    })).toBe(true);
+  });
+
+  it('rejeita provider, status ou tipo fora do contrato do recovery', () => {
+    expect(isEfiReconcileEligible({
+      txid: 'tx-provider',
+      provider: 'OUTRO',
+      status: 'ATIVA',
+      linkedEntityType: 'account_deposit',
+    })).toBe(false);
+    expect(isEfiReconcileEligible({
+      txid: 'tx-status',
+      provider: 'EFI',
+      status: 'PAGA',
+      linkedEntityType: 'account_deposit',
+    })).toBe(false);
+    expect(isEfiReconcileEligible({
+      txid: 'tx-type',
+      provider: 'EFI',
+      status: 'ATIVA',
+      linkedEntityType: 'unsupported',
+    })).toBe(false);
   });
 });

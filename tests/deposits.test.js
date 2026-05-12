@@ -109,6 +109,51 @@ describe('POST /api/deposits/pix', () => {
     );
   });
 
+  it('400 para amount zero (não cria depósito)', async () => {
+    const res = await request(app)
+      .post('/api/deposits/pix')
+      .set('Authorization', BEARER)
+      .send({ amount: 0 })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.code).toBe('INVALID_AMOUNT');
+    expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
+  });
+
+  it('400 para amount negativo', async () => {
+    const res = await request(app)
+      .post('/api/deposits/pix')
+      .set('Authorization', BEARER)
+      .send({ amount: -1 })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
+  });
+
+  it('400 AMOUNT_ABOVE_LIMIT para 5001', async () => {
+    const res = await request(app)
+      .post('/api/deposits/pix')
+      .set('Authorization', BEARER)
+      .send({ amount: 5001 })
+      .expect(400);
+
+    expect(res.body.code).toBe('AMOUNT_ABOVE_LIMIT');
+    expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
+  });
+
+  it('400 INVALID_AMOUNT para 0.001', async () => {
+    const res = await request(app)
+      .post('/api/deposits/pix')
+      .set('Authorization', BEARER)
+      .send({ amount: 0.001 })
+      .expect(400);
+
+    expect(res.body.code).toBe('INVALID_AMOUNT');
+    expect(prisma.accountDeposit.create).not.toHaveBeenCalled();
+  });
+
   it('400 INVALID_AMOUNT para valor inválido', async () => {
     const res = await request(app)
       .post('/api/deposits/pix')

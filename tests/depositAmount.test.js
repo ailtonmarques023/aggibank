@@ -44,6 +44,15 @@ describe('depositAmount.parseValidatedDepositAmount', () => {
     const r = parseValidatedDepositAmount('5000.01');
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe('AMOUNT_ABOVE_LIMIT');
+    const r2 = parseValidatedDepositAmount('5001');
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.code).toBe('AMOUNT_ABOVE_LIMIT');
+  });
+
+  it('INVALID_AMOUNT para texto não numérico', () => {
+    const r = parseValidatedDepositAmount('abc');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe('INVALID_AMOUNT');
   });
 
   it('constantes de produto', () => {
