@@ -102,6 +102,12 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.results[0].result).toBe('PROCESSED');
     expect(spy).toHaveBeenCalled();
+    const ctx = spy.mock.calls[0][1];
+    expect(ctx.source).toBe('webhook_auto');
+    expect(ctx.requestPath).toBe('/api/internal/efi/pix/webhook');
+    expect(ctx.requestMethod).toBe('POST');
+    expect(ctx.httpStatus).toBe(200);
+    expect(ctx.receivedAt).toBeInstanceOf(Date);
   });
 
   it('retorna 200 com query efiwk quando EFI_PIX_WEBHOOK_CALLBACK_TOKEN está definido', async () => {
@@ -114,6 +120,10 @@ describe('POST /api/internal/efi/pix/webhook', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(spy).toHaveBeenCalled();
+    const ctx = spy.mock.calls[0][1];
+    expect(ctx.source).toBe('webhook_auto');
+    expect(ctx.requestPath).toBe('/api/internal/efi/pix/webhook?efiwk=***');
+    expect(JSON.stringify(ctx)).not.toContain('callback-token-o1');
   });
 
   it('POST /webhook/pix aceita o mesmo auth e NO_PIX_ITEMS', async () => {

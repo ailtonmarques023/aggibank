@@ -536,6 +536,13 @@ model PixWebhookEvent {
   amountReceived     String?
   processingResult   String
   pixCobrancaId      String?
+  /// Origem operacional do evento: webhook_auto, recovery ou internal_test.
+  source             String?
+  requestPath        String?
+  requestMethod      String?
+  httpStatus         Int?
+  receivedAt         DateTime?
+  providerEventId    String?
   /// Resultado do settlement (negócio) associado ao mesmo webhook Pix.
   settlementResult  String?
   settlementAt       DateTime?
@@ -546,5 +553,7 @@ model PixWebhookEvent {
   @@index([txid])
   @@index([endToEndId])
   @@index([pixCobrancaId])
+  @@index([source, receivedAt])
+  @@index([providerEventId])
   @@map("pix_webhook_events")
 }

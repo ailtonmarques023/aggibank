@@ -3,13 +3,19 @@
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
+const { sanitizeUrlForAccessLog } = require('../utils/logSanitizer');
 const { settlePaidPixCobrancaInTx } = require('./pixSettlementService');
 
 const SENSITIVE_KEYS = new Set([
   'pixcopiaecola',
   'authorization',
   'client_secret',
+  'clientsecret',
+  'database_url',
+  'efiwk',
+  'token',
   'certificado',
+  'certificate',
   'senha',
 ]);
 
@@ -52,13 +58,41 @@ function buildIdempotencyKey(endToEndId) {
   return `efi:e2e:${String(endToEndId).trim()}`;
 }
 
+function normalizeWebhookSource(source) {
+  const value = String(source || '').trim();
+  if (value === 'webhook_auto' || value === 'recovery' || value === 'internal_test') {
+    return value;
+  }
+  return null;
+}
+
+function normalizeReceivedAt(receivedAt) {
+  if (!receivedAt) return null;
+  const d = receivedAt instanceof Date ? receivedAt : new Date(receivedAt);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function buildWebhookObservabilityData(ctx = {}, endToEndId) {
+  const requestPath = ctx.requestPath ? sanitizeUrlForAccessLog(ctx.requestPath) : null;
+  const httpStatus = Number.isInteger(ctx.httpStatus) ? ctx.httpStatus : null;
+  return {
+    source: normalizeWebhookSource(ctx.source),
+    requestPath,
+    requestMethod: ctx.requestMethod ? String(ctx.requestMethod).trim().toUpperCase() : null,
+    httpStatus,
+    receivedAt: normalizeReceivedAt(ctx.receivedAt),
+    providerEventId: ctx.providerEventId ? String(ctx.providerEventId).trim() : endToEndId || null,
+  };
+}
+
 /**
  * Processa corpo do webhook Pix Efí (array `pix`).
  * Atualiza PixCobranca para PAGA e executa settlement de negócio (Fase P) conforme `linkedEntityType`.
  *
  * @returns {Promise<{ results: Array<{ txid?: string, endToEndId?: string, result: string, settlementResult?: string }> }>}
  */
-async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
+async function processEfiPixWebhookBody(body, ctx = {}) {
+  const { requestId, ip } = ctx;
   const results = [];
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { ok: false, code: 'INVALID_BODY', results };
@@ -103,6 +137,7 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
       ip: ip || null,
       horario: horario || null,
     };
+    const eventObservabilityData = buildWebhookObservabilityData(ctx, endToEndId);
 
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -121,6 +156,7 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
               amountReceived: valor || null,
               processingResult: 'MISSING_TXID',
               pixCobrancaId: null,
+              ...eventObservabilityData,
               metadata: { ...metaBase, item: sanitizeForStorage(item) },
             },
           });
@@ -137,6 +173,7 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
               amountReceived: valor || null,
               processingResult: 'ORPHAN_TXID',
               pixCobrancaId: null,
+              ...eventObservabilityData,
               metadata: { ...metaBase, item: sanitizeForStorage(item) },
             },
           });
@@ -161,6 +198,7 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
               amountReceived: valor || null,
               processingResult: 'AMOUNT_MISMATCH',
               pixCobrancaId: cob.id,
+              ...eventObservabilityData,
               metadata: {
                 ...metaBase,
                 expectedCents: moneyCents(cob.amount),
@@ -190,6 +228,7 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
               amountReceived: valor || null,
               processingResult: 'ALREADY_PAID',
               pixCobrancaId: cob.id,
+              ...eventObservabilityData,
               metadata: { ...metaBase, item: sanitizeForStorage(item) },
             },
           });
@@ -256,6 +295,7 @@ async function processEfiPixWebhookBody(body, { requestId, ip } = {}) {
             amountReceived: valor || null,
             processingResult: 'PROCESSED',
             pixCobrancaId: cob.id,
+            ...eventObservabilityData,
             metadata: { ...metaBase, item: sanitizeForStorage(item) },
           },
         });

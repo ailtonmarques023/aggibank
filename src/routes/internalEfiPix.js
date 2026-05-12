@@ -3,6 +3,7 @@
 const express = require('express');
 const { requireEfiPixWebhookAuth } = require('../middleware/auth');
 const logger = require('../utils/logger');
+const { sanitizeUrlForAccessLog } = require('../utils/logSanitizer');
 const pixProviderService = require('../services/pix/pixProviderService');
 
 const router = express.Router();
@@ -25,12 +26,15 @@ function classifyEfiPixWebhookPayload(body) {
 
 async function handleEfiPixWebhookPost(req, res) {
   try {
+    const requestPath = sanitizeUrlForAccessLog(req.originalUrl || req.url || req.path);
     const kind = classifyEfiPixWebhookPayload(req.body);
     if (kind === 'VALIDATION') {
       logger.info('efi_pix_webhook_validation_ok', {
         category: 'operational',
         component: 'internalEfiPix',
         requestId: req.requestId,
+        source: 'internal_test',
+        requestPath,
       });
       return res.status(200).json({ success: true, code: 'EFI_WEBHOOK_VALIDATION_OK' });
     }
@@ -39,6 +43,8 @@ async function handleEfiPixWebhookPost(req, res) {
         category: 'operational',
         component: 'internalEfiPix',
         requestId: req.requestId,
+        source: 'internal_test',
+        requestPath,
       });
       return res.status(200).json({ success: true, code: 'NO_PIX_ITEMS' });
     }
@@ -47,6 +53,7 @@ async function handleEfiPixWebhookPost(req, res) {
         category: 'operational',
         component: 'internalEfiPix',
         requestId: req.requestId,
+        requestPath,
         reason: 'pix_not_array_or_bad_root',
       });
       return res.status(400).json({
@@ -59,6 +66,11 @@ async function handleEfiPixWebhookPost(req, res) {
     const parsed = await pixProviderService.processChargeWebhookBody(req.body, {
       requestId: req.requestId,
       ip: req.ip,
+      source: 'webhook_auto',
+      requestPath,
+      requestMethod: req.method,
+      httpStatus: 200,
+      receivedAt: new Date(),
     });
 
     if (!parsed.ok) {

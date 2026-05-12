@@ -240,6 +240,11 @@ async function main() {
     const proc = await processEfiPixWebhookBody(body, {
       requestId: `efi-reconcile:${cob.id}`,
       ip: null,
+      source: 'recovery',
+      requestPath: 'scripts/efi-reconcile-received-pix.js',
+      requestMethod: null,
+      httpStatus: null,
+      receivedAt: new Date(),
     });
 
     line.process = proc;

@@ -62,6 +62,7 @@ describe('pixEfiWebhookService', () => {
   });
 
   it('PROCESSED atualiza PixCobranca e cria evento', async () => {
+    const receivedAt = new Date('2026-05-12T14:00:00.000Z');
     prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
     prisma.pixCobranca.findUnique.mockResolvedValue({
       id: 'cob1',
@@ -81,10 +82,19 @@ describe('pixEfiWebhookService', () => {
             txid: 'txidUnitTestPixWebhookFaseO01',
             valor: '39.90',
             horario: '2026-05-11T15:00:00.000Z',
+            pixCopiaECola: '000201SECRET',
           },
         ],
       },
-      { requestId: 'req-1', ip: '127.0.0.1' },
+      {
+        requestId: 'req-1',
+        ip: '127.0.0.1',
+        source: 'webhook_auto',
+        requestPath: '/api/internal/efi/pix/webhook/pix?ignorar=&efiwk=secret-token',
+        requestMethod: 'post',
+        httpStatus: 200,
+        receivedAt,
+      },
     );
 
     expect(r.ok).toBe(true);
@@ -95,6 +105,15 @@ describe('pixEfiWebhookService', () => {
     expect(up.data.status).toBe('PAGA');
     expect(up.data.endToEndId).toBe('E2EUnitTestPixWebhookFaseO01');
     expect(prisma.pixWebhookEvent.create).toHaveBeenCalled();
+    const createData = prisma.pixWebhookEvent.create.mock.calls[0][0].data;
+    expect(createData.source).toBe('webhook_auto');
+    expect(createData.requestPath).toBe('/api/internal/efi/pix/webhook/pix?ignorar=&efiwk=***');
+    expect(createData.requestMethod).toBe('POST');
+    expect(createData.httpStatus).toBe(200);
+    expect(createData.receivedAt).toBe(receivedAt);
+    expect(createData.providerEventId).toBe('E2EUnitTestPixWebhookFaseO01');
+    expect(createData.metadata.item.pixCopiaECola).toBe('[redacted]');
+    expect(JSON.stringify(createData)).not.toContain('secret-token');
     expect(prisma.pixWebhookEvent.update).toHaveBeenCalled();
     const upd = prisma.pixWebhookEvent.update.mock.calls[0][0];
     expect(upd.where.id).toBe('ev1');
@@ -232,6 +251,37 @@ describe('pixEfiWebhookService', () => {
 
     expect(r.results[0].result).toBe('ORPHAN_TXID');
     expect(prisma.pixCobranca.update).not.toHaveBeenCalled();
+  });
+
+  it('recovery persiste source=recovery sem alterar idempotência', async () => {
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue(null);
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-recovery' });
+
+    const r = await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2ERecoveryUnitTestPixWebhookU4',
+            txid: 'txidRecoveryUnitTestPixWebhookU4',
+            valor: '1.00',
+          },
+        ],
+      },
+      {
+        requestId: 'efi-reconcile:cob1',
+        source: 'recovery',
+        requestPath: 'scripts/efi-reconcile-received-pix.js',
+        receivedAt: '2026-05-12T14:10:00.000Z',
+      },
+    );
+
+    expect(r.results[0].result).toBe('ORPHAN_TXID');
+    const createData = prisma.pixWebhookEvent.create.mock.calls[0][0].data;
+    expect(createData.idempotencyKey).toBe('efi:e2e:E2ERecoveryUnitTestPixWebhookU4');
+    expect(createData.source).toBe('recovery');
+    expect(createData.requestPath).toBe('scripts/efi-reconcile-received-pix.js');
+    expect(createData.receivedAt).toEqual(new Date('2026-05-12T14:10:00.000Z'));
   });
 
   it('AMOUNT_MISMATCH não atualiza cobrança', async () => {
