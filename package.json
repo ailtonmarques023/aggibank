@@ -13,6 +13,7 @@
     "db:seed": "node src/scripts/seed.js",
     "email:templates-demo": "node src/scripts/sendEmailTemplatesSample.js",
     "w2:transfer-internal-real": "node scripts/transfers-operational-w2.js",
+    "w2:validate-readonly": "node scripts/transfers-validate-w2-readonly.js",
     "validate:k1-ops-credit": "node scripts/validate-k1-ops-credit-staging.js",
     "efi:o1-webhook": "node scripts/efi-o1-register-pix-webhook.js",
     "o2:webhook-verify": "node scripts/o2-verify-pix-webhook-readonly.js",
