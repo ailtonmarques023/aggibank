@@ -167,18 +167,50 @@
       margin-top: 14px;
     }
     .dep-err { color: #b00020; font-size: 0.84rem; min-height: 1.25em; margin: 8px 0 0; }
-    .dep-success {
-      display: none;
-      padding: 12px 14px;
-      background: #d4edda;
-      border: 1px solid #c3e6cb;
-      border-radius: 14px;
-      color: #155724;
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 12px;
+    .dep-hint--auto-credito {
+      font-size: 0.8rem;
+      color: var(--ab-muted);
+      margin: 0 0 12px;
+      line-height: 1.45;
+      font-weight: 500;
     }
-    .dep-success.dep-success--show { display: block; }
+    .dep-meta {
+      font-size: 0.82rem;
+      color: var(--ab-muted);
+      margin: 0 0 6px;
+      line-height: 1.35;
+    }
+    .dep-meta--txid {
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+    }
+    .dep-panel-creditado {
+      display: none;
+    }
+    .dep-panel-creditado.dep-panel-creditado--show {
+      display: block;
+    }
+    .dep-panel-aguardando.dep-panel-aguardando--hide {
+      display: none !important;
+    }
+    .dep-status--ok {
+      color: #146c43;
+      font-size: 1.05rem;
+    }
+    .dep-hero-valor {
+      text-align: center;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--ab-blue);
+      margin: 8px 0 14px;
+      line-height: 1.15;
+    }
+    .dep-meta--id code {
+      font-size: 0.78rem;
+      word-break: break-all;
+    }
     .dep-status {
       font-weight: 700;
       color: var(--ab-blue);
@@ -247,8 +279,6 @@
         Validação na tela: R$&nbsp;1,00 a R$&nbsp;5.000,00 e até 2 decimais. A validação definitiva e o crédito ocorrem apenas no servidor após confirmação do Pix pela Efí — este fluxo não altera saldo localmente.
       </p>
 
-      <div id="depSuccess" class="dep-success" role="status">Saldo creditado com sucesso.</div>
-
       <div id="depStepForm" class="dep-step-form">
         <label class="dep-label" for="depValor">Valor (R$)</label>
         <input type="text" class="dep-input" id="depValor" inputmode="decimal" placeholder="Ex.: 50,00" autocomplete="off" />
@@ -264,17 +294,36 @@
       </div>
 
       <div id="depStepPix" class="dep-step-pix">
-        <p class="dep-status" id="depStatusText">Aguardando pagamento</p>
-        <p class="dep-expira" id="depExpira"></p>
-        <div class="dep-qr-wrap">
-          <img class="dep-qr" id="depQr" alt="QR Code Pix" />
+        <div id="depPanelAguardando" class="dep-panel-aguardando">
+          <p class="dep-status" id="depStatusText">Aguardando pagamento</p>
+          <p class="dep-hint dep-hint--auto-credito">
+            O saldo será creditado automaticamente após confirmação do pagamento.
+          </p>
+          <p class="dep-meta" id="depGeradoEm" style="display:none;"></p>
+          <p class="dep-meta dep-meta--txid" id="depTxidLine" style="display:none;"></p>
+          <p class="dep-expira" id="depExpira"></p>
+          <div class="dep-qr-wrap">
+            <img class="dep-qr" id="depQr" alt="QR Code Pix" />
+          </div>
+          <label class="dep-label" for="depCopia">Pix copia e cola</label>
+          <textarea class="dep-textarea" id="depCopia" readonly></textarea>
+          <div class="dep-row-actions">
+            <button type="button" class="dep-btn dep-btn-secondary" id="depBtnCopiar">Copiar código Pix</button>
+            <button type="button" class="dep-btn dep-btn-primary" id="depBtnAtualizar">Atualizar status</button>
+          </div>
         </div>
-        <label class="dep-label" for="depCopia">Pix copia e cola</label>
-        <textarea class="dep-textarea" id="depCopia" readonly></textarea>
-        <div class="dep-row-actions">
-          <button type="button" class="dep-btn dep-btn-secondary" id="depBtnCopiar">Copiar código Pix</button>
-          <button type="button" class="dep-btn dep-btn-primary" id="depBtnAtualizar">Atualizar status</button>
+
+        <div id="depPanelCreditado" class="dep-panel-creditado" role="status">
+          <p class="dep-status dep-status--ok" id="depStatusCreditado">Depósito creditado</p>
+          <p class="dep-hero-valor" id="depValorCreditado"></p>
+          <p class="dep-meta" id="depWhenCreditado"></p>
+          <p class="dep-meta dep-meta--id" id="depIdLine"></p>
+          <div class="dep-row-actions">
+            <button type="button" class="dep-btn dep-btn-primary" id="depBtnExtrato">Ver extrato</button>
+            <button type="button" class="dep-btn dep-btn-secondary" id="depBtnNovoDeposito">Novo depósito</button>
+          </div>
         </div>
+
         <p class="dep-err" id="depErrApiPix" aria-live="polite"></p>
       </div>
     </main>
@@ -286,7 +335,104 @@
       'use strict';
 
       /** Estado local do fluxo (evita global compartilhado com index legado). */
-      var state = { depositId: null };
+      var state = { depositId: null, lastAmount: null };
+
+      function formatBrl(n) {
+        if (!Number.isFinite(n)) return '—';
+        return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      function maskTxid(txid) {
+        var s = String(txid || '').trim();
+        if (!s) return '';
+        if (s.length <= 8) return 'TxId ••••' + s.slice(-4);
+        return 'TxId ' + s.slice(0, 4) + '…' + s.slice(-4);
+      }
+
+      function showDepositoAguardando() {
+        var ag = document.getElementById('depPanelAguardando');
+        var cr = document.getElementById('depPanelCreditado');
+        if (ag) {
+          ag.classList.remove('dep-panel-aguardando--hide');
+        }
+        if (cr) {
+          cr.classList.remove('dep-panel-creditado--show');
+        }
+      }
+
+      function showDepositoCreditado(dep) {
+        var ag = document.getElementById('depPanelAguardando');
+        var cr = document.getElementById('depPanelCreditado');
+        if (ag) ag.classList.add('dep-panel-aguardando--hide');
+        if (cr) cr.classList.add('dep-panel-creditado--show');
+
+        var amt = dep && dep.amount != null ? Number(dep.amount) : state.lastAmount;
+        var vEl = document.getElementById('depValorCreditado');
+        if (vEl) vEl.textContent = formatBrl(Number.isFinite(amt) ? amt : NaN);
+
+        var whenIso = (dep && (dep.creditedAt || dep.paidAt || dep.updatedAt)) || '';
+        var wEl = document.getElementById('depWhenCreditado');
+        if (wEl) {
+          try {
+            var d = new Date(whenIso);
+            wEl.textContent = whenIso && !isNaN(d.getTime())
+              ? 'Data e hora: ' + d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+              : '';
+          } catch (e) {
+            wEl.textContent = '';
+          }
+        }
+
+        var idEl = document.getElementById('depIdLine');
+        if (idEl) {
+          idEl.textContent = '';
+        }
+        if (idEl && dep && dep.id) {
+          var lbl = document.createTextNode('ID do depósito: ');
+          var code = document.createElement('code');
+          code.textContent = String(dep.id);
+          idEl.appendChild(lbl);
+          idEl.appendChild(code);
+        }
+
+        var copia = document.getElementById('depCopia');
+        if (copia) copia.value = '';
+        var qr = document.getElementById('depQr');
+        if (qr) {
+          qr.classList.remove('dep-qr--show');
+          qr.removeAttribute('src');
+        }
+      }
+
+      function resetDepositoFluxoForm() {
+        state.depositId = null;
+        state.lastAmount = null;
+        showDepositoAguardando();
+        document.getElementById('depStepForm').classList.remove('dep-step-form--hide');
+        document.getElementById('depStepPix').classList.remove('dep-step-pix--show');
+
+        var copia = document.getElementById('depCopia');
+        if (copia) copia.value = '';
+        var qr = document.getElementById('depQr');
+        if (qr) {
+          qr.classList.remove('dep-qr--show');
+          qr.removeAttribute('src');
+        }
+        var ge = document.getElementById('depGeradoEm');
+        var tx = document.getElementById('depTxidLine');
+        if (ge) {
+          ge.textContent = '';
+          ge.style.display = 'none';
+        }
+        if (tx) {
+          tx.textContent = '';
+          tx.style.display = 'none';
+        }
+        var st = document.getElementById('depStatusText');
+        if (st) st.textContent = 'Aguardando pagamento';
+        var ex = document.getElementById('depExpira');
+        if (ex) ex.textContent = '';
+      }
 
       function showToast(msg) {
         var el = document.getElementById('depToast');
@@ -385,15 +531,43 @@
               return;
             }
             state.depositId = d.deposit.id;
+            state.lastAmount = d.deposit.amount != null ? Number(d.deposit.amount) : n;
 
             document.getElementById('depStepForm').classList.add('dep-step-form--hide');
             document.getElementById('depStepPix').classList.add('dep-step-pix--show');
+
+            showDepositoAguardando();
 
             var copia = document.getElementById('depCopia');
             if (copia) copia.value = d.pix.pixCopiaECola || '';
 
             var st = document.getElementById('depStatusText');
             if (st) st.textContent = 'Aguardando pagamento';
+
+            var ge = document.getElementById('depGeradoEm');
+            if (ge && d.deposit && d.deposit.createdAt) {
+              try {
+                var cr = new Date(d.deposit.createdAt);
+                ge.textContent = !isNaN(cr.getTime())
+                  ? 'Gerado em: ' + cr.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                  : '';
+                ge.style.display = ge.textContent ? 'block' : 'none';
+              } catch (e2) {
+                ge.textContent = '';
+                ge.style.display = 'none';
+              }
+            } else if (ge) {
+              ge.style.display = 'none';
+            }
+
+            var txEl = document.getElementById('depTxidLine');
+            if (txEl && d.pix && d.pix.txid) {
+              txEl.textContent = maskTxid(d.pix.txid);
+              txEl.style.display = 'block';
+            } else if (txEl) {
+              txEl.textContent = '';
+              txEl.style.display = 'none';
+            }
 
             var ex = document.getElementById('depExpira');
             if (ex && d.pix.expiresAt) {
@@ -446,7 +620,9 @@
           copia.select();
           try {
             document.execCommand('copy');
-          } catch (e) {}
+          } catch (e) {
+            if (typeof console !== 'undefined' && console.warn) console.warn('dep_copy_fallback', e);
+          }
           showToast('Código selecionado; use Ctrl+C se necessário.');
         }
       });
@@ -483,13 +659,11 @@
             var dep = pack.body && pack.body.data && pack.body.data.deposit;
             if (!dep) return;
 
-            var ok = document.getElementById('depSuccess');
             var st = document.getElementById('depStatusText');
             if (dep.status === 'CREDITADO') {
-              if (ok) ok.classList.add('dep-success--show');
-              if (st) st.textContent = 'Saldo creditado com sucesso';
+              showDepositoCreditado(dep);
             } else {
-              if (ok) ok.classList.remove('dep-success--show');
+              showDepositoAguardando();
               if (st) st.textContent = 'Aguardando pagamento';
             }
           })
@@ -502,6 +676,25 @@
               btn.textContent = 'Atualizar status';
             }
           });
+      });
+
+      document.getElementById('depBtnExtrato').addEventListener('click', function () {
+        try {
+          sessionStorage.setItem('agilbank_modulos_target', 'extrato');
+        } catch (e) {
+          if (typeof console !== 'undefined' && console.warn) console.warn('dep_extrato_nav', e);
+        }
+        window.location.href = 'index.html';
+      });
+
+      document.getElementById('depBtnNovoDeposito').addEventListener('click', function () {
+        var errLocal = document.getElementById('depErrLocal');
+        var errApi = document.getElementById('depErrApi');
+        var errPix = document.getElementById('depErrApiPix');
+        if (errLocal) errLocal.textContent = '';
+        if (errApi) errApi.textContent = '';
+        if (errPix) errPix.textContent = '';
+        resetDepositoFluxoForm();
       });
     })();
   </script>

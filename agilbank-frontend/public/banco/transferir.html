@@ -463,28 +463,71 @@
     .trx-receipt {
       background: var(--trx-surface);
       border-radius: var(--trx-radius-card);
-      padding: 14px 15px;
+      padding: 16px 15px 14px;
       font-size: 0.88rem;
       line-height: 1.55;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       box-shadow: var(--trx-shadow-card);
       color: var(--trx-text);
     }
-    .trx-receipt > div {
+    .trx-receipt-hero {
+      text-align: center;
+      font-size: 1.65rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--trx-ink-strong);
+      margin: 4px 0 14px;
+      line-height: 1.15;
+    }
+    .trx-receipt-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
       padding: 10px 0;
       border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     }
-    .trx-receipt > div:last-child {
+    .trx-receipt-row:last-child {
       border-bottom: none;
     }
-    .trx-receipt strong {
+    .trx-receipt-k {
+      flex: 0 0 42%;
       color: var(--trx-muted);
       font-weight: 600;
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      line-height: 1.35;
+      padding-top: 2px;
     }
-    .trx-receipt code { font-size: 0.76rem; word-break: break-all; color: var(--trx-ink-strong); }
+    .trx-receipt-v {
+      flex: 1;
+      text-align: right;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--trx-ink-strong);
+      word-break: break-word;
+    }
+    .trx-receipt code {
+      font-size: 0.78rem;
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-weight: 600;
+      color: var(--trx-primary-dark);
+    }
+    .trx-receipt-hint {
+      margin: 12px 0 0;
+      font-size: 0.78rem;
+      color: var(--trx-muted);
+      line-height: 1.45;
+    }
+    .trx-actions-done {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .trx-actions-done .trx-btn-secondary { margin-top: 0; }
     .trx-btn-secondary {
       width: 100%;
       margin-top: 10px;
@@ -661,8 +704,12 @@
         </div>
       </header>
       <div class="trx-panel-body">
-        <p class="trx-done-badge">Transferência concluída</p>
+        <p class="trx-done-badge" id="trxDoneBadge">Transferência concluída</p>
         <div class="trx-receipt" id="trxReceipt"></div>
+        <div class="trx-actions-done">
+          <button type="button" class="trx-btn-secondary" id="trxBtnCopiar">Copiar comprovante</button>
+          <button type="button" class="trx-btn-secondary" id="trxBtnShare" style="display:none">Compartilhar</button>
+        </div>
         <button type="button" class="trx-btn-continue" id="trxBtnExtrato">Ver extrato</button>
         <button type="button" class="trx-btn-secondary" id="trxBtnNova">Nova transferência</button>
       </div>
@@ -680,6 +727,7 @@
         description: '',
         idempotencyKey: null,
         lastTransfer: null,
+        lastReceiptPlain: '',
         confirmLocked: false,
       };
 
@@ -793,6 +841,103 @@
         return d.innerHTML;
       }
 
+      function formatDateTimeBr(iso) {
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return String(iso || '');
+          return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        } catch (err) {
+          return String(iso || '');
+        }
+      }
+
+      function maskDestinatarioDigitado(raw) {
+        var s = String(raw || '').trim();
+        if (!s) return '—';
+        if (s.indexOf('@') !== -1) {
+          var at = s.indexOf('@');
+          if (at <= 1) return '***';
+          return s[0] + '***@' + s.slice(at + 1);
+        }
+        var digits = s.replace(/\D/g, '');
+        if (digits.length >= 4) {
+          return 'Conta ••••' + digits.slice(-4);
+        }
+        return 'Conta ••••';
+      }
+
+      function maskContaCampo(contaRaw) {
+        var s = String(contaRaw || '').trim();
+        if (!s) return '';
+        var digits = s.replace(/\D/g, '');
+        if (digits.length >= 4) return 'Conta ••••' + digits.slice(-4);
+        return 'Conta ••••';
+      }
+
+      function destinatarioComprovante(t, toInput) {
+        if (t && t.counterparty) {
+          var cp = t.counterparty;
+          var parts = [];
+          if (cp.label) parts.push(String(cp.label));
+          if (cp.conta) parts.push(maskContaCampo(cp.conta));
+          if (cp.emailMasked) parts.push(String(cp.emailMasked));
+          var out = parts.filter(Boolean).join(' · ');
+          if (out) return out;
+        }
+        return maskDestinatarioDigitado(toInput);
+      }
+
+      function buildTransferReceiptPlain(t, toInput, replay) {
+        var lines = [];
+        lines.push('AgilBank — Comprovante de transferência interna');
+        lines.push('Status: Transferência concluída');
+        lines.push('Valor: ' + formatBrl(t && t.amount));
+        lines.push('Tipo: Transferência interna AgilBank');
+        lines.push('Origem: Sua conta AgilBank');
+        lines.push('Destino: ' + destinatarioComprovante(t, toInput));
+        var when = (t && (t.completedAt || t.createdAt)) || '';
+        lines.push('Data/hora: ' + formatDateTimeBr(when));
+        if (t && t.id) lines.push('ID da transferência: ' + String(t.id));
+        if (t && t.description) lines.push('Descrição: ' + String(t.description));
+        if (replay) lines.push('Observação: retorno idempotente (operação já registrada).');
+        return lines.join('\n');
+      }
+
+      function renderTransferReceiptDom(t, toInput, replay) {
+        var receipt = document.getElementById('trxReceipt');
+        if (!receipt) return;
+        var dest = escapeHtml(destinatarioComprovante(t, toInput));
+        var when = formatDateTimeBr(t && (t.completedAt || t.createdAt));
+        var idHtml = t && t.id ? '<code>' + escapeHtml(String(t.id)) + '</code>' : '—';
+        var descRow = '';
+        if (t && t.description) {
+          descRow =
+            '<div class="trx-receipt-row"><span class="trx-receipt-k">Descrição</span><span class="trx-receipt-v">' +
+            escapeHtml(String(t.description)) +
+            '</span></div>';
+        }
+        var replayHint = replay
+          ? '<p class="trx-receipt-hint">Esta confirmação corresponde a uma operação já registrada anteriormente (idempotência).</p>'
+          : '';
+        receipt.innerHTML =
+          '<div class="trx-receipt-hero">' +
+          escapeHtml(formatBrl(t && t.amount)) +
+          '</div>' +
+          '<div class="trx-receipt-row"><span class="trx-receipt-k">Destinatário</span><span class="trx-receipt-v">' +
+          dest +
+          '</span></div>' +
+          '<div class="trx-receipt-row"><span class="trx-receipt-k">Data e hora</span><span class="trx-receipt-v">' +
+          escapeHtml(when) +
+          '</span></div>' +
+          '<div class="trx-receipt-row"><span class="trx-receipt-k">Tipo</span><span class="trx-receipt-v">Transferência interna AgilBank</span></div>' +
+          '<div class="trx-receipt-row"><span class="trx-receipt-k">Origem</span><span class="trx-receipt-v">Sua conta AgilBank</span></div>' +
+          '<div class="trx-receipt-row"><span class="trx-receipt-k">ID da transferência</span><span class="trx-receipt-v">' +
+          idHtml +
+          '</span></div>' +
+          descRow +
+          replayHint;
+      }
+
       function showForm() {
         elForm.classList.remove('trx-hidden');
         elReview.classList.remove('trx-review--show');
@@ -802,6 +947,9 @@
         elFoot.classList.remove('trx-foot--show');
         elFoot.setAttribute('aria-hidden', 'true');
         state.confirmLocked = false;
+        state.lastReceiptPlain = '';
+        var shareBtnReset = document.getElementById('trxBtnShare');
+        if (shareBtnReset) shareBtnReset.style.display = 'none';
         resetSecureButton();
       }
 
@@ -957,18 +1105,13 @@
 
             state.lastTransfer = d.transfer;
             var t = d.transfer;
-            var when = t.completedAt || t.createdAt || new Date().toISOString();
-            var receipt = document.getElementById('trxReceipt');
-            receipt.innerHTML =
-              '<div><strong>Status:</strong> ' + escapeHtml(t.status || '') + '</div>' +
-              '<div><strong>Valor:</strong> ' + formatBrl(t.amount) + '</div>' +
-              '<div><strong>Destinatário informado:</strong> ' + escapeHtml(state.to) + '</div>' +
-              '<div><strong>Data/hora:</strong> ' + escapeHtml(when) + '</div>' +
-              (t.counterparty && t.counterparty.label
-                ? '<div><strong>Contraparte:</strong> ' + escapeHtml(t.counterparty.label) + '</div>'
-                : '') +
-              '<div><strong>ID:</strong> <code>' + escapeHtml(t.id || '') + '</code></div>' +
-              (d.replay ? '<div class="trx-hint" style="margin:10px 0 0">Retorno de operação já registrada (idempotência).</div>' : '');
+            state.lastReceiptPlain = buildTransferReceiptPlain(t, state.to, !!d.replay);
+            renderTransferReceiptDom(t, state.to, !!d.replay);
+            var shareBtn = document.getElementById('trxBtnShare');
+            if (shareBtn) {
+              shareBtn.style.display =
+                typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? 'block' : 'none';
+            }
             showDone();
             showToast('Transferência confirmada pelo servidor.');
           })
@@ -992,8 +1135,52 @@
       document.getElementById('trxBtnNova').addEventListener('click', function () {
         state.idempotencyKey = null;
         state.lastTransfer = null;
+        state.lastReceiptPlain = '';
         document.getElementById('trxErrApi').textContent = '';
         showForm();
+      });
+
+      document.getElementById('trxBtnCopiar').addEventListener('click', function () {
+        var txt = state.lastReceiptPlain;
+        if (!txt) {
+          showToast('Não há comprovante para copiar.');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard
+            .writeText(txt)
+            .then(function () {
+              showToast('Comprovante copiado.');
+            })
+            .catch(function () {
+              showToast('Não foi possível copiar automaticamente.');
+            });
+        } else {
+          showToast('Use um navegador com suporte a copiar ou copie manualmente.');
+        }
+      });
+
+      document.getElementById('trxBtnShare').addEventListener('click', function () {
+        var txt = state.lastReceiptPlain;
+        if (!txt) {
+          showToast('Não há comprovante para compartilhar.');
+          return;
+        }
+        if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+          showToast('Compartilhamento indisponível neste dispositivo.');
+          return;
+        }
+        navigator
+          .share({
+            title: 'AgilBank — Comprovante de transferência',
+            text: txt,
+          })
+          .then(function () {
+            showToast('Compartilhamento concluído.');
+          })
+          .catch(function () {
+            showToast('Compartilhamento cancelado ou indisponível.');
+          });
       });
     })();
   </script>
