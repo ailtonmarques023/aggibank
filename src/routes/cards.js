@@ -276,6 +276,129 @@ function publicShipment(shipment, options = {}) {
   };
 }
 
+function mapTipoCartaoApiEn(tipo) {
+  const t = String(tipo || '').toLowerCase();
+  if (t === 'debito') return 'debit';
+  return 'credit';
+}
+
+function normalizeCardApiStatus(status) {
+  const s = String(status || '').trim().toLowerCase();
+  if (!s) return 'UNKNOWN';
+  if (s === 'ativo') return 'ATIVO';
+  if (s === 'aprovado') return 'APPROVED';
+  if (s === 'pendente' || s === 'pending') return 'PENDENTE';
+  if (s === 'rejeitado' || s === 'rejected' || s === 'negado' || s === 'recusado') return 'REJECTED';
+  if (s === 'bloqueado') return 'BLOQUEADO';
+  return String(status).toUpperCase();
+}
+
+/**
+ * Resumo seguro do formulário armazenado em dadosSolicitacao (sem PAN/CVV/token/CPF).
+ * @param {unknown} dadosRaw
+ * @returns {object|null}
+ */
+function sanitizePedidoPreviewFromDados(dadosRaw) {
+  if (!dadosRaw || typeof dadosRaw !== 'object' || Array.isArray(dadosRaw)) return null;
+  const enc = dadosRaw.endereco;
+  const out = {};
+
+  if (
+    dadosRaw.rendaMensalDeclarada !== undefined &&
+    dadosRaw.rendaMensalDeclarada !== null &&
+    Number.isFinite(Number(dadosRaw.rendaMensalDeclarada))
+  ) {
+    const n = Math.round(Number(dadosRaw.rendaMensalDeclarada) * 100) / 100;
+    if (n >= 0 && n <= 50_000_000) out.rendaMensalDeclarada = n;
+  }
+
+  const tempoEmprego =
+    dadosRaw.tempoEmprego != null && String(dadosRaw.tempoEmprego).trim()
+      ? String(dadosRaw.tempoEmprego).trim().slice(0, 80)
+      : null;
+  if (tempoEmprego) out.tempoEmprego = tempoEmprego;
+
+  const empresa =
+    dadosRaw.empresa != null && String(dadosRaw.empresa).trim()
+      ? String(dadosRaw.empresa).trim().slice(0, 200)
+      : null;
+  if (empresa) out.empresa = empresa;
+
+  const empresaAtual =
+    dadosRaw.empresaAtual != null && String(dadosRaw.empresaAtual).trim()
+      ? String(dadosRaw.empresaAtual).trim().slice(0, 200)
+      : null;
+  if (empresaAtual) out.empresaAtual = empresaAtual;
+
+  if (
+    dadosRaw.enderecoEntregaDiferente !== undefined &&
+    typeof dadosRaw.enderecoEntregaDiferente === 'boolean'
+  ) {
+    out.enderecoEntregaDiferente = dadosRaw.enderecoEntregaDiferente;
+  }
+
+  if (enc && typeof enc === 'object' && !Array.isArray(enc)) {
+    const e = {};
+    if (enc.rua != null && String(enc.rua).trim()) e.rua = String(enc.rua).trim().slice(0, 200);
+    if (enc.bairro != null && String(enc.bairro).trim())
+      e.bairro = String(enc.bairro).trim().slice(0, 100);
+    if (enc.cidade != null && String(enc.cidade).trim())
+      e.cidade = String(enc.cidade).trim().slice(0, 100);
+    if (enc.estado != null && String(enc.estado).trim())
+      e.estado = String(enc.estado).trim().slice(0, 4).toUpperCase();
+    if (enc.cep != null && String(enc.cep).trim()) e.cep = String(enc.cep).trim().slice(0, 20);
+    if (Object.keys(e).length) out.enderecoResumo = e;
+  }
+
+  const obs =
+    dadosRaw.observacao != null && String(dadosRaw.observacao).trim()
+      ? String(dadosRaw.observacao).trim().slice(0, 240)
+      : null;
+  if (obs) out.observacao = obs;
+
+  return Object.keys(out).length ? out : null;
+}
+
+/**
+ * Payload de remessa alinhado ao contrato público (+ campos flatten para UI).
+ */
+function shipmentStatusFlattenForFrontend(shipmentPrismaRow, holderName, addressSnapshotResolved, addressSource) {
+  if (!shipmentPrismaRow) return null;
+  const pubShip = publicShipment(shipmentPrismaRow, {
+    addressSnapshot: addressSnapshotResolved,
+    addressSource,
+  });
+  const snap = pubShip.addressSnapshot || {};
+  return {
+    id: pubShip.id,
+    cardId: pubShip.cardId,
+    status: pubShip.status,
+    recipientName: holderName || null,
+    addressLine: snap.logradouro ? String(snap.logradouro).trim().slice(0, 260) || null : null,
+    number: snap.numero ? String(snap.numero).trim().slice(0, 40) || null : null,
+    complement: snap.complemento != null ? String(snap.complemento).trim().slice(0, 200) || null : null,
+    district: snap.bairro ? String(snap.bairro).trim().slice(0, 120) || null : null,
+    city: snap.cidade ? String(snap.cidade).trim().slice(0, 120) || null : null,
+    state: snap.estado ? String(snap.estado).trim().slice(0, 4).toUpperCase() || null : null,
+    zipCode: snap.cep ? String(snap.cep).trim().slice(0, 20) || null : null,
+    trackingCode: pubShip.trackingCode || null,
+    trackingUrl: pubShip.trackingUrl || null,
+    carrierCode: pubShip.carrierCode || null,
+    carrierName: pubShip.carrierName || null,
+    shippingFeeAmount: pubShip.shippingFeeAmount,
+    shippingFeeStatus: pubShip.shippingFeeStatus,
+    createdAt: pubShip.createdAt,
+    updatedAt: pubShip.updatedAt,
+    estimatedDeliveryAt: pubShip.estimatedDeliveryAt,
+    deliveredAt: pubShip.deliveredAt,
+    postedAt: pubShip.postedAt,
+    returnedAt: pubShip.returnedAt,
+    deliveryAttempts: pubShip.deliveryAttempts,
+    addressSnapshot: snap,
+    addressSource: pubShip.addressSource || null,
+  };
+}
+
 /**
  * Monta objeto persistivel em dadosSolicitacao (apenas whitelist; sem PIN/CVV/PAN).
  */
@@ -503,6 +626,139 @@ router.get('/', async (req, res) => {
       success: false,
       message: 'Erro interno do servidor',
       code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
+ * Resumo do cartão e remessa do titular — um cartão representativo prioriza crédito aprovado/ativo (UI + entrega física).
+ * Deve ficar antes de GET /:id/* para não colidir com parâmetro.
+ */
+router.get('/status', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const holderName = req.user.nomeCompleto
+      ? String(req.user.nomeCompleto).trim().slice(0, 240)
+      : null;
+
+    const cartoes = await prisma.cartao.findMany({
+      where: { userId },
+      orderBy: [{ dataAprovacao: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        tipo: true,
+        bandeira: true,
+        status: true,
+        last4: true,
+        maskedNumber: true,
+        dataSolicitacao: true,
+        dataAprovacao: true,
+        createdAt: true,
+        dadosSolicitacao: true,
+      },
+    });
+
+    const hasCard = cartoes.length > 0;
+
+    const preferScore = (r) => {
+      const tipo = String(r.tipo || '').toLowerCase();
+      const st = String(r.status || '').toLowerCase();
+      let score = 0;
+      if (tipo === 'credito') score += 40;
+      if (st === 'ativo') score += 30;
+      else if (st === 'aprovado') score += 20;
+      else if (st === 'pendente') score += 10;
+      const tApr = r.dataAprovacao ? new Date(r.dataAprovacao).getTime() : 0;
+      const tCr = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+      return score * 1e15 + tApr + tCr / 1e6;
+    };
+
+    let representative = cartoes.length ? cartoes[0] : null;
+    for (let i = 1; i < cartoes.length; i++) {
+      if (preferScore(cartoes[i]) > preferScore(representative)) {
+        representative = cartoes[i];
+      }
+    }
+
+    let cardOut = null;
+    let shipmentOut = null;
+    let pedidoPreview = null;
+
+    if (representative) {
+      const rawSnap = representative.dadosSolicitacao;
+      let dadosForPreview = rawSnap;
+      if (rawSnap && typeof rawSnap === 'object' && !Array.isArray(rawSnap) && rawSnap.dadosAnalise) {
+        dadosForPreview = rawSnap.dadosAnalise;
+      }
+      pedidoPreview = sanitizePedidoPreviewFromDados(dadosForPreview);
+
+      const tipoRep = String(representative.tipo || '').toLowerCase();
+
+      cardOut = {
+        id: representative.id,
+        type: mapTipoCartaoApiEn(representative.tipo),
+        brand: representative.bandeira ? String(representative.bandeira).trim().toUpperCase().slice(0, 40) : null,
+        status: normalizeCardApiStatus(representative.status),
+        last4:
+          representative.last4 != null
+            ? String(representative.last4).replace(/\D/g, '').slice(-4).padStart(4, '0')
+            : null,
+        maskedNumber: representative.maskedNumber || null,
+        holderName,
+        createdAt: representative.createdAt,
+        approvedAt: representative.dataAprovacao,
+        solicitadoEm: representative.dataSolicitacao ?? null,
+        pedidoPreview,
+      };
+
+      if (tipoRep === 'credito') {
+        try {
+          const shipmentRow = await prisma.cardShipment.findFirst({
+            where: { cardId: representative.id, userId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+              user: {
+                select: {
+                  endereco: true,
+                },
+              },
+            },
+          });
+
+          if (shipmentRow) {
+            const { addressSnapshot: addrRes, addressSource } = resolveShipmentAddressSnapshot(shipmentRow);
+            shipmentOut = shipmentStatusFlattenForFrontend(
+              shipmentRow,
+              holderName,
+              addrRes,
+              addressSource,
+            );
+          }
+        } catch (shipErr) {
+          if (shipErr.code === 'P2021') {
+            shipmentOut = null;
+          } else {
+            throw shipErr;
+          }
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Status do cartão e remessa consultados com sucesso',
+      data: {
+        hasCard,
+        card: cardOut,
+        shipment: shipmentOut,
+      },
+    });
+  } catch (error) {
+    logger.error('Erro ao consultar /api/cards/status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
     });
   }
 });

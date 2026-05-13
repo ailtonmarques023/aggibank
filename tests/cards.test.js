@@ -446,6 +446,137 @@ describe('Cards API — POST decisão e GET segurança', () => {
     });
   });
 
+  describe('GET /api/cards/status', () => {
+    it('401 sem token', async () => {
+      await request(app).get('/api/cards/status').expect(401);
+    });
+
+    it('hasCard false quando não há cartões', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([]);
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.hasCard).toBe(false);
+      expect(res.body.data.card).toBeNull();
+      expect(res.body.data.shipment).toBeNull();
+    });
+
+    it('crédito aprovado com remessa devolve últimos dígitos, holderName pelo usuário autenticado e dados logísticos (sem PAN/CVV/dadosSolicitacao)', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([
+        {
+          id: 'c-rem',
+          userId: 'test-user-id',
+          tipo: 'credito',
+          bandeira: 'VISA',
+          status: 'aprovado',
+          last4: '9614',
+          maskedNumber: '**** **** **** 9614',
+          dataSolicitacao: new Date('2026-05-01T12:00:00.000Z'),
+          dataAprovacao: new Date('2026-05-03T12:00:00.000Z'),
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          dadosSolicitacao: {
+            dadosAnalise: {
+              rendaMensalDeclarada: 5000,
+              endereco: {
+                rua: 'Rua Pedido X',
+                bairro: 'Bairro P',
+                cidade: 'Campinas',
+                estado: 'SP',
+                cep: '13000-000',
+              },
+            },
+            cpf: 'nao-devolve',
+          },
+        },
+      ]);
+
+      prisma.cardShipment.findFirst.mockResolvedValueOnce({
+        id: 'ship-x',
+        cardId: 'c-rem',
+        userId: 'test-user-id',
+        status: 'EM_PRODUCAO',
+        shippingFeeAmount: 39.9,
+        shippingFeeStatus: 'PENDENTE',
+        shippingFeeMovementId: null,
+        carrierCode: null,
+        carrierName: 'Correios',
+        trackingCode: 'TR123AG',
+        trackingUrl: null,
+        estimatedDeliveryAt: new Date('2026-06-01T12:00:00.000Z'),
+        postedAt: null,
+        deliveredAt: null,
+        returnedAt: null,
+        deliveryAttempts: 0,
+        isSecondIssue: false,
+        originShipmentId: null,
+        addressSnapshot: {
+          cep: '01001-000',
+          logradouro: 'Rua Remessa Oficial',
+          numero: '10',
+          complemento: 'Sala 1',
+          bairro: 'Centro',
+          cidade: 'São Paulo',
+          estado: 'SP',
+        },
+        createdAt: new Date('2026-05-03T13:00:00.000Z'),
+        updatedAt: new Date('2026-05-03T13:00:00.000Z'),
+        user: { endereco: {} },
+      });
+
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.hasCard).toBe(true);
+      expect(res.body.data.card.last4).toBe('9614');
+      expect(res.body.data.card.holderName).toBe(global.testUser.nomeCompleto);
+      expect(res.body.data.card.type).toBe('credit');
+      expect(res.body.data.card.brand).toBe('VISA');
+      expect(res.body.data.shipment).toBeTruthy();
+      expect(res.body.data.shipment.trackingCode).toBe('TR123AG');
+
+      expect(res.body.data.card).not.toHaveProperty('dadosSolicitacao');
+      expect(JSON.stringify(res.body)).not.toContain('nao-devolve');
+
+      FORBIDDEN_CARD_KEYS.forEach((k) => {
+        expect(res.body.data.card).not.toHaveProperty(k);
+      });
+    });
+
+    it('cartão de débito ativo não consulta nem retorna shipment', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([
+        {
+          id: 'c-db',
+          userId: 'test-user-id',
+          tipo: 'debito',
+          bandeira: 'elo',
+          status: 'ativo',
+          last4: '4444',
+          maskedNumber: '**** **** **** 4444',
+          dataSolicitacao: new Date('2026-05-02T12:00:00.000Z'),
+          dataAprovacao: new Date('2026-05-03T12:00:00.000Z'),
+          createdAt: new Date('2026-05-02T12:00:00.000Z'),
+          dadosSolicitacao: null,
+        },
+      ]);
+
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.data.hasCard).toBe(true);
+      expect(res.body.data.card.type).toBe('debit');
+      expect(res.body.data.shipment).toBeNull();
+      expect(prisma.cardShipment.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
   describe('POST /api/cards — duplicidade', () => {
     it('retorna 400 CARD_PENDING_ALREADY_EXISTS quando já existe pendente do mesmo tipo', async () => {
       prisma.cartao.findFirst

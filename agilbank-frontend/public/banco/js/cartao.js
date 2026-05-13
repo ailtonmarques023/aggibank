@@ -782,6 +782,140 @@ async function fetchCartoesFromApi() {
     }
 }
 
+/**
+ * GET /api/cards/status — resumo seguro do cartão representativo + remessa (sem PAN/CVV/CPF completo na resposta tratada pela UI).
+ * @returns {Promise<{ ok: true, data: object, reason: 'success' } | { ok: false, data: null, error: string, reason: string, status?: number }>}
+ */
+async function fetchCardsStatusFromApi() {
+    var token = getCartaoAuthToken();
+    if (!token || !window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+        return {
+            ok: false,
+            data: null,
+            error: 'Sessão ou cliente de API indisponível.',
+            reason: 'no_auth'
+        };
+    }
+    try {
+        var response = await window.AgilBank.api.request('cards/status', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        var result = await response.json().catch(function () {
+            return null;
+        });
+        if (!response.ok) {
+            var msg =
+                (result && (result.message || result.error)) ||
+                'Não foi possível carregar o status do cartão agora.';
+            return {
+                ok: false,
+                data: null,
+                error: String(msg),
+                reason: 'http',
+                status: response.status
+            };
+        }
+        if (result == null || typeof result !== 'object' || result.success !== true) {
+            return {
+                ok: false,
+                data: null,
+                error: 'Formato inválido na resposta de status do cartão.',
+                reason: 'invalid_body'
+            };
+        }
+        if (!result.data || typeof result.data !== 'object') {
+            return {
+                ok: false,
+                data: null,
+                error: 'Dados ausentes na resposta de status do cartão.',
+                reason: 'invalid_shape'
+            };
+        }
+        return { ok: true, data: result.data, reason: 'success' };
+    } catch (err) {
+        console.warn('fetchCardsStatusFromApi:', err);
+        return {
+            ok: false,
+            data: null,
+            error: 'Erro de rede ao consultar status do cartão.',
+            reason: 'network'
+        };
+    }
+}
+
+/** Garante addressSnapshot esperado pela tela quando a API flatten devolve apenas campos paralelos. */
+function agilbankNormalizeShipmentParaUi(s) {
+    if (!s || typeof s !== 'object') return null;
+    var snap = s.addressSnapshot && typeof s.addressSnapshot === 'object' && !Array.isArray(s.addressSnapshot)
+        ? Object.assign({}, s.addressSnapshot)
+        : {};
+    var hasMean =
+        (snap.logradouro != null && String(snap.logradouro).trim()) ||
+        (snap.cep != null && String(snap.cep).trim()) ||
+        (snap.cidade != null && String(snap.cidade).trim());
+
+    if (!hasMean && (s.addressLine || s.zipCode || s.city || s.number)) {
+        snap = {
+            logradouro: s.addressLine != null ? String(s.addressLine).trim() : '',
+            numero: s.number != null ? String(s.number).trim() : '',
+            complemento: s.complement != null ? String(s.complement).trim() : null,
+            bairro: s.district != null ? String(s.district).trim() : '',
+            cidade: s.city != null ? String(s.city).trim() : '',
+            estado: s.state != null ? String(s.state).trim().toUpperCase() : '',
+            cep: s.zipCode != null ? String(s.zipCode).trim() : ''
+        };
+    }
+
+    var out = Object.assign({}, s, { addressSnapshot: snap });
+
+    ['shippingFeeAmount', 'estimatedDeliveryAt', 'deliveredAt', 'postedAt', 'returnedAt'].forEach(function (key) {
+        if (typeof out[key] === 'number' && !Number.isFinite(out[key])) delete out[key];
+    });
+
+    return out;
+}
+
+/**
+ * Une remessa/status do snapshot em cada cartão cujo id coincidir com o retorno oficial.
+ * @param {Array} cartoes
+ * @param {object|null} statusData resultado de GET /cards/status `.data`
+ * @returns {Array}
+ */
+function agilbankMergeCardsStatusIntoLista(cartoes, statusData) {
+    var list = Array.isArray(cartoes) ? cartoes.slice() : [];
+    if (!statusData || typeof statusData !== 'object') return list;
+
+    var sc = statusData.card;
+    if (!sc || sc.id == null) return list;
+
+    var cid = String(sc.id).trim();
+
+    if (sc.holderName && String(sc.holderName).trim()) {
+        window.__agilbankTitularCartaoCache = String(sc.holderName).trim();
+    }
+
+    list = list.map(function (x) {
+        if (!x || String(x.id).trim() !== cid) return x;
+        var m = Object.assign({}, x);
+
+        /* Bandeira: preferir marca consolidada quando existir no snapshot */
+        if (sc.brand != null && String(sc.brand).trim()) {
+            m.bandeira = String(sc.brand).trim();
+        }
+        m.holderName = sc.holderName != null && String(sc.holderName).trim() ? String(sc.holderName).trim() : null;
+        /* Resumo sanitizado do formulário persistido */
+        m.pedidoPreview =
+            sc.pedidoPreview != null && typeof sc.pedidoPreview === 'object' ? sc.pedidoPreview : null;
+        /* Remessa rastreada no backend apenas para esta linha */
+        m.shipment = statusData.shipment ? agilbankNormalizeShipmentParaUi(statusData.shipment) : null;
+
+        return m;
+    });
+
+    return list;
+}
+
 function statusCartaoLabel(status) {
     var s = String(status || '').trim().toLowerCase();
     if (s === 'ativo') return 'Ativo';
@@ -964,7 +1098,10 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
     var pct = isFinite(lim) && lim > 0 ? Math.min(100, (usado / lim) * 100) : 0;
     var numTxt = agilbankFormatarNumeroCartaoApi(c);
     var valTxt = agilbankFormatarValidadeApi(c);
-    var titular = window.__agilbankTitularCartaoCache || 'Indisponível';
+    var titular =
+        (c && c.holderName && String(c.holderName).trim()) ||
+        window.__agilbankTitularCartaoCache ||
+        'Indisponível';
 
     var containerId = virtual ? 'cartaoVirtualContainer' : 'cartaoFisicoContainer';
     var cont = document.getElementById(containerId);
@@ -1036,6 +1173,15 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
                 agilbankToggleBloqueioCartao(bqf);
             };
         }
+
+        var pedHost = document.getElementById('cartaoFisicoPedidoResumo');
+        if (pedHost) {
+            var pvPed =
+                !virtual && c && c.pedidoPreview != null && typeof c.pedidoPreview === 'object'
+                    ? c.pedidoPreview
+                    : null;
+            agilbankRenderPedidoPreviewFisico(pedHost, pvPed);
+        }
     }
 }
 
@@ -1073,44 +1219,106 @@ function agilbankShipmentEscapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+/** Lista curta dos dados sanitizados do pedido persistidos (`pedidoPreview` da API status). */
+function agilbankRenderPedidoPreviewFisico(host, pv) {
+    if (!host) return;
+    if (!pv || typeof pv !== 'object') {
+        host.hidden = true;
+        host.innerHTML = '';
+        return;
+    }
+    var parts = [];
+
+    var er = pv.enderecoResumo;
+    if (er && typeof er === 'object' && !Array.isArray(er)) {
+        var ln = [];
+        if (er.rua) ln.push(er.rua);
+        if (er.bairro) ln.push(er.bairro);
+        var cityPart = '';
+        if (er.cidade && er.estado) cityPart = er.cidade + '/' + er.estado;
+        else if (er.cidade) cityPart = er.cidade;
+        else if (er.estado) cityPart = er.estado;
+        if (cityPart) ln.push(cityPart);
+        if (er.cep) ln.push('CEP ' + er.cep);
+        if (ln.length) {
+            parts.push(
+                '<strong>Endereço informado na solicitação</strong><br />' +
+                    agilbankShipmentEscapeHtml(ln.join(' — ')),
+            );
+        }
+    }
+
+    if (pv.rendaMensalDeclarada != null && Number.isFinite(Number(pv.rendaMensalDeclarada))) {
+        var r = Number(pv.rendaMensalDeclarada);
+        parts.push(
+            '<strong>Renda declarada (pedido)</strong><br />' +
+                agilbankShipmentEscapeHtml(
+                    'R$ ' +
+                        r.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                ),
+        );
+    }
+    if (
+        pv.tempoEmprego != null &&
+        String(pv.tempoEmprego).trim() &&
+        String(pv.tempoEmprego).toLowerCase() !== 'nao_informado' &&
+        String(pv.tempoEmprego).toLowerCase() !== 'ni'
+    ) {
+        parts.push(
+            '<strong>Tempo no emprego</strong><br />' + agilbankShipmentEscapeHtml(String(pv.tempoEmprego).trim()),
+        );
+    }
+
+    host.className = 'cartao-pedido-resumo';
+    host.hidden = parts.length === 0;
+    if (!parts.length) {
+        host.innerHTML = '';
+        return;
+    }
+    host.innerHTML = parts.map(function (p) {
+        return '<p class=\"cartao-pedido-resumo-par\">' + p + '</p>';
+    }).join('');
+}
+
 function agilbankShipmentStatusMeta(status) {
     var s = String(status || '').trim().toUpperCase();
     var map = {
         AGUARDANDO_COBRANCA: {
-            title: 'Em análise',
-            description: 'Aguardando confirmação da cobrança do frete para iniciar o fluxo logístico.'
+            title: 'Produção',
+            description:
+                'Solicitação na fila da remessa física — aguardando confirmação da cobrança do frete no backend oficial.'
         },
         COBRANCA_CONFIRMADA: {
-            title: 'Frete cobrado',
-            description: 'Taxa de frete confirmada. Preparando o cartão físico para produção.'
+            title: 'Produção',
+            description: 'Taxa de frete confirmada. Seu pedido foi encaminhado para produção do cartão.'
         },
         EM_PRODUCAO: {
-            title: 'Em produção',
+            title: 'Produção',
             description: 'Seu cartão está em produção e seguirá para postagem após a finalização.'
         },
         POSTADO: {
-            title: 'Postado',
-            description: 'Cartão postado pela transportadora. O rastreio foi liberado.'
+            title: 'Em trânsito',
+            description: 'Cartão postado pela transportadora — rastreio disponível quando houver código.'
         },
         EM_TRANSITO: {
             title: 'Em trânsito',
-            description: 'Cartão em trânsito para o endereço cadastrado.'
+            description: 'Cartão em trânsito para o endereço registrado.'
         },
         SAIU_PARA_ENTREGA: {
-            title: 'Saiu para entrega',
+            title: 'Em trânsito',
             description: 'O cartão saiu para entrega e deve chegar no endereço informado.'
         },
         ENTREGUE: {
             title: 'Entregue',
-            description: 'Entrega concluída com sucesso para o titular.'
+            description: 'Entrega concluída com sucesso.'
         },
         FALHA_ENTREGA: {
             title: 'Falha na entrega',
             description: 'A transportadora informou falha na tentativa de entrega. Aguarde próxima atualização.'
         },
         DEVOLVIDO: {
-            title: 'Falha na entrega',
-            description: 'A remessa foi devolvida. Entre em contato com o suporte para nova emissão.'
+            title: 'Devolvido ao AgilBank',
+            description: 'A remessa foi devolvida aos canais AgilBank. Entre em contato com o suporte para próximos passos.'
         }
     };
     return map[s] || {
@@ -1139,6 +1347,13 @@ function agilbankShipmentCardEyebrow(card) {
     if (type) parts.push(type.replace(/_/g, ' / '));
     if (brand) parts.push(brand);
     return parts.length ? parts.join(' • ') : 'Cartão físico';
+}
+
+/** Texto auxiliar para status de entrega: só tipo, sem bandeira textual (arte do mock já tem marca). */
+function agilbankShipmentCardEyebrowSemBandeira(card) {
+    var type = card && card.tipo ? String(card.tipo).trim() : '';
+    if (!type) return 'Cartão físico';
+    return type.replace(/_/g, ' / ');
 }
 
 function agilbankShipmentCardTitle(card) {
@@ -1298,13 +1513,13 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     var support = document.getElementById('statusEntregaSupportText');
     var title = document.getElementById('statusEntregaCardTitle');
     var eyebrow = document.getElementById('statusEntregaCardEyebrow');
-    var brand = document.getElementById('statusEntregaCardBrand');
+    var brandRow = document.getElementById('statusEntregaCardBrand');
     var last4 = document.getElementById('statusEntregaCardLast4');
     var l1 = document.getElementById('statusEntregaLinha1');
     var l2 = document.getElementById('statusEntregaLinha2');
     var end = document.getElementById('enderecoEntrega');
     var eventsHost = document.getElementById('statusEntregaEventos');
-    if (!host || !statusLine || !statusLabel || !support || !title || !eyebrow || !brand || !last4 || !l1 || !l2 || !end || !eventsHost) return;
+    if (!host || !statusLine || !statusLabel || !support || !title || !eyebrow || !last4 || !l1 || !l2 || !end || !eventsHost) return;
     var payload = state && typeof state === 'object' ? state : {};
     var uiState = payload.uiState || 'sem_dados';
     var shipment = payload.shipment || null;
@@ -1312,8 +1527,21 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     var timelineError = payload.timelineError || '';
 
     title.textContent = agilbankShipmentCardTitle(c);
-    eyebrow.textContent = agilbankShipmentCardEyebrow(c);
-    brand.textContent = c && c.bandeira ? String(c.bandeira).toUpperCase() : 'CARD';
+    eyebrow.textContent = agilbankShipmentCardEyebrowSemBandeira(c);
+    var bandeiraRaw = c && c.bandeira ? String(c.bandeira).trim().toUpperCase() : '';
+    var bandeirasNome = ['VISA', 'ELO', 'MASTERCARD', 'AMEX'];
+    /* Texto da bandeira alinhado ao que o backend confirma (evita contradizer VISA no mock quando a conta é outra marca). */
+    if (brandRow) {
+        if (bandeiraRaw && bandeirasNome.indexOf(bandeiraRaw) >= 0) {
+            brandRow.textContent = bandeiraRaw === 'MASTERCARD' ? 'Mastercard' : bandeiraRaw;
+            brandRow.hidden = false;
+            brandRow.setAttribute('aria-hidden', 'false');
+        } else {
+            brandRow.textContent = '';
+            brandRow.hidden = true;
+            brandRow.setAttribute('aria-hidden', 'true');
+        }
+    }
     last4.textContent = agilbankShipmentCardLast4(c);
     statusLine.className = 'status-entrega-status-line';
 
@@ -1332,6 +1560,42 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
             '<div class="status-entrega-skeleton status-entrega-skeleton-title"></div>' +
             '<div class="status-entrega-skeleton status-entrega-skeleton-line"></div>' +
             '<div class="status-entrega-skeleton status-entrega-skeleton-line short"></div>';
+        return;
+    }
+
+    if (uiState === 'sem_envio_fisico') {
+        statusLabel.textContent = 'Sem entrega física rastreada';
+        support.textContent =
+            'Este tipo de cartão não acompanha remessa física por este fluxo. Use as outras ações para limite ou cartão virtual, se disponível.';
+        host.innerHTML = agilbankShipmentTimelineHtml([
+            { key: 'producao', label: 'Produção', state: 'future' },
+            { key: 'transito', label: 'Em trânsito', state: 'future' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entregue', state: 'future' }
+        ]);
+        l1.textContent = 'Frete: não aplicável';
+        l2.textContent = 'Status logístico: não aplicável';
+        end.textContent = 'Endereço de entrega: não há envio físico rastreado para este produto.';
+        eventsHost.innerHTML =
+            '<p class="status-entrega-empty-copy">Nenhum pedido postal é exibido aqui porque o sistema não registrou remessa para este tipo de cartão.</p>';
+        return;
+    }
+
+    if (uiState === 'aguardando_remessa') {
+        statusLabel.textContent = 'Aguardando registro da remessa';
+        support.textContent =
+            'O servidor ainda não vinculou uma remessa a este cartão (ex.: antes da cobrança de frete). Use “Atualizar status” para recarregar.';
+        host.innerHTML = agilbankShipmentTimelineHtml([
+            { key: 'producao', label: 'Produção', state: 'current' },
+            { key: 'transito', label: 'Em trânsito', state: 'future' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entregue', state: 'future' }
+        ]);
+        l1.textContent = 'Frete: a confirmar quando a remessa for criada';
+        l2.textContent = 'Status logístico: pendente no backend';
+        end.textContent = 'Endereço de entrega: será preenchido após criar remessa oficial.';
+        eventsHost.innerHTML =
+            '<p class="status-entrega-empty-copy">Sem eventos porque ainda não há remessa ativa registrada pela API para este cartão.</p>';
         return;
     }
 
@@ -1379,7 +1643,8 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
 
     if (uiState === 'sem_dados') {
         statusLabel.textContent = 'Sem dados de entrega';
-        support.textContent = 'Não existe remessa registrada para este cartão no backend oficial.';
+        support.textContent =
+            'O backend oficial respondeu sem remessa (shipment ausente ou null). Se você já solicitou cartão físico em crédito, use “Atualizar status”; caso contrário pode ser ausência normal de vínculo logístico.';
         host.innerHTML = agilbankShipmentTimelineHtml([
             { key: 'producao', label: 'Produção', state: 'future' },
             { key: 'transito', label: 'Em trânsito', state: 'future' },
@@ -1573,10 +1838,72 @@ async function agilbankCartaoAcaoStatus() {
     var btnStatus = document.getElementById('cartaoAcaoStatus');
     agilbankSetBtnLoading(btnStatus, true, 'Consultando...');
     try {
+        var snapFresh = await fetchCardsStatusFromApi().catch(function () {
+            return { ok: false };
+        });
+        if (snapFresh.ok && snapFresh.data && snapFresh.data.card && snapFresh.data.card.id != null) {
+            var sameId =
+                String(snapFresh.data.card.id).trim() === String((c && c.id) || '').trim();
+            if (sameId) {
+                var scFresh = snapFresh.data.card;
+                if (scFresh.holderName && String(scFresh.holderName).trim()) {
+                    window.__agilbankTitularCartaoCache = String(scFresh.holderName).trim();
+                }
+                if (scFresh.brand && String(scFresh.brand).trim()) {
+                    c = Object.assign({}, c, { bandeira: String(scFresh.brand).trim() });
+                }
+                var shipFromSnap = snapFresh.data.shipment;
+                if (shipFromSnap != null && typeof shipFromSnap === 'object' && shipFromSnap.id != null) {
+                    c = Object.assign({}, c, {
+                        shipment: agilbankNormalizeShipmentParaUi(shipFromSnap)
+                    });
+                }
+            }
+        }
+
         if (!agilbankStatusCartaoAtivo(c)) {
             agilbankRenderStatusEntregaParaCartao(c, { uiState: 'em_analise' });
             return;
         }
+
+        var tipoCli = String(c.tipo || '').toLowerCase();
+        if (tipoCli.indexOf('debit') >= 0 || tipoCli.indexOf('debito') >= 0) {
+            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'sem_envio_fisico' });
+            return;
+        }
+
+        var localShipMerged = c.shipment && c.shipment.id ? agilbankNormalizeShipmentParaUi(c.shipment) : null;
+        if (localShipMerged && localShipMerged.id) {
+            var timelineLocal = [];
+            var timelineErrLocal = '';
+            try {
+                var trLocal = await agilbankRequestCards('cards/' + c.id + '/shipment/timeline?page=1&limit=20', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                }, 12000);
+                if (trLocal.response.ok) {
+                    var timelineApiLoc =
+                        trLocal.body && trLocal.body.data && Array.isArray(trLocal.body.data.timeline)
+                            ? trLocal.body.data.timeline
+                            : [];
+                    timelineLocal = timelineApiLoc;
+                } else {
+                    timelineErrLocal =
+                        'Não foi possível carregar eventos atualizados. Mantidos dados consolidados.';
+                }
+            } catch (timelineLocErr) {
+                timelineErrLocal =
+                    (timelineLocErr && timelineLocErr.message) || 'Falha de conexão ao carregar timeline.';
+            }
+            agilbankRenderStatusEntregaParaCartao(c, {
+                uiState: timelineLocal.length ? 'sucesso' : 'vazio',
+                shipment: localShipMerged,
+                timeline: timelineLocal,
+                timelineError: timelineErrLocal
+            });
+            return;
+        }
+
         var shipmentResult = await agilbankRequestCards('cards/' + c.id + '/shipment', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
@@ -1604,7 +1931,7 @@ async function agilbankCartaoAcaoStatus() {
                     if (shipmentResult.response.ok) {
                         var shipmentRetry = shipmentResult.body && shipmentResult.body.data ? shipmentResult.body.data.shipment : null;
                         if (!shipmentRetry) {
-                            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'sem_dados' });
+                            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'aguardando_remessa' });
                             return;
                         }
                         var timelineRetry = shipmentResult.body && shipmentResult.body.data && Array.isArray(shipmentResult.body.data.timeline)
@@ -1621,7 +1948,7 @@ async function agilbankCartaoAcaoStatus() {
                 }
             }
             if (shipmentResult.response.status === 404 && code === 'SHIPMENT_NOT_FOUND') {
-                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'sem_dados' });
+                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'aguardando_remessa' });
                 return;
             }
             if (shipmentResult.response.status === 422 || code === 'VALIDATION_ERROR') {
@@ -1634,7 +1961,7 @@ async function agilbankCartaoAcaoStatus() {
 
         var shipment = shipmentResult.body && shipmentResult.body.data ? shipmentResult.body.data.shipment : null;
         if (!shipment) {
-            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'sem_dados' });
+            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'aguardando_remessa' });
             return;
         }
 
@@ -2484,16 +2811,43 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
 }
 
 /**
- * Atualiza painel de cartões (GET) + ofertas no dashboard. Expõe para index.html.
+ * Atualiza painel de cartões (GET) + snapshot de status + ofertas no dashboard. Expõe para index.html.
  */
 async function agilbankRefreshPainelCartoes() {
-    var result = await fetchCartoesFromApi();
+    agilbankShowPainelCartoesLoading(true);
+    var pair = await Promise.all([fetchCartoesFromApi(), fetchCardsStatusFromApi()]);
+    var result = pair[0];
+    var snap = pair[1];
     if (!result.ok) {
         renderCartoesErroCarregamento();
         return result;
     }
-    agilbankAplicarEstadoPainelCartao(result.cartoes);
-    return result;
+    var merged = result.cartoes;
+    if (snap.ok && snap.data) {
+        merged = agilbankMergeCardsStatusIntoLista(result.cartoes, snap.data);
+    } else if (!snap.ok && snap.reason !== 'no_auth') {
+        console.warn('agilbankRefreshPainelCartoes: cards/status falhou:', snap.error);
+    }
+    agilbankAplicarEstadoPainelCartao(merged);
+    return Object.assign({}, result, { cartoes: merged });
+}
+
+/** Pré-feedback ao abrir a seção até concluir GET /cards e /cards/status. */
+function agilbankShowPainelCartoesLoading(show) {
+    if (!show) return;
+    var flow = document.getElementById('cartaoSolicitacaoFlow');
+    if (flow && flow.style.display === 'block') return;
+    var msg = document.getElementById('cartaoPainelMensagem');
+    var grid = document.getElementById('cartoesReaisGrid');
+    if (msg) {
+        msg.style.display = 'block';
+        msg.className = 'cartao-painel-msg cartao-painel-msg--loading';
+        msg.innerHTML =
+            '<p class="cartao-painel-texto"><span aria-busy="true">' +
+            agilbankEscapeHtmlPainel('Carregando dados do cartão...') +
+            '</span></p>';
+    }
+    if (grid) grid.innerHTML = '';
 }
 
 window.agilbankRefreshPainelCartoes = agilbankRefreshPainelCartoes;
@@ -2504,6 +2858,7 @@ window.agilbankDashboardOpenCartaoPainel = agilbankDashboardOpenCartaoPainel;
 window.agilbankSetSolicitacaoWizardMode = agilbankSetSolicitacaoWizardMode;
 window.agilbankFecharSolicitacaoCartao = agilbankFecharSolicitacaoCartao;
 window.agilbankFetchCartoes = fetchCartoesFromApi;
+window.agilbankFetchCardsStatus = fetchCardsStatusFromApi;
 window.agilbankTemSolicitacaoCartaoPendente = agilbankTemSolicitacaoCartaoPendente;
 
 function buildNumeroLegacyFromLast4(last4) {

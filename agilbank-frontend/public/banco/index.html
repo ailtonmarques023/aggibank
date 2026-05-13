@@ -4199,16 +4199,20 @@
                 <i class="fas fa-chevron-left"></i>
             </button>
             <h1 class="title">Status de Entrega</h1>
+            <button type="button" class="status-entrega-refresh" id="statusEntregaBtnAtualizar" onclick="if (typeof window.agilbankCartaoAcaoStatus==='function') window.agilbankCartaoAcaoStatus();">Atualizar status</button>
         </div>
 
         <div class="status-entrega-content">
             <section class="status-entrega-hero" id="statusEntregaHero">
-                <div class="status-entrega-card-visual status-entrega-card-visual--img" aria-hidden="true">
-                    <img src="assets/cards/cartao-agilbank-azul.jpg" alt="" class="agilbank-card-preview-img agilbank-card-preview-img--status" decoding="async" />
-                    <div class="status-entrega-card-floating">
-                    <div class="status-entrega-card-last4" id="statusEntregaCardLast4">••••</div>
-                    <div class="status-entrega-card-brand" id="statusEntregaCardBrand" aria-hidden="true"></div>
+                <div class="status-entrega-card-column">
+                    <div class="status-entrega-card-visual status-entrega-card-visual--img" aria-hidden="true">
+                        <img src="assets/cards/cartao-agilbank-azul.jpg" alt="" class="agilbank-card-preview-img agilbank-card-preview-img--status" decoding="async" />
                     </div>
+                    <div class="cartao-mock-dados cartao-mock-dados--status">
+                        <span>Cartão final</span>
+                        <strong id="statusEntregaCardLast4">••••</strong>
+                    </div>
+                    <p class="cartao-mock-band" id="statusEntregaCardBrand" hidden aria-hidden="true"></p>
                 </div>
 
                 <div class="status-entrega-hero-body">
@@ -4384,19 +4388,17 @@
                 <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
             </div>
             <div class="cartao-mock-dados">
-                <div class="cartao-numero">
-                    <span class="label">Número do Cartão</span>
-                    <span class="numero" id="numeroCartaoVirtual">•••• •••• •••• ••••</span>
+                <span class="cartao-mock-dados-label">Cartão final</span>
+                <strong class="cartao-mock-dados-numero" id="numeroCartaoVirtual">•••• •••• •••• ••••</strong>
+            </div>
+            <div class="cartao-mock-meta">
+                <div class="cartao-mock-meta-item">
+                    <span class="cartao-mock-meta-lab">Titular</span>
+                    <span id="titularCartaoVirtual" class="cartao-mock-meta-val">NOME DO TITULAR</span>
                 </div>
-                <div class="cartao-info">
-                    <div class="cartao-titular">
-                        <span class="label">Titular</span>
-                        <span class="valor" id="titularCartaoVirtual">NOME DO TITULAR</span>
-                    </div>
-                    <div class="cartao-validade">
-                        <span class="label">Validade</span>
-                        <span class="valor" id="validadeCartaoVirtual">MM/AA</span>
-                    </div>
+                <div class="cartao-mock-meta-item">
+                    <span class="cartao-mock-meta-lab">Validade</span>
+                    <span id="validadeCartaoVirtual" class="cartao-mock-meta-val">MM/AA</span>
                 </div>
             </div>
             <!-- limite disponivel -->
@@ -4462,21 +4464,20 @@
                 <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
             </div>
             <div class="cartao-mock-dados">
-                <div class="cartao-numero">
-                    <span class="label">Número do Cartão</span>
-                    <span class="numero" id="numeroCartaoFisico">•••• •••• •••• ••••</span>
+                <span class="cartao-mock-dados-label">Cartão final</span>
+                <strong class="cartao-mock-dados-numero" id="numeroCartaoFisico">•••• •••• •••• ••••</strong>
+            </div>
+            <div class="cartao-mock-meta">
+                <div class="cartao-mock-meta-item">
+                    <span class="cartao-mock-meta-lab">Titular</span>
+                    <span id="titularCartaoFisico" class="cartao-mock-meta-val">NOME DO TITULAR</span>
                 </div>
-                <div class="cartao-info">
-                    <div class="cartao-titular">
-                        <span class="label">Titular</span>
-                        <span class="valor" id="titularCartaoFisico">NOME DO TITULAR</span>
-                    </div>
-                    <div class="cartao-validade">
-                        <span class="label">Validade</span>
-                        <span class="valor" id="validadeCartaoFisico">MM/AA</span>
-                    </div>
+                <div class="cartao-mock-meta-item">
+                    <span class="cartao-mock-meta-lab">Validade</span>
+                    <span id="validadeCartaoFisico" class="cartao-mock-meta-val">MM/AA</span>
                 </div>
             </div>
+            <div id="cartaoFisicoPedidoResumo" class="cartao-pedido-resumo" hidden></div>
             <!-- limite disponivel -->
             <div class="cartao-limite-info">
                 <div class="limite-header">
