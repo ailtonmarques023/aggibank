@@ -450,10 +450,11 @@
         }
 
         .status-entrega-card-visual--img .status-entrega-card-brand {
-            position: static;
-            font-size: 22px;
-            color: #fff;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+            display: none !important;
+        }
+
+        .status-entrega-card-visual--img .status-entrega-card-floating {
+            justify-content: flex-start;
         }
 
         .status-entrega-hero-body {

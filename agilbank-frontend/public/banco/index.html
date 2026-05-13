@@ -2017,7 +2017,7 @@
     <!-- header cabeçario -->
     <header class="top-bar">
         <div class="logo">
-            <img src="assets/agilbank-logo.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--header" width="216" height="36" decoding="async" />
+            <img src="assets/brand/agilbank-wordmark-header.svg" alt="AgilBank" class="agilbank-brand-wordmark-header" width="300" height="52" decoding="async" />
         </div>
         <div class="icons">
             <i class="fa-regular fa-bell" onclick="irParaNotification()">
@@ -4207,7 +4207,7 @@
                     <img src="assets/cards/cartao-agilbank-azul.jpg" alt="" class="agilbank-card-preview-img agilbank-card-preview-img--status" decoding="async" />
                     <div class="status-entrega-card-floating">
                     <div class="status-entrega-card-last4" id="statusEntregaCardLast4">••••</div>
-                    <div class="status-entrega-card-brand" id="statusEntregaCardBrand">VISA</div>
+                    <div class="status-entrega-card-brand" id="statusEntregaCardBrand" aria-hidden="true"></div>
                     </div>
                 </div>
 
@@ -4382,7 +4382,8 @@
             <!-- cartao virtual -->
             <div class="cartao-virtual-card cartao-virtual-card--preview-img">
                 <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
-                <div class="cartao-preview-overlay">
+            </div>
+            <div class="cartao-mock-dados">
                 <div class="cartao-numero">
                     <span class="label">Número do Cartão</span>
                     <span class="numero" id="numeroCartaoVirtual">•••• •••• •••• ••••</span>
@@ -4396,7 +4397,6 @@
                         <span class="label">Validade</span>
                         <span class="valor" id="validadeCartaoVirtual">MM/AA</span>
                     </div>
-                </div>
                 </div>
             </div>
             <!-- limite disponivel -->
@@ -4460,7 +4460,8 @@
             <!-- responsavel por mostrar o cartão fisico-->
             <div class="cartao-virtual-card cartao-virtual-card--preview-img">
                 <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
-                <div class="cartao-preview-overlay">
+            </div>
+            <div class="cartao-mock-dados">
                 <div class="cartao-numero">
                     <span class="label">Número do Cartão</span>
                     <span class="numero" id="numeroCartaoFisico">•••• •••• •••• ••••</span>
@@ -4474,7 +4475,6 @@
                         <span class="label">Validade</span>
                         <span class="valor" id="validadeCartaoFisico">MM/AA</span>
                     </div>
-                </div>
                 </div>
             </div>
             <!-- limite disponivel -->

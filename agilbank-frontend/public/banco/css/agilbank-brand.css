@@ -46,20 +46,27 @@
 
 /* Wordmark só texto — headers mobile (sem ícone “A”); barra azul → agilbank-wordmark-header.svg */
 .agilbank-brand-wordmark-header {
-  height: 22px;
+  height: 28px;
   width: auto;
-  max-width: 130px;
+  max-width: min(170px, 54vw);
   display: block;
   object-fit: contain;
   margin-left: auto;
   margin-right: auto;
 }
 
+/* Barra azul institucional (dashboard): um pouco mais alto que cards estreitos */
+.top-bar .agilbank-brand-wordmark-header {
+  height: 30px;
+  max-width: min(178px, 52vw);
+  margin-left: 0;
+}
+
 /* Fundo claro → agilbank-wordmark-header-on-light.svg + esta classe */
 .agilbank-brand-wordmark-header--on-light {
   margin-left: 0;
   margin-right: auto;
-  max-width: min(160px, 46vw);
+  max-width: min(170px, 54vw);
 }
 
 /* --- Compatível com telas legadas (não quebrar index / modais) --- */

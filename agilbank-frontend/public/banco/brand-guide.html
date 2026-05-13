@@ -163,8 +163,9 @@
       </div>
       <ul class="g-note">
         <li>Usar <strong>wordmark sem ícone</strong> em headers pequenos.</li>
+        <li>Tamanhos (Fase Z.2): <code>.agilbank-brand-wordmark-header</code> — altura ~28px, largura até ~170px (com <code>max-width</code> relativo à viewport). Na barra azul do <code>index.html</code>, a mesma classe sobe para ~30px via <code>.top-bar .agilbank-brand-wordmark-header</code>.</li>
         <li>Usar <strong>logo completa</strong> (dark-bg ou light-bg) em áreas com largura suficiente (hero, modais grandes, onboarding).</li>
-        <li>Usar <strong>ícone isolado</strong> só quando não houver espaço para texto nem para a composição inteira — favicon, avatar, splash, bolha compacta.</li>
+        <li>Usar <strong>ícone isolado</strong> só quando não houver espaço para texto nem para a composição inteira — favicon, avatar compacto decorativo em Serviços, splash, bolha compacta.</li>
       </ul>
     </section>
 
@@ -210,7 +211,7 @@
     <section aria-labelledby="sec-where">
       <h2 id="sec-where">Onde aplicar no app</h2>
       <ul>
-        <li><strong>index.html</strong> — barra superior, login, splash, modais (próxima migração planejada; hoje ainda pode referenciar SVGs legados em <code>assets/</code> para não quebrar o dashboard).</li>
+        <li><strong>index.html</strong> — barra superior azul: <code>agilbank-wordmark-header.svg</code> + <code>.agilbank-brand-wordmark-header</code>; login e demais áreas podem usar SVG em <code>assets/</code> até migração completa.</li>
         <li><strong>deposito.html</strong> — header azul: <code>agilbank-wordmark-header.svg</code> + <code>.agilbank-brand-wordmark-header</code>.</li>
         <li><strong>transferir.html</strong> — headers de fluxo: mesmo wordmark sobre azul.</li>
         <li><strong>movimentacao.html</strong> — barra superior azul: wordmark; bloco/comprovante em card branco: <code>agilbank-logo-light-bg.svg</code> quando for logo completa no contexto claro.</li>

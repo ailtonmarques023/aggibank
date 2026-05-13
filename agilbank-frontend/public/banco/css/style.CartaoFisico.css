@@ -499,6 +499,33 @@ padding: 0 15px;
     object-fit: contain;
 }
 
+/* Dados do cartão ao lado/fora da arte do mock — evita desalinhamento e bandeira duplicada */
+.cartao-mock-dados {
+    width: 100%;
+    max-width: 420px;
+    margin: 12px auto 0;
+    padding: 16px 16px 18px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+.cartao-mock-dados .label {
+    color: #64748b;
+    opacity: 1;
+}
+.cartao-mock-dados .numero,
+.cartao-mock-dados .valor {
+    color: #0f172a;
+    text-shadow: none;
+    font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+.cartao-mock-dados .cartao-numero .numero {
+    font-family: ui-monospace, 'Cascadia Code', 'Courier New', monospace;
+    letter-spacing: 0.06em;
+    font-size: 1.05rem;
+}
+
 .cartao-preview-overlay {
     position: absolute;
     left: 0;
