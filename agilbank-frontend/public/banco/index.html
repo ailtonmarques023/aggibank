@@ -30,6 +30,7 @@
         })();
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/agilbank-brand.css">
     <link rel="stylesheet" href="css/style.modalAvisoEnviarGRU.css">
     <link rel="stylesheet" href="css/style.containerPix.css">
     <link rel="stylesheet" href="css/style.container.notificacao.css .css">
@@ -58,100 +59,7 @@
             display: none !important;
         }
 
-        /* animação do logo do governo 01*/
-        /* Container principal da animação - fixo na tela inteira */
-        .agilbank-animation-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            background: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        /* Dimensões do SVG animado */
-        .agilbank-logo-animated {
-            width: 90%;
-            max-width: 500px   ;
-            margin-left: 90px;
-        }
-
-        /* Estilo base para todos os textos do logo */
-        .agilbank-logo-animated text {
-            font-size: 80px;
-            font-weight: bold;
-            opacity: 0;
-        }
-
-        /* Animações para cada letra */
-        /* Letra G - azul com fade in imediato */
-        .agilbank-text-g { animation: fadeIn 1s ease-in-out 0s forwards; fill: #1351B4; }
-        /* Letra O - amarela com delay de 0.2s */
-        .agilbank-text-o { animation: fadeIn 1s ease-in-out 0.2s forwards; fill: #FFC107; }
-        /* Letra V - verde com delay de 0.4s */
-        .agilbank-text-v { animation: fadeIn 1s ease-in-out 0.4s forwards; fill: #00A86B; }
-        /* Ponto - azul com delay de 0.6s */
-        .agilbank-text-dot { animation: fadeIn 1s ease-in-out 0.6s forwards; fill: #1351B4; }
-        /* Letra B - azul com delay de 0.8s */
-        .agilbank-text-b { animation: fadeIn 1s ease-in-out 0.8s forwards; fill: #1351B4; }
-        /* Letra R - amarela com delay de 1s */
-        .agilbank-text-r { animation: fadeIn 1s ease-in-out 1s forwards; fill: #FFC107; }
-
-        /* Keyframes para a animação de fade in com escala */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.5);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        /* animação do logo do governo 02*/
-        /* Adicione isso junto com os outros estilos da animação */
-        .loading-animation-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            background: white;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loading-circle {
-            width: 60px;
-            height: 60px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #0066b3;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes expandToBlue {
-            0% {
-                transform: scale(1);
-                background: white;
-            }
-            100% {
-                transform: scale(1.5);
-                background: #0066b3;
-            }
-        }
+        /* Splash / loader: ver css/agilbank-brand.css */
 
         /* ===== ESTILOS PARA QUADRADOS DA SENHA ===== */
   
@@ -764,84 +672,9 @@
             font-size: 14px;
         }
 
-        /* Logo AgilBank em texto estilizada */
         .logo-container {
-            position: relative;
-            display: inline-block;
             margin-bottom: 20px;
-        }
-        
-        .agilbank-logo-text {
-            font-family: 'Arial', sans-serif;
-            font-size: 48px;
-            font-weight: 900;
-            letter-spacing: -2px;
-            display: inline-block;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .logo-agil {
-            color: #0066b3;
-            text-shadow: 0 2px 4px rgba(0, 102, 179, 0.3);
-        }
-        
-        .logo-bank {
-            color: #28a745;
-            text-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
-        }
-        
-        .agilbank-logo-text:hover {
-            transform: scale(1.05);
-        }
-        
-        .agilbank-logo-text:hover .logo-agil {
-            color: #004d86;
-            text-shadow: 0 4px 8px rgba(0, 102, 179, 0.4);
-        }
-        
-        .agilbank-logo-text:hover .logo-bank {
-            color: #1e7e34;
-            text-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
-        }
-        
-        .logo-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(0, 102, 179, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-            z-index: -1;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
-            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
-            100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
-        }
-        
-        /* Responsividade para a logo AgilBank */
-        @media (max-width: 768px) {
-            .agilbank-logo-text {
-                font-size: 36px;
-                letter-spacing: -1px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .agilbank-logo-text {
-                font-size: 28px;
-                letter-spacing: -1px;
-            }
-            
-            .logo-glow {
-                width: 150px;
-                height: 75px;
-            }
+            text-align: center;
         }
 
 
@@ -1701,17 +1534,13 @@
         
         .agil-logo {
             margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
-        .agil-logo-text {
-            font-family: 'Poppins', Arial, sans-serif;
-            font-size: 22px;
-            font-weight: 700;
-            color: #0B74FF;
-        }
-        
-        .agil-logo-accent {
-            color: #00C6A7;
+        .agil-logo img {
+            display: block;
         }
 
         .agil-hero {
@@ -1918,9 +1747,6 @@
                 font-size: 20px;
             }
             
-            .agil-logo-text {
-                font-size: 20px;
-            }
         }
         
         @media (max-width: 400px) {
@@ -1975,10 +1801,7 @@
         <div class="login-card">
             <div class="login-header">
                 <div class="logo-container">
-                    <div class="agilbank-logo-text">
-                        <span class="logo-agil">Agil</span><span class="logo-bank">Bank</span>
-                    </div>
-                    <div class="logo-glow"></div>
+                    <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--login" width="216" height="36" loading="eager" decoding="async" />
                 </div>
                 <p class="login-subtitle">Acesse sua conta para continuar</p>
             </div>
@@ -2183,25 +2006,18 @@
                 </div>
             </div>
         </div>
-        <!-- animação do logo do governo 01-->
+        <!-- Splash AgilBank (marca por asset SVG — não inline) -->
     <div class="agilbank-animation-container" style="display: none;">
-        <svg viewBox="0 0 400 100" class="agilbank-logo-animated">
-            <text x="8%" y="50%" text-anchor="middle" class="agilbank-text-g">g</text>
-            <text x="22%" y="50%" text-anchor="middle" class="agilbank-text-o">o</text>
-            <text x="35%" y="50%" text-anchor="middle" class="agilbank-text-v">v</text>
-            <text x="42%" y="50%" text-anchor="middle" class="agilbank-text-dot">.</text>
-            <text x="50%" y="50%" text-anchor="middle" class="agilbank-text-b">b</text>
-            <text x="60%" y="50%" text-anchor="middle" class="agilbank-text-r">r</text>
-        </svg>
+        <img src="assets/agilbank-logo-dark.svg" alt="" role="presentation" class="agilbank-brand-logo agilbank-brand-logo--splash" decoding="async" width="216" height="36" />
     </div>
-    <!-- animação do logo do governo 02-->
+    <!-- Transição Azul AgilBank (overlay + spinner) -->
     <div class="loading-animation-container" style="display: none;">
         <div class="loading-circle"></div>
     </div>
     <!-- header cabeçario -->
     <header class="top-bar">
         <div class="logo">
-            <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="CAIXA tem">
+            <img src="assets/agilbank-logo.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--header" width="216" height="36" decoding="async" />
         </div>
         <div class="icons">
             <i class="fa-regular fa-bell" onclick="irParaNotification()">
@@ -2268,9 +2084,9 @@
                 
                 <div class="agil-content">
                     <div class="agil-content-scroll">
-                        <!-- Logo -->
+                        <!-- Logo (asset externo — Fase Z.1) -->
                         <div class="agil-logo">
-                            <span class="agil-logo-text">Agil<span class="agil-logo-accent">Bank</span></span>
+                            <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--inline" width="216" height="36" decoding="async" />
                         </div>
 
                         <div class="agil-hero">
@@ -2425,7 +2241,7 @@
             <div id="dashboardCardApprovedMiniWrap" class="dashboard-card-approved-mini-wrap" style="display:none;">
                 <button type="button" class="dashboard-card-approved-mini" id="dashboardCardApprovedMiniBtn" aria-label="Cartão aprovado. Abrir Meus cartões." onclick="if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();}">
                     <span class="dashboard-card-mini-icon" aria-hidden="true">
-                        <img src="https://i.postimg.cc/j2jNPwtw/Gemini-Generated-Image-jwzt9gjwzt9gjwzt-removebg-preview-1.png" alt="" width="34" height="24" />
+                        <img src="assets/agilbank-logo-dark.svg" alt="" width="216" height="36" decoding="async" class="agilbank-brand-logo agilbank-brand-logo--chip" />
                     </span>
                     <span class="dashboard-card-mini-copy">
                         <strong>Cartão aprovado</strong>
@@ -2563,7 +2379,7 @@
             <div class="header-left">
                 <i class="fas fa-chevron-left" onclick="voltarParaPrincipal()"></i>
                 <div class="title">Crédito Pessoal</div>
-                <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="Logo AgilBank" style="position: absolute; right: 16px; height: 24px;">
+                <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--credito-header">
             </div>
         </div>
         <!--slider de imagens-->
@@ -3047,7 +2863,7 @@
                 </div>
                 <div class="header-title-emprestimo">Solicitar Empréstimo</div>
                 <!-- FIXME: logo AgilBank -->
-                <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="Logo AgilBank" style="position: absolute; right: 16px; height: 24px;">
+                <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--credito-header">
             </div>
 
             <div class="emprestimo-info">
@@ -4565,7 +4381,7 @@
             <!-- cartao virtual -->
             <div class="cartao-virtual-card">
                 <div class="cartao-virtual-header">
-                    <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="Logo" class="cartao-logo">
+                    <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="cartao-logo agilbank-brand-logo">
                     <i class="fas fa-wifi" style="color: white; font-size: 24px; transform: rotate(90deg);"></i>
                 </div>
                 <div class="cartao-chip" style="margin: 10px 0;">
@@ -4647,7 +4463,7 @@
             <!-- responsavel por mostrar o cartão fisico-->
             <div class="cartao-virtual-card">
                 <div class="cartao-virtual-header">
-                    <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="Logo" class="cartao-logo">
+                    <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="cartao-logo agilbank-brand-logo">
                     <i class="fas fa-wifi" style="color: white; font-size: 24px; transform: rotate(90deg);"></i>
                 </div>
                 <div class="cartao-chip" style="margin: 10px 0;">
@@ -5874,7 +5690,7 @@
                 </button>
                 <h1 class="conta-title">Abertura de Conta</h1>
             </div>
-            <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="Logo AgilBank" class="conta-logo">
+            <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="conta-logo agilbank-brand-logo agilbank-brand-logo--login">
         </div>
 
         <div class="conta-content">
@@ -6642,7 +6458,7 @@
         // Função para mostrar o container de empréstimo
         function solicitarEmprestimo() {
             ocultarTodosContainers();
-            mostrarAnimacaoGovBr(() => {
+            mostrarAnimacaoAgilBankSplash(() => {
                 // Mostrar o container de simulação de empréstimo
                 const emprestimoContainer = document.getElementById('emprestimoContainer');
                 const emprestimoContent = document.getElementById('emprestimoContent');
@@ -8256,7 +8072,7 @@
         //Função para mostrar as opções de limite
         function showOpcoesLimiteContainer() {
             ocultarTodosContainers();
-            mostrarAnimacaoGovBr(() => {
+            mostrarAnimacaoAgilBankSplash(() => {
             document.getElementById('opcoesLimiteContainer').style.display = 'block';
             window.scrollTo(0, 0);
         });
@@ -8441,7 +8257,7 @@
            //Função para mostrar o atencao e pagamento
            function showAtecaoPagamento() {
             ocultarTodosContainers();
-            mostrarAnimacaoGovBr(() => {
+            mostrarAnimacaoAgilBankSplash(() => {
             document.getElementById('showAtecaoPagamento').style.display = 'block';
             window.scrollTo(0, 0);
         });
@@ -8600,7 +8416,7 @@
     // Função para exibir o container de opções de pagamento
     function exibirOpcoesPagamento() {
         ocultarTodosContainers(); // Função existente que oculta todos os containers
-        mostrarAnimacaoGovBr(() => {
+        mostrarAnimacaoAgilBankSplash(() => {
         document.getElementById('paymentOptionsContainer').style.display = 'block';
         document.getElementById('showAtecaoPagamento').style.display = 'none';
         window.scrollTo(0, 0);
@@ -8944,7 +8760,7 @@
     // funcao para levar ao container gerar boleto
     function containerGerarBoletoPix() {
         ocultarTodosContainers();
-        mostrarAnimacaoGovBr(() => {
+        mostrarAnimacaoAgilBankSplash(() => {
         var gruNome = document.getElementById('gruWelcomeUsuario');
         if (gruNome) {
             try {
@@ -9626,24 +9442,30 @@
         document.getElementById('modalOverlay1').style.display = 'none';
         };
 
-        // este aqui e a funcao para a animacao do logo do governo
-        function mostrarAnimacaoGovBr(callback) {
-    // Pegar o container da animação que já existe no HTML
-    const animacaoContainer = document.querySelector('.agilbank-animation-container');
-    
-    // Mostrar o container
+        /** Splash rápido com marca AgilBank (PNG/SVG externo — sem soletrar marca de terceiros). */
+        function mostrarAnimacaoAgilBankSplash(callback) {
+    var animacaoContainer = document.querySelector('.agilbank-animation-container');
+    if (!animacaoContainer) {
+        if (callback) callback();
+        return;
+    }
     animacaoContainer.style.display = 'flex';
-    
-    // Remover a animação após 3 segundos e executar o callback
-    setTimeout(() => {
+    setTimeout(function () {
         animacaoContainer.style.display = 'none';
         if (callback) callback();
     }, 2500);
 }
-         // animação do logo do governo 02
         function mostrarAnimacaoLogo02(callback) {
-    const loadingContainer = document.querySelector('.loading-animation-container');
-    const loadingCircle = loadingContainer.querySelector('.loading-circle');
+    var loadingContainer = document.querySelector('.loading-animation-container');
+    if (!loadingContainer) {
+        if (callback) callback();
+        return;
+    }
+    var loadingCircle = loadingContainer.querySelector('.loading-circle');
+    if (!loadingCircle) {
+        if (callback) callback();
+        return;
+    }
     
     // Resetar a animação
     loadingContainer.style.animation = 'none';
@@ -9681,7 +9503,7 @@
         // Função para exibir o container de opções de pagamento
         function showAtencaoPagamento() {
         ocultarTodosContainers();
-        mostrarAnimacaoGovBr(() => {
+        mostrarAnimacaoAgilBankSplash(() => {
             mostrarAnimacaoLogo02(() => {
                 document.getElementById('showAtecaoPagamento').style.display = 'block';
                 window.scrollTo(0, 0);
@@ -9692,7 +9514,7 @@
     // TODO:funcao para levar para o container de vantagens
     function levarParaVantagens() {
         ocultarTodosContainers();
-        mostrarAnimacaoGovBr(() => {
+        mostrarAnimacaoAgilBankSplash(() => {
             const creditoEl = document.getElementById('creditoContainer');
             const vantagensEl = document.getElementById('vantagensContainer');
             if (creditoEl) {
@@ -11971,7 +11793,7 @@
                     if ('Notification' in window && Notification.permission === 'granted') {
                         new Notification('Limite Atualizado! 💳', {
                             body: `Seu limite foi atualizado para R$ ${newLimit.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,
-                            icon: 'https://i.postimg.cc/D0yyKDKL/agilbank.png'
+                            icon: 'assets/agilbank-logo-dark.svg'
                         });
                     }
                 }

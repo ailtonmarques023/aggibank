@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#020A1E" />
+  <title>Guia de Marca AgilBank</title>
+  <link rel="stylesheet" href="css/agilbank-brand.css" />
+  <style>
+    :root {
+      --g-bg: #020A1E;
+      --g-surface: rgba(255, 255, 255, 0.05);
+      --g-border: rgba(255, 255, 255, 0.12);
+      --g-ink: #e8eef8;
+      --g-muted: rgba(232, 238, 248, 0.72);
+      --g-card-light: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 65% 20%, rgba(0, 140, 255, 0.2), transparent 40%),
+        linear-gradient(160deg, #020A1E 0%, #061B3A 50%, #020A1E 100%);
+      color: var(--g-ink);
+      min-height: 100vh;
+      line-height: 1.55;
+    }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 18px calc(48px + env(safe-area-inset-bottom, 12px));
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .g-lead {
+      margin: 0 0 32px;
+      color: var(--g-muted);
+      font-size: 1rem;
+    }
+    section {
+      margin-bottom: 36px;
+      padding: 24px;
+      border-radius: 18px;
+      background: var(--g-surface);
+      border: 1px solid var(--g-border);
+    }
+    section h2 {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .g-panel-dark {
+      background: linear-gradient(90deg, #0066b3 0%, #007fd4 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 20px;
+      border-radius: 14px;
+      margin: 16px 0;
+    }
+    .g-panel-light {
+      background: var(--g-card-light);
+      color: #14213D;
+      padding: 20px;
+      border-radius: 14px;
+      margin: 16px 0;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .g-panel-light h3 { color: #07152E; margin-top: 0; }
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+    }
+    pre {
+      margin: 12px 0 0;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      overflow-x: auto;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .g-panel-light pre {
+      background: #f0f4f8;
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #0f172a;
+    }
+    ul { margin: 8px 0 0; padding-left: 1.2em; }
+    li { margin: 6px 0; }
+    .g-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .g-note { color: var(--g-muted); font-size: 0.9rem; margin-top: 10px; }
+    .g-panel-light .g-note { color: #475569; }
+    a { color: #7ecbff; }
+    .g-panel-light a { color: #0066b3; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Guia de Marca AgilBank</h1>
+    <p class="g-lead">Identidade visual para o frontend legado em <code>public/banco/</code>. Use sempre arquivos SVG externos — não embutir SVG grande no <code>index.html</code>.</p>
+
+    <section aria-labelledby="sec-dark">
+      <h2 id="sec-dark">Logo para fundo azul / escuro</h2>
+      <p>Arquivo: <code>assets/brand/agilbank-logo-dark-bg.svg</code> — texto claro e gradiente no ícone “A”.</p>
+      <div class="g-panel-dark" role="img" aria-label="Exemplo em faixa azul">
+        <p class="agilbank-brand-header-mark">
+          <img src="assets/brand/agilbank-logo-dark-bg.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--header agilbank-brand-logo--dark" width="760" height="180" decoding="async" />
+        </p>
+      </div>
+      <pre><code>&lt;link rel="stylesheet" href="css/agilbank-brand.css" /&gt;
+&lt;!-- Header azul --&gt;
+&lt;img src="assets/brand/agilbank-logo-dark-bg.svg" alt="AgilBank"
+     class="agilbank-brand-logo agilbank-brand-logo--header agilbank-brand-logo--dark"
+     width="760" height="180" decoding="async" /&gt;</code></pre>
+    </section>
+
+    <section aria-labelledby="sec-light">
+      <h2 id="sec-light">Logo para fundo branco / claro</h2>
+      <p>Arquivo: <code>assets/brand/agilbank-logo-light-bg.svg</code> — tipografia escura e recorte interno claro.</p>
+      <div class="g-panel-light">
+        <p class="agilbank-brand-header-mark">
+          <img src="assets/brand/agilbank-logo-light-bg.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--light" width="760" height="180" decoding="async" />
+        </p>
+        <pre><code>&lt;img src="assets/brand/agilbank-logo-light-bg.svg" alt="AgilBank"
+     class="agilbank-brand-logo agilbank-brand-logo--light"
+     width="760" height="180" decoding="async" /&gt;</code></pre>
+      </div>
+    </section>
+
+    <section aria-labelledby="sec-icon">
+      <h2 id="sec-icon">Ícone isolado</h2>
+      <p><code>assets/brand/agilbank-icon.svg</code> — favicon, avatar, splash ou espaços reduzidos.</p>
+      <div class="g-icon-row">
+        <img src="assets/brand/agilbank-icon.svg" alt="" class="agilbank-brand-icon" width="145" height="140" decoding="async" aria-hidden="true" />
+        <img src="assets/brand/agilbank-icon.svg" alt="" class="agilbank-brand-icon" style="width:48px;height:48px;" aria-hidden="true" />
+      </div>
+      <pre><code>&lt;img src="assets/brand/agilbank-icon.svg" alt=""
+     class="agilbank-brand-icon" aria-hidden="true"
+     width="145" height="140" decoding="async" /&gt;</code></pre>
+      <p class="g-note">Quando o ícone for só decorativo, use <code>alt=""</code> e <code>aria-hidden="true"</code>. Se for o único elemento de marca no bloco, prefira <code>alt="AgilBank"</code> e não use <code>aria-hidden</code>.</p>
+    </section>
+
+    <section aria-labelledby="sec-import">
+      <h2 id="sec-import">Como importar</h2>
+      <ol>
+        <li>Inclua a folha de estilo em cada HTML: <code>&lt;link rel="stylesheet" href="css/agilbank-brand.css" /&gt;</code> (caminho relativo a partir de <code>public/banco/</code>).</li>
+        <li>Referencie o SVG certo para o contraste do fundo (ver regras abaixo).</li>
+        <li>Mantenha proporção: use classes <code>.agilbank-brand-logo</code> / <code>--header</code> e não force largura com distorção.</li>
+      </ol>
+      <p class="g-note">Páginas que ainda apontam para <code>assets/agilbank-brand.css</code> continuam válidas: esse arquivo apenas reexporta <code>css/agilbank-brand.css</code>.</p>
+    </section>
+
+    <section aria-labelledby="sec-rules">
+      <h2 id="sec-rules">Regras de uso</h2>
+      <ul>
+        <li>Em header azul ou fundo escuro, usar <strong>agilbank-logo-dark-bg.svg</strong>.</li>
+        <li>Em fundo branco ou claro, usar <strong>agilbank-logo-light-bg.svg</strong>.</li>
+        <li>Em espaços pequenos, usar <strong>agilbank-icon.svg</strong>.</li>
+        <li>Não usar gov.br como marca do app.</li>
+        <li>Não distorcer a logo nem alterar proporção (CSS: <code>height</code> + <code>width: auto</code> ou classes fornecidas).</li>
+        <li>Evitar sombra pesada sobre a marca.</li>
+        <li>Não usar amarelo ou paleta de terceiros para substituir o gradiente institucional.</li>
+        <li>Não colocar SVG grande inline no <code>index.html</code>.</li>
+        <li>Não usar wordmark de texto escuro sobre header azul; não usar wordmark claro isolado sobre cartão branco sem o arquivo adequado.</li>
+        <li>Manter <code>alt="AgilBank"</code> quando a imagem representar a marca textual completa.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="sec-where">
+      <h2 id="sec-where">Onde aplicar no app</h2>
+      <ul>
+        <li><strong>index.html</strong> — barra superior, login, splash, modais (próxima migração planejada; hoje ainda pode referenciar SVGs legados em <code>assets/</code> para não quebrar o dashboard).</li>
+        <li><strong>deposito.html</strong> — header azul: <code>agilbank-logo-dark-bg.svg</code> (aplicado nesta fase).</li>
+        <li><strong>transferir.html</strong> — headers de fluxo: <code>agilbank-logo-dark-bg.svg</code> (aplicado).</li>
+        <li><strong>movimentacao.html</strong> — header azul: dark-bg; comprovante em card branco: light-bg (aplicado; mesma composição alimenta exportação visual/PNG).</li>
+        <li><strong>modulos.html</strong> — área clara: light-bg (aplicado).</li>
+        <li><strong>emprestimos.html, notificacoes.html, reset-password, formulario…</strong> — alinhar na próxima iteração ao guia.</li>
+      </ul>
+    </section>
+
+    <p class="g-note" style="margin-top:28px;">AgilBank — documento interno de marca. Sem alteração de API ou fluxos financeiros.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,144 @@
+/*
+ * AgilBank — sistema de marca (Fase Z.1)
+ * Logos em: assets/brand/*.svg — não duplicar SVG grande nos HTML.
+ */
+.agilbank-brand-logo {
+  display: block;
+  width: auto;
+  height: 28px;
+  max-width: 100%;
+}
+
+/* Header compacto em barra azul (par: agilbank-logo-dark-bg.svg) */
+.agilbank-brand-logo--header {
+  height: 24px;
+  max-width: 150px;
+  margin: 0 auto;
+}
+
+/* Marca em uso com arquivo agilbank-logo-light-bg.svg */
+.agilbank-brand-logo--light {
+  object-fit: contain;
+}
+
+/* Marca em uso com arquivo agilbank-logo-dark-bg.svg */
+.agilbank-brand-logo--dark {
+  object-fit: contain;
+}
+
+/* Ícone só “A”; decorativo quando em chip — aria-hidden conforme uso */
+.agilbank-brand-icon {
+  width: 36px;
+  height: 36px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Container opcional para alinhar logo no header */
+.agilbank-brand-header-mark {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+/* --- Compatível com telas legadas (não quebrar index / modais) --- */
+.agilbank-brand-logo--inline {
+  height: 24px;
+  max-width: 140px;
+}
+
+.agilbank-brand-logo--login {
+  height: 40px;
+  max-width: 220px;
+  margin: 0 auto;
+}
+
+.agilbank-brand-logo--credito-header {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 24px;
+  max-width: 140px;
+  width: auto;
+}
+
+.agilbank-brand-logo--chip {
+  height: 22px;
+  max-width: 100px;
+}
+
+.agilbank-brand-logo--splash {
+  width: min(78vw, 320px);
+  height: auto;
+  max-height: min(28vh, 120px);
+  margin: 0 auto;
+  display: block;
+  opacity: 0;
+  animation: agilbank-splash-fade-in 0.65s ease-out 0.05s forwards;
+}
+
+@keyframes agilbank-splash-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.agilbank-animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: #fff;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: #fff;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-circle {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #0066b3;
+  border-radius: 50%;
+  animation: agilbank-splash-spin 1s linear infinite;
+}
+
+@keyframes agilbank-splash-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes expandToBlue {
+  0% {
+    transform: scale(1);
+    background: #fff;
+  }
+  100% {
+    transform: scale(1.5);
+    background: #0066b3;
+  }
+}

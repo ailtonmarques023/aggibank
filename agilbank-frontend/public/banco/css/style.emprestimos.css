@@ -96,6 +96,13 @@
   margin: 0;
   font-size: 11px;
   opacity: 0.9;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.ab-emp-topbar-kicker img {
+  display: block;
 }
 
 .ab-emp-topbar-title {

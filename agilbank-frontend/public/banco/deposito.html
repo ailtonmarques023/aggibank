@@ -8,6 +8,7 @@
   <title>Adicionar dinheiro — AgilBank</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/agilbank-brand.css">
   <script src="js/legacyAuthStore.js"></script>
   <script src="js/agilbankApiBase.js"></script>
   <script src="js/legacyApiClient.js"></script>
@@ -103,6 +104,9 @@
       letter-spacing: 0.03em;
       margin: 0;
       line-height: 1.2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .dep-header-actions {
       display: flex;
@@ -156,6 +160,9 @@
       padding: 16px 15px 18px;
       border: none;
     }
+    #depMainCard {
+      height: 700px;
+    }
     .dep-hint {
       font-size: 0.8rem;
       color: var(--ab-muted);
@@ -189,6 +196,7 @@
       flex-wrap: wrap;
       gap: 8px;
       margin: 12px 0 4px;
+      background-color: rgba(255, 255, 255, 1);
     }
     .dep-btn {
       border: none;
@@ -220,6 +228,9 @@
     .dep-btn-primary:focus-visible {
       outline: 2px solid var(--dep-primary-dark);
       outline-offset: 2px;
+    }
+    #depBtnGerar {
+      margin-top: 350px;
     }
     .dep-row-actions {
       display: flex;
@@ -334,7 +345,7 @@
             <path d="M15 18l-6-6 6-6"/>
           </svg>
         </button>
-        <p class="dep-header-brand">AgilBank</p>
+        <p class="dep-header-brand"><img src="assets/brand/agilbank-logo-dark-bg.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--header agilbank-brand-logo--dark" width="760" height="180" decoding="async" /></p>
         <div class="dep-header-actions" aria-hidden="true">
           <span class="dep-icon-bell-wrap"><i class="far fa-bell"></i><span class="dep-notify-dot"></span></span>
           <i class="fas fa-magnifying-glass"></i>

@@ -2914,7 +2914,7 @@ function showErrorModal(title, message, opts) {
  * Incrementa o progresso até 100% e então mostra o container de vencimento
  */
 function iniciarBarraProgresso() {
-    mostrarAnimacaoGovBr(() => {
+    mostrarAnimacaoAgilBankSplash(() => {
     let progress = 0;
     const progressFill = document.getElementById('progressFill');
     const progressInterval = setInterval(() => {
@@ -2960,9 +2960,9 @@ async function selecionarVencimento(dia, ev) {
         console.log('📋 Dados do cartão:', cartaoData);
 
         // Sequência de exibição dos containers com delays
-        mostrarAnimacaoGovBr(() => {
-            mostrarAnimacaoGovBr(() => {
-                mostrarAnimacaoGovBr(() => {
+        mostrarAnimacaoAgilBankSplash(() => {
+            mostrarAnimacaoAgilBankSplash(() => {
+                mostrarAnimacaoAgilBankSplash(() => {
                     document.getElementById('vencimentoContainer').style.display = 'none';
                     document.getElementById('aprovacaoContainer').style.display = 'block';
                     

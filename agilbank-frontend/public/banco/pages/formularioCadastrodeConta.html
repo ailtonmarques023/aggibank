@@ -9,6 +9,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/agilbank-brand.css">
     <link rel="stylesheet" href="../css/formulario-fix.css?v=20241220-013">
     <link rel="icon" href="../favicon.ico" type="image/x-icon">
     <style>
@@ -62,8 +63,10 @@
         }
 
         .conta-logo {
-            width: 72px;
-            margin-bottom: 8px;
+            display: block;
+            width: auto;
+            max-width: 220px;
+            margin: 0 auto 8px;
         }
 
         .conta-title {
@@ -955,7 +958,7 @@
         <div class="conta-content">
             <!-- Header do Formulário -->
             <div class="conta-header">
-                <img src="https://i.postimg.cc/D0yyKDKL/agilbank.png" alt="AgilBank" class="conta-logo">
+                <img src="../assets/agilbank-logo-dark.svg" alt="AgilBank" class="conta-logo agilbank-brand-logo agilbank-brand-logo--login">
                 <h1 class="conta-title">Abertura de Conta</h1>
                 <p class="conta-subtitle">Preencha os dados para criar sua conta</p>
                 <button class="conta-back-btn" onclick="window.location.href='../index.bancogov.html'">

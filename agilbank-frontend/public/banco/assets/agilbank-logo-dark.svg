@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 36" role="img" aria-labelledby="abd">
+  <title id="abd">AgilBank</title>
+  <rect x="1" y="4" width="32" height="28" rx="8" fill="#0066b3"/>
+  <text x="17" y="24" text-anchor="middle" fill="#fff" font-family="Roboto, 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="800">AB</text>
+  <text x="40" y="25" fill="#0066b3" font-family="Roboto, 'Segoe UI', Arial, sans-serif" font-size="19" font-weight="700">AgilBank</text>
+</svg>

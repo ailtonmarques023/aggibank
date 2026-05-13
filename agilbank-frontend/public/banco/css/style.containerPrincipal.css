@@ -111,9 +111,9 @@
             align-items: center;
             z-index: 1;
         }
-        /* logo */
+        /* logo — altura/max vêm de assets/agilbank-brand.css (.agilbank-brand-logo--header) */
         .top-bar .logo img {
-            height: 28px;
+            display: block;
         }
 
         /* icones */
