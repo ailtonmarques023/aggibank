@@ -400,6 +400,90 @@ function shipmentStatusFlattenForFrontend(shipmentPrismaRow, holderName, address
 }
 
 /**
+ * Estado consolidado para UI: frete pago somente com shippingFeeStatus === DEBITADO
+ * (débito em conta em POST /shipment ou liquidação Pix em pixSettlementService).
+ * Nunca infere pagamento por status visual ou tracking sozinho.
+ */
+function computePhysicalDeliverySummary({ tipoRep, shipmentRow }) {
+  const tipo = String(tipoRep || '').toLowerCase();
+  if (tipo !== 'credito') {
+    return {
+      freightStatus: 'NAO_APLICAVEL',
+      freightPaid: false,
+      productionStarted: false,
+      shipmentUiState: null,
+      shipmentStatus: null,
+      trackingCode: null,
+    };
+  }
+
+  if (!shipmentRow) {
+    return {
+      freightStatus: 'PENDENTE',
+      freightPaid: false,
+      productionStarted: false,
+      shipmentUiState: 'AWAITING_LOGISTICS_SETUP',
+      shipmentStatus: null,
+      trackingCode: null,
+    };
+  }
+
+  const fee = String(shipmentRow.shippingFeeStatus || '').toUpperCase();
+  const st = String(shipmentRow.status || '').toUpperCase();
+  const freightPaid = fee === 'DEBITADO';
+
+  let freightStatus = 'PENDENTE';
+  if (freightPaid) freightStatus = 'PAGO';
+  else if (fee === 'RECUSADO') freightStatus = 'RECUSADO';
+
+  const trackingRaw = shipmentRow.trackingCode ? String(shipmentRow.trackingCode).trim() : '';
+  const trackingCode = trackingRaw ? trackingRaw.slice(0, 80) : null;
+
+  const inTransitStatuses = ['POSTADO', 'EM_TRANSITO', 'SAIU_PARA_ENTREGA'];
+
+  let shipmentUiState = 'FREIGHT_PENDING';
+  let productionStarted = false;
+
+  if (fee === 'RECUSADO') {
+    shipmentUiState = 'FREIGHT_REFUSED';
+    productionStarted = false;
+  } else if (!freightPaid) {
+    shipmentUiState = 'FREIGHT_PENDING';
+    productionStarted = false;
+  } else if (st === 'ENTREGUE') {
+    shipmentUiState = 'ENTREGUE';
+    productionStarted = true;
+  } else if (st === 'DEVOLVIDO') {
+    shipmentUiState = 'DEVOLVIDO';
+    productionStarted = true;
+  } else if (st === 'FALHA_ENTREGA') {
+    shipmentUiState = 'FALHA_ENTREGA';
+    productionStarted = true;
+  } else if (inTransitStatuses.includes(st) || trackingCode) {
+    shipmentUiState = 'EM_TRANSITO';
+    productionStarted = true;
+  } else if (['COBRANCA_CONFIRMADA', 'EM_PRODUCAO'].includes(st)) {
+    shipmentUiState = 'PRODUCTION_STARTED_WAITING_SHIPMENT';
+    productionStarted = true;
+  } else if (st === 'AGUARDANDO_COBRANCA') {
+    shipmentUiState = freightPaid ? 'PRODUCTION_STARTED_WAITING_SHIPMENT' : 'FREIGHT_PENDING';
+    productionStarted = freightPaid;
+  } else {
+    shipmentUiState = freightPaid ? 'PRODUCTION_STARTED_WAITING_SHIPMENT' : 'FREIGHT_PENDING';
+    productionStarted = freightPaid;
+  }
+
+  return {
+    freightStatus,
+    freightPaid,
+    productionStarted,
+    shipmentUiState,
+    shipmentStatus: st || null,
+    trackingCode,
+  };
+}
+
+/**
  * Monta objeto persistivel em dadosSolicitacao (apenas whitelist; sem PIN/CVV/PAN).
  */
 function sanitizeDadosAnaliseForStorage(raw) {
@@ -683,6 +767,7 @@ router.get('/status', async (req, res) => {
     let cardOut = null;
     let shipmentOut = null;
     let pedidoPreview = null;
+    let shipmentRow = null;
 
     if (representative) {
       const rawSnap = representative.dadosSolicitacao;
@@ -713,7 +798,7 @@ router.get('/status', async (req, res) => {
 
       if (tipoRep === 'credito') {
         try {
-          const shipmentRow = await prisma.cardShipment.findFirst({
+          shipmentRow = await prisma.cardShipment.findFirst({
             where: { cardId: representative.id, userId },
             orderBy: { createdAt: 'desc' },
             include: {
@@ -737,12 +822,20 @@ router.get('/status', async (req, res) => {
         } catch (shipErr) {
           if (shipErr.code === 'P2021') {
             shipmentOut = null;
+            shipmentRow = null;
           } else {
             throw shipErr;
           }
         }
       }
     }
+
+    const physicalDelivery = representative
+      ? computePhysicalDeliverySummary({
+          tipoRep: representative.tipo,
+          shipmentRow,
+        })
+      : null;
 
     return res.json({
       success: true,
@@ -751,6 +844,7 @@ router.get('/status', async (req, res) => {
         hasCard,
         card: cardOut,
         shipment: shipmentOut,
+        physicalDelivery,
       },
     });
   } catch (error) {

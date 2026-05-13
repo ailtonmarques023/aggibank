@@ -462,9 +462,10 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expect(res.body.data.hasCard).toBe(false);
       expect(res.body.data.card).toBeNull();
       expect(res.body.data.shipment).toBeNull();
+      expect(res.body.data.physicalDelivery).toBeNull();
     });
 
-    it('crédito aprovado com remessa devolve últimos dígitos, holderName pelo usuário autenticado e dados logísticos (sem PAN/CVV/dadosSolicitacao)', async () => {
+    it('crédito aprovado com remessa e frete PENDENTE → FREIGHT_PENDING (frete não pago mesmo com código futuro cancelado)', async () => {
       prisma.cartao.findMany.mockResolvedValueOnce([
         {
           id: 'c-rem',
@@ -497,13 +498,13 @@ describe('Cards API — POST decisão e GET segurança', () => {
         id: 'ship-x',
         cardId: 'c-rem',
         userId: 'test-user-id',
-        status: 'EM_PRODUCAO',
+        status: 'AGUARDANDO_COBRANCA',
         shippingFeeAmount: 39.9,
         shippingFeeStatus: 'PENDENTE',
         shippingFeeMovementId: null,
         carrierCode: null,
-        carrierName: 'Correios',
-        trackingCode: 'TR123AG',
+        carrierName: null,
+        trackingCode: null,
         trackingUrl: null,
         estimatedDeliveryAt: new Date('2026-06-01T12:00:00.000Z'),
         postedAt: null,
@@ -538,7 +539,11 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expect(res.body.data.card.type).toBe('credit');
       expect(res.body.data.card.brand).toBe('VISA');
       expect(res.body.data.shipment).toBeTruthy();
-      expect(res.body.data.shipment.trackingCode).toBe('TR123AG');
+
+      expect(res.body.data.physicalDelivery).toBeTruthy();
+      expect(res.body.data.physicalDelivery.freightPaid).toBe(false);
+      expect(res.body.data.physicalDelivery.freightStatus).toBe('PENDENTE');
+      expect(res.body.data.physicalDelivery.shipmentUiState).toBe('FREIGHT_PENDING');
 
       expect(res.body.data.card).not.toHaveProperty('dadosSolicitacao');
       expect(JSON.stringify(res.body)).not.toContain('nao-devolve');
@@ -548,6 +553,161 @@ describe('Cards API — POST decisão e GET segurança', () => {
       });
     });
 
+    it('frete DEBITADO sem postagem → PRODUCTION_STARTED_WAITING_SHIPMENT', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([
+        {
+          id: 'c-prod',
+          userId: 'test-user-id',
+          tipo: 'credito',
+          bandeira: 'VISA',
+          status: 'aprovado',
+          last4: '2222',
+          maskedNumber: '**** **** **** 2222',
+          dataSolicitacao: new Date('2026-05-01T12:00:00.000Z'),
+          dataAprovacao: new Date('2026-05-03T12:00:00.000Z'),
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          dadosSolicitacao: null,
+        },
+      ]);
+
+      prisma.cardShipment.findFirst.mockResolvedValueOnce({
+        id: 'ship-prod',
+        cardId: 'c-prod',
+        userId: 'test-user-id',
+        status: 'COBRANCA_CONFIRMADA',
+        shippingFeeAmount: 39.9,
+        shippingFeeStatus: 'DEBITADO',
+        shippingFeeMovementId: 'mov-1',
+        trackingCode: null,
+        carrierName: null,
+        addressSnapshot: {},
+        createdAt: new Date('2026-05-03T13:00:00.000Z'),
+        updatedAt: new Date('2026-05-03T13:00:00.000Z'),
+        user: { endereco: {} },
+      });
+
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.data.physicalDelivery.freightPaid).toBe(true);
+      expect(res.body.data.physicalDelivery.freightStatus).toBe('PAGO');
+      expect(res.body.data.physicalDelivery.productionStarted).toBe(true);
+      expect(res.body.data.physicalDelivery.shipmentUiState).toBe('PRODUCTION_STARTED_WAITING_SHIPMENT');
+    });
+
+    it('frete pago + POSTADO → EM_TRANSITO', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([
+        {
+          id: 'c-tr',
+          userId: 'test-user-id',
+          tipo: 'credito',
+          bandeira: 'VISA',
+          status: 'ativo',
+          last4: '3333',
+          maskedNumber: '**** **** **** 3333',
+          dataSolicitacao: new Date('2026-05-01T12:00:00.000Z'),
+          dataAprovacao: new Date('2026-05-03T12:00:00.000Z'),
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          dadosSolicitacao: null,
+        },
+      ]);
+
+      prisma.cardShipment.findFirst.mockResolvedValueOnce({
+        id: 'ship-tr',
+        cardId: 'c-tr',
+        userId: 'test-user-id',
+        status: 'POSTADO',
+        shippingFeeAmount: 39.9,
+        shippingFeeStatus: 'DEBITADO',
+        shippingFeeMovementId: 'mov-2',
+        trackingCode: 'BR123456789BR',
+        carrierName: 'Correios',
+        addressSnapshot: {},
+        createdAt: new Date('2026-05-03T13:00:00.000Z'),
+        updatedAt: new Date('2026-05-03T13:00:00.000Z'),
+        user: { endereco: {} },
+      });
+
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.data.physicalDelivery.shipmentUiState).toBe('EM_TRANSITO');
+      expect(res.body.data.physicalDelivery.trackingCode).toBe('BR123456789BR');
+    });
+
+    it('frete pago + ENTREGUE → ENTREGUE', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([
+        {
+          id: 'c-done',
+          userId: 'test-user-id',
+          tipo: 'credito',
+          bandeira: 'VISA',
+          status: 'ativo',
+          last4: '4444',
+          maskedNumber: '**** **** **** 4444',
+          dataSolicitacao: new Date('2026-05-01T12:00:00.000Z'),
+          dataAprovacao: new Date('2026-05-03T12:00:00.000Z'),
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          dadosSolicitacao: null,
+        },
+      ]);
+
+      prisma.cardShipment.findFirst.mockResolvedValueOnce({
+        id: 'ship-done',
+        cardId: 'c-done',
+        userId: 'test-user-id',
+        status: 'ENTREGUE',
+        shippingFeeAmount: 39.9,
+        shippingFeeStatus: 'DEBITADO',
+        shippingFeeMovementId: 'mov-3',
+        trackingCode: 'TRK99',
+        deliveredAt: new Date('2026-05-10T15:00:00.000Z'),
+        addressSnapshot: {},
+        createdAt: new Date('2026-05-03T13:00:00.000Z'),
+        updatedAt: new Date('2026-05-10T15:00:00.000Z'),
+        user: { endereco: {} },
+      });
+
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.data.physicalDelivery.shipmentUiState).toBe('ENTREGUE');
+    });
+
+    it('crédito sem linha CardShipment → AWAITING_LOGISTICS_SETUP', async () => {
+      prisma.cartao.findMany.mockResolvedValueOnce([
+        {
+          id: 'c-no-ship',
+          userId: 'test-user-id',
+          tipo: 'credito',
+          bandeira: 'VISA',
+          status: 'aprovado',
+          last4: '5555',
+          maskedNumber: '**** **** **** 5555',
+          dataSolicitacao: new Date('2026-05-01T12:00:00.000Z'),
+          dataAprovacao: new Date('2026-05-03T12:00:00.000Z'),
+          createdAt: new Date('2026-05-01T12:00:00.000Z'),
+          dadosSolicitacao: null,
+        },
+      ]);
+
+      prisma.cardShipment.findFirst.mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .get('/api/cards/status')
+        .set('Authorization', BEARER)
+        .expect(200);
+
+      expect(res.body.data.shipment).toBeNull();
+      expect(res.body.data.physicalDelivery.shipmentUiState).toBe('AWAITING_LOGISTICS_SETUP');
+      expect(res.body.data.physicalDelivery.freightPaid).toBe(false);
+    });
     it('cartão de débito ativo não consulta nem retorna shipment', async () => {
       prisma.cartao.findMany.mockResolvedValueOnce([
         {
@@ -573,6 +733,9 @@ describe('Cards API — POST decisão e GET segurança', () => {
       expect(res.body.data.hasCard).toBe(true);
       expect(res.body.data.card.type).toBe('debit');
       expect(res.body.data.shipment).toBeNull();
+      expect(res.body.data.physicalDelivery.freightStatus).toBe('NAO_APLICAVEL');
+      expect(res.body.data.physicalDelivery.freightPaid).toBe(false);
+      expect(res.body.data.physicalDelivery.shipmentUiState).toBeNull();
       expect(prisma.cardShipment.findFirst).not.toHaveBeenCalled();
     });
   });

@@ -910,10 +910,143 @@ function agilbankMergeCardsStatusIntoLista(cartoes, statusData) {
         /* Remessa rastreada no backend apenas para esta linha */
         m.shipment = statusData.shipment ? agilbankNormalizeShipmentParaUi(statusData.shipment) : null;
 
+        m.physicalDelivery =
+            statusData.physicalDelivery && typeof statusData.physicalDelivery === 'object'
+                ? statusData.physicalDelivery
+                : null;
+
         return m;
     });
 
     return list;
+}
+
+/**
+ * Fallback quando GET /cards/status não trouxe physicalDelivery — espelha regra do backend (frete pago = DEBITADO).
+ */
+function agilbankInferPhysicalDeliveryFromShipment(shipment) {
+    if (!shipment || typeof shipment !== 'object') return null;
+    var fee = String(shipment.shippingFeeStatus || '').toUpperCase();
+    var st = String(shipment.status || '').toUpperCase();
+    var freightPaid = fee === 'DEBITADO';
+    var freightStatus = freightPaid ? 'PAGO' : fee === 'RECUSADO' ? 'RECUSADO' : 'PENDENTE';
+    var tcRaw = shipment.trackingCode ? String(shipment.trackingCode).trim() : '';
+    var trackingCode = tcRaw ? tcRaw.slice(0, 80) : null;
+    var inTransitStatuses = ['POSTADO', 'EM_TRANSITO', 'SAIU_PARA_ENTREGA'];
+    var shipmentUiState = 'FREIGHT_PENDING';
+    var productionStarted = false;
+
+    if (fee === 'RECUSADO') {
+        shipmentUiState = 'FREIGHT_REFUSED';
+        productionStarted = false;
+    } else if (!freightPaid) {
+        shipmentUiState = 'FREIGHT_PENDING';
+        productionStarted = false;
+    } else if (st === 'ENTREGUE') {
+        shipmentUiState = 'ENTREGUE';
+        productionStarted = true;
+    } else if (st === 'DEVOLVIDO') {
+        shipmentUiState = 'DEVOLVIDO';
+        productionStarted = true;
+    } else if (st === 'FALHA_ENTREGA') {
+        shipmentUiState = 'FALHA_ENTREGA';
+        productionStarted = true;
+    } else if (inTransitStatuses.indexOf(st) >= 0 || trackingCode) {
+        shipmentUiState = 'EM_TRANSITO';
+        productionStarted = true;
+    } else if (['COBRANCA_CONFIRMADA', 'EM_PRODUCAO'].indexOf(st) >= 0) {
+        shipmentUiState = 'PRODUCTION_STARTED_WAITING_SHIPMENT';
+        productionStarted = true;
+    } else if (st === 'AGUARDANDO_COBRANCA') {
+        shipmentUiState = freightPaid ? 'PRODUCTION_STARTED_WAITING_SHIPMENT' : 'FREIGHT_PENDING';
+        productionStarted = freightPaid;
+    } else {
+        shipmentUiState = freightPaid ? 'PRODUCTION_STARTED_WAITING_SHIPMENT' : 'FREIGHT_PENDING';
+        productionStarted = freightPaid;
+    }
+
+    return {
+        freightStatus: freightStatus,
+        freightPaid: freightPaid,
+        productionStarted: productionStarted,
+        shipmentUiState: shipmentUiState,
+        shipmentStatus: st || null,
+        trackingCode: trackingCode,
+    };
+}
+
+/** Régua horizontal guiada pelo estado oficial de frete/remessa (não marca produção sem freightPaid). */
+function agilbankShipmentTimelineStagesFromDelivery(pd, shipment) {
+    var ui = pd && pd.shipmentUiState ? String(pd.shipmentUiState) : '';
+    var fut = function () {
+        return [
+            { key: 'producao', label: 'Produção', state: 'future' },
+            { key: 'transito', label: 'Em trânsito', state: 'future' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entregue', state: 'future' },
+        ];
+    };
+
+    if (!pd || ui === 'FREIGHT_PENDING' || ui === 'FREIGHT_REFUSED' || ui === 'AWAITING_LOGISTICS_SETUP') {
+        return fut();
+    }
+    if (ui === 'PRODUCTION_STARTED_WAITING_SHIPMENT') {
+        return [
+            { key: 'producao', label: 'Produção', state: 'complete' },
+            { key: 'transito', label: 'Em trânsito', state: 'current' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entregue', state: 'future' },
+        ];
+    }
+    if (ui === 'EM_TRANSITO') {
+        return [
+            { key: 'producao', label: 'Produção', state: 'complete' },
+            { key: 'transito', label: 'Em trânsito', state: 'current' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entregue', state: 'future' },
+        ];
+    }
+    if (ui === 'ENTREGUE') {
+        return [
+            { key: 'producao', label: 'Produção', state: 'complete' },
+            { key: 'transito', label: 'Em trânsito', state: 'complete' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entregue', state: 'current' },
+        ];
+    }
+    if (ui === 'DEVOLVIDO') {
+        return [
+            { key: 'producao', label: 'Produção', state: 'complete' },
+            { key: 'transito', label: 'Em trânsito', state: 'complete' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'problem' },
+            { key: 'final', label: 'Entregue', state: 'future' },
+        ];
+    }
+    if (ui === 'FALHA_ENTREGA') {
+        return [
+            { key: 'producao', label: 'Produção', state: 'complete' },
+            { key: 'transito', label: 'Em trânsito', state: 'complete' },
+            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
+            { key: 'final', label: 'Entrega não realizada', state: 'problem' },
+        ];
+    }
+    return agilbankShipmentTimelineStages(shipment);
+}
+
+function agilbankBindStatusEntregaPayFreteButton(show) {
+    var btn = document.getElementById('statusEntregaBtnPagarFrete');
+    if (!btn) return;
+    var can = !!show && typeof window.levarboletoContainer === 'function';
+    btn.hidden = !can;
+    btn.onclick = can
+        ? function () {
+              try {
+                  window.levarboletoContainer();
+              } catch (err) {
+                  console.warn('levarboletoContainer:', err);
+              }
+          }
+        : null;
 }
 
 function statusCartaoLabel(status) {
@@ -1545,6 +1678,8 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     last4.textContent = agilbankShipmentCardLast4(c);
     statusLine.className = 'status-entrega-status-line';
 
+    agilbankBindStatusEntregaPayFreteButton(false);
+
     if (uiState === 'loading') {
         statusLabel.textContent = 'Consultando entrega';
         support.textContent = 'Buscando dados reais da remessa no backend oficial do AgilBank.';
@@ -1582,20 +1717,21 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     }
 
     if (uiState === 'aguardando_remessa') {
-        statusLabel.textContent = 'Aguardando registro da remessa';
+        statusLabel.textContent = 'Envio físico em preparação';
         support.textContent =
-            'O servidor ainda não vinculou uma remessa a este cartão (ex.: antes da cobrança de frete). Use “Atualizar status” para recarregar.';
-        host.innerHTML = agilbankShipmentTimelineHtml([
-            { key: 'producao', label: 'Produção', state: 'current' },
-            { key: 'transito', label: 'Em trânsito', state: 'future' },
-            { key: 'devolvido', label: 'Devolvido ao AgilBank', state: 'future' },
-            { key: 'final', label: 'Entregue', state: 'future' }
-        ]);
-        l1.textContent = 'Frete: a confirmar quando a remessa for criada';
-        l2.textContent = 'Status logístico: pendente no backend';
-        end.textContent = 'Endereço de entrega: será preenchido após criar remessa oficial.';
+            'Assim que o frete do cartão físico aparecer em Cobranças, você poderá pagar e liberar a produção. Use “Atualizar status” para ver novidades.';
+        host.innerHTML = agilbankShipmentTimelineHtml(
+            agilbankShipmentTimelineStagesFromDelivery(
+                { shipmentUiState: 'AWAITING_LOGISTICS_SETUP', freightPaid: false },
+                null,
+            ),
+        );
+        l1.textContent = 'Frete: aguardando disponibilização da cobrança';
+        l2.textContent = 'Rastreio: disponível após envio';
+        end.textContent =
+            'Endereço de entrega: será confirmado conforme seu cadastro e o fluxo oficial de remessa.';
         eventsHost.innerHTML =
-            '<p class="status-entrega-empty-copy">Sem eventos porque ainda não há remessa ativa registrada pela API para este cartão.</p>';
+            '<p class="status-entrega-empty-copy">Histórico de eventos ficará disponível após registrar o envio físico.</p>';
         return;
     }
 
@@ -1658,20 +1794,145 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
         return;
     }
 
-    var currentMeta = agilbankShipmentStatusMeta(shipment && shipment.status);
-    var tone = agilbankShipmentStatusLineTone(shipment && shipment.status);
-    statusLine.classList.add(tone);
-    statusLabel.textContent = currentMeta.title;
-    support.textContent = agilbankShipmentSupportText(shipment, timeline, currentMeta);
-    host.innerHTML = agilbankShipmentTimelineHtml(agilbankShipmentTimelineStages(shipment));
+    var pd =
+        payload.physicalDelivery ||
+        (c && c.physicalDelivery) ||
+        agilbankInferPhysicalDeliveryFromShipment(shipment);
 
-    var fee = agilbankShipmentFormatMoney(shipment && shipment.shippingFeeAmount);
-    var feeStatus = shipment && shipment.shippingFeeStatus ? String(shipment.shippingFeeStatus) : 'indisponível';
-    var tracking = shipment && shipment.trackingCode ? String(shipment.trackingCode) : 'indisponível';
+    function linhaFreteResumo(pdCtx, ship) {
+        var paid = pdCtx && pdCtx.freightPaid === true;
+        if (!ship || ship.shippingFeeAmount == null) {
+            return paid ? 'Frete: pago' : 'Frete: pendente de pagamento';
+        }
+        var feeTxt = agilbankShipmentFormatMoney(ship.shippingFeeAmount);
+        return paid ? 'Frete: pago (' + feeTxt + ')' : 'Frete: pendente de pagamento (' + feeTxt + ')';
+    }
+
+    function tonePorDelivery(pdCtx, ship) {
+        var k = pdCtx && pdCtx.shipmentUiState ? String(pdCtx.shipmentUiState) : '';
+        if (k === 'ENTREGUE') return 'is-success';
+        if (k === 'DEVOLVIDO' || k === 'FALHA_ENTREGA') return 'is-warning';
+        if (k === 'FREIGHT_PENDING' || k === 'FREIGHT_REFUSED') return 'is-warning';
+        return 'is-info';
+    }
+
+    if (!pd && shipment) {
+        pd = agilbankInferPhysicalDeliveryFromShipment(shipment);
+    }
+
+    var uiKey = pd && pd.shipmentUiState ? String(pd.shipmentUiState) : '';
+
+    if (uiKey === 'FREIGHT_PENDING') {
+        statusLine.classList.add(tonePorDelivery(pd, shipment));
+        statusLabel.textContent = 'Frete pendente';
+        support.textContent =
+            'Frete pendente de pagamento. Pague o frete para iniciar a produção e envio do cartão.';
+        if (typeof window.levarboletoContainer !== 'function') {
+            support.textContent +=
+                ' Abra Cobranças no menu quando o frete estiver listado para concluir o pagamento.';
+        }
+        host.innerHTML = agilbankShipmentTimelineHtml(agilbankShipmentTimelineStagesFromDelivery(pd, shipment));
+        l1.textContent = linhaFreteResumo(pd, shipment);
+        l2.textContent = 'Rastreio: disponível após envio';
+        end.textContent =
+            shipment && shipment.addressSnapshot
+                ? 'Endereço de entrega: ' + agilbankShipmentAddressText(shipment.addressSnapshot)
+                : 'Endereço de entrega: confirmado junto ao pedido assim que o envio físico estiver ativo.';
+        eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
+        agilbankBindStatusEntregaPayFreteButton(true);
+        return;
+    }
+
+    if (uiKey === 'FREIGHT_REFUSED') {
+        statusLine.classList.add('is-warning');
+        statusLabel.textContent = 'Frete não confirmado';
+        support.textContent =
+            'A última tentativa de cobrar o frete não foi concluída (por exemplo, saldo insuficiente). Ajuste em Cobranças ou seu saldo e tente novamente.';
+        host.innerHTML = agilbankShipmentTimelineHtml(agilbankShipmentTimelineStagesFromDelivery(pd, shipment));
+        l1.textContent = linhaFreteResumo(pd, shipment);
+        l2.textContent = 'Rastreio: disponível após pagamento confirmado';
+        end.textContent =
+            shipment && shipment.addressSnapshot
+                ? 'Endereço de entrega: ' + agilbankShipmentAddressText(shipment.addressSnapshot)
+                : 'Endereço de entrega: indisponível.';
+        eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
+        agilbankBindStatusEntregaPayFreteButton(typeof window.levarboletoContainer === 'function');
+        return;
+    }
+
+    if (uiKey === 'AWAITING_LOGISTICS_SETUP') {
+        statusLine.classList.add('is-info');
+        statusLabel.textContent = 'Envio físico em preparação';
+        support.textContent =
+            'Estamos alinhando seu pedido com o fluxo de envio físico. Em breve o frete poderá aparecer em Cobranças.';
+        host.innerHTML = agilbankShipmentTimelineHtml(agilbankShipmentTimelineStagesFromDelivery(pd, shipment));
+        l1.textContent = 'Frete: aguardando cobrança oficial';
+        l2.textContent = 'Rastreio: disponível após envio';
+        end.textContent = 'Endereço de entrega: será exibido quando o envio físico estiver registrado.';
+        eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
+        return;
+    }
+
+    if (uiKey === 'PRODUCTION_STARTED_WAITING_SHIPMENT') {
+        statusLine.classList.add('is-info');
+        statusLabel.textContent = 'Em produção';
+        support.textContent =
+            'Frete confirmado. Seu cartão está em produção e será enviado em breve.';
+        host.innerHTML = agilbankShipmentTimelineHtml(agilbankShipmentTimelineStagesFromDelivery(pd, shipment));
+        l1.textContent = linhaFreteResumo(pd, shipment);
+        var trProd =
+            pd && pd.trackingCode
+                ? String(pd.trackingCode)
+                : shipment && shipment.trackingCode
+                  ? String(shipment.trackingCode)
+                  : '';
+        l2.textContent = trProd ? 'Rastreio: ' + trProd : 'Rastreio: aguardando postagem';
+        end.textContent =
+            shipment && shipment.addressSnapshot
+                ? 'Endereço de entrega: ' + agilbankShipmentAddressText(shipment.addressSnapshot)
+                : 'Endereço de entrega: indisponível.';
+        eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
+        return;
+    }
+
+    var currentMeta = agilbankShipmentStatusMeta(shipment && shipment.status);
+    var toneFinal = tonePorDelivery(pd, shipment);
+    statusLine.classList.add(toneFinal);
+
+    var titulosPorUi = {
+        EM_TRANSITO: 'Em trânsito',
+        ENTREGUE: 'Entregue',
+        DEVOLVIDO: 'Devolvido ao AgilBank',
+        FALHA_ENTREGA: 'Falha na entrega',
+    };
+    statusLabel.textContent = titulosPorUi[uiKey] || currentMeta.title;
+
+    support.textContent = agilbankShipmentSupportText(shipment, timeline, currentMeta);
+    host.innerHTML = agilbankShipmentTimelineHtml(
+        pd ? agilbankShipmentTimelineStagesFromDelivery(pd, shipment) : agilbankShipmentTimelineStages(shipment),
+    );
+
+    var feeLine = pd ? linhaFreteResumo(pd, shipment) : 'Frete: indisponível';
+    var trackingDisp =
+        pd && pd.trackingCode
+            ? String(pd.trackingCode)
+            : shipment && shipment.trackingCode
+              ? String(shipment.trackingCode)
+              : 'indisponível';
     var carrier = shipment && shipment.carrierName ? String(shipment.carrierName) : 'indisponível';
-    var eta = shipment && shipment.estimatedDeliveryAt ? agilbankShipmentFormatDate(shipment.estimatedDeliveryAt) : 'Indisponível';
-    l1.textContent = 'Frete: ' + fee + ' (' + feeStatus + ')';
-    l2.textContent = 'Status logístico: ' + currentMeta.title + ' | Rastreio: ' + tracking + ' | Transportadora: ' + carrier + ' | Previsão: ' + eta;
+    var eta =
+        shipment && shipment.estimatedDeliveryAt ? agilbankShipmentFormatDate(shipment.estimatedDeliveryAt) : 'Indisponível';
+
+    l1.textContent = feeLine;
+    l2.textContent =
+        'Status logístico: ' +
+        statusLabel.textContent +
+        ' | Rastreio: ' +
+        trackingDisp +
+        ' | Transportadora: ' +
+        carrier +
+        ' | Previsão: ' +
+        eta;
     end.textContent = 'Endereço de entrega: ' + agilbankShipmentAddressText(shipment && shipment.addressSnapshot);
     eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
 }
@@ -1858,6 +2119,10 @@ async function agilbankCartaoAcaoStatus() {
                         shipment: agilbankNormalizeShipmentParaUi(shipFromSnap)
                     });
                 }
+                var pdFresh = snapFresh.data.physicalDelivery;
+                if (pdFresh != null && typeof pdFresh === 'object') {
+                    c = Object.assign({}, c, { physicalDelivery: pdFresh });
+                }
             }
         }
 
@@ -1899,7 +2164,8 @@ async function agilbankCartaoAcaoStatus() {
                 uiState: timelineLocal.length ? 'sucesso' : 'vazio',
                 shipment: localShipMerged,
                 timeline: timelineLocal,
-                timelineError: timelineErrLocal
+                timelineError: timelineErrLocal,
+                physicalDelivery: c.physicalDelivery || null,
             });
             return;
         }
@@ -1931,7 +2197,10 @@ async function agilbankCartaoAcaoStatus() {
                     if (shipmentResult.response.ok) {
                         var shipmentRetry = shipmentResult.body && shipmentResult.body.data ? shipmentResult.body.data.shipment : null;
                         if (!shipmentRetry) {
-                            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'aguardando_remessa' });
+                            agilbankRenderStatusEntregaParaCartao(c, {
+                                uiState: 'aguardando_remessa',
+                                physicalDelivery: c.physicalDelivery || null,
+                            });
                             return;
                         }
                         var timelineRetry = shipmentResult.body && shipmentResult.body.data && Array.isArray(shipmentResult.body.data.timeline)
@@ -1941,14 +2210,18 @@ async function agilbankCartaoAcaoStatus() {
                             uiState: timelineRetry.length ? 'sucesso' : 'vazio',
                             shipment: shipmentRetry,
                             timeline: timelineRetry,
-                            timelineError: ''
+                            timelineError: '',
+                            physicalDelivery: c.physicalDelivery || null,
                         });
                         return;
                     }
                 }
             }
             if (shipmentResult.response.status === 404 && code === 'SHIPMENT_NOT_FOUND') {
-                agilbankRenderStatusEntregaParaCartao(c, { uiState: 'aguardando_remessa' });
+                agilbankRenderStatusEntregaParaCartao(c, {
+                    uiState: 'aguardando_remessa',
+                    physicalDelivery: c.physicalDelivery || null,
+                });
                 return;
             }
             if (shipmentResult.response.status === 422 || code === 'VALIDATION_ERROR') {
@@ -1961,7 +2234,10 @@ async function agilbankCartaoAcaoStatus() {
 
         var shipment = shipmentResult.body && shipmentResult.body.data ? shipmentResult.body.data.shipment : null;
         if (!shipment) {
-            agilbankRenderStatusEntregaParaCartao(c, { uiState: 'aguardando_remessa' });
+            agilbankRenderStatusEntregaParaCartao(c, {
+                uiState: 'aguardando_remessa',
+                physicalDelivery: c.physicalDelivery || null,
+            });
             return;
         }
 
@@ -1990,7 +2266,8 @@ async function agilbankCartaoAcaoStatus() {
             uiState: timeline.length ? 'sucesso' : 'vazio',
             shipment: shipment,
             timeline: timeline,
-            timelineError: timelineError
+            timelineError: timelineError,
+            physicalDelivery: c.physicalDelivery || null,
         });
     } catch (error) {
         var isTimeout = error && String(error.message || '').toLowerCase().indexOf('tempo de resposta esgotado') >= 0;

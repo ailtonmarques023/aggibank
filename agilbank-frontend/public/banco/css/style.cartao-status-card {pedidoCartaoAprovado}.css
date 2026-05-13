@@ -363,6 +363,31 @@
             letter-spacing: 0.02em;
         }
 
+        .status-entrega-pay-freight {
+            position: absolute;
+            right: 132px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 8px 12px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.92);
+            color: #0b58c8;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .status-entrega-pay-freight:hover {
+            background: #fff;
+        }
+
+        .status-entrega-pay-freight[hidden] {
+            display: none !important;
+        }
+
         .status-entrega-refresh:hover {
             background: rgba(255, 255, 255, 0.28);
         }
