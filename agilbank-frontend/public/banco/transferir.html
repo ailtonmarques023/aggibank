@@ -37,7 +37,7 @@
       --trx-text: #333;
       --trx-muted: #666;
       --trx-ink-strong: #1a1a1a;
-      --trx-radius-card: 12px;
+      --trx-radius-card: 14px;
       --trx-max: 480px;
       --trx-shadow-card: 0 2px 5px rgba(0, 0, 0, 0.1);
       --trx-shadow-soft: 0 2px 8px rgba(0, 40, 80, 0.08);
@@ -156,6 +156,9 @@
       max-width: 100%;
       overflow-x: hidden;
     }
+    .trx-view-form .trx-panel-body {
+      padding: 14px 10px calc(28px + env(safe-area-inset-bottom, 0px));
+    }
 
     /* Etapa 1 */
     .trx-view-form {
@@ -170,17 +173,51 @@
 
     .trx-card {
       background: var(--trx-surface);
-      border-radius: var(--trx-radius-card);
-      padding: 16px 15px 18px;
+      border-radius: 14px;
+      padding: 18px 16px;
       border: none;
       box-shadow: var(--trx-shadow-card);
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      box-sizing: border-box;
     }
     .trx-hint {
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       color: var(--trx-muted);
-      margin: 0 0 14px;
+      margin: 0 0 12px;
+      line-height: 1.48;
+    }
+    .trx-hint--intro {
+      margin-bottom: 14px;
+    }
+    .trx-limits {
+      margin: 0 0 16px;
+      padding: 12px 12px 12px 14px;
+      background: #f4f7fb;
+      border: 1px solid rgba(0, 102, 179, 0.14);
+      border-radius: 10px;
+    }
+    .trx-limits-title {
+      margin: 0 0 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--trx-ink-strong);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .trx-limits-list {
+      margin: 0;
+      padding-left: 1.1em;
+      font-size: 0.78rem;
+      color: var(--trx-muted);
       line-height: 1.45;
     }
+    .trx-limits-list li {
+      margin: 4px 0;
+    }
+    .trx-limits-list li:first-child { margin-top: 0; }
+    .trx-limits-list li:last-child { margin-bottom: 0; }
     .trx-label {
       display: block;
       font-size: 0.74rem;
@@ -192,7 +229,8 @@
     .trx-label:first-of-type { margin-top: 0; }
     .trx-input, .trx-textarea {
       width: 100%;
-      padding: 12px 14px;
+      padding: 14px 14px;
+      min-height: 48px;
       border-radius: 10px;
       border: 1px solid rgba(0, 0, 0, 0.1);
       font-size: 1rem;
@@ -201,9 +239,12 @@
       color: var(--trx-text);
     }
     .trx-textarea {
-      min-height: 72px;
+      min-height: 88px;
+      padding-top: 14px;
+      padding-bottom: 14px;
       font-size: 0.94rem;
       resize: vertical;
+      line-height: 1.4;
     }
     .trx-input:focus, .trx-textarea:focus {
       outline: none;
@@ -212,7 +253,8 @@
     }
     .trx-btn-continue {
       width: 100%;
-      margin-top: 18px;
+      margin-top: 20px;
+      min-height: 50px;
       padding: 14px 20px;
       border: none;
       border-radius: 10px;
@@ -223,8 +265,9 @@
       background: var(--trx-primary);
       box-shadow: var(--trx-shadow-soft);
       -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s ease, filter 0.15s ease;
     }
-    .trx-btn-continue:active { transform: scale(0.99); }
+    .trx-btn-continue:active { transform: scale(0.99); filter: brightness(0.97); }
     .trx-btn-continue:focus-visible {
       outline: 2px solid var(--trx-primary-dark);
       outline-offset: 2px;
@@ -234,6 +277,10 @@
       font-size: 0.84rem;
       min-height: 1.25em;
       margin: 10px 0 0;
+    }
+    .trx-err--panel {
+      margin: 14px 0 0;
+      padding: 0 2px;
     }
 
     /* Etapa 2 revisão */
@@ -594,7 +641,15 @@
       </header>
       <div class="trx-panel-body">
         <div class="trx-card">
-          <p class="trx-hint">E-mail cadastrado ou conta (ex.: 123456-7). Limites operacionais MVP — por transferência: até R$&nbsp;10.000,00; diário enviado: até R$&nbsp;30.000,00; até 30 transferências por dia. Por operação: R$&nbsp;1,00 a R$&nbsp;10.000,00.</p>
+          <p class="trx-hint trx-hint--intro">E-mail cadastrado ou conta (ex.: 123456-7).</p>
+          <div class="trx-limits" role="note" aria-label="Limites operacionais da transferência">
+            <p class="trx-limits-title">Limites operacionais MVP</p>
+            <ul class="trx-limits-list">
+              <li>Por operação: R$&nbsp;1,00 a R$&nbsp;10.000,00</li>
+              <li>Diário (enviado): até R$&nbsp;30.000,00</li>
+              <li>Até 30 transferências por dia</li>
+            </ul>
+          </div>
           <label class="trx-label" for="trxDest">Destinatário</label>
           <input type="text" class="trx-input" id="trxDest" autocomplete="off" placeholder="E-mail ou conta-dígito" />
 
@@ -607,7 +662,7 @@
           <p class="trx-err" id="trxErrLocal" aria-live="polite"></p>
           <button type="button" class="trx-btn-continue" id="trxBtnContinuar">Continuar</button>
         </div>
-        <p class="trx-err" id="trxErrApi" aria-live="polite" style="margin-top:14px;"></p>
+        <p class="trx-err trx-err--panel" id="trxErrApi" aria-live="polite"></p>
       </div>
     </div>
 
