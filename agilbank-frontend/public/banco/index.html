@@ -7743,6 +7743,9 @@
             const semMovimentacoes = document.querySelector('#extratoContainer .sem-movimentacoes');
             if (movimentacoesEntrada) movimentacoesEntrada.style.display = 'none';
             if (semMovimentacoes) semMovimentacoes.style.display = 'none';
+            if (typeof agilbankExtratoRestoreFiltroFromSession === 'function') {
+                agilbankExtratoRestoreFiltroFromSession();
+            }
             if (typeof carregarExtratoPixReal === 'function') {
                 carregarExtratoPixReal();
             }
@@ -7752,6 +7755,49 @@
         // Itens do extrato (GET /api/user/statement); null = erro de carga, [] = vazio com sucesso
         var extratoPixTransacoesCache = null;
         var EXTRATO_CARREGANDO_MSG = 'Carregando movimentações...';
+
+        function agilbankFindExtratoCacheItemById(id) {
+            if (extratoPixTransacoesCache === null || !Array.isArray(extratoPixTransacoesCache)) return null;
+            var sid = String(id);
+            for (var i = 0; i < extratoPixTransacoesCache.length; i++) {
+                var x = extratoPixTransacoesCache[i];
+                if (x && String(x.id) === sid) return x;
+            }
+            return null;
+        }
+
+        function agilbankOpenMovementDetail(item) {
+            if (!item || item.id == null || String(item.id).trim() === '') return;
+            try {
+                var ativoF = document.querySelector('#extratoContainer .filtro-opcao.ativo');
+                var filtroAtivo = ativoF ? ativoF.getAttribute('data-tipo') : 'todos';
+                sessionStorage.setItem('agilbank_extrato_filtro_ativo', filtroAtivo || 'todos');
+            } catch (errFiltro) {
+                if (typeof console !== 'undefined' && console.warn) console.warn('extrato_filtro_session', errFiltro);
+            }
+            try {
+                sessionStorage.setItem('agilbank_movimentacao_detail_item', JSON.stringify(item));
+            } catch (errStore) {
+                if (typeof console !== 'undefined' && console.warn) console.warn('movimentacao_detail_store', errStore);
+                return;
+            }
+            window.location.href = 'movimentacao.html?id=' + encodeURIComponent(String(item.id));
+        }
+
+        function agilbankExtratoRestoreFiltroFromSession() {
+            try {
+                var want = sessionStorage.getItem('agilbank_extrato_filtro_restore');
+                if (!want) return;
+                sessionStorage.removeItem('agilbank_extrato_filtro_restore');
+                document.querySelectorAll('#extratoContainer .filtro-opcao').forEach(function (o) {
+                    o.classList.remove('ativo');
+                });
+                var alvo = document.querySelector('#extratoContainer .filtro-opcao[data-tipo="' + want + '"]');
+                if (alvo) alvo.classList.add('ativo');
+            } catch (e) {
+                if (typeof console !== 'undefined' && console.warn) console.warn('extrato_filtro_restore', e);
+            }
+        }
 
         function extratoIconClassForOrigem(origem) {
             var o = String(origem || '').toUpperCase();
@@ -7833,6 +7879,14 @@
 
                 var item = document.createElement('div');
                 item.className = 'movimentacao-item';
+                var movId = t.id != null ? String(t.id).trim() : '';
+                if (movId) {
+                    item.classList.add('movimentacao-item--clickable');
+                    item.setAttribute('data-movimentacao-id', movId);
+                    item.setAttribute('role', 'button');
+                    item.setAttribute('tabindex', '0');
+                    item.setAttribute('aria-label', 'Abrir comprovante: ' + desc);
+                }
 
                 var iconWrap = document.createElement('div');
                 iconWrap.className = 'movimentacao-icon';
@@ -7872,6 +7926,33 @@
                 listaEl.appendChild(item);
             });
         }
+
+        (function agilbankAttachExtratoListaDelegation() {
+            var root = document.getElementById('extratoPixListaReal');
+            if (!root || root.getAttribute('data-agilbank-delegation') === '1') return;
+            root.setAttribute('data-agilbank-delegation', '1');
+            root.addEventListener('click', function (ev) {
+                var card = ev.target.closest('[data-movimentacao-id]');
+                if (!card || !root.contains(card)) return;
+                var id = card.getAttribute('data-movimentacao-id');
+                if (!id) return;
+                var found = agilbankFindExtratoCacheItemById(id);
+                if (!found) return;
+                agilbankOpenMovementDetail(found);
+            });
+            root.addEventListener('keydown', function (ev) {
+                if (ev.key !== 'Enter' && ev.key !== ' ') return;
+                var card = ev.target.closest('[data-movimentacao-id]');
+                if (!card || !root.contains(card)) return;
+                if (document.activeElement !== card) return;
+                ev.preventDefault();
+                var id = card.getAttribute('data-movimentacao-id');
+                var found = agilbankFindExtratoCacheItemById(id);
+                if (found) agilbankOpenMovementDetail(found);
+            });
+        })();
+
+        window.agilbankOpenMovementDetail = agilbankOpenMovementDetail;
 
         async function carregarExtratoPixReal() {
             var msgEl = document.getElementById('extratoPixMensagem');
