@@ -135,6 +135,39 @@
       </div>
     </section>
 
+    <section aria-labelledby="sec-wordmark-mobile">
+      <h2 id="sec-wordmark-mobile">Wordmark para cabeçalho mobile</h2>
+      <p>Cabeçalhos estreitos (barra superior em telas mobile) ficam mais legíveis com <strong>apenas</strong> o texto “agilBank”, <strong>sem</strong> o ícone “A” à frente.</p>
+      <ul>
+        <li><strong>Header azul / escuro</strong>: <code>assets/brand/agilbank-wordmark-header.svg</code> — texto branco / gradiente quase branco sobre fundo institucional.</li>
+        <li><strong>Header ou topo claro</strong>: <code>assets/brand/agilbank-wordmark-header-on-light.svg</code> — texto escuro para contraste sobre branco/off-white.</li>
+      </ul>
+      <div class="g-panel-dark" role="img" aria-label="Wordmark sobre faixa azul">
+        <p class="agilbank-brand-header-mark">
+          <img src="assets/brand/agilbank-wordmark-header.svg" alt="AgilBank" class="agilbank-brand-wordmark-header" width="300" height="52" decoding="async" />
+        </p>
+      </div>
+      <div class="g-panel-light" style="margin-top:14px;">
+        <p style="margin:0;">
+          <img src="assets/brand/agilbank-wordmark-header-on-light.svg" alt="AgilBank" class="agilbank-brand-wordmark-header agilbank-brand-wordmark-header--on-light" width="300" height="52" decoding="async" />
+        </p>
+        <pre style="margin-top:12px;"><code>&lt;!-- Barra azul --&gt;
+&lt;img src="assets/brand/agilbank-wordmark-header.svg" alt="AgilBank"
+     class="agilbank-brand-wordmark-header"
+     width="300" height="52" decoding="async" /&gt;
+
+&lt;!-- Fundo claro (ex.: modulos) — acrescentar --on-light --&gt;
+&lt;img src="assets/brand/agilbank-wordmark-header-on-light.svg" alt="AgilBank"
+     class="agilbank-brand-wordmark-header agilbank-brand-wordmark-header--on-light"
+     width="300" height="52" decoding="async" /&gt;</code></pre>
+      </div>
+      <ul class="g-note">
+        <li>Usar <strong>wordmark sem ícone</strong> em headers pequenos.</li>
+        <li>Usar <strong>logo completa</strong> (dark-bg ou light-bg) em áreas com largura suficiente (hero, modais grandes, onboarding).</li>
+        <li>Usar <strong>ícone isolado</strong> só quando não houver espaço para texto nem para a composição inteira — favicon, avatar, splash, bolha compacta.</li>
+      </ul>
+    </section>
+
     <section aria-labelledby="sec-icon">
       <h2 id="sec-icon">Ícone isolado</h2>
       <p><code>assets/brand/agilbank-icon.svg</code> — favicon, avatar, splash ou espaços reduzidos.</p>
@@ -169,7 +202,7 @@
         <li>Evitar sombra pesada sobre a marca.</li>
         <li>Não usar amarelo ou paleta de terceiros para substituir o gradiente institucional.</li>
         <li>Não colocar SVG grande inline no <code>index.html</code>.</li>
-        <li>Não usar wordmark de texto escuro sobre header azul; não usar wordmark claro isolado sobre cartão branco sem o arquivo adequado.</li>
+        <li>Não usar wordmark escuro sobre header azul; não usar wordmark claro sobre fundo claro. Usar sempre o arquivo e a classe combinados conforme esta seção e <code>.agilbank-brand-wordmark-header--on-light</code> onde aplicável.</li>
         <li>Manter <code>alt="AgilBank"</code> quando a imagem representar a marca textual completa.</li>
       </ul>
     </section>
@@ -178,10 +211,10 @@
       <h2 id="sec-where">Onde aplicar no app</h2>
       <ul>
         <li><strong>index.html</strong> — barra superior, login, splash, modais (próxima migração planejada; hoje ainda pode referenciar SVGs legados em <code>assets/</code> para não quebrar o dashboard).</li>
-        <li><strong>deposito.html</strong> — header azul: <code>agilbank-logo-dark-bg.svg</code> (aplicado nesta fase).</li>
-        <li><strong>transferir.html</strong> — headers de fluxo: <code>agilbank-logo-dark-bg.svg</code> (aplicado).</li>
-        <li><strong>movimentacao.html</strong> — header azul: dark-bg; comprovante em card branco: light-bg (aplicado; mesma composição alimenta exportação visual/PNG).</li>
-        <li><strong>modulos.html</strong> — área clara: light-bg (aplicado).</li>
+        <li><strong>deposito.html</strong> — header azul: <code>agilbank-wordmark-header.svg</code> + <code>.agilbank-brand-wordmark-header</code>.</li>
+        <li><strong>transferir.html</strong> — headers de fluxo: mesmo wordmark sobre azul.</li>
+        <li><strong>movimentacao.html</strong> — barra superior azul: wordmark; bloco/comprovante em card branco: <code>agilbank-logo-light-bg.svg</code> quando for logo completa no contexto claro.</li>
+        <li><strong>modulos.html</strong> — topo claro: <code>agilbank-wordmark-header-on-light.svg</code> + <code>.agilbank-brand-wordmark-header.agilbank-brand-wordmark-header--on-light</code>.</li>
         <li><strong>emprestimos.html, notificacoes.html, reset-password, formulario…</strong> — alinhar na próxima iteração ao guia.</li>
       </ul>
     </section>

@@ -4203,11 +4203,12 @@
 
         <div class="status-entrega-content">
             <section class="status-entrega-hero" id="statusEntregaHero">
-                <div class="status-entrega-card-visual" aria-hidden="true">
-                    <div class="status-entrega-card-logo">agilbank</div>
-                    <div class="status-entrega-card-chip"></div>
+                <div class="status-entrega-card-visual status-entrega-card-visual--img" aria-hidden="true">
+                    <img src="assets/cards/cartao-agilbank-azul.jpg" alt="" class="agilbank-card-preview-img agilbank-card-preview-img--status" decoding="async" />
+                    <div class="status-entrega-card-floating">
                     <div class="status-entrega-card-last4" id="statusEntregaCardLast4">••••</div>
                     <div class="status-entrega-card-brand" id="statusEntregaCardBrand">VISA</div>
+                    </div>
                 </div>
 
                 <div class="status-entrega-hero-body">
@@ -4379,14 +4380,9 @@
         <!-- conteudo -->
         <div class="cartao-virtual-content">
             <!-- cartao virtual -->
-            <div class="cartao-virtual-card">
-                <div class="cartao-virtual-header">
-                    <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="cartao-logo agilbank-brand-logo">
-                    <i class="fas fa-wifi" style="color: white; font-size: 24px; transform: rotate(90deg);"></i>
-                </div>
-                <div class="cartao-chip" style="margin: 10px 0;">
-                    <i class="fas fa-microchip" style="color: #ffd700; font-size: 32px;"></i>
-                </div>
+            <div class="cartao-virtual-card cartao-virtual-card--preview-img">
+                <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
+                <div class="cartao-preview-overlay">
                 <div class="cartao-numero">
                     <span class="label">Número do Cartão</span>
                     <span class="numero" id="numeroCartaoVirtual">•••• •••• •••• ••••</span>
@@ -4400,6 +4396,7 @@
                         <span class="label">Validade</span>
                         <span class="valor" id="validadeCartaoVirtual">MM/AA</span>
                     </div>
+                </div>
                 </div>
             </div>
             <!-- limite disponivel -->
@@ -4461,14 +4458,9 @@
         <!-- conteudo -->   
         <div class="cartao-virtual-content">
             <!-- responsavel por mostrar o cartão fisico-->
-            <div class="cartao-virtual-card">
-                <div class="cartao-virtual-header">
-                    <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="cartao-logo agilbank-brand-logo">
-                    <i class="fas fa-wifi" style="color: white; font-size: 24px; transform: rotate(90deg);"></i>
-                </div>
-                <div class="cartao-chip" style="margin: 10px 0;">
-                    <i class="fas fa-microchip" style="color: #ffd700; font-size: 32px;"></i>
-                </div>
+            <div class="cartao-virtual-card cartao-virtual-card--preview-img">
+                <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
+                <div class="cartao-preview-overlay">
                 <div class="cartao-numero">
                     <span class="label">Número do Cartão</span>
                     <span class="numero" id="numeroCartaoFisico">•••• •••• •••• ••••</span>
@@ -4482,6 +4474,7 @@
                         <span class="label">Validade</span>
                         <span class="valor" id="validadeCartaoFisico">MM/AA</span>
                     </div>
+                </div>
                 </div>
             </div>
             <!-- limite disponivel -->

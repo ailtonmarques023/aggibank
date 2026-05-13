@@ -44,6 +44,24 @@
   min-width: 0;
 }
 
+/* Wordmark só texto — headers mobile (sem ícone “A”); barra azul → agilbank-wordmark-header.svg */
+.agilbank-brand-wordmark-header {
+  height: 22px;
+  width: auto;
+  max-width: 130px;
+  display: block;
+  object-fit: contain;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Fundo claro → agilbank-wordmark-header-on-light.svg + esta classe */
+.agilbank-brand-wordmark-header--on-light {
+  margin-left: 0;
+  margin-right: auto;
+  max-width: min(160px, 46vw);
+}
+
 /* --- Compatível com telas legadas (não quebrar index / modais) --- */
 .agilbank-brand-logo--inline {
   height: 24px;
