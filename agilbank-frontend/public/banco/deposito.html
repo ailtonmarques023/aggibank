@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#f5f7fb">
+  <meta name="theme-color" content="#0066b3">
   <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
   <title>Adicionar dinheiro — AgilBank</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="js/legacyAuthStore.js"></script>
   <script src="js/agilbankApiBase.js"></script>
   <script src="js/legacyApiClient.js"></script>
@@ -23,15 +25,22 @@
   </script>
   <style>
     :root {
-      --ab-blue: #1351B4;
+      --dep-header: #0066b3;
+      --dep-header-grad: linear-gradient(to right, #0066b3, #007fd4);
+      --dep-primary: #0066b3;
+      --dep-primary-dark: #005a9e;
+      --dep-bg: #f0f2f5;
+      --dep-surface: #ffffff;
+      --ab-blue: #0066b3;
       --ab-blue-ink: #0c2d6b;
-      --ab-bg: #f5f7fb;
+      --ab-bg: #f0f2f5;
       --ab-surface: #ffffff;
-      --ab-text: #0f172a;
-      --ab-muted: #64748b;
-      --ab-radius-xl: 22px;
+      --ab-text: #333;
+      --ab-muted: #666;
+      --ab-radius-xl: 12px;
       --ab-radius-pill: 999px;
-      --ab-shadow-card: 0 8px 32px rgba(15, 23, 42, 0.08);
+      --ab-shadow-card: 0 2px 5px rgba(0, 0, 0, 0.1);
+      --ab-shadow-soft: 0 2px 8px rgba(0, 40, 80, 0.08);
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -39,8 +48,8 @@
       margin: 0;
       min-height: 100vh;
       min-height: 100dvh;
-      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Ubuntu, sans-serif;
-      background: var(--ab-bg);
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--dep-bg);
       color: var(--ab-text);
     }
     .dep-app {
@@ -48,88 +57,132 @@
       margin: 0 auto;
       min-height: 100vh;
       min-height: 100dvh;
-      padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+      position: relative;
+      background: var(--dep-bg);
+      overflow-x: hidden;
     }
-    .dep-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .dep-back {
+    /* Header alinhado a transferir / dashboard / extrato */
+    .dep-app-header {
       flex-shrink: 0;
-      width: 48px;
-      height: 48px;
-      border-radius: var(--ab-radius-pill);
+      color: #fff;
+    }
+    .dep-header-top {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 50px;
+      padding: 8px 12px;
+      padding-top: calc(8px + env(safe-area-inset-top, 0px));
+      background: var(--dep-header);
+    }
+    .dep-header-back {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
       border: none;
-      background: var(--ab-surface);
-      box-shadow: 0 2px 14px rgba(15, 23, 42, 0.06);
-      color: var(--ab-text);
+      background: rgba(255, 255, 255, 0.22);
+      color: #fff;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s ease, transform 0.1s ease;
     }
-    .dep-back:active { transform: scale(0.96); }
-    .dep-back:focus-visible { outline: 2px solid var(--ab-blue); outline-offset: 2px; }
-    .dep-head-text { flex: 1; min-width: 0; padding-top: 2px; }
-    .dep-kicker {
-      display: block;
-      font-size: 0.65rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      color: var(--ab-blue);
-      margin-bottom: 4px;
+    .dep-header-back:active { transform: scale(0.96); }
+    .dep-header-back:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
     }
-    .dep-head-text h1 {
+    .dep-header-back svg { display: block; }
+    .dep-header-brand {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.03em;
       margin: 0;
-      font-size: 1.38rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
+      line-height: 1.2;
     }
-    .dep-sub {
+    .dep-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #fff;
+      font-size: 1.05rem;
+      pointer-events: none;
+    }
+    .dep-icon-bell-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+    .dep-notify-dot {
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      background: #ffab00;
+      border-radius: 50%;
+      border: 1px solid var(--dep-header);
+    }
+    .dep-header-sub {
+      background: var(--dep-header-grad);
+      padding: 12px 15px 14px;
+    }
+    .dep-header-screen-title {
+      margin: 0;
+      font-size: 1.12rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .dep-header-screen-desc {
       margin: 6px 0 0;
-      font-size: 0.88rem;
-      line-height: 1.45;
-      color: var(--ab-muted);
-      font-weight: 500;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      opacity: 0.94;
+      font-weight: 400;
+    }
+    .dep-panel-body {
+      padding: 12px 15px calc(24px + env(safe-area-inset-bottom, 0px));
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
     }
     .dep-card {
       background: var(--ab-surface);
       border-radius: var(--ab-radius-xl);
       box-shadow: var(--ab-shadow-card);
-      padding: 18px 16px 20px;
-      border: 1px solid rgba(226, 232, 240, 0.95);
+      padding: 16px 15px 18px;
+      border: none;
     }
     .dep-hint {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       color: var(--ab-muted);
       margin: 0 0 14px;
       line-height: 1.45;
     }
     .dep-label {
       display: block;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: var(--ab-blue-ink);
       margin-bottom: 6px;
     }
     .dep-input {
       width: 100%;
-      padding: 14px 14px;
-      border-radius: 14px;
-      border: 1px solid rgba(15, 23, 42, 0.12);
-      font-size: 1.05rem;
-      font-weight: 600;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      font-size: 1rem;
+      font-weight: 500;
+      background: #fff;
+      color: var(--ab-text);
     }
     .dep-input:focus {
       outline: none;
-      border-color: var(--ab-blue);
-      box-shadow: 0 0 0 3px rgba(19, 81, 180, 0.15);
+      border-color: var(--dep-primary);
+      box-shadow: 0 0 0 2px rgba(0, 102, 179, 0.2);
     }
     .dep-quick {
       display: flex;
@@ -143,28 +196,40 @@
       font-weight: 700;
       font-size: 0.88rem;
       padding: 12px 18px;
-      border-radius: var(--ab-radius-pill);
+      border-radius: 10px;
       -webkit-tap-highlight-color: transparent;
       transition: transform 0.12s ease, opacity 0.12s ease;
     }
-    .dep-btn:active:not(:disabled) { transform: scale(0.98); }
+    .dep-btn:active:not(:disabled) { transform: scale(0.99); }
     .dep-btn:disabled { opacity: 0.55; cursor: not-allowed; }
     .dep-btn-secondary {
-      background: #eef2f7;
-      color: var(--ab-blue-ink);
+      background: #e8ecf0;
+      color: #1a1a1a;
     }
     .dep-btn-primary {
-      background: linear-gradient(145deg, var(--ab-blue) 0%, #0a4a9e 100%);
-      color: #fff;
       width: 100%;
-      margin-top: 8px;
+      margin-top: 18px;
       padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fff;
+      background: var(--dep-primary);
+      box-shadow: var(--ab-shadow-soft);
+    }
+    .dep-btn-primary:focus-visible {
+      outline: 2px solid var(--dep-primary-dark);
+      outline-offset: 2px;
     }
     .dep-row-actions {
       display: flex;
       flex-direction: column;
       gap: 10px;
       margin-top: 14px;
+    }
+    .dep-row-actions .dep-btn-primary,
+    .dep-row-actions .dep-btn-secondary {
+      margin-top: 0;
     }
     .dep-err { color: #b00020; font-size: 0.84rem; min-height: 1.25em; margin: 8px 0 0; }
     .dep-hint--auto-credito {
@@ -203,7 +268,7 @@
       font-size: 1.55rem;
       font-weight: 800;
       letter-spacing: -0.03em;
-      color: var(--ab-blue);
+      color: var(--dep-primary);
       margin: 8px 0 14px;
       line-height: 1.15;
     }
@@ -213,7 +278,7 @@
     }
     .dep-status {
       font-weight: 700;
-      color: var(--ab-blue);
+      color: var(--dep-primary);
       margin: 0 0 6px;
       font-size: 1rem;
     }
@@ -225,11 +290,12 @@
       width: 100%;
       min-height: 88px;
       padding: 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
       font-size: 0.75rem;
       font-family: ui-monospace, monospace;
       resize: vertical;
+      background: #fff;
     }
     .dep-step-pix { display: none; }
     .dep-step-pix.dep-step-pix--show { display: block; }
@@ -261,19 +327,26 @@
 </head>
 <body>
   <div class="dep-app">
-    <header class="dep-top">
-      <button type="button" class="dep-back" id="depBackBtn" aria-label="Voltar ao início">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M15 18l-6-6 6-6"/>
-        </svg>
-      </button>
-      <div class="dep-head-text">
-        <span class="dep-kicker">AGILBANK</span>
-        <h1>Adicionar dinheiro</h1>
-        <p class="dep-sub">Gere um Pix para adicionar saldo à sua conta</p>
+    <header class="dep-app-header">
+      <div class="dep-header-top">
+        <button type="button" class="dep-header-back" id="depBackBtn" aria-label="Voltar ao início">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <p class="dep-header-brand">AgilBank</p>
+        <div class="dep-header-actions" aria-hidden="true">
+          <span class="dep-icon-bell-wrap"><i class="far fa-bell"></i><span class="dep-notify-dot"></span></span>
+          <i class="fas fa-magnifying-glass"></i>
+        </div>
+      </div>
+      <div class="dep-header-sub">
+        <h1 class="dep-header-screen-title">Adicionar dinheiro</h1>
+        <p class="dep-header-screen-desc">Gere um Pix para adicionar saldo à sua conta.</p>
       </div>
     </header>
 
+    <div class="dep-panel-body">
     <main class="dep-card" id="depMainCard">
       <p class="dep-hint">
         Validação na tela: R$&nbsp;1,00 a R$&nbsp;10.000,00 e até 2 decimais. Limites operacionais MVP — por depósito: até R$&nbsp;10.000,00; diário: até R$&nbsp;30.000,00; até 20 depósitos por dia. A validação definitiva e o crédito ocorrem apenas no servidor após confirmação do Pix pela Efí — este fluxo não altera saldo localmente.
@@ -327,6 +400,7 @@
         <p class="dep-err" id="depErrApiPix" aria-live="polite"></p>
       </div>
     </main>
+    </div>
   </div>
   <div id="depToast" role="status" aria-live="polite"></div>
 
