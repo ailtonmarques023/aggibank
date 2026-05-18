@@ -2878,6 +2878,15 @@ function agilbankSetDashboardOfferVisible(kind, visible) {
     slide.style.display = visible ? '' : 'none';
 }
 
+function agilbankSyncDashboardCdbOfferVisible() {
+    var card = document.querySelector('.dashboard-offer-slide[data-dashboard-offer="card"]');
+    var loan = document.querySelector('.dashboard-offer-slide[data-dashboard-offer="loan"]');
+    var hasProductOffer =
+        (card && !card.hidden && card.style.display !== 'none') ||
+        (loan && !loan.hidden && loan.style.display !== 'none');
+    agilbankSetDashboardOfferVisible('cdb', !!hasProductOffer);
+}
+
 function agilbankSetDashboardOffersState(state) {
     var s = state && typeof state === 'object' ? state : {};
     if (Object.prototype.hasOwnProperty.call(s, 'card')) {
@@ -2886,6 +2895,7 @@ function agilbankSetDashboardOffersState(state) {
     if (Object.prototype.hasOwnProperty.call(s, 'loan')) {
         agilbankSetDashboardOfferVisible('loan', !!s.loan);
     }
+    agilbankSyncDashboardCdbOfferVisible();
     agilbankSyncDashboardOfferCarouselHost();
 }
 
@@ -2914,6 +2924,7 @@ function agilbankStartDashboardOfferAutoScroll() {
  */
 function agilbankSetDashboardCardOffersVisible(visible) {
     agilbankSetDashboardOfferVisible('card', !!visible);
+    agilbankSyncDashboardCdbOfferVisible();
     agilbankSyncDashboardOfferCarouselHost();
 }
 
