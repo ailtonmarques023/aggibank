@@ -15,16 +15,23 @@
   var input = document.getElementById("abFgtsSaldoInput");
   var continueBtn = document.getElementById("abFgtsContinueBtn");
   var resultValue = document.getElementById("abFgtsResultValue");
-  var lastScreen = "home";
+  var backBtn = document.getElementById("abFgtsBackBtn");
+
+  /** Fórmula apenas ilustrativa — sem base em produto oficial ou API. Não representa oferta. */
+  function illustrativeEstimate(balance) {
+    if (balance < 100) return 0;
+    var available = Math.min(balance * 0.82, balance - 30);
+    return Math.max(available, 0);
+  }
 
   function setTitle(view) {
     var labels = {
       home: "Consignado e FGTS",
-      loading: "Simulador",
-      authorize: "Antecipação FGTS",
-      simulator: "Simulador",
-      result: "Resultado",
-      tutorial: "Antecipação FGTS",
+      loading: "Simulação informativa",
+      authorize: "Referência FGTS",
+      simulator: "Simulação informativa",
+      result: "Resultado estimado",
+      tutorial: "Referência educativa",
       client: "Área do cliente"
     };
     if (title) title.textContent = labels[view] || "Consignado e FGTS";
@@ -41,12 +48,11 @@
   }
 
   function showLoadingThen(view) {
-    lastScreen = view;
     show("loading");
     window.setTimeout(function () {
       show(view);
       if (view === "simulator" && input) input.focus();
-    }, 950);
+    }, 650);
   }
 
   function moneyToNumber(value) {
@@ -71,23 +77,25 @@
   function simulate() {
     var balance = moneyToNumber(input.value);
     if (balance < 100) return;
-    var available = Math.min(balance * 0.82, balance - 30);
-    resultValue.textContent = formatMoney(Math.max(available, 0));
+    var est = illustrativeEstimate(balance);
+    resultValue.textContent = formatMoney(est);
     showLoadingThen("result");
   }
 
-  function goHome() {
+  function goHomeIndex() {
     window.location.assign("./index.html");
   }
 
-  document.getElementById("abFgtsBackBtn").addEventListener("click", function () {
-    if (screens.home && screens.home.classList.contains("ab-fgts-screen--active")) {
-      goHome();
-      return;
-    }
-    show("home");
-  });
-  document.getElementById("abFgtsHomeBtn").addEventListener("click", goHome);
+  if (backBtn) {
+    backBtn.addEventListener("click", function () {
+      if (screens.home && screens.home.classList.contains("ab-fgts-screen--active")) {
+        goHomeIndex();
+        return;
+      }
+      show("home");
+    });
+  }
+  document.getElementById("abFgtsHomeBtn").addEventListener("click", goHomeIndex);
   document.getElementById("abFgtsStartBtn").addEventListener("click", function () {
     showLoadingThen("simulator");
   });
@@ -109,6 +117,12 @@
   document.getElementById("abFgtsInlineHowBtn").addEventListener("click", function () {
     show("tutorial");
   });
+  var tutorialHome = document.getElementById("abFgtsTutorialHomeBtn");
+  if (tutorialHome) {
+    tutorialHome.addEventListener("click", function () {
+      show("home");
+    });
+  }
   document.getElementById("abFgtsAlreadyBtn").addEventListener("click", function () {
     showLoadingThen("simulator");
   });
@@ -119,12 +133,11 @@
     show("simulator");
   });
   document.getElementById("abFgtsFinishBtn").addEventListener("click", function () {
-    window.alert("Solicitação registrada para análise. Em breve você poderá acompanhar pela Área do cliente.");
-    show("client");
+    show("home");
   });
 
-  input.addEventListener("input", applyMoneyMask);
-  continueBtn.addEventListener("click", simulate);
+  if (input) input.addEventListener("input", applyMoneyMask);
+  if (continueBtn) continueBtn.addEventListener("click", simulate);
 
   if (window.location.hash === "#autorizar") {
     show("tutorial");
