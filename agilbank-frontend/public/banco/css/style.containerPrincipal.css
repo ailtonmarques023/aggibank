@@ -430,7 +430,7 @@
         }
 
         .dashboard-feature-slide {
-            flex: 0 0 min(88vw, 420px);
+            flex: 0 0 min(72vw, 320px);
             scroll-snap-align: start;
         }
 
@@ -455,7 +455,7 @@
         .dashboard-feature-banner img {
             display: block;
             width: 100%;
-            aspect-ratio: 16 / 9;
+            aspect-ratio: 16 / 8.4;
             object-fit: cover;
         }
 
@@ -966,7 +966,7 @@
         .banner-divulgação {
             position: relative;
             overflow: hidden;
-            height: 250px;
+            height: 180px;
             border-radius: 12px;
             margin: 15px;
         }

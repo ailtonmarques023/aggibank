@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0066b3">
+  <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+  <title>Meus comprovantes — AgilBank</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/agilbank-brand.css">
+  <link rel="stylesheet" href="css/style.comprovantes.css">
+  <script src="js/legacyAuthStore.js"></script>
+  <script src="js/agilbankApiBase.js"></script>
+  <script src="js/legacyApiClient.js"></script>
+  <script>
+    (function enforceAuthComp() {
+      var authStore = window.AgilBank && window.AgilBank.auth;
+      var sessionToken = authStore && typeof authStore.getToken === 'function'
+        ? authStore.getToken()
+        : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
+          localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
+      if (!sessionToken) {
+        window.location.replace('/login');
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="comp-app">
+    <header class="comp-header">
+      <button type="button" class="comp-header__back" id="compBack" aria-label="Voltar">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+      </button>
+      <div class="comp-header__text">
+        <h1 class="comp-header__title">Meus comprovantes</h1>
+        <p class="comp-header__sub">Consulte recibos das suas movimentações.</p>
+      </div>
+      <span class="comp-header__spacer" aria-hidden="true"></span>
+    </header>
+
+    <main class="comp-main">
+      <section class="comp-summary" aria-label="Resumo">
+        <p class="comp-summary__line">
+          <span class="comp-summary__label">Movimentações carregadas</span>
+          <strong class="comp-summary__value" id="compSummaryCount">—</strong>
+        </p>
+        <p class="comp-summary__line comp-summary__line--muted">
+          <span class="comp-summary__label">Última atualização</span>
+          <span class="comp-summary__value" id="compSummaryUpdated">—</span>
+        </p>
+        <p class="comp-summary__note">
+          Os comprovantes são gerados com base nos registros do AgilBank.
+        </p>
+      </section>
+
+      <section class="comp-filters" aria-label="Filtros">
+        <label class="comp-visually-hidden" for="compSearch">Buscar</label>
+        <div class="comp-search-wrap">
+          <i class="fas fa-search comp-search-wrap__icon" aria-hidden="true"></i>
+          <input type="search" id="compSearch" class="comp-search" placeholder="Descrição, tipo, valor ou referência" autocomplete="off">
+        </div>
+        <div class="comp-chip-row" role="group" aria-label="Tipo">
+          <button type="button" class="comp-chip comp-chip--tipo is-active" data-tipo="todos">Todos</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="pix">Pix</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="boleto">Boleto</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="cartao">Cartão</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="emprestimo">Empréstimo</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="frete">Frete</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="seguro">Seguro</button>
+          <button type="button" class="comp-chip comp-chip--tipo" data-tipo="outros">Outros</button>
+        </div>
+        <div class="comp-chip-row" role="group" aria-label="Período">
+          <button type="button" class="comp-chip comp-chip--periodo is-active" data-dias="0">Todos</button>
+          <button type="button" class="comp-chip comp-chip--periodo" data-dias="7">7 dias</button>
+          <button type="button" class="comp-chip comp-chip--periodo" data-dias="30">30 dias</button>
+          <button type="button" class="comp-chip comp-chip--periodo" data-dias="90">90 dias</button>
+        </div>
+      </section>
+
+      <div class="comp-state comp-state--loading" id="compStateLoading">
+        <div class="comp-spinner" aria-hidden="true"></div>
+        <p>Carregando movimentações…</p>
+      </div>
+
+      <div class="comp-state comp-state--error is-hidden" id="compStateError" role="alert">
+        <i class="fas fa-circle-exclamation comp-state__icon" aria-hidden="true"></i>
+        <p id="compStateErrorText"></p>
+        <button type="button" class="comp-btn comp-btn--secondary" id="compRetry">Tentar novamente</button>
+      </div>
+
+      <div class="comp-state comp-state--empty is-hidden" id="compStateEmpty">
+        <i class="fas fa-receipt comp-state__icon" aria-hidden="true"></i>
+        <p>Não há movimentações no extrato ainda.</p>
+      </div>
+
+      <div class="comp-state comp-state--empty is-hidden" id="compStateNoFilter">
+        <i class="fas fa-filter-circle-xmark comp-state__icon" aria-hidden="true"></i>
+        <p>Nenhum resultado para os filtros atuais.</p>
+        <p class="comp-state__hint">Ajuste a busca, o tipo ou o período.</p>
+      </div>
+
+      <ul class="comp-list" id="compList"></ul>
+
+      <div class="comp-load-more-wrap">
+        <button type="button" class="comp-btn comp-btn--secondary is-hidden" id="compLoadMore">Carregar mais</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="comp-modal is-hidden" id="receiptModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
+    <div class="comp-modal__backdrop" id="receiptModalBackdrop"></div>
+    <div class="comp-modal__panel">
+      <div class="comp-receipt comp-receipt--print" id="receiptPrintRoot">
+        <div class="comp-receipt__brand">
+          <img src="assets/brand/agilbank-wordmark-header.svg" alt="AgilBank" class="agilbank-brand-wordmark-header comp-receipt__logo" width="170" height="28">
+        </div>
+        <h2 class="comp-receipt__title" id="receiptModalTitle">Comprovante</h2>
+        <p class="comp-receipt__tipo-linha" id="receiptTipoLinha"></p>
+        <p class="comp-receipt__valor" id="receiptValor"></p>
+        <dl class="comp-receipt__grid">
+          <div class="comp-receipt__row">
+            <dt>Data e hora</dt>
+            <dd id="receiptData"></dd>
+          </div>
+          <div class="comp-receipt__row">
+            <dt>Descrição</dt>
+            <dd id="receiptDesc"></dd>
+          </div>
+          <div class="comp-receipt__row">
+            <dt>Referência</dt>
+            <dd id="receiptRef"></dd>
+          </div>
+          <div class="comp-receipt__row is-hidden" id="receiptStatusRow">
+            <dt>Status</dt>
+            <dd id="receiptStatus"></dd>
+          </div>
+          <div class="comp-receipt__row is-hidden" id="receiptCanalRow">
+            <dt>Classificação no extrato</dt>
+            <dd id="receiptCanal"></dd>
+          </div>
+          <div class="comp-receipt__row is-hidden" id="receiptMovIdRow">
+            <dt>ID da movimentação</dt>
+            <dd id="receiptMovId"></dd>
+          </div>
+        </dl>
+        <p class="comp-receipt__disclaimer">
+          Este comprovante foi gerado com base nas informações registradas no AgilBank.
+        </p>
+      </div>
+      <div class="comp-modal__actions no-print">
+        <button type="button" class="comp-btn comp-btn--secondary" id="receiptCopy">
+          <i class="fas fa-copy" aria-hidden="true"></i> Copiar dados
+        </button>
+        <button type="button" class="comp-btn comp-btn--primary" id="receiptPrint">
+          <i class="fas fa-print" aria-hidden="true"></i> Imprimir / salvar PDF
+        </button>
+        <button type="button" class="comp-btn comp-btn--ghost" id="receiptClose">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/comprovantes.js"></script>
+</body>
+</html>
