@@ -327,6 +327,18 @@
             line-height: 1.2;
         }
 
+        /* FATIA 3 — tiles abrem central informativa (sem modal "em breve") */
+        .mais-item.mais-item--mpv {
+            position: relative;
+            cursor: pointer;
+            border-radius: 12px;
+            padding-top: 6px;
+            outline: none;
+        }
+        .mais-item.mais-item--mpv:focus-visible {
+            box-shadow: 0 0 0 2px #0066b3;
+        }
+
         /* Painel de status (solicitacao pendente / aprovado / rejeitado) — cartao.js */
         .cartao-painel-msg--rich {
             text-align: left;

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0066b3">
+  <title>Mais pra você — AgilBank</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.mais-pra-voce.css">
+</head>
+<body>
+  <div class="mpv-app">
+    <header class="mpv-header">
+      <button type="button" class="mpv-back" id="mpvBack" aria-label="Voltar">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+      </button>
+      <div class="mpv-header__text">
+        <h1 class="mpv-header__title">Mais pra você</h1>
+        <p class="mpv-header__sub">Produtos e benefícios em ativação</p>
+      </div>
+      <span style="width:40px" aria-hidden="true"></span>
+    </header>
+
+    <section class="mpv-hero" aria-label="Arte Mais pra você AgilBank">
+      <img
+        src="img/fatia-3-hero.png"
+        alt="Ecossistema de produtos e benefícios digitais AgilBank em preparação. Nenhuma contratação ativa nesta área."
+        fetchpriority="high"
+        decoding="async">
+    </section>
+
+    <div class="mpv-intro">
+      <p>Conheça recursos que estão sendo preparados para futuras versões do AgilBank.</p>
+    </div>
+
+    <p class="mpv-disclaimer" role="status">
+      Alguns produtos ainda não estão disponíveis para contratação. As condições oficiais serão exibidas antes de qualquer ativação.
+    </p>
+
+    <div class="mpv-list" id="mpvListaProdutos">
+
+      <article class="mpv-card" id="cdb" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-arrow-trend-up"></i></div>
+          <div class="mpv-card__titles">
+            <h2>CDB Mais Limite</h2>
+            <span class="mpv-status mpv-status--info">Informativo</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Estamos preparando uma área para você conhecer futuras opções de investimento com segurança.</p>
+          <p class="mpv-card__aviso"><strong>Aviso:</strong> Contratação indisponível no momento.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="poupanca" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Poupança Mais Limite</h2>
+            <span class="mpv-status">Em ativação</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Uma experiência para organizar limite e reserva financeira está em estudo.</p>
+          <p class="mpv-card__aviso"><strong>Aviso:</strong> Sem contratação ativa.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="cartao-global" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-globe"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Cartão Global</h2>
+            <span class="mpv-status mpv-status--breve">Em breve</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Produto internacional em análise para futuras versões do AgilBank.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="cartao-protegido" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-shield"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Cartão + Protegido</h2>
+            <span class="mpv-status">Em ativação</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Proteções e seguros serão comunicados com regras oficiais antes da ativação.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="maquininha" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-credit-card"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Maquininha</h2>
+            <span class="mpv-status mpv-status--breve">Em breve</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Solução para recebimentos e vendas pelo AgilBank.</p>
+          <p class="mpv-card__aviso"><strong>Aviso:</strong> Disponibilidade futura.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="pontos" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-gift"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Programa de Pontos</h2>
+            <span class="mpv-status">Em ativação</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Benefícios e pontos aparecerão aqui quando o programa estiver disponível.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="beneficios" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-star"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Benefícios</h2>
+            <span class="mpv-status mpv-status--breve">Em breve</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Parcerias e vantagens aparecerão nesta área.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+
+      <article class="mpv-card" id="duo-gourmet" tabindex="-1">
+        <div class="mpv-card__head">
+          <div class="mpv-card__icon" aria-hidden="true"><i class="fas fa-utensils"></i></div>
+          <div class="mpv-card__titles">
+            <h2>Duo Gourmet</h2>
+            <span class="mpv-status mpv-status--breve">Em breve</span>
+          </div>
+        </div>
+        <div class="mpv-card__body">
+          <p>Benefício de parceria ainda não disponível no app.</p>
+        </div>
+        <div class="mpv-card__actions">
+          <button type="button" class="mpv-btn mpv-btn--quiet" disabled aria-disabled="true">Indisponível no momento</button>
+        </div>
+      </article>
+    </div>
+
+    <p class="mpv-footnote">
+      Esta página é somente informativa. Não há contratação, investimento ou movimentação financeira neste fluxo.
+    </p>
+  </div>
+  <script src="js/mais-pra-voce.js"></script>
+</body>
+</html>
