@@ -47,20 +47,24 @@ Nenhum endpoint. Apenas recursos estáticos:
 | Recurso | Método | Observação |
 |---------|--------|------------|
 | `./indique-ganhe.html` | Navegação do browser | HTML + CSS inline + script mínimo (voltar) |
-| `./img/propaganda-indique-e-ganhe.png` | `GET` estático | Hero da página (ver **Asset imagem** abaixo) |
+| `./img/fatia-1-hero.png` | `GET` estático | Hero premium FATIA 1 (16:9, identidade AgilBank; ver **Asset imagem**) |
+| `./img/propaganda-indique-e-ganhe.png` | *(opcional / legado)* | Cópia da arte em `imagens/`; **não** referenciada no HTML após o hero `fatia-1-hero.png` |
 
 ---
 
-## ASSET IMAGEM (HERO — melhoria visual)
+## ASSET IMAGEM (HERO — identidade AgilBank)
 
-| Item | Caminho / URL |
-|------|----------------|
-| **Arquivo original no repositório** | `agilbank-frontend/imagens/propaganda indique e ganhe.png` |
-| **Por que há cópia em `public/banco/img/`** | A pasta `imagens/` fica **fora** de `public/`. No fluxo habitual do frontend (Vite: só o conteúdo de `public/` vai para o artefato estático servido com o `banco/`), o browser **não** receberia a imagem se referenciássemos apenas `../imagens/...`. |
-| **Arquivo usado no HTML (servido com a página)** | `agilbank-frontend/public/banco/img/propaganda-indique-e-ganhe.png` |
-| **URL relativa na página** | `img/propaganda-indique-e-ganhe.png` (a partir de `banco/indique-ganhe.html`) |
+### Hero principal (em uso na página)
 
-**Decisão:** foi criada **cópia** com nome sem espaços (`propaganda-indique-e-ganhe.png`) para URL estável; o **original permanece** em `imagens/` (pode ser removido manualmente se quiser uma única cópia no repo).
+| Item | Valor |
+|------|--------|
+| **Arquivo servido** | `agilbank-frontend/public/banco/img/fatia-1-hero.png` |
+| **URL relativa** | `img/fatia-1-hero.png` (a partir de `banco/indique-ganhe.html`) |
+| **Proporção / tratamento CSS** | 16:9; `object-fit: cover`; fundo do bloco `#0a1628` (alinhado a visual escuro) |
+| **Origem do arquivo** | Imagem **gerada** para esta fatia a partir de brief interno (estilo premium, azul escuro, neon suave, 3D abstrato, celular com UI sem texto, sem logotipos de bancos reais), **sem** clonar layout de concorrentes |
+| **Prompt de criação (resumo)** | *Banner premium para app bancário digital AgilBank, moderno e tecnológico, fundo azul escuro com luzes neon suaves, elementos 3D de finanças digitais, celular com interface abstrata, ícones de segurança e crescimento, visual limpo e sofisticado, alta qualidade, sem textos pequenos, sem logotipos de bancos reais, proporção 16:9.* |
+
+**Arte promocional anterior (repo):** `agilbank-frontend/imagens/propaganda indique e ganhe.png` e cópia `public/banco/img/propaganda-indique-e-ganhe.png` — permanecem como ativos opcioniais; o **hero ativo** na página é `fatia-1-hero.png`.
 
 **Comunicação obrigatória:** imediatamente abaixo do hero, faixa com o texto: *“Programa em ativação. As recompensas ainda não estão disponíveis e as regras oficiais serão comunicadas antes do lançamento.”*
 
@@ -73,7 +77,7 @@ Nenhum endpoint. Apenas recursos estáticos:
 | Página FATIA 1 | Criada `indique-ganhe.html` com texto de programa **em fase de ativação**, **sem** código de indicação e **sem** promessa de dinheiro/recompensa. |
 | Card no `index` | Removidos `service-item--soon`, `data-fatia0-nome`, pill “Em breve”, handlers do modal FATIA 0; navegação para `indique-ganhe.html` com suporte a teclado. |
 | Smoke | Corrigida divergência: clique abre a página e não o modal “Em breve”. |
-| Melhoria visual | Hero com arte existente (cópia servível em `public/banco/img/`), faixa de aviso logo abaixo, layout mobile-first; **sem** alterar promessa de produto ativo. |
+| Melhoria visual | Hero **identidade AgilBank** (`fatia-1-hero.png`), faixa de aviso logo abaixo, layout mobile-first; `alt` e cópia **não** prometem produto ativo. |
 
 **Intencionalmente não alterados:** demais CTAs/modais “Em breve” (ex.: Consignado e FGTS, `agilbankFatia0*` em outros itens).
 
@@ -83,8 +87,9 @@ Nenhum endpoint. Apenas recursos estáticos:
 
 | Arquivo | Tipo |
 |---------|------|
-| `agilbank-frontend/public/banco/indique-ganhe.html` | **Criado** / **Alterado** (hero + aviso) |
-| `agilbank-frontend/public/banco/img/propaganda-indique-e-ganhe.png` | **Criado** (cópia para deploy; origem: `agilbank-frontend/imagens/propaganda indique e ganhe.png`) |
+| `agilbank-frontend/public/banco/indique-ganhe.html` | **Alterado** (hero `fatia-1-hero.png`, bloco 16:9 escuro) |
+| `agilbank-frontend/public/banco/img/fatia-1-hero.png` | **Criado** — hero premium FATIA 1 (nome conforme padrão `fatia-1` + `hero`) |
+| `agilbank-frontend/public/banco/img/propaganda-indique-e-ganhe.png` | **Legado** (não usado no HTML atual; origem: `imagens/propaganda indique e ganhe.png`) |
 | `agilbank-frontend/public/banco/index.html` | **Alterado** (apenas card Indique e Ganhe) |
 | `docs/relatorios/ivar-fatia-1-indique-ganhe.md` | **Criado** (este relatório) |
 
@@ -120,7 +125,8 @@ Nenhum endpoint. Apenas recursos estáticos:
 ## RISCOS
 
 - **Dependência de CDN:** Font Awesome e Google Fonts (igual ao restante do `banco`); falha de rede externa pode afetar ícone/fonte, não a navegação.  
-- **Conteúdo jurídico:** texto é informativo e conservador; revisão jurídica final permanece recomendada antes de divulgação ampla do programa.
+- **Conteúdo jurídico:** texto é informativo e conservador; revisão jurídica final permanece recomendada antes de divulgação ampla do programa.  
+- **Imagem hero gerada:** revisar visualmente em cada deploy se houve artefato indesejado (texto legível fantasma, marcas); substituir PNG se necessário.
 
 ---
 

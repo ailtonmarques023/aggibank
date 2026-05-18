@@ -70,18 +70,21 @@
     .ig-hero {
       margin: 0;
       line-height: 0;
-      background: #fff;
-      border-bottom: 1px solid var(--ig-border);
+      background: #0a1628;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       flex-shrink: 0;
+      aspect-ratio: 16 / 9;
+      max-height: min(48vh, 320px);
+      overflow: hidden;
+      position: relative;
     }
     .ig-hero img {
       width: 100%;
-      height: auto;
+      height: 100%;
       display: block;
-      object-fit: contain;
-      max-height: min(58vh, 420px);
-      margin: 0 auto;
-      background: #fff;
+      object-fit: cover;
+      object-position: center;
+      margin: 0;
     }
     .ig-notice {
       margin: 0;
@@ -128,10 +131,10 @@
       <span style="width:40px" aria-hidden="true"></span>
     </header>
 
-    <section class="ig-hero" aria-label="Campanha Indique e Ganhe">
+    <section class="ig-hero" aria-label="Arte Indique e Ganhe AgilBank">
       <img
-        src="img/propaganda-indique-e-ganhe.png"
-        alt="Campanha Indique e Ganhe AgilBank. O programa ainda não está disponível para uso."
+        src="img/fatia-1-hero.png"
+        alt="Arte institucional AgilBank em estilo digital premium. O programa Indique e Ganhe ainda não está disponível."
         fetchpriority="high"
         decoding="async">
     </section>
