@@ -47,6 +47,22 @@ Nenhum endpoint. Apenas recursos estáticos:
 | Recurso | Método | Observação |
 |---------|--------|------------|
 | `./indique-ganhe.html` | Navegação do browser | HTML + CSS inline + script mínimo (voltar) |
+| `./img/propaganda-indique-e-ganhe.png` | `GET` estático | Hero da página (ver **Asset imagem** abaixo) |
+
+---
+
+## ASSET IMAGEM (HERO — melhoria visual)
+
+| Item | Caminho / URL |
+|------|----------------|
+| **Arquivo original no repositório** | `agilbank-frontend/imagens/propaganda indique e ganhe.png` |
+| **Por que há cópia em `public/banco/img/`** | A pasta `imagens/` fica **fora** de `public/`. No fluxo habitual do frontend (Vite: só o conteúdo de `public/` vai para o artefato estático servido com o `banco/`), o browser **não** receberia a imagem se referenciássemos apenas `../imagens/...`. |
+| **Arquivo usado no HTML (servido com a página)** | `agilbank-frontend/public/banco/img/propaganda-indique-e-ganhe.png` |
+| **URL relativa na página** | `img/propaganda-indique-e-ganhe.png` (a partir de `banco/indique-ganhe.html`) |
+
+**Decisão:** foi criada **cópia** com nome sem espaços (`propaganda-indique-e-ganhe.png`) para URL estável; o **original permanece** em `imagens/` (pode ser removido manualmente se quiser uma única cópia no repo).
+
+**Comunicação obrigatória:** imediatamente abaixo do hero, faixa com o texto: *“Programa em ativação. As recompensas ainda não estão disponíveis e as regras oficiais serão comunicadas antes do lançamento.”*
 
 ---
 
@@ -57,6 +73,7 @@ Nenhum endpoint. Apenas recursos estáticos:
 | Página FATIA 1 | Criada `indique-ganhe.html` com texto de programa **em fase de ativação**, **sem** código de indicação e **sem** promessa de dinheiro/recompensa. |
 | Card no `index` | Removidos `service-item--soon`, `data-fatia0-nome`, pill “Em breve”, handlers do modal FATIA 0; navegação para `indique-ganhe.html` com suporte a teclado. |
 | Smoke | Corrigida divergência: clique abre a página e não o modal “Em breve”. |
+| Melhoria visual | Hero com arte existente (cópia servível em `public/banco/img/`), faixa de aviso logo abaixo, layout mobile-first; **sem** alterar promessa de produto ativo. |
 
 **Intencionalmente não alterados:** demais CTAs/modais “Em breve” (ex.: Consignado e FGTS, `agilbankFatia0*` em outros itens).
 
@@ -66,7 +83,8 @@ Nenhum endpoint. Apenas recursos estáticos:
 
 | Arquivo | Tipo |
 |---------|------|
-| `agilbank-frontend/public/banco/indique-ganhe.html` | **Criado** |
+| `agilbank-frontend/public/banco/indique-ganhe.html` | **Criado** / **Alterado** (hero + aviso) |
+| `agilbank-frontend/public/banco/img/propaganda-indique-e-ganhe.png` | **Criado** (cópia para deploy; origem: `agilbank-frontend/imagens/propaganda indique e ganhe.png`) |
 | `agilbank-frontend/public/banco/index.html` | **Alterado** (apenas card Indique e Ganhe) |
 | `docs/relatorios/ivar-fatia-1-indique-ganhe.md` | **Criado** (este relatório) |
 
@@ -120,8 +138,26 @@ Se o smoke **ainda** exibir apenas o modal “Em breve”, a divergência tende 
 
 ---
 
+## SMOKE OPERACIONAL (ambiente publicado)
+
+**Data do registro:** 2026-05-18  
+**Responsável / ambiente:** validação do operador no host publicado (pós-deploy).
+
+| Critério | Resultado |
+|----------|-----------|
+| Card “Indique e Ganhe” abre `indique-ganhe.html` | **OK** |
+| Não abre modal antigo “Em breve” | **OK** |
+| Comunicação: programa em fase de ativação | **OK** |
+| Sem promessa de dinheiro, cashback ou benefício garantido | **OK** |
+| Sem código de indicação falso | **OK** |
+| Sem backend, migration, Prisma ou ledger nesta fatia | **OK** |
+
+**Observação:** melhorias visuais podem ser tratadas em recorte futuro; **entrega funcional e de comunicação aprovadas.**
+
+---
+
 ## STATUS FINAL
 
-**FATIA 1 ATENDE AO CRITÉRIO DE SMOKE PARA NAVEGAÇÃO —** card abre `indique-ganhe.html`; página deixa claro **ativação**; **sem** promessa de dinheiro real; **sem** código/link de indicação; voltar funcional; sem backend/migration/ledger.
+**FATIA 1 — APROVADA (smoke operacional no ambiente publicado).**
 
-**Aguardando** novo smoke real no ambiente do usuário para **APROVADO** formal se todos os checks de console/rede estiverem ok.
+Critérios de navegação, cópia e escopo técnico (somente frontend) atendidos. Registro de smoke acima.

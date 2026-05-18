@@ -17,6 +17,8 @@
       --ig-ink: #1a1a1a;
       --ig-muted: #5c6670;
       --ig-border: rgba(0, 0, 0, 0.08);
+      --ig-notice-bg: #e8f2fa;
+      --ig-notice-border: #0066b3;
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -28,7 +30,14 @@
       background: var(--ig-bg);
       color: #333;
     }
-    .ig-app { max-width: 520px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
+    .ig-app {
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
     .ig-header {
       display: grid;
       grid-template-columns: 44px 1fr 44px;
@@ -39,6 +48,7 @@
       background: linear-gradient(to right, var(--ig-blue), var(--ig-blue-2));
       color: #fff;
       box-shadow: 0 2px 8px rgba(0, 40, 80, 0.08);
+      flex-shrink: 0;
     }
     .ig-back {
       width: 40px;
@@ -57,7 +67,37 @@
     .ig-header__text { text-align: center; min-width: 0; }
     .ig-header__title { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; }
     .ig-header__sub { margin: 4px 0 0; font-size: 0.78rem; opacity: 0.92; line-height: 1.3; }
-    .ig-main { padding: 16px 14px calc(28px + env(safe-area-inset-bottom, 0px)); }
+    .ig-hero {
+      margin: 0;
+      line-height: 0;
+      background: #fff;
+      border-bottom: 1px solid var(--ig-border);
+      flex-shrink: 0;
+    }
+    .ig-hero img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+      max-height: min(58vh, 420px);
+      margin: 0 auto;
+      background: #fff;
+    }
+    .ig-notice {
+      margin: 0;
+      padding: 14px 16px;
+      background: var(--ig-notice-bg);
+      border-left: 4px solid var(--ig-notice-border);
+      color: var(--ig-ink);
+      font-size: 0.88rem;
+      font-weight: 500;
+      line-height: 1.45;
+      flex-shrink: 0;
+    }
+    .ig-main {
+      flex: 1;
+      padding: 16px 14px calc(28px + env(safe-area-inset-bottom, 0px));
+    }
     .ig-card {
       background: var(--ig-card);
       border-radius: 12px;
@@ -83,10 +123,23 @@
       </button>
       <div class="ig-header__text">
         <h1 class="ig-header__title">Indique e Ganhe</h1>
-        <p class="ig-header__sub">Programa em ativação</p>
+        <p class="ig-header__sub">Programa em fase de ativação</p>
       </div>
       <span style="width:40px" aria-hidden="true"></span>
     </header>
+
+    <section class="ig-hero" aria-label="Campanha Indique e Ganhe">
+      <img
+        src="img/propaganda-indique-e-ganhe.png"
+        alt="Campanha Indique e Ganhe AgilBank. O programa ainda não está disponível para uso."
+        fetchpriority="high"
+        decoding="async">
+    </section>
+
+    <p class="ig-notice" role="status">
+      Programa em ativação. As recompensas ainda não estão disponíveis e as regras oficiais serão comunicadas antes do lançamento.
+    </p>
+
     <main class="ig-main">
       <div class="ig-brand">
         <img src="assets/brand/agilbank-wordmark-header.svg" alt="AgilBank" class="agilbank-brand-wordmark-header" width="170" height="28">
