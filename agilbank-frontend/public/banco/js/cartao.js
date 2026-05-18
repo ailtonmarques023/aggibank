@@ -951,7 +951,7 @@ function agilbankInferPhysicalDeliveryFromShipment(shipment) {
     } else if (st === 'FALHA_ENTREGA') {
         shipmentUiState = 'FALHA_ENTREGA';
         productionStarted = true;
-    } else if (inTransitStatuses.indexOf(st) >= 0 || trackingCode) {
+    } else if (inTransitStatuses.indexOf(st) >= 0) {
         shipmentUiState = 'EM_TRANSITO';
         productionStarted = true;
     } else if (['COBRANCA_CONFIRMADA', 'EM_PRODUCAO'].indexOf(st) >= 0) {
@@ -2198,6 +2198,46 @@ function agilbankPainelCartoesBindAcoes() {
             b.addEventListener('click', map[id]);
         }
     });
+    agilbankBindAcompanharPedidoCardNav();
+}
+
+/**
+ * Card "Acompanhar pedido" na tela de status de entrega → página dedicada (somente leitura).
+ */
+function agilbankBindAcompanharPedidoCardNav() {
+    if (window.__agilbankAcompanharPedidoNavBound) return;
+    var el = document.getElementById('statusEntregaTrackingCard');
+    if (!el) return;
+    window.__agilbankAcompanharPedidoNavBound = true;
+    el.setAttribute('role', 'link');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute(
+        'aria-label',
+        'Acompanhar pedido: ver histórico e detalhes da entrega do cartão físico',
+    );
+    function openAcompanharPedidoPage(ev) {
+        if (ev && ev.target && typeof ev.target.closest === 'function') {
+            if (ev.target.closest('a')) return;
+        }
+        var card = typeof agilbankGetCartaoSelecionado === 'function' ? agilbankGetCartaoSelecionado() : null;
+        var cid = card && card.id != null ? String(card.id).trim() : '';
+        try {
+            if (cid) {
+                sessionStorage.setItem('agilbank_acompanhar_pedido_card_id', cid);
+            }
+            sessionStorage.setItem('agilbank_acompanhar_pedido_return', 'index');
+        } catch (eStore) {
+            /* ignore */
+        }
+        window.location.href = 'acompanhar-pedido-cartao.html';
+    }
+    el.addEventListener('click', openAcompanharPedidoPage);
+    el.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            openAcompanharPedidoPage(ev);
+        }
+    });
 }
 
 /**
@@ -2771,18 +2811,26 @@ function renderCartoesReaisGrid(cartoes) {
         wrap.setAttribute('role', 'button');
         wrap.setAttribute('tabindex', '0');
         wrap.innerHTML =
-            '<div><div class="cartao-nome">' +
+            '<div class="cartao-item-topo">' +
+            '<span class="cartao-nome">' +
             tipo +
-            '</div>' +
-            '<div class="cartao-numero">•••• ' +
-            last4 +
-            '</div>' +
-            '<div style="font-size:12px;color:#555;margin-top:6px;">Limite: ' +
-            limTxt +
-            '</div>' +
-            '<div style="font-size:12px;color:#0066b3;margin-top:4px;">' +
+            '</span>' +
+            '<span class="cartao-status-badge">' +
             statusCartaoLabel(c.status) +
-            '</div></div>';
+            '</span>' +
+            '</div>' +
+            '<div class="cartao-item-centro">' +
+            '<span class="cartao-chip" aria-hidden="true"></span>' +
+            '<strong class="cartao-numero">•••• ' +
+            last4 +
+            '</strong>' +
+            '</div>' +
+            '<div class="cartao-item-rodape">' +
+            '<span>Limite disponível</span>' +
+            '<strong>' +
+            limTxt +
+            '</strong>' +
+            '</div>';
 
         wrap.addEventListener('click', function () {
             window.__agilbankCartaoSelecionadoId = c.id;
@@ -2804,14 +2852,69 @@ function renderCartoesReaisGrid(cartoes) {
     agilbankAtualizarBotoesPainelCartoes();
 }
 
+function agilbankDashboardOfferSlidesVisiveis() {
+    return Array.prototype.slice.call(document.querySelectorAll('.dashboard-offer-slide')).filter(function (slide) {
+        return !slide.hidden && slide.style.display !== 'none';
+    });
+}
+
+function agilbankSyncDashboardOfferCarouselHost() {
+    var host = document.getElementById('dashboardOfferCarousel') || document.querySelector('.banner-divulgação');
+    if (!host) return;
+    var visibleSlides = agilbankDashboardOfferSlidesVisiveis();
+    host.style.display = visibleSlides.length ? '' : 'none';
+    if (visibleSlides.length) {
+        var track = document.getElementById('dashboardOfferTrack');
+        if (track) {
+            track.scrollTo({ left: visibleSlides[0].offsetLeft, behavior: 'auto' });
+        }
+    }
+}
+
+function agilbankSetDashboardOfferVisible(kind, visible) {
+    var slide = document.querySelector('.dashboard-offer-slide[data-dashboard-offer="' + kind + '"]');
+    if (!slide) return;
+    slide.hidden = !visible;
+    slide.style.display = visible ? '' : 'none';
+}
+
+function agilbankSetDashboardOffersState(state) {
+    var s = state && typeof state === 'object' ? state : {};
+    if (Object.prototype.hasOwnProperty.call(s, 'card')) {
+        agilbankSetDashboardOfferVisible('card', !!s.card);
+    }
+    if (Object.prototype.hasOwnProperty.call(s, 'loan')) {
+        agilbankSetDashboardOfferVisible('loan', !!s.loan);
+    }
+    agilbankSyncDashboardOfferCarouselHost();
+}
+
+function agilbankStartDashboardOfferAutoScroll() {
+    if (window.__agilbankOfferCarouselTimer) return;
+    window.__agilbankOfferCarouselTimer = window.setInterval(function () {
+        var host = document.getElementById('dashboardOfferCarousel');
+        var track = document.getElementById('dashboardOfferTrack');
+        if (!host || !track || host.style.display === 'none') return;
+        var visibleSlides = agilbankDashboardOfferSlidesVisiveis();
+        if (visibleSlides.length < 2) return;
+        var currentIndex = 0;
+        for (var i = 0; i < visibleSlides.length; i += 1) {
+            if (visibleSlides[i].offsetLeft <= track.scrollLeft + 8) {
+                currentIndex = i;
+            }
+        }
+        var next = visibleSlides[(currentIndex + 1) % visibleSlides.length];
+        track.scrollTo({ left: next.offsetLeft, behavior: 'smooth' });
+    }, 4500);
+}
+
 /**
- * Esconde banners/modal de oferta no dashboard quando já existe cartão na API.
- * O card compacto “Cartão aprovado” no dashboard é controlado por {@link agilbankSyncDashboardApprovedMiniCard}.
+ * Esconde/mostra a oferta de cartão no carrossel do dashboard.
+ * A oferta de empréstimo é controlada pelo fluxo contextual que consulta /api/loans.
  */
 function agilbankSetDashboardCardOffersVisible(visible) {
-    var disp = visible ? '' : 'none';
-    var banner = document.querySelector('.banner-divulgação');
-    if (banner) banner.style.display = disp;
+    agilbankSetDashboardOfferVisible('card', !!visible);
+    agilbankSyncDashboardOfferCarouselHost();
 }
 
 /**
@@ -3262,6 +3365,7 @@ function agilbankShowPainelCartoesLoading(show) {
 window.agilbankRefreshPainelCartoes = agilbankRefreshPainelCartoes;
 window.agilbankAplicarEstadoPainelCartao = agilbankAplicarEstadoPainelCartao;
 window.agilbankSetDashboardCardOffersVisible = agilbankSetDashboardCardOffersVisible;
+window.agilbankSetDashboardOffersState = agilbankSetDashboardOffersState;
 window.agilbankSyncDashboardApprovedMiniCard = agilbankSyncDashboardApprovedMiniCard;
 window.agilbankDashboardOpenCartaoPainel = agilbankDashboardOpenCartaoPainel;
 window.agilbankSetSolicitacaoWizardMode = agilbankSetSolicitacaoWizardMode;
@@ -3933,6 +4037,7 @@ function startCountdown() {
         agilbankWizardBindNav();
         agilbankPainelCartoesBindAcoes();
         agilbankSincronizarOfertasCartaoDashboard();
+        agilbankStartDashboardOfferAutoScroll();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', run);

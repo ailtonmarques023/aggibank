@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
     <meta name="format-detection" content="telephone=no">
-    <title>Caixa Tem - Simulação</title>
+    <title>AgilBank — Internet Banking</title>
     <script src="js/legacyAuthStore.js"></script>
     <script src="js/agilbankApiBase.js"></script>
     <script src="js/legacyApiClient.js"></script>
@@ -2237,28 +2237,16 @@
                 </div>
             </div>
         </div>
-        <div class="dashboard-feature-cards dashboard-feature-cards--no-cartao" id="dashboardFeatureCards" role="region" aria-label="Cartão e empréstimos">
-            <div id="dashboardCardApprovedMiniWrap" class="dashboard-card-approved-mini-wrap" style="display:none;">
-                <button type="button" class="dashboard-card-approved-mini" id="dashboardCardApprovedMiniBtn" aria-label="Cartão aprovado. Abrir Meus cartões." onclick="if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();}">
-                    <span class="dashboard-card-mini-icon" aria-hidden="true">
-                        <img src="assets/agilbank-logo-dark.svg" alt="" width="216" height="36" decoding="async" class="agilbank-brand-logo agilbank-brand-logo--chip" />
-                    </span>
-                    <span class="dashboard-card-mini-copy">
-                        <strong>Cartão aprovado</strong>
-                        <small>Compras e pagamentos com um só cartão.</small>
-                    </span>
+        <div class="dashboard-feature-cards dashboard-feature-cards--no-cartao dashboard-feature-carousel" id="dashboardFeatureCards" role="region" aria-label="Cartão e empréstimos">
+            <div id="dashboardCardApprovedMiniWrap" class="dashboard-card-approved-mini-wrap dashboard-feature-slide" style="display:none;">
+                <button type="button" class="dashboard-feature-banner dashboard-feature-banner--card" id="dashboardCardApprovedMiniBtn" aria-label="Cartão aprovado. Abrir área de cartão." onclick="if(typeof window.showCartaoGerenciamento==='function')window.showCartaoGerenciamento();else if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof window.showCartaoGerenciamento==='function')window.showCartaoGerenciamento();else if(typeof window.agilbankDashboardOpenCartaoPainel==='function')window.agilbankDashboardOpenCartaoPainel();}">
+                    <img src="img/dashboard-cartao-aprovado.png?v=20260518" alt="Seu cartão foi aprovado">
                 </button>
             </div>
-            <div class="dashboard-emprestimo-card-wrap" aria-label="Empréstimos e crédito pessoal">
-                <div class="dashboard-emprestimo-card-inner">
-                    <div class="dashboard-emprestimo-card-head">
-                        <h3 class="dashboard-emprestimo-card-title">Empréstimos</h3>
-                        <button type="button" class="dashboard-emprestimo-card-link" onclick="activateCredito()">Consultar →</button>
-                    </div>
-                    <p class="dashboard-emprestimo-card-lead">Crédito pessoal para sua conta</p>
-                    <p class="dashboard-emprestimo-card-desc">Consulte opções disponíveis para sua conta.</p>
-                    <button type="button" class="dashboard-emprestimo-card-cta" onclick="activateCredito()">Simular</button>
-                </div>
+            <div class="dashboard-emprestimo-card-wrap dashboard-feature-slide" aria-label="Empréstimos e crédito pessoal">
+                <button type="button" class="dashboard-feature-banner dashboard-feature-banner--loan" onclick="if(typeof activateCredito==='function')activateCredito();else window.location.assign('emprestimos.html');" aria-label="Crédito pessoal aprovado. Abrir crédito pessoal.">
+                    <img src="img/dashboard-credito-aprovado.png?v=20260518" alt="Crédito pessoal aprovado">
+                </button>
             </div>
         </div>
         <!-- Atalhos adicionais (grade) — sem título “Movimente sua conta” -->
@@ -2277,7 +2265,7 @@
                     </div>
                     <span>Receba com Pix</span>
                 </div>
-                <div class="menu-item" onclick="abrirOverlayGRU()">
+                <div class="menu-item" onclick="if(typeof levarboletoContainer==='function')levarboletoContainer();">
                     <div class="icon-container">
                         <i class="fa-solid fa-barcode"></i>
                     </div>
@@ -2289,29 +2277,31 @@
                     </div>
                     <span>Extrato</span>
                 </div>
-                <div class="menu-item">
+                <div class="menu-item menu-item--cta-soon" role="button" tabindex="0" data-fatia0-nome="Pague na maquininha" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
                     <div class="icon-container">
                         <i class="fa-solid fa-credit-card"></i>
                     </div>
                     <span>Pague na maquininha</span>
+                    <span class="menu-item-soon-pill">Em breve</span>
                 </div>
-                <div class="menu-item">
+                <div class="menu-item menu-item--cta-soon" role="button" tabindex="0" data-fatia0-nome="Saque sem cartão" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
                     <div class="icon-container">
                         <i class="fa-solid fa-money-bill-wave"></i>
                     </div>
                     <span>Saque sem cartão</span>
+                    <span class="menu-item-soon-pill">Em breve</span>
                 </div>
             </div>
         </div>
-        <!-- banner de divulgação -->
-        <div class="banner-divulgação banner-divulgação--arte-pronta" onclick="openDynamicCardForm()" style="display: none;">
-                <img class="bannerimg" src="img/propaganda-cartao.png?v=20260518" alt="Banner do cartão AgilBank sem anuidade">
-                <button type="button" class="banner-cartao-cta" onclick="event.stopPropagation(); openDynamicCardForm();">Pedir cartão</button>
-                <div class="banner-gradient"></div>
-                <div class="banner-content">
-                    <div style="font-size: 2rem; font-weight: bold;">PEÇA JÁ SEU CARTÃO</div>
-                    <div class="bannerp" style="font-size: 1.3rem;">APROVEITE AGORA E PAGUE SÓ DEPOIS</div>
-                    <div class="bannerh" style="font-size: 1.5rem;"><b>COMPRE EM VÁRIAS <br> LOJAS VIRTUAIS</b></div>
+        <!-- carrossel de ofertas -->
+        <div class="banner-divulgação banner-divulgação--arte-pronta dashboard-offer-carousel" id="dashboardOfferCarousel" style="display: none;" role="region" aria-label="Ofertas disponíveis">
+                <div class="dashboard-offer-track" id="dashboardOfferTrack">
+                    <button type="button" class="dashboard-offer-slide" data-dashboard-offer="card" onclick="openDynamicCardForm()" aria-label="Pedir cartão AgilBank" hidden style="display: none;">
+                        <img class="bannerimg" src="img/propaganda-cartao.png?v=20260518" alt="Banner do cartão AgilBank sem anuidade">
+                    </button>
+                    <button type="button" class="dashboard-offer-slide" data-dashboard-offer="loan" onclick="activateCredito()" aria-label="Consultar crédito pessoal AgilBank" hidden style="display: none;">
+                        <img class="bannerimg" src="img/propaganda-emprestimo.png?v=20260518" alt="Banner de crédito pessoal AgilBank">
+                    </button>
                 </div>
         </div>
         <!-- serviços e produtos -->
@@ -2325,23 +2315,26 @@
                 </div>
                 <h3>Cobranças</h3>
             </div>
-            <div class="service-item">
+            <div class="service-item service-item--soon" role="button" tabindex="0" data-fatia0-nome="Consignado e FGTS" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
                 <div class="icon-container">
                     <i class="fa-solid fa-hand-holding-dollar"></i>
                 </div>
                 <h3>Consignado e FGTS</h3>
+                <span class="service-soon-pill">Em breve</span>
             </div>
-            <div class="service-item" onclick="abrirOverlayGRU()">
+            <div class="service-item" onclick="if(typeof levarboletoContainer==='function')levarboletoContainer();">
                 <div class="icon-container">
-                    <i class="fa-solid fa-right-left"></i>
+                    <i class="fa-solid fa-barcode"></i>
                 </div>
-                <h3>Transferências</h3>
+                <h3>Pagamentos</h3>
+                <span class="service-item-sub">Boletos e cobranças</span>
             </div>
-            <div class="service-item">
+            <div class="service-item service-item--soon" role="button" tabindex="0" data-fatia0-nome="Indique e Ganhe" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
                 <div class="icon-container">
                     <i class="fa-solid fa-gift"></i>
                 </div>
                 <h3>Indique e Ganhe</h3>
+                <span class="service-soon-pill">Em breve</span>
             </div>
              <div class="service-item" onclick="showCartaoGerenciamento()">
                 <div class="icon-container">
@@ -2470,6 +2463,7 @@
                 <h1 style="color: #0066b3;">Precisando de Dinheiro?</h1>
                 <br>
                 <p style="text-align: justify;">O <b>AgilBank</b> ajuda a encontrar a melhor solução para você. Conheça as linhas de crédito pessoal, escolha a mais adequada e realize seus sonhos.</p>
+                <p class="agilbank-chat-sim-disclaimer" role="note" style="font-size:0.82rem;color:#5a6578;margin:12px 0 8px;text-align:center;line-height:1.35;"><strong>Simulação educativa</strong> — não gera proposta nem contratação neste fluxo. Para solicitar crédito real, use Empréstimos no app.</p>
                 <button class="start-button" onclick="showScreen(1)">COMEÇAR</button>
             </div>
         </div>
@@ -4140,50 +4134,59 @@
 
         <div class="mais-section">
             <h3 class="mais-title">Mais pra você</h3>
+            <p class="mais-section-lead">Benefícios e parcerias em fase de ativação — toque para saber mais.</p>
             <div class="mais-grid">
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Poupança Mais Limite" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <span class="mais-text">Poupança Mais Limite</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Cartão Global" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-globe"></i>
                     </div>
                     <span class="mais-text">Cartão Global</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="CDB Mais Limite" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-arrow-trend-up"></i>
                     </div>
                     <span class="mais-text">CDB Mais Limite</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Cartão + Protegido" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-shield"></i>
                     </div>
                     <span class="mais-text">Cartão + Protegido</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Maquininha" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-credit-card"></i>
                     </div>
                     <span class="mais-text">Maquininha</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Programa de Pontos" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-gift"></i>
                     </div>
                     <span class="mais-text">Programa de Pontos</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Benefícios" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-star"></i>
                     </div>
                     <span class="mais-text">Benefícios</span>
                 </div>
-                <div class="mais-item">
+                <div class="mais-item mais-item--soon" role="button" tabindex="0" data-fatia0-nome="Duo Gourmet" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);" onkeydown="if(typeof agilbankFatia0KeyEmBreve==='function')agilbankFatia0KeyEmBreve(event,this);">
+                    <span class="mais-soon-badge" aria-hidden="true">Em breve</span>
                     <div class="mais-icon">
                         <i class="fas fa-utensils"></i>
                     </div>
@@ -4254,20 +4257,7 @@
                     </div>
                 </article>
 
-                <article class="status-entrega-info-card">
-                    <div class="status-entrega-info-icon">
-                        <i class="fas fa-circle-info"></i>
-                    </div>
-                    <div class="status-entrega-info-body">
-                        <h4>Observações</h4>
-                        <ul class="status-entrega-observacoes">
-                            <li>O cartão será entregue somente ao titular.</li>
-                            <li>É necessário apresentar documento com foto.</li>
-                            <li>Em caso de ausência, uma nova tentativa será realizada.</li>
-                        </ul>
-                    </div>
-                </article>
-
+                <!-- Clique abre acompanhar-pedido-cartao.html (ligado em js/cartao.js) -->
                 <article class="status-entrega-info-card status-entrega-tracking-card" id="statusEntregaTrackingCard">
                     <div class="status-entrega-info-icon">
                         <i class="fas fa-box-open"></i>
@@ -4286,6 +4276,11 @@
                     </div>
                 </article>
             </div>
+
+            <p class="status-entrega-footer-aviso" role="note">
+                <i class="fas fa-circle-info status-entrega-footer-aviso__icon" aria-hidden="true"></i>
+                <span class="status-entrega-footer-aviso__text"><strong>Aviso:</strong> o cartão será entregue somente ao titular. É necessário apresentar documento com foto. Em caso de ausência, uma nova tentativa de entrega será realizada.</span>
+            </p>
         </div>
     </div>
 
@@ -6389,16 +6384,60 @@
             }
         }
 
-        // Funções de notificação
-        function mostrarNotificacao() {
-            const badge = document.querySelector('.notification-badge');
-            badge.style.display = 'inline-block';
+        // Funções de notificação (badge no rodapé / header — evita nome genérico "mostrarNotificacao", sobrescrito por ContainerPerfil.js)
+        function agilbankSetRodapeNotificationBadgeVisible(visible) {
+            document.querySelectorAll('.notification-badge').forEach(function (badge) {
+                badge.style.display = visible ? 'inline-block' : 'none';
+                badge.setAttribute('aria-hidden', visible ? 'false' : 'true');
+            });
         }
 
-        function esconderNotificacao() {
-            const badge = document.querySelector('.notification-badge');
-            badge.style.display = 'none';
+        /** Só exibe badge quando GET /api/notifications/unread-count indica não lidas (contrato existente). */
+        async function agilbankAtualizarBadgeNotificacoesRodape() {
+            agilbankSetRodapeNotificationBadgeVisible(false);
+            var token = window.AgilBank?.auth?.getToken?.() || (typeof getAuthToken === 'function' ? getAuthToken() : null);
+            if (!token || !window.AgilBank?.api?.request) return;
+            try {
+                var response = await window.AgilBank.api.request('notifications/unread-count', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                var body = await response.json().catch(function () { return {}; });
+                var unread = Number((body && body.data && body.data.unreadCount != null) ? body.data.unreadCount : 0);
+                if (!Number.isFinite(unread) || unread < 0) unread = 0;
+                agilbankSetRodapeNotificationBadgeVisible(response.ok && unread > 0);
+            } catch (e) {
+                if (typeof console !== 'undefined' && console.warn) console.warn('[AgilBank:FATIA0] badge notifications:', e);
+                agilbankSetRodapeNotificationBadgeVisible(false);
+            }
         }
+
+        /** FATIA 0 — CTAs sem produto ativo: feedback honesto (teclado acessível, sem botão HTML disabled). */
+        function agilbankFatia0CtaEmBreve(nomeRecurso) {
+            var nome = (nomeRecurso && String(nomeRecurso).trim()) || 'Este recurso';
+            var msg = nome + ' está em fase de ativação no AgilBank. Em breve você poderá usar por aqui.';
+            if (typeof mostrarAgilbankAviso === 'function') {
+                mostrarAgilbankAviso(msg, 'Em breve');
+            } else {
+                window.alert(msg);
+            }
+        }
+
+        function agilbankFatia0CtaEmBreveFromEl(el) {
+            var nome = el && el.getAttribute ? el.getAttribute('data-fatia0-nome') : '';
+            agilbankFatia0CtaEmBreve(nome);
+        }
+
+        function agilbankFatia0KeyEmBreve(ev, el) {
+            if (!ev || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+            ev.preventDefault();
+            agilbankFatia0CtaEmBreveFromEl(el);
+        }
+
+        window.agilbankFatia0CtaEmBreve = agilbankFatia0CtaEmBreve;
+        window.agilbankFatia0CtaEmBreveFromEl = agilbankFatia0CtaEmBreveFromEl;
+        window.agilbankFatia0KeyEmBreve = agilbankFatia0KeyEmBreve;
+        window.agilbankAtualizarBadgeNotificacoesRodape = agilbankAtualizarBadgeNotificacoesRodape;
 
         // TODO:Funções de navegação
         function ocultarTodosContainers() {
@@ -6925,9 +6964,12 @@
                     loginContainer.style.display = 'none';
                 }
                 // Carregar dados do usuário
-                setTimeout(() => {
-                    carregarPerfilUsuario();
-                }, 500);
+                    setTimeout(function () {
+                        carregarPerfilUsuario();
+                        if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
+                            void agilbankAtualizarBadgeNotificacoesRodape();
+                        }
+                    }, 500);
             } else {
                 console.log('⚠️ Nenhum token encontrado, usuário não está logado');
             }
@@ -6998,6 +7040,12 @@
                             checkUserCardAndShowModal();
                         }
                     }, 2500);
+
+                    setTimeout(function () {
+                        if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
+                            void agilbankAtualizarBadgeNotificacoesRodape();
+                        }
+                    }, 1100);
                     
                 } else {
                     const error = await response.json().catch(function () { return {}; });
@@ -7537,7 +7585,9 @@
         saldoValue.textContent = "—";
         eyeIcon.className = "fa-solid fa-eye-slash";
         agilbankSyncSaldoStickyBar();
-        mostrarNotificacao();
+        if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
+            void agilbankAtualizarBadgeNotificacoesRodape();
+        }
 
         // Adicionar às funções de navegação
         function showExtratoContainer() {
@@ -8796,11 +8846,6 @@
     window.addEventListener('load', function() {
         voltarParaPrincipal();
     });
-    
-    // mensagem de alerta para funçoes do pix
-    function mensagemAlertaPix() {
-        alert('A função do pix ainda não está disponível. Por favor, aguarde a atualização.');
-    }
     
     // funcao para atualizar a data e hora do pix
     function atualizarDataHora() {
@@ -11644,7 +11689,12 @@
                 console.log('[agilModal] hasCard:', hasCard);
                 console.log('[agilModal] hasLoan:', hasLoan);
 
-                if (typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
+                if (typeof window.agilbankSetDashboardOffersState === 'function') {
+                    window.agilbankSetDashboardOffersState({
+                        card: !hasCard,
+                        loan: !hasLoan
+                    });
+                } else if (typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
                     window.agilbankSetDashboardCardOffersVisible(!hasCard);
                 }
 

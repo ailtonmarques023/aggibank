@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#054a7d">
+    <meta name="agilbank-api-base" content="https://aggibank-production.up.railway.app/api">
+    <title>Acompanhar pedido — AgilBank</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/agilbank-brand.css">
+    <link rel="stylesheet" href="css/style.acompanhar-pedido-cartao.css">
+    <script src="js/legacyAuthStore.js"></script>
+    <script src="js/agilbankApiBase.js"></script>
+    <script src="js/legacyApiClient.js"></script>
+    <script>
+        (function enforceAuthAcompanharPedido() {
+            var authStore = window.AgilBank && window.AgilBank.auth;
+            var sessionToken = authStore && typeof authStore.getToken === 'function'
+                ? authStore.getToken()
+                : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
+                  localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
+            if (!sessionToken) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
+</head>
+<body class="apc-page">
+    <div class="apc-app">
+        <header class="apc-header">
+            <button type="button" class="apc-back" id="apcBtnVoltar" aria-label="Voltar ao Internet Banking">
+                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <div class="apc-header-center">
+                <img src="assets/brand/agilbank-wordmark-header.svg" alt="AgilBank" width="132" height="22" decoding="async" class="apc-wordmark" />
+                <p class="apc-title">Acompanhar pedido</p>
+            </div>
+            <button type="button" class="apc-help" id="apcBtnAjuda" aria-label="Ajuda sobre entrega" title="Saiba mais sobre a entrega do cartão">
+                <i class="fas fa-circle-question" aria-hidden="true"></i>
+            </button>
+        </header>
+
+        <main class="apc-main">
+            <div id="apcLoading" class="apc-panel">
+                <div class="apc-loading">
+                    <div class="apc-spinner" aria-hidden="true"></div>
+                    <p>Buscando o status do seu cartão…</p>
+                </div>
+            </div>
+
+            <div id="apcError" class="apc-panel" hidden>
+                <div class="apc-error">
+                    <p id="apcErrorText"></p>
+                    <div class="apc-actions">
+                        <button type="button" class="apc-btn apc-btn--primary" id="apcBtnRetry">Tentar de novo</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="apcContent" hidden>
+                <div class="apc-panel apc-panel--hero">
+                    <div class="apc-resumo-card">
+                        <img src="assets/cards/cartao-agilbank-azul.jpg" alt="" class="apc-resumo-card-img" width="56" height="38" decoding="async" />
+                        <div class="apc-resumo-card-text">
+                            <h2 id="apcCardTitle">Cartão AgilBank</h2>
+                            <p class="apc-resumo-last4" id="apcCardLast4">•••• •••• •••• ••••</p>
+                        </div>
+                    </div>
+                    <div class="apc-resumo-status" id="apcResumoStatus" role="status">
+                        <span class="apc-resumo-status-dot" aria-hidden="true"></span>
+                        <span id="apcResumoStatusText">—</span>
+                    </div>
+                </div>
+
+                <div class="apc-panel">
+                    <p class="apc-block-title">Endereço</p>
+                    <p class="apc-address" id="apcEndereco"></p>
+                </div>
+
+                <div class="apc-panel">
+                    <p class="apc-block-title">Previsão de entrega</p>
+                    <p class="apc-previsao" id="apcPrevisao"></p>
+                </div>
+
+                <div class="apc-panel">
+                    <p class="apc-block-title">Etapas</p>
+                    <div class="apc-timeline" id="apcTimeline" aria-label="Etapas do pedido do cartão físico"></div>
+                    <div class="apc-events" id="apcEventsWrap" hidden>
+                        <h3 class="apc-events-title">Histórico</h3>
+                        <div id="apcEventsList"></div>
+                    </div>
+                </div>
+
+                <div class="apc-panel apc-panel--muted">
+                    <div class="apc-actions">
+                        <button type="button" class="apc-btn apc-btn--primary" id="apcBtnAtualizar">
+                            <i class="fas fa-rotate" aria-hidden="true"></i> Atualizar
+                        </button>
+                        <button type="button" class="apc-btn apc-btn--secondary" id="apcBtnPagarFrete" hidden>
+                            Pagar frete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="apc-footer-aviso" role="note">
+            <span class="apc-footer-rule" aria-hidden="true"></span>
+            <p class="apc-footer-copy">Entrega ao titular, com documento com foto. Se não houver ninguém, tentamos de novo.</p>
+        </footer>
+    </div>
+
+    <script src="js/acompanhar-pedido-cartao.js"></script>
+</body>
+</html>

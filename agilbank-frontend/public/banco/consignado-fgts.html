@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgilBank | Consignado e FGTS</title>
+  <link rel="stylesheet" href="./css/style.consignado-fgts.css">
+</head>
+<body class="ab-fgts-page">
+  <div class="ab-fgts-shell">
+    <header class="ab-fgts-topbar">
+      <button type="button" class="ab-fgts-icon-btn" id="abFgtsBackBtn" aria-label="Voltar">&#8592;</button>
+      <h1 id="abFgtsTitle">Consignado e FGTS</h1>
+      <button type="button" class="ab-fgts-icon-btn" id="abFgtsHomeBtn" aria-label="Início">
+        <span aria-hidden="true">⌂</span>
+      </button>
+    </header>
+
+    <main class="ab-fgts-main">
+      <section class="ab-fgts-screen ab-fgts-screen--active" id="abFgtsHome">
+        <div class="ab-fgts-tabs" role="tablist" aria-label="Produtos">
+          <button type="button" class="ab-fgts-tab is-active">Simulador</button>
+          <button type="button" class="ab-fgts-tab" id="abFgtsAreaBtn">Área do cliente</button>
+        </div>
+
+        <div class="ab-fgts-product-switch" aria-label="Produtos disponíveis">
+          <button type="button" class="ab-fgts-product is-active">
+            <span>FGTS</span>
+            <strong>Saque-aniversário</strong>
+          </button>
+          <button type="button" class="ab-fgts-product" id="abFgtsConsignadoBtn">
+            <span>Consignado</span>
+            <strong>Em breve</strong>
+          </button>
+        </div>
+
+        <div class="ab-fgts-hero-visual" aria-hidden="true">
+          <div class="ab-fgts-money-card">
+            <div class="ab-fgts-note ab-fgts-note-1">100</div>
+            <div class="ab-fgts-note ab-fgts-note-2">50</div>
+            <div class="ab-fgts-note ab-fgts-note-3">50</div>
+            <div class="ab-fgts-hand"></div>
+          </div>
+        </div>
+
+        <section class="ab-fgts-copy">
+          <h2>Antecipe seu FGTS e receba em até um dia útil!</h2>
+          <p>Faça a antecipação de até 5 anos do Saque-Aniversário e receba direto na sua conta AgilBank.</p>
+        </section>
+
+        <div class="ab-fgts-actions">
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--primary" id="abFgtsStartBtn">
+            Simular Antecipação <span aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--outline" id="abFgtsHowBtn">
+            Saiba como autorizar
+          </button>
+        </div>
+      </section>
+
+      <section class="ab-fgts-screen" id="abFgtsLoading" aria-live="polite">
+        <div class="ab-fgts-loading-center">
+          <div class="ab-fgts-spinner" aria-hidden="true"></div>
+          <p>Só alguns segundos para você poder simular!</p>
+        </div>
+      </section>
+
+      <section class="ab-fgts-screen" id="abFgtsAuthorize">
+        <div class="ab-fgts-center-block">
+          <div class="ab-fgts-app-icon" aria-hidden="true">
+            <strong>FGTS</strong>
+            <span>AgilBank</span>
+          </div>
+          <h2>Faça adesão ao saque-aniversário</h2>
+          <p>Altere sua modalidade de saque e autorize o AgilBank no app do FGTS para prosseguir com a simulação de antecipação.</p>
+          <p class="ab-fgts-strong">Após autorizar, aguarde 5 minutos e tente novamente aqui.</p>
+        </div>
+        <div class="ab-fgts-bottom-actions">
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--primary" id="abFgtsAuthorizeHowBtn">Saiba como autorizar</button>
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--outline" id="abFgtsApproxBtn">Simular com valor aproximado</button>
+        </div>
+      </section>
+
+      <section class="ab-fgts-screen" id="abFgtsSimulator">
+        <div class="ab-fgts-form-card">
+          <label for="abFgtsSaldoInput">Qual é seu saldo no FGTS?</label>
+          <input type="text" id="abFgtsSaldoInput" inputmode="numeric" autocomplete="off" placeholder="Informe seu saldo disponível">
+          <span>Valor mínimo de R$ 100,00</span>
+        </div>
+
+        <aside class="ab-fgts-info-card">
+          <div class="ab-fgts-info-icon" aria-hidden="true">i</div>
+          <div>
+            <strong>Autorize o AgilBank no app do FGTS</strong>
+            <p>Você não poderá contratar antes de fazer isso. <button type="button" id="abFgtsInlineHowBtn">Saiba como autorizar.</button></p>
+          </div>
+        </aside>
+
+        <button type="button" class="ab-fgts-btn ab-fgts-btn--primary ab-fgts-continue" id="abFgtsContinueBtn" disabled>Continuar</button>
+      </section>
+
+      <section class="ab-fgts-screen" id="abFgtsResult">
+        <div class="ab-fgts-result-card">
+          <span>Valor aproximado disponível</span>
+          <strong id="abFgtsResultValue">R$ 0,00</strong>
+          <p>Simulação estimada com base no saldo informado. A contratação depende da autorização no app FGTS e validação final.</p>
+        </div>
+        <div class="ab-fgts-result-grid">
+          <div>
+            <span>Prazo estimado</span>
+            <strong>até 5 anos</strong>
+          </div>
+          <div>
+            <span>Recebimento</span>
+            <strong>até 1 dia útil</strong>
+          </div>
+        </div>
+        <button type="button" class="ab-fgts-btn ab-fgts-btn--primary" id="abFgtsFinishBtn">Solicitar análise</button>
+        <button type="button" class="ab-fgts-btn ab-fgts-btn--outline" id="abFgtsBackSimBtn">Editar saldo</button>
+      </section>
+
+      <section class="ab-fgts-screen" id="abFgtsTutorial">
+        <div class="ab-fgts-video-card">
+          <div class="ab-fgts-video-copy">
+            <span>FGTS</span>
+            <strong>Passo a passo</strong>
+          </div>
+          <button type="button" class="ab-fgts-play" aria-label="Reproduzir tutorial">▶</button>
+        </div>
+
+        <h2 class="ab-fgts-section-title">Como autorizo a consulta do saldo FGTS?</h2>
+        <ol class="ab-fgts-steps">
+          <li><span>1</span><p>Acesse o <strong>app do FGTS</strong> e selecione “Sistemática do saque do seu FGTS”.</p></li>
+          <li><span>2</span><p>No final da tela seguinte, leia, aceite os termos e clique em <strong>Optar pelo Saque-Aniversário</strong>.</p></li>
+          <li><span>3</span><p>No menu inferior da tela inicial, clique em <strong>Mais</strong> e escolha <strong>Autorização de consulta às informações do FGTS</strong>.</p></li>
+          <li><span>4</span><p>Selecione <strong>Empréstimo saque-aniversário</strong>.</p></li>
+          <li><span>5</span><p>Em “Adicionar instituição” busque por <strong>AgilBank</strong> e confirme.</p></li>
+          <li><span>6</span><p>Após autorizar a consulta, volte ao app e simule sua antecipação.</p></li>
+        </ol>
+        <button type="button" class="ab-fgts-btn ab-fgts-btn--primary">Conferir tutorial completo</button>
+        <button type="button" class="ab-fgts-btn ab-fgts-btn--outline" id="abFgtsAlreadyBtn">Já autorizei e quero simular</button>
+      </section>
+
+      <section class="ab-fgts-screen" id="abFgtsClient">
+        <div class="ab-fgts-empty-client">
+          <div class="ab-fgts-empty-icon" aria-hidden="true">FG</div>
+          <h2>Área do cliente</h2>
+          <p>Você ainda não possui proposta de consignado ou antecipação FGTS em andamento.</p>
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--primary" id="abFgtsClientSimBtn">Simular agora</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./js/consignado-fgts.js"></script>
+</body>
+</html>

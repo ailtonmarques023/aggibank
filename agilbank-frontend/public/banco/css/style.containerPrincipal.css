@@ -398,25 +398,70 @@
 
         /* Dois destaques lado a lado: grid estável em mobile (sem estourar largura) */
         .dashboard-feature-cards {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 8px;
-            margin: 10px 12px 12px;
+            display: flex;
+            gap: 12px;
+            margin: 10px 0 14px;
+            padding: 0 12px 8px;
             align-items: stretch;
             box-sizing: border-box;
             max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
         }
 
         .dashboard-feature-cards.dashboard-feature-cards--no-cartao {
-            grid-template-columns: minmax(0, 1fr);
+            display: flex;
         }
 
         .dashboard-feature-cards > * {
             min-width: 0;
         }
 
+        .dashboard-feature-cards::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .dashboard-feature-cards::-webkit-scrollbar-thumb {
+            background: rgba(0, 102, 179, 0.25);
+            border-radius: 999px;
+        }
+
+        .dashboard-feature-slide {
+            flex: 0 0 min(88vw, 420px);
+            scroll-snap-align: start;
+        }
+
         .dashboard-card-approved-mini-wrap {
             min-width: 0;
+        }
+
+        .dashboard-feature-banner {
+            width: 100%;
+            border: 0;
+            border-radius: 14px;
+            padding: 0;
+            display: block;
+            overflow: hidden;
+            background: #020817;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+            cursor: pointer;
+            line-height: 0;
+            -webkit-tap-highlight-color: rgba(0, 102, 179, 0.12);
+        }
+
+        .dashboard-feature-banner img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+        }
+
+        .dashboard-feature-banner:focus-visible {
+            outline: 3px solid #0066b3;
+            outline-offset: 3px;
         }
 
         .dashboard-card-approved-mini {
@@ -926,6 +971,46 @@
             margin: 15px;
         }
 
+        .dashboard-offer-carousel {
+            touch-action: pan-x pan-y;
+        }
+
+        .dashboard-offer-track {
+            display: flex;
+            height: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .dashboard-offer-track::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .dashboard-offer-track::-webkit-scrollbar-thumb {
+            background: rgba(0, 102, 179, 0.24);
+            border-radius: 999px;
+        }
+
+        .dashboard-offer-slide {
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            padding: 0;
+            margin: 0;
+            background: transparent;
+            cursor: pointer;
+            scroll-snap-align: start;
+            line-height: 0;
+        }
+
+        .dashboard-offer-slide[hidden] {
+            display: none;
+        }
+
         .bannerimg {
             width: 100%;
             height: 100%;
@@ -997,7 +1082,7 @@
             margin-top: 8px;
         }
         /* Animação do banner ao tocar/scroll */
-        .banner-divulgação {
+        .banner-divulgação:not(.dashboard-offer-carousel) {
             transition: all 0.2s ease-out;
             transform-origin: center;
             will-change: transform;
@@ -1016,12 +1101,12 @@
             }
         }
  
-        .banner-divulgação {
+        .banner-divulgação:not(.dashboard-offer-carousel) {
             animation: pulsar 3s ease-in-out infinite;
         }
 
-        .banner-divulgação:hover,
-        .banner-divulgação:active {
+        .banner-divulgação:not(.dashboard-offer-carousel):hover,
+        .banner-divulgação:not(.dashboard-offer-carousel):active {
             animation-play-state: paused;
             transform: scale(1.005);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -1149,4 +1234,52 @@
         .barcode img {
             width: 100%;
             max-width: 300px;
+        }
+
+        /* ========== FATIA 0 — higiene CTAs / menu / serviços ========== */
+        .menu .menu-item.menu-item--cta-soon {
+            cursor: pointer;
+            opacity: 0.92;
+            outline: none;
+        }
+        .menu .menu-item.menu-item--cta-soon:focus-visible {
+            box-shadow: 0 0 0 2px #0066b3;
+            border-radius: 12px;
+        }
+        .menu .menu-item .menu-item-soon-pill {
+            display: block;
+            width: 100%;
+            text-align: center;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #005a9e;
+            margin-top: 4px;
+        }
+        .service-item .service-item-sub {
+            display: block;
+            font-size: 10px;
+            color: #5a6578;
+            text-align: center;
+            margin-top: 4px;
+            line-height: 1.25;
+            max-width: 100%;
+        }
+        .service-item.service-item--soon {
+            cursor: pointer;
+            outline: none;
+        }
+        .service-item.service-item--soon:focus-visible {
+            box-shadow: 0 0 0 2px #0066b3;
+        }
+        .service-item .service-soon-pill {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            color: #005a9e;
+            text-align: center;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }

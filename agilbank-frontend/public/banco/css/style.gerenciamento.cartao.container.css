@@ -49,40 +49,117 @@
         /* cartoes-grid */
         .cartoes-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            grid-template-columns: 1fr;
+            gap: 16px;
             margin-bottom: 20px;
             padding: 0 15px;
         }
         
         /* cartao-item */
         .cartao-item {
-            background: white;
-            border-radius: 15px;
-            padding: 15px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(142deg, #07305f 0%, #0066b3 52%, #12a4e8 100%);
+            border-radius: 18px;
+            padding: 22px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 160px;
-            border: 2px solid #0066b3;
-            box-shadow: 0 4px 8px rgba(0, 102, 179, 0.2);
-            transition: all 0.3s ease;
+            min-height: clamp(280px, 52vh, 440px);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            box-shadow: 0 16px 34px rgba(0, 66, 132, 0.28);
+            color: #ffffff;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .cartao-item::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 16% 18%, rgba(255,255,255,0.2), transparent 28%),
+                linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.16) 43%, transparent 64%);
+            pointer-events: none;
         }
         /* cartao-item hover */
-        .cartao-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 102, 179, 0.3);
+        .cartao-item:hover,
+        .cartao-item:focus-visible {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(0, 66, 132, 0.34);
+            outline: none;
+        }
+
+        .cartao-item.is-selected {
+            box-shadow: 0 0 0 3px rgba(0, 102, 179, 0.18), 0 20px 40px rgba(0, 66, 132, 0.34);
+        }
+
+        .cartao-item-topo,
+        .cartao-item-centro,
+        .cartao-item-rodape {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cartao-item-topo {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .cartao-status-badge {
+            border: 1px solid rgba(255, 255, 255, 0.36);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 10px;
+            white-space: nowrap;
+        }
+
+        .cartao-item-centro {
+            display: grid;
+            gap: 18px;
+        }
+
+        .cartao-chip {
+            width: 48px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f4d27a 0%, #b88b2f 100%);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+        }
+
+        .cartao-item-rodape {
+            display: grid;
+            gap: 6px;
+        }
+
+        .cartao-item-rodape span {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .cartao-item-rodape strong {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 800;
         }
         /* cartao-item .cartao-nome */
         .cartao-item .cartao-nome {
-            font-size: 16px;
-            color: #0066b3;
-            margin-bottom: 10px;
+            font-size: 18px;
+            color: #ffffff;
+            font-weight: 800;
+            margin-bottom: 0;
         }
         /* cartao-item .cartao-numero */
         .cartao-item .cartao-numero {
-            color: #0066b3;
-            font-size: 14px;
+            color: #ffffff;
+            font-size: 22px;
+            letter-spacing: 0;
         }
         /* cartao-item .cartao-action */
         .cartao-item .cartao-action {
@@ -212,6 +289,41 @@
         .mais-text {
             color: #333;
             font-size: 12px;
+            line-height: 1.2;
+        }
+
+        /* FATIA 0 — vitrine "Mais pra você" sem produto ativo */
+        .mais-section-lead {
+            font-size: 12px;
+            color: #5a6578;
+            line-height: 1.35;
+            margin: -4px 12px 14px;
+            padding: 0 4px;
+            text-align: center;
+        }
+        .mais-item.mais-item--soon {
+            position: relative;
+            cursor: pointer;
+            border-radius: 12px;
+            padding-top: 6px;
+            outline: none;
+        }
+        .mais-item.mais-item--soon:focus-visible {
+            box-shadow: 0 0 0 2px #0066b3;
+        }
+        .mais-item .mais-soon-badge {
+            position: absolute;
+            top: 0;
+            right: 4px;
+            z-index: 1;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background: #e8f4fc;
+            color: #005a9e;
+            border-radius: 6px;
+            padding: 2px 5px;
             line-height: 1.2;
         }
 

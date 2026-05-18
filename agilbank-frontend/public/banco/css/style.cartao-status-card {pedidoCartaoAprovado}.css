@@ -642,6 +642,14 @@
             box-shadow: 0 14px 34px rgba(16, 24, 40, 0.09);
         }
 
+        .status-entrega-tracking-card {
+            cursor: pointer;
+        }
+
+        .status-entrega-tracking-card:hover {
+            box-shadow: 0 16px 38px rgba(16, 24, 40, 0.11);
+        }
+
         .status-entrega-info-icon {
             width: 58px;
             height: 58px;
@@ -672,12 +680,30 @@
             margin-bottom: 0;
         }
 
-        .status-entrega-observacoes {
-            margin: 0;
-            padding-left: 18px;
+        .status-entrega-footer-aviso {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 18px 0 0;
+            padding: 0 2px 6px;
+            max-width: 100%;
+            font-size: 12.5px;
+            line-height: 1.45;
+            color: #718096;
+            font-weight: 400;
+        }
+
+        .status-entrega-footer-aviso__icon {
+            flex-shrink: 0;
+            font-size: 13px;
+            line-height: 1.35;
+            margin-top: 1px;
+            color: #8b9cb3;
+        }
+
+        .status-entrega-footer-aviso__text strong {
+            font-weight: 600;
             color: #5e6577;
-            font-size: 15px;
-            line-height: 1.6;
         }
 
         .status-entrega-action-head {
@@ -808,5 +834,16 @@
                 width: 48px;
                 height: 48px;
                 font-size: 20px;
+            }
+
+            .status-entrega-footer-aviso {
+                font-size: 12px;
+                margin-top: 16px;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            .status-entrega-footer-aviso__icon {
+                font-size: 12px;
             }
         }
