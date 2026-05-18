@@ -11704,6 +11704,9 @@
                 } else if (typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
                     window.agilbankSetDashboardCardOffersVisible(!hasCard);
                 }
+                if (typeof window.agilbankSetDashboardApprovedLoanVisible === 'function') {
+                    window.agilbankSetDashboardApprovedLoanVisible(hasLoan);
+                }
 
                 var caseNum = 1;
                 if (hasCard && hasLoan) caseNum = 4;

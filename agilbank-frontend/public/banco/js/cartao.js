@@ -2918,6 +2918,49 @@ function agilbankStartDashboardOfferAutoScroll() {
     }, 4500);
 }
 
+function agilbankDashboardFeatureSlidesVisiveis() {
+    return Array.prototype.slice.call(document.querySelectorAll('#dashboardFeatureCards .dashboard-feature-slide')).filter(function (slide) {
+        return !slide.hidden && slide.style.display !== 'none';
+    });
+}
+
+function agilbankSyncDashboardFeatureCarouselHost() {
+    var host = document.getElementById('dashboardFeatureCards');
+    if (!host) return;
+    var visibleSlides = agilbankDashboardFeatureSlidesVisiveis();
+    host.style.display = visibleSlides.length ? '' : 'none';
+    if (visibleSlides.length) {
+        host.scrollTo({ left: visibleSlides[0].offsetLeft, behavior: 'auto' });
+    }
+}
+
+function agilbankSetDashboardApprovedFeatureVisible(kind, visible) {
+    var map = {
+        card: 'dashboardCardApprovedMiniWrap',
+        loan: 'dashboardLoanApprovedMiniWrap',
+        cdb: 'dashboardCdbApprovedMiniWrap'
+    };
+    var slide = document.getElementById(map[kind]);
+    if (!slide) return;
+    slide.hidden = !visible;
+    slide.style.display = visible ? '' : 'none';
+}
+
+function agilbankSyncDashboardApprovedCdbVisible() {
+    var card = document.getElementById('dashboardCardApprovedMiniWrap');
+    var loan = document.getElementById('dashboardLoanApprovedMiniWrap');
+    var hasApprovedProduct =
+        (card && !card.hidden && card.style.display !== 'none') ||
+        (loan && !loan.hidden && loan.style.display !== 'none');
+    agilbankSetDashboardApprovedFeatureVisible('cdb', !!hasApprovedProduct);
+}
+
+function agilbankSetDashboardApprovedLoanVisible(visible) {
+    agilbankSetDashboardApprovedFeatureVisible('loan', !!visible);
+    agilbankSyncDashboardApprovedCdbVisible();
+    agilbankSyncDashboardFeatureCarouselHost();
+}
+
 /**
  * Esconde/mostra a oferta de cartão no carrossel do dashboard.
  * A oferta de empréstimo é controlada pelo fluxo contextual que consulta /api/loans.
@@ -2946,6 +2989,9 @@ function agilbankSyncDashboardApprovedMiniCard(list) {
     } else {
         row.classList.add('dashboard-feature-cards--no-cartao');
     }
+    wrap.hidden = !show;
+    agilbankSyncDashboardApprovedCdbVisible();
+    agilbankSyncDashboardFeatureCarouselHost();
 }
 
 /** Abre Meus cartões sem forçar fluxo de nova solicitação (diferente de openDynamicCardForm). */
@@ -3377,6 +3423,7 @@ window.agilbankRefreshPainelCartoes = agilbankRefreshPainelCartoes;
 window.agilbankAplicarEstadoPainelCartao = agilbankAplicarEstadoPainelCartao;
 window.agilbankSetDashboardCardOffersVisible = agilbankSetDashboardCardOffersVisible;
 window.agilbankSetDashboardOffersState = agilbankSetDashboardOffersState;
+window.agilbankSetDashboardApprovedLoanVisible = agilbankSetDashboardApprovedLoanVisible;
 window.agilbankSyncDashboardApprovedMiniCard = agilbankSyncDashboardApprovedMiniCard;
 window.agilbankDashboardOpenCartaoPainel = agilbankDashboardOpenCartaoPainel;
 window.agilbankSetSolicitacaoWizardMode = agilbankSetSolicitacaoWizardMode;
