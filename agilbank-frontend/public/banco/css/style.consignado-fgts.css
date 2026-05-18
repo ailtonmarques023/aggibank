@@ -1,13 +1,18 @@
 :root {
-  --ab-bg: #121212;
-  --ab-panel: #1b1b1e;
-  --ab-panel-2: #242428;
-  --ab-line: #36363a;
-  --ab-text: #f4f4f7;
-  --ab-muted: #b9b9c0;
-  --ab-orange: #f57c00;
-  --ab-orange-2: #ff8a00;
-  --ab-disabled: #3a3840;
+  /* Paleta AgilBank / FATIA 7A — visual azul (sem laranja dominante) */
+  --ab-bg: #0a1628;
+  --ab-panel: #0f1f35;
+  --ab-panel-2: #152a45;
+  --ab-line: rgba(56, 189, 248, 0.18);
+  --ab-text: #f1f5f9;
+  --ab-muted: #64748b;
+  --ab-primary: #2563eb;
+  --ab-primary-2: #1e63ff;
+  --ab-cyan: #38bdf8;
+  --ab-soft: #eaf1ff;
+  --ab-ink: #102033;
+  --ab-green-accent: #22c55e;
+  --ab-disabled: #334155;
 }
 
 * {
@@ -17,7 +22,7 @@
 body.ab-fgts-page {
   margin: 0;
   min-height: 100vh;
-  background: var(--ab-bg);
+  background: linear-gradient(180deg, var(--ab-bg) 0%, #060d18 100%);
   color: var(--ab-text);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -44,8 +49,8 @@ input {
   align-items: center;
   gap: 8px;
   padding: 12px 18px;
-  background: #1a1a1d;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(90deg, #0a1628 0%, #0f2140 50%, #0a1628 100%);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
 }
 
 .ab-fgts-topbar h1 {
@@ -62,7 +67,7 @@ input {
   height: 44px;
   border: 0;
   background: transparent;
-  color: var(--ab-orange);
+  color: var(--ab-cyan);
   font-size: 34px;
   line-height: 1;
   cursor: pointer;
@@ -106,7 +111,7 @@ input {
 }
 
 .ab-fgts-tab.is-active {
-  color: var(--ab-orange);
+  color: var(--ab-cyan);
 }
 
 .ab-fgts-tab.is-active::after {
@@ -117,7 +122,7 @@ input {
   bottom: -1px;
   height: 4px;
   border-radius: 999px;
-  background: var(--ab-orange);
+  background: linear-gradient(90deg, var(--ab-primary-2), var(--ab-cyan));
 }
 
 .ab-fgts-product-switch {
@@ -154,8 +159,8 @@ input {
 }
 
 .ab-fgts-product.is-active {
-  border-color: rgba(245, 124, 0, 0.8);
-  box-shadow: inset 0 0 0 1px rgba(245, 124, 0, 0.24);
+  border-color: rgba(37, 99, 235, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.28);
 }
 
 .ab-fgts-hero-wrap {
@@ -179,8 +184,8 @@ input {
   margin: 0 0 20px;
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(201, 162, 39, 0.55);
-  background: rgba(42, 36, 24, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: rgba(10, 22, 40, 0.96);
   color: #f4f4f7;
   font-size: 15px;
   line-height: 1.45;
@@ -189,7 +194,7 @@ input {
 .ab-fgts-disclaimer-critical strong {
   display: block;
   margin-bottom: 6px;
-  color: #ffd666;
+  color: var(--ab-cyan);
 }
 
 .ab-fgts-copy--honest h2 {
@@ -315,11 +320,12 @@ input {
 }
 
 .ab-fgts-btn--primary {
-  background: var(--ab-orange);
+  background: linear-gradient(135deg, var(--ab-primary-2) 0%, var(--ab-primary) 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.28);
 }
 
 .ab-fgts-actions .ab-fgts-btn--primary {
@@ -328,8 +334,8 @@ input {
 
 .ab-fgts-btn--outline {
   background: transparent;
-  color: var(--ab-orange);
-  border-color: rgba(245, 124, 0, 0.7);
+  color: var(--ab-cyan);
+  border-color: rgba(56, 189, 248, 0.55);
 }
 
 .ab-fgts-btn:disabled {
@@ -354,8 +360,8 @@ input {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: 6px solid rgba(245, 124, 0, 0.22);
-  border-top-color: var(--ab-orange-2);
+  border: 6px solid rgba(37, 99, 235, 0.2);
+  border-top-color: var(--ab-cyan);
   animation: abFgtsSpin 0.85s linear infinite;
 }
 
@@ -376,7 +382,7 @@ input {
   width: 92px;
   height: 92px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #0072bc 0%, #0072bc 68%, #ff8a00 69%);
+  background: linear-gradient(135deg, #0a1628 0%, var(--ab-primary) 55%, var(--ab-cyan) 100%);
   display: grid;
   place-items: center;
   color: #fff;
@@ -456,7 +462,7 @@ input {
 }
 
 .ab-fgts-form-card input:focus {
-  box-shadow: 0 0 0 2px rgba(245, 124, 0, 0.52);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.55);
 }
 
 .ab-fgts-form-card span {
@@ -503,7 +509,7 @@ input {
 .ab-fgts-info-card button {
   border: 0;
   background: transparent;
-  color: var(--ab-orange);
+  color: var(--ab-cyan);
   padding: 0;
   font-weight: 900;
   text-decoration: underline;
@@ -532,7 +538,7 @@ input {
 .ab-fgts-result-card strong {
   display: block;
   margin: 12px 0 18px;
-  color: var(--ab-orange);
+  color: var(--ab-primary-2);
   font-size: 42px;
 }
 
@@ -564,7 +570,7 @@ input {
   position: relative;
   min-height: 150px;
   border-radius: 0;
-  background: linear-gradient(100deg, #f57c00 0%, #f57c00 48%, #fff0de 49%);
+  background: linear-gradient(100deg, #0a1628 0%, #1e4a8e 46%, var(--ab-soft) 50%);
   margin-bottom: 56px;
   overflow: hidden;
 }
@@ -586,10 +592,11 @@ input {
 .ab-fgts-video-copy strong {
   margin-top: 18px;
   font-size: 18px;
-  color: #7b4b17;
-  background: #ffe3c0;
+  color: var(--ab-ink);
+  background: rgba(234, 241, 255, 0.95);
   width: max-content;
   padding: 5px 12px;
+  border-radius: 8px;
 }
 
 .ab-fgts-play {
@@ -600,7 +607,7 @@ input {
   height: 76px;
   border-radius: 50%;
   border: 0;
-  background: rgba(93, 57, 20, 0.72);
+  background: rgba(10, 22, 40, 0.78);
   color: #fff;
   font-size: 34px;
   cursor: pointer;

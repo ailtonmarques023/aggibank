@@ -101,6 +101,62 @@
       padding: 12px 12px calc(28px + env(safe-area-inset-bottom, 0px));
     }
 
+    .ig-cover {
+      position: relative;
+      width: 100%;
+      min-height: calc(100dvh - 70px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0 12px;
+    }
+
+    .ig-cover__button {
+      width: 100%;
+      border: 0;
+      padding: 0;
+      border-radius: 20px;
+      background: #070716;
+      overflow: hidden;
+      box-shadow: 0 16px 36px rgba(29, 8, 76, 0.28);
+      cursor: pointer;
+      line-height: 0;
+      -webkit-tap-highlight-color: rgba(159, 82, 255, 0.18);
+    }
+
+    .ig-cover__button:focus-visible {
+      outline: 3px solid rgba(159, 82, 255, 0.78);
+      outline-offset: 3px;
+    }
+
+    .ig-cover__image {
+      display: block;
+      width: 100%;
+      max-height: calc(100dvh - 92px);
+      object-fit: contain;
+      background: #070716;
+    }
+
+    .ig-cover__hint {
+      position: absolute;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #2d174f;
+      font-size: 0.78rem;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
     .ig-hero {
       position: relative;
       overflow: hidden;
@@ -351,14 +407,14 @@
       color: #c47e00;
     }
 
+    .ig-share-panel {
+      scroll-margin-top: 76px;
+    }
+
     .ig-actions {
-      position: sticky;
-      bottom: 0;
       display: grid;
       gap: 8px;
-      margin: 14px -12px calc(-28px - env(safe-area-inset-bottom, 0px));
-      padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-      background: linear-gradient(180deg, rgba(237, 242, 247, 0), rgba(237, 242, 247, 0.96) 24%, #edf2f7 100%);
+      margin-top: 12px;
     }
 
     .ig-button {
@@ -417,7 +473,6 @@
     @media (min-width: 430px) {
       .ig-main { padding-left: 16px; padding-right: 16px; }
       .ig-title { font-size: 1.55rem; }
-      .ig-actions { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
     }
   </style>
 </head>
@@ -435,6 +490,21 @@
     </header>
 
     <main class="ig-main">
+      <section class="ig-cover" aria-label="Convite Indique e Ganhe">
+        <button type="button" class="ig-cover__button" id="igCoverBtn" aria-label="Abrir tela de compartilhamento do Indique e Ganhe">
+          <img
+            class="ig-cover__image"
+            src="img/indique-ganhe-story.png?v=20260518"
+            alt="Indique e ganhe. Convide seus amigos e receba recompensas a cada indicação válida."
+            fetchpriority="high"
+            decoding="async">
+        </button>
+        <span class="ig-cover__hint">
+          <i class="fas fa-hand-pointer" aria-hidden="true"></i>
+          Toque para compartilhar
+        </span>
+      </section>
+
       <section class="ig-hero" aria-label="Indique amigos para o AgilBank">
         <img
           class="ig-hero__image"
@@ -512,7 +582,7 @@
         </div>
       </section>
 
-      <section class="ig-panel" aria-labelledby="igStatusTitle">
+      <section class="ig-panel ig-share-panel" id="igSharePanel" aria-labelledby="igStatusTitle">
         <h2 class="ig-section-title" id="igStatusTitle">Status do convite</h2>
         <div class="ig-status">
           <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -583,6 +653,15 @@
       document.getElementById('igBack').addEventListener('click', function () {
         if (window.history.length > 1) window.history.back();
         else window.location.href = 'index.html';
+      });
+
+      document.getElementById('igCoverBtn').addEventListener('click', function () {
+        var panel = document.getElementById('igSharePanel');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(function () {
+          var share = document.getElementById('igShareBtn');
+          if (share) share.focus({ preventScroll: true });
+        }, 420);
       });
 
       document.getElementById('igShareBtn').addEventListener('click', function () {
