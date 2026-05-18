@@ -2304,8 +2304,9 @@
             </div>
         </div>
         <!-- banner de divulgação -->
-        <div class="banner-divulgação" onclick="openDynamicCardForm()">
-                <img class="bannerimg" src="https://i.postimg.cc/L4jVpf0D/mulher-cartao.jpg" alt="Mulher segurando cartão">
+        <div class="banner-divulgação banner-divulgação--arte-pronta" onclick="openDynamicCardForm()" style="display: none;">
+                <img class="bannerimg" src="img/propaganda-cartao.png?v=20260518" alt="Banner do cartão AgilBank sem anuidade">
+                <button type="button" class="banner-cartao-cta" onclick="event.stopPropagation(); openDynamicCardForm();">Pedir cartão</button>
                 <div class="banner-gradient"></div>
                 <div class="banner-content">
                     <div style="font-size: 2rem; font-weight: bold;">PEÇA JÁ SEU CARTÃO</div>
@@ -11643,8 +11644,8 @@
                 console.log('[agilModal] hasCard:', hasCard);
                 console.log('[agilModal] hasLoan:', hasLoan);
 
-                if (hasCard && typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
-                    window.agilbankSetDashboardCardOffersVisible(false);
+                if (typeof window.agilbankSetDashboardCardOffersVisible === 'function') {
+                    window.agilbankSetDashboardCardOffersVisible(!hasCard);
                 }
 
                 var caseNum = 1;

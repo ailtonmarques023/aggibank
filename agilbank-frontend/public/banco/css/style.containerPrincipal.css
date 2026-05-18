@@ -932,6 +932,37 @@
             object-fit: cover;
         }
 
+        .banner-divulgação--arte-pronta .bannerimg {
+            object-position: center;
+        }
+
+        .banner-divulgação--arte-pronta .banner-gradient,
+        .banner-divulgação--arte-pronta .banner-content {
+            display: none;
+        }
+
+        .banner-cartao-cta {
+            position: absolute;
+            left: 18px;
+            bottom: 18px;
+            z-index: 2;
+            border: 0;
+            border-radius: 8px;
+            background: #0066b3;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1;
+            padding: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0, 55, 110, 0.28);
+            cursor: pointer;
+        }
+
+        .banner-cartao-cta:hover,
+        .banner-cartao-cta:focus-visible {
+            background: #005394;
+        }
+
         .banner-gradient {
             position: absolute;
             top: -13px;
