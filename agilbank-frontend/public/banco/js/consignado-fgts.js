@@ -30,7 +30,7 @@
       loading: "Simulação informativa",
       authorize: "Referência FGTS",
       simulator: "Simulação informativa",
-      result: "Resultado estimado",
+      result: "Resultado estimado (ilustrativo)",
       tutorial: "Referência educativa",
       client: "Área do cliente"
     };

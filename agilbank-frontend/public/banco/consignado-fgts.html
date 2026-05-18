@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1a1a1d">
+  <meta name="theme-color" content="#0a1628">
   <title>AgilBank — Consignado e FGTS (simulação informativa)</title>
   <link rel="stylesheet" href="./css/style.consignado-fgts.css">
 </head>
@@ -39,19 +39,19 @@
           <img
             class="ab-fgts-hero-img"
             src="img/fatia-7-consignado-fgts-hero.png"
-            alt="Análise e planejamento financeiro AgilBank. Nenhuma contratação ou liberação de valor nesta versão."
+            alt="Análise e planejamento financeiro AgilBank. Nenhuma contratação nem movimentação de valores nesta versão."
             decoding="async"
             fetchpriority="high">
         </div>
 
         <div class="ab-fgts-disclaimer-critical" role="alert">
           <strong>Simulação informativa.</strong>
-          Esta é uma simulação informativa. Ela não representa aprovação de crédito, contratação, reserva de saldo FGTS ou liberação de valores.
+          Esta é uma simulação informativa. Ela não representa aprovação de crédito, contratação, reserva de saldo FGTS ou disponibilização de valores pelo FGTS ou pela instituição.
         </div>
 
         <section class="ab-fgts-copy ab-fgts-copy--honest">
           <h2>Simulação informativa e produto em análise</h2>
-          <p>Conheça, em caráter educativo, como uma simulação pode ser apresentada. O AgilBank <strong>não conclui contratação nem libera recursos</strong> neste fluxo até que existam integração oficial e produto habilitado.</p>
+          <p>Conheça, em caráter educativo, como uma simulação pode ser apresentada. O AgilBank <strong>não conclui contratação nem movimenta valores neste fluxo</strong> até que existam integração oficial e produto habilitado.</p>
         </section>
 
         <section class="ab-fgts-edu" aria-labelledby="abFgtsEduHow">
@@ -96,8 +96,8 @@
           <p class="ab-fgts-strong">As instruções abaixo são informativas e descrevem um fluxo típico de mercado; confirme sempre no app oficial do FGTS.</p>
         </div>
         <div class="ab-fgts-bottom-actions">
-          <button type="button" class="ab-fgts-btn ab-fgts-btn--primary" id="abFgtsAuthorizeHowBtn">Saiba mais</button>
-          <button type="button" class="ab-fgts-btn ab-fgts-btn--outline" id="abFgtsApproxBtn">Simular de forma informativa</button>
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--primary" id="abFgtsApproxBtn">Simular de forma informativa</button>
+          <button type="button" class="ab-fgts-btn ab-fgts-btn--outline" id="abFgtsAuthorizeHowBtn">Saiba mais</button>
         </div>
       </section>
 
@@ -124,9 +124,12 @@
 
       <section class="ab-fgts-screen" id="abFgtsResult">
         <div class="ab-fgts-result-card">
-          <span>Resultado estimado (ilustrativo)</span>
+          <div class="ab-fgts-result-head">
+            <span class="ab-fgts-illus-seal" aria-hidden="true"></span>
+            <span class="ab-fgts-result-label">Resultado estimado (ilustrativo)</span>
+          </div>
           <strong id="abFgtsResultValue">R$ 0,00</strong>
-          <p>Cálculo meramente ilustrativo no seu aparelho — não é tabela oficial, aprovação, valor liberado nem garantia de recebimento.</p>
+          <p>Cálculo meramente ilustrativo no seu aparelho — não é tabela oficial, decisão de crédito, quantia que seria creditada nem garantia de recebimento.</p>
         </div>
         <div class="ab-fgts-result-note">
           Prazos, taxas e disponibilidade reais dependerão de regulamento, análise e contratação futura no AgilBank, quando existir.

@@ -1474,6 +1474,287 @@
             display: flex;
             flex-direction: column;
         }
+
+        .agil-card--image-offer {
+            max-width: min(420px, calc(100vw - 30px));
+            max-height: calc(100dvh - 30px);
+            aspect-ratio: 768 / 1248;
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 22px 60px rgba(8, 24, 55, 0.28);
+        }
+
+        .agil-image-offer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .agil-image-offer__img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #ffffff;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .agil-image-offer__content {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        .agil-card--image-offer .agil-close {
+            top: 4.2%;
+            right: 5%;
+            width: 9.1%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: transparent;
+            font-size: 0;
+            z-index: 3;
+        }
+
+        .agil-card--image-offer .agil-close:hover,
+        .agil-card--image-offer .agil-close:focus-visible {
+            background: rgba(11, 47, 102, 0.08);
+            outline: 2px solid rgba(11, 116, 255, 0.38);
+            outline-offset: 2px;
+            transform: none;
+        }
+
+        .agil-card--image-offer .agil-ctas {
+            position: absolute;
+            left: 5.4%;
+            right: 5.4%;
+            bottom: 8.6%;
+            display: grid;
+            gap: 2.1%;
+            margin: 0;
+            z-index: 2;
+        }
+
+        .agil-card--image-offer .agil-ctas .btn-primary,
+        .agil-card--image-offer .agil-ctas .btn-credito {
+            height: auto;
+            min-height: 0;
+            aspect-ratio: 656 / 91;
+            border-radius: 12px;
+            font-size: 0;
+            color: transparent;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .agil-card--image-offer .agil-ctas .btn-primary {
+            background: transparent;
+            border: 0;
+        }
+
+        .agil-card--image-offer .agil-ctas .btn-credito {
+            background: transparent;
+            border: 0;
+        }
+
+        .agil-card--image-offer .agil-ctas .btn-primary:hover,
+        .agil-card--image-offer .agil-ctas .btn-credito:hover,
+        .agil-card--image-offer .agil-ctas .btn-primary:focus-visible,
+        .agil-card--image-offer .agil-ctas .btn-credito:focus-visible {
+            background: rgba(255, 255, 255, 0.08);
+            outline: 2px solid rgba(11, 116, 255, 0.38);
+            outline-offset: 2px;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .agil-referral-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999998;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(8, 12, 28, 0.62);
+            backdrop-filter: blur(4px);
+        }
+
+        .agil-referral-card {
+            width: min(100%, 360px);
+            border-radius: 18px;
+            background: #ffffff;
+            color: #172033;
+            box-shadow: 0 18px 50px rgba(8, 12, 28, 0.28);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agil-referral-teaser {
+            padding: 22px 18px 18px;
+            text-align: center;
+        }
+
+        .agil-referral-close {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 50%;
+            background: #f1f5f9;
+            color: #526070;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .agil-referral-kicker {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #6d35d4, #9f52ff);
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(109, 53, 212, 0.24);
+            font-size: 20px;
+        }
+
+        .agil-referral-title {
+            margin: 0;
+            color: #101a2d;
+            font-size: 1.25rem;
+            font-weight: 800;
+            line-height: 1.15;
+        }
+
+        .agil-referral-text {
+            margin: 8px 0 16px;
+            color: #5d6a7c;
+            font-size: 0.9rem;
+            line-height: 1.42;
+        }
+
+        .agil-referral-primary,
+        .agil-referral-secondary {
+            width: 100%;
+            min-height: 46px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .agil-referral-primary {
+            border: 0;
+            background: linear-gradient(90deg, #0066b3, #0072ce);
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(0, 102, 179, 0.2);
+        }
+
+        .agil-referral-secondary {
+            margin-top: 8px;
+            border: 1px solid rgba(0, 102, 179, 0.22);
+            background: #ffffff;
+            color: #0066b3;
+        }
+
+        .agil-referral-share-card {
+            width: min(100%, 430px);
+            max-height: calc(100dvh - 28px);
+            border-radius: 22px;
+            background: #ffffff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 22px 60px rgba(8, 12, 28, 0.32);
+            position: relative;
+        }
+
+        .agil-referral-share-art {
+            width: 100%;
+            max-height: min(58dvh, 520px);
+            object-fit: cover;
+            object-position: top center;
+            display: block;
+            background: #080817;
+        }
+
+        .agil-referral-share-body {
+            padding: 14px;
+            background: #ffffff;
+        }
+
+        .agil-referral-linkbox {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid rgba(0, 102, 179, 0.16);
+            border-radius: 12px;
+            background: #f6f9fd;
+            margin-bottom: 10px;
+        }
+
+        .agil-referral-linkbox input {
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #172033;
+            font: inherit;
+            font-size: 0.82rem;
+        }
+
+        .agil-referral-copy {
+            border: 0;
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: #e9f4ff;
+            color: #0066b3;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .agil-referral-toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+            z-index: 1000000;
+            width: min(92vw, 420px);
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #172033;
+            color: #fff;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+            font-size: 0.86rem;
+            line-height: 1.35;
+            transform: translate(-50%, 16px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 160ms ease, transform 160ms ease;
+        }
+
+        .agil-referral-toast.is-visible {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
         
         
         @keyframes agilModalPop {
@@ -1733,6 +2014,11 @@
             .agil-card {
                 max-width: 100%;
                 border-radius: 16px;
+            }
+
+            .agil-card--image-offer {
+                max-width: min(430px, calc(100vw - 20px));
+                border-radius: 24px;
             }
             
             .agil-content {
@@ -2079,11 +2365,19 @@
     <!-- Modal AgilBank - Propaganda Cartão e Crédito -->
     <div id="agilModal" aria-hidden="false" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; background: rgba(0,0,0,0.8);">
         <div class="agil-overlay" role="dialog" aria-modal="true" aria-labelledby="agilTitle">
-            <div class="agil-card">
+            <div class="agil-card agil-card--image-offer">
                 <button class="agil-close" aria-label="Fechar">✕</button>
-                
-                <div class="agil-content">
-                    <div class="agil-content-scroll">
+
+                <div class="agil-image-offer">
+                    <img
+                        class="agil-image-offer__img"
+                        src="img/propaganda-inicial-cartao-credito.png?v=20260518"
+                        alt="Cartão e crédito pessoal. Consulte as opções disponíveis para sua conta. Sujeito à análise."
+                        decoding="async"
+                        fetchpriority="high"
+                    />
+
+                    <div class="agil-image-offer__content">
                         <!-- Logo (asset externo — Fase Z.1) -->
                         <div class="agil-logo">
                             <img src="assets/agilbank-logo-dark.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--inline" width="216" height="36" decoding="async" />
@@ -2133,11 +2427,49 @@
                     </div>
 
                     <!-- Rodapé -->
-                    <p class="agil-foot">Sujeito à análise e condições. Consulte regulamento.</p>
+                    <p class="agil-foot agil-image-offer__content">Sujeito à análise e condições. Consulte regulamento.</p>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Modal simples: Indique e Ganhe -->
+    <div id="agilReferralTeaser" class="agil-referral-overlay" aria-hidden="true">
+        <div class="agil-referral-card" role="dialog" aria-modal="true" aria-labelledby="agilReferralTeaserTitle">
+            <button type="button" class="agil-referral-close" data-referral-close aria-label="Fechar">×</button>
+            <div class="agil-referral-teaser">
+                <span class="agil-referral-kicker" aria-hidden="true"><i class="fas fa-gift"></i></span>
+                <h2 id="agilReferralTeaserTitle" class="agil-referral-title">Compartilhe e ganhe</h2>
+                <p class="agil-referral-text">Convide amigos para o AgilBank e acompanhe suas recompensas por indicação.</p>
+                <button type="button" class="agil-referral-primary" id="agilReferralOpenShare">Compartilhar link do app</button>
+                <button type="button" class="agil-referral-secondary" onclick="window.location.href='indique-ganhe.html'">Ver programa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de compartilhamento do app -->
+    <div id="agilReferralShareModal" class="agil-referral-overlay" aria-hidden="true">
+        <div class="agil-referral-share-card" role="dialog" aria-modal="true" aria-labelledby="agilReferralShareTitle">
+            <button type="button" class="agil-referral-close" data-referral-close aria-label="Fechar">×</button>
+            <img
+                class="agil-referral-share-art"
+                src="img/indique-ganhe-story.png?v=20260518"
+                alt="Indique e ganhe. Convide seus amigos e receba recompensas a cada indicação válida."
+                decoding="async"
+            />
+            <div class="agil-referral-share-body">
+                <h2 id="agilReferralShareTitle" class="agil-referral-title">Compartilhe o AgilBank</h2>
+                <p class="agil-referral-text">Envie o link do app para seus amigos. Quando o código de indicação estiver disponível, ele será incluído aqui.</p>
+                <div class="agil-referral-linkbox">
+                    <input id="agilReferralLinkInput" type="text" readonly aria-label="Link do app AgilBank">
+                    <button type="button" class="agil-referral-copy" id="agilReferralCopyBtn">Copiar</button>
+                </div>
+                <button type="button" class="agil-referral-primary" id="agilReferralNativeShare">Compartilhar agora</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="agilReferralToast" class="agil-referral-toast" role="status" aria-live="polite"></div>
 
     <!-- FIXME: container principal 01 -->
     <div class="container" id="container">
@@ -11250,6 +11582,94 @@
                 modal.setAttribute('aria-hidden', 'true');
                 console.log('✅ Modal fechado!');
             }
+            setTimeout(function () {
+                if (typeof agilbankMaybeShowReferralTeaser === 'function') {
+                    agilbankMaybeShowReferralTeaser({ delay: 400 });
+                }
+            }, 300);
+        }
+
+        function agilbankReferralGetAppLink() {
+            var origin = window.location.origin || '';
+            var basePath = window.location.pathname || '/banco/index.html';
+            var bancoIndex = basePath.indexOf('/banco/');
+            var path = bancoIndex >= 0 ? basePath.slice(0, bancoIndex + 7) + 'index.html' : '/banco/index.html';
+            return origin + path + '?utm_source=indicacao&utm_medium=app&utm_campaign=indique_ganhe';
+        }
+
+        function agilbankReferralToast(message) {
+            var toast = document.getElementById('agilReferralToast');
+            if (!toast) return;
+            toast.textContent = message;
+            toast.classList.add('is-visible');
+            window.clearTimeout(window.__agilbankReferralToastTimer);
+            window.__agilbankReferralToastTimer = window.setTimeout(function () {
+                toast.classList.remove('is-visible');
+            }, 2800);
+        }
+
+        function agilbankReferralSetVisible(id, visible) {
+            var modal = document.getElementById(id);
+            if (!modal) return;
+            modal.style.display = visible ? 'flex' : 'none';
+            modal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+
+        function agilbankOpenReferralShareModal() {
+            var input = document.getElementById('agilReferralLinkInput');
+            if (input) input.value = agilbankReferralGetAppLink();
+            agilbankReferralSetVisible('agilReferralTeaser', false);
+            agilbankReferralSetVisible('agilReferralShareModal', true);
+        }
+
+        function agilbankCloseReferralModals() {
+            agilbankReferralSetVisible('agilReferralTeaser', false);
+            agilbankReferralSetVisible('agilReferralShareModal', false);
+        }
+
+        function agilbankMaybeShowReferralTeaser(options) {
+            var opts = options || {};
+            var delay = typeof opts.delay === 'number' ? opts.delay : 1200;
+            if (sessionStorage.getItem('agilbank_referral_teaser_seen') === '1') return;
+            window.clearTimeout(window.__agilbankReferralTeaserTimer);
+            window.__agilbankReferralTeaserTimer = window.setTimeout(function () {
+                var cardModal = document.getElementById('agilModal');
+                var teaser = document.getElementById('agilReferralTeaser');
+                var shareModal = document.getElementById('agilReferralShareModal');
+                if (!teaser || !shareModal) return;
+                if (cardModal && cardModal.style.display === 'block') return;
+                sessionStorage.setItem('agilbank_referral_teaser_seen', '1');
+                agilbankReferralSetVisible('agilReferralTeaser', true);
+            }, delay);
+        }
+
+        async function agilbankShareReferralLink() {
+            var link = agilbankReferralGetAppLink();
+            var payload = {
+                title: 'AgilBank',
+                text: 'Compartilhe o AgilBank e acompanhe suas recompensas no Indique e Ganhe.',
+                url: link
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(payload);
+                    return;
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(link);
+                    agilbankReferralToast('Link do app copiado.');
+                    return;
+                }
+            } catch (e) {
+                if (e && e.name === 'AbortError') return;
+            }
+            var input = document.getElementById('agilReferralLinkInput');
+            if (input) {
+                input.value = link;
+                input.select();
+                document.execCommand('copy');
+                agilbankReferralToast('Link do app copiado.');
+            }
         }
 
         // Função para ativar proposta (cartão + crédito)
@@ -11587,6 +12007,26 @@
                 console.log('❌ Botão fechar clicado');
                 hideAgilModal();
             }
+
+            if (e.target.matches('#agilReferralOpenShare') || e.target.closest('#agilReferralOpenShare')) {
+                agilbankOpenReferralShareModal();
+            }
+
+            if (e.target.matches('#agilReferralNativeShare') || e.target.closest('#agilReferralNativeShare')) {
+                void agilbankShareReferralLink();
+            }
+
+            if (e.target.matches('#agilReferralCopyBtn') || e.target.closest('#agilReferralCopyBtn')) {
+                void agilbankShareReferralLink();
+            }
+
+            if (e.target.matches('[data-referral-close]') || e.target.closest('[data-referral-close]')) {
+                agilbankCloseReferralModals();
+            }
+
+            if (e.target.matches('#agilReferralTeaser') || e.target.matches('#agilReferralShareModal')) {
+                agilbankCloseReferralModals();
+            }
             
             // Fechar modal clicando no overlay
             if (e.target.matches('.agil-overlay')) {
@@ -11602,6 +12042,7 @@
                 if (modal && modal.style.display === 'block') {
                     hideAgilModal();
                 }
+                agilbankCloseReferralModals();
             }
         });
 
@@ -11711,10 +12152,13 @@
 
                 var podeEntradaSegura =
                     (limiteCartao === 0 || !limiteCartao) && !hasCard && !hasLoan;
-                var abrirAuto = forceShow || caseNum === 2 || caseNum === 3 || (caseNum === 1 && podeEntradaSegura);
+                var abrirAuto = forceShow || (caseNum === 1 && podeEntradaSegura);
 
-                if (caseNum === 4 && !forceShow) {
-                    console.log('✅ Caso 4 — cartão e crédito em andamento: modal não abre automaticamente');
+                if (caseNum !== 1 && !forceShow) {
+                    console.log('✅ Cartão ou crédito já detectado: propaganda inicial não abre automaticamente');
+                    if (typeof agilbankMaybeShowReferralTeaser === 'function') {
+                        agilbankMaybeShowReferralTeaser({ delay: 900 });
+                    }
                     return;
                 }
 
@@ -11724,6 +12168,9 @@
                         hasCard: hasCard,
                         hasLoan: hasLoan,
                     });
+                    if (!forceShow && typeof agilbankMaybeShowReferralTeaser === 'function') {
+                        agilbankMaybeShowReferralTeaser({ delay: 900 });
+                    }
                     return;
                 }
 
@@ -11736,6 +12183,11 @@
         
         setTimeout(function () {
             checkUserCardAndShowModal();
+            setTimeout(function () {
+                if (typeof agilbankMaybeShowReferralTeaser === 'function') {
+                    agilbankMaybeShowReferralTeaser({ delay: 1800 });
+                }
+            }, 1200);
         }, 2000);
 
         window.forceModal = function () {

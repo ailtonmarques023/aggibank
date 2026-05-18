@@ -2980,8 +2980,7 @@ function agilbankSyncDashboardApprovedMiniCard(list) {
     if (!wrap || !row) return;
     var l = Array.isArray(list) ? list : [];
     var show = l.some(function (c) {
-        var s = agilbankStatusNorm(c && c.status);
-        return s === 'aprovado' || s === 'ativo';
+        return agilbankStatusMostraBannerCartaoAprovado(c && c.status);
     });
     wrap.style.display = show ? '' : 'none';
     if (show) {
@@ -3035,7 +3034,7 @@ function agilbankStatusNorm(status) {
 
 function agilbankStatusIsAtivoOuAprovado(status) {
     var s = agilbankStatusNorm(status);
-    return s === 'ativo' || s === 'aprovado';
+    return s === 'ativo' || s === 'active' || s === 'aprovado' || s === 'aprovada' || s === 'approved';
 }
 
 function agilbankStatusIsPendente(status) {
@@ -3054,6 +3053,24 @@ function agilbankStatusIsAtivo(status) {
 function agilbankStatusIsRejeitado(status) {
     var s = agilbankStatusNorm(status);
     return s === 'rejeitado' || s === 'rejected' || s === 'negado' || s === 'recusado';
+}
+
+function agilbankStatusMostraBannerCartaoAprovado(status) {
+    var s = agilbankStatusNorm(status);
+    if (!s) return false;
+    if (agilbankStatusIsPendente(s) || agilbankStatusIsRejeitado(s)) return false;
+    return (
+        agilbankStatusIsAtivoOuAprovado(s) ||
+        s === 'bloqueado' ||
+        s === 'blocked' ||
+        s === 'emitido' ||
+        s === 'emitida' ||
+        s === 'produzido' ||
+        s === 'postado' ||
+        s === 'enviado' ||
+        s === 'entregue' ||
+        s.indexOf('aprov') >= 0
+    );
 }
 
 function agilbankSortCartoesPorDataDesc(list) {
