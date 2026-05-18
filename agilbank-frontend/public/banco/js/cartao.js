@@ -2989,45 +2989,10 @@ function agilbankRenderPainelCartaoPendente(msgEl, c) {
 }
 
 function agilbankRenderPainelCartaoAprovado(msgEl, c) {
-    if (!msgEl || !c) return;
-    msgEl.style.display = 'block';
-    msgEl.className = 'cartao-painel-msg cartao-painel-msg--rich';
-    var cid = String(c.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
-    msgEl.innerHTML =
-        '<h3 class="cartao-painel-titulo">' +
-        agilbankEscapeHtmlPainel('Cartão aprovado') +
-        '</h3>' +
-        '<p class="cartao-painel-texto">' +
-        agilbankEscapeHtmlPainel(
-            'Seu cartão foi aprovado. Siga as instruções para ativar ou acessar os dados do cartão.'
-        ) +
-        '</p>' +
-        '<div class="cartao-painel-acoes-dupla">' +
-        '<button type="button" class="limite-button" data-cartao-painel-ver="' +
-        agilbankEscapeHtmlPainel(cid) +
-        '">Ver cartão</button>' +
-        '<button type="button" class="limite-button limite-button--sec" data-cartao-painel-ativar="' +
-        agilbankEscapeHtmlPainel(cid) +
-        '">Ativar cartão</button>' +
-        '</div>';
-    msgEl.querySelectorAll('[data-cartao-painel-ver]').forEach(function (b) {
-        b.onclick = function () {
-            window.__agilbankCartaoSelecionadoId = c.id;
-            if (typeof agilbankCartaoAcaoVer === 'function') {
-                agilbankCartaoAcaoVer();
-            }
-        };
-    });
-    msgEl.querySelectorAll('[data-cartao-painel-ativar]').forEach(function (b) {
-        b.onclick = function () {
-            window.__agilbankCartaoSelecionadoId = c.id;
-            if (typeof agilbankCartaoAcaoFisico === 'function') {
-                agilbankCartaoAcaoFisico();
-            } else if (typeof agilbankCartaoAcaoVer === 'function') {
-                agilbankCartaoAcaoVer();
-            }
-        };
-    });
+    if (!msgEl) return;
+    msgEl.style.display = 'none';
+    msgEl.textContent = '';
+    msgEl.innerHTML = '';
 }
 
 function agilbankRenderPainelCartaoRejeitado(msgEl, c) {
