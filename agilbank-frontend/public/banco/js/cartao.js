@@ -3490,26 +3490,39 @@ function agilbankAplicarEstadoPainelCartao(cartoes) {
     agilbankSyncDashboardApprovedMiniCard(list);
 }
 
+/** Evita várias rajadas paralelas de GET /cards + /cards/status vindas do mesmo tick ou handlers repetidos. */
+var __agilbankRefreshPainelCartoesInflight = null;
+
 /**
  * Atualiza painel de cartões (GET) + snapshot de status + ofertas no dashboard. Expõe para index.html.
  */
 async function agilbankRefreshPainelCartoes() {
-    agilbankShowPainelCartoesLoading(true);
-    var pair = await Promise.all([fetchCartoesFromApi(), fetchCardsStatusFromApi()]);
-    var result = pair[0];
-    var snap = pair[1];
-    if (!result.ok) {
-        renderCartoesErroCarregamento();
-        return result;
+    if (__agilbankRefreshPainelCartoesInflight) {
+        return __agilbankRefreshPainelCartoesInflight;
     }
-    var merged = result.cartoes;
-    if (snap.ok && snap.data) {
-        merged = agilbankMergeCardsStatusIntoLista(result.cartoes, snap.data);
-    } else if (!snap.ok && snap.reason !== 'no_auth') {
-        console.warn('agilbankRefreshPainelCartoes: cards/status falhou:', snap.error);
-    }
-    agilbankAplicarEstadoPainelCartao(merged);
-    return Object.assign({}, result, { cartoes: merged });
+    __agilbankRefreshPainelCartoesInflight = (async function () {
+        try {
+            agilbankShowPainelCartoesLoading(true);
+            var pair = await Promise.all([fetchCartoesFromApi(), fetchCardsStatusFromApi()]);
+            var result = pair[0];
+            var snap = pair[1];
+            if (!result.ok) {
+                renderCartoesErroCarregamento();
+                return result;
+            }
+            var merged = result.cartoes;
+            if (snap.ok && snap.data) {
+                merged = agilbankMergeCardsStatusIntoLista(result.cartoes, snap.data);
+            } else if (!snap.ok && snap.reason !== 'no_auth') {
+                console.warn('agilbankRefreshPainelCartoes: cards/status falhou:', snap.error);
+            }
+            agilbankAplicarEstadoPainelCartao(merged);
+            return Object.assign({}, result, { cartoes: merged });
+        } finally {
+            __agilbankRefreshPainelCartoesInflight = null;
+        }
+    })();
+    return __agilbankRefreshPainelCartoesInflight;
 }
 
 /** Pré-feedback ao abrir a seção até concluir GET /cards e /cards/status. */

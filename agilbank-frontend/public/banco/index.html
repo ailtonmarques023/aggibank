@@ -2467,7 +2467,7 @@
             />
             <div class="agil-referral-share-body">
                 <h2 id="agilReferralShareTitle" class="agil-referral-title">Compartilhe o AgilBank</h2>
-                <p class="agil-referral-text">Envie o link do app para seus amigos. Quando o código de indicação estiver disponível, ele será incluído aqui.</p>
+                <p class="agil-referral-text">Envie o link de instalação do app para seus amigos. Seu código de indicação será preservado no cadastro.</p>
                 <div class="agil-referral-linkbox">
                     <input id="agilReferralLinkInput" type="text" readonly aria-label="Link do app AgilBank">
                     <button type="button" class="agil-referral-copy" id="agilReferralCopyBtn">Copiar</button>
@@ -7210,13 +7210,8 @@
 
         // Carregar dados do perfil quando a página carregar
         document.addEventListener('DOMContentLoaded', function() {
-            // Verificar se usuário já está logado
+            // Verificar se usuário já está logado (UserDataManager também sincroniza API — evitar segundo disparo redundante aqui)
             verificarLoginExistente();
-            
-            // Aguardar um pouco para garantir que a sessão esteja carregada
-            setTimeout(() => {
-                carregarDadosPerfilAutomaticamente();
-            }, 1000);
         });
 
         // Função para carregar configurações do banco Neon
@@ -7304,13 +7299,12 @@
                 if (loginContainer) {
                     loginContainer.style.display = 'none';
                 }
-                // Carregar dados do usuário
-                    setTimeout(function () {
-                        carregarPerfilUsuario();
-                        if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
-                            void agilbankAtualizarBadgeNotificacoesRodape();
-                        }
-                    }, 500);
+                // Badge de notificações (perfil: UserDataManager + forceUpdateHeaderData no bootstrapping)
+                setTimeout(function () {
+                    if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
+                        void agilbankAtualizarBadgeNotificacoesRodape();
+                    }
+                }, 500);
             } else {
                 console.log('⚠️ Nenhum token encontrado, usuário não está logado');
             }
@@ -7402,73 +7396,128 @@
 
         // Função para carregar dados do perfil do usuário
         async function carregarPerfilUsuario() {
-            console.log('🔄 Carregando dados do perfil do usuário...');
-            
-            // Verificar se há token de autenticação
-            const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
-            if (!token) {
-                console.log('⚠️ Token não encontrado — estado público');
-                usarDadosPadrao();
-                return;
+            if (window.__carregarPerfilUsuarioInflight) {
+                return window.__carregarPerfilUsuarioInflight;
             }
-            
-            console.log('✅ Token encontrado, fazendo requisição para API...');
+            window.__carregarPerfilUsuarioInflight = (async function () {
+                console.log('🔄 Carregando dados do perfil do usuário...');
 
-            try {
-                async function requisitarPerfil(path) {
-                    var response = await window.AgilBank.api.request(path, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        credentials: 'include'
-                    });
-                    var body = await response.json().catch(function () { return {}; });
-                    return { response: response, body: body, path: path };
+                const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+                if (!token) {
+                    console.log('⚠️ Token não encontrado — estado público');
+                    usarDadosPadrao();
+                    return;
                 }
 
-                var tentativaPrincipal = await requisitarPerfil('user/user-complete-data');
-                var tentativa = tentativaPrincipal;
-                if (!tentativaPrincipal.response.ok && tentativaPrincipal.response.status !== 401) {
-                    console.warn('⚠️ user/user-complete-data falhou; tentando fallback user/profile');
-                    tentativa = await requisitarPerfil('user/profile');
-                }
+                console.log('✅ Token encontrado, fazendo requisição para API...');
 
-                console.log('📡 Resposta da API:', tentativa.path, tentativa.response.status, tentativa.response.statusText);
-                if (tentativa.response.ok) {
-                    var profile = tentativa.body;
-                    var usuarioBruto = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
-                        ? window.agilbankResolverUsuarioBrutoDoPerfil(profile)
-                        : null;
-                    if (!usuarioBruto && window.__agilbankUltimosDadosUsuarioReais) {
-                        console.warn('⚠️ API sem usuário reconhecível; reaproveitando cache real');
-                        atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
-                        return;
-                    }
-                    if (!usuarioBruto) {
-                        marcarCamposPerfilApiIndisponivel();
-                        return;
-                    }
-                    console.log('✅ Perfil carregado com sucesso:', tentativa.path);
-                    atualizarInterfacePerfil(profile);
-                } else if (tentativa.response.status === 401) {
-                    console.log('🔒 Sessão inválida ou expirada');
-                    if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                        window.aplicarDadosUsuarioReais(null, {
-                            modo: 'autenticado',
-                            estado: 'indisponivel',
-                            fonte: 'carregarPerfilUsuario-401',
-                            preservarDadosAtuais: true
+                try {
+                    async function requisitarPerfil(path) {
+                        var response = await window.AgilBank.api.request(path, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include'
                         });
+                        var body = await response.json().catch(function () { return {}; });
+                        return { response: response, body: body, path: path };
                     }
-                    marcarCamposPerfilApiIndisponivel();
-                } else {
-                    console.error('❌ Erro ao carregar perfil:', tentativa.response.status, tentativa.response.statusText);
+
+                    var tentativaPrincipal = await requisitarPerfil('user/user-complete-data');
+                    var tentativa = tentativaPrincipal;
+                    if (tentativaPrincipal.response.status === 429) {
+                        console.warn(
+                            '⚠️ Limite de requisições (429) em user/user-complete-data — sem fallback imediato para user/profile'
+                        );
+                        if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                            window.aplicarDadosUsuarioReais(null, {
+                                modo: 'autenticado',
+                                estado: 'indisponivel',
+                                fonte: 'carregarPerfilUsuario-429',
+                                preservarDadosAtuais: true
+                            });
+                        }
+                        if (window.__agilbankUltimosDadosUsuarioReais) {
+                            atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                        } else {
+                            marcarCamposPerfilApiIndisponivel();
+                        }
+                        return;
+                    }
+                    if (!tentativaPrincipal.response.ok && tentativaPrincipal.response.status !== 401) {
+                        console.warn('⚠️ user/user-complete-data falhou; tentando fallback user/profile');
+                        tentativa = await requisitarPerfil('user/profile');
+                        if (tentativa.response.status === 429) {
+                            console.warn('⚠️ Limite de requisições (429) em user/profile — encerrando');
+                            if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                                window.aplicarDadosUsuarioReais(null, {
+                                    modo: 'autenticado',
+                                    estado: 'indisponivel',
+                                    fonte: 'carregarPerfilUsuario-429-fallback',
+                                    preservarDadosAtuais: true
+                                });
+                            }
+                            if (window.__agilbankUltimosDadosUsuarioReais) {
+                                atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                            } else {
+                                marcarCamposPerfilApiIndisponivel();
+                            }
+                            return;
+                        }
+                    }
+
+                    console.log('📡 Resposta da API:', tentativa.path, tentativa.response.status, tentativa.response.statusText);
+                    if (tentativa.response.ok) {
+                        var profile = tentativa.body;
+                        var usuarioBruto = typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                            ? window.agilbankResolverUsuarioBrutoDoPerfil(profile)
+                            : null;
+                        if (!usuarioBruto && window.__agilbankUltimosDadosUsuarioReais) {
+                            console.warn('⚠️ API sem usuário reconhecível; reaproveitando cache real');
+                            atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                            return;
+                        }
+                        if (!usuarioBruto) {
+                            marcarCamposPerfilApiIndisponivel();
+                            return;
+                        }
+                        console.log('✅ Perfil carregado com sucesso:', tentativa.path);
+                        atualizarInterfacePerfil(profile);
+                    } else if (tentativa.response.status === 401) {
+                        console.log('🔒 Sessão inválida ou expirada');
+                        if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                            window.aplicarDadosUsuarioReais(null, {
+                                modo: 'autenticado',
+                                estado: 'indisponivel',
+                                fonte: 'carregarPerfilUsuario-401',
+                                preservarDadosAtuais: true
+                            });
+                        }
+                        marcarCamposPerfilApiIndisponivel();
+                    } else {
+                        console.error('❌ Erro ao carregar perfil:', tentativa.response.status, tentativa.response.statusText);
+                        if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                            window.aplicarDadosUsuarioReais(null, {
+                                modo: 'autenticado',
+                                estado: 'indisponivel',
+                                fonte: 'carregarPerfilUsuario-erro',
+                                preservarDadosAtuais: true
+                            });
+                        }
+                        if (window.__agilbankUltimosDadosUsuarioReais) {
+                            atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                        } else {
+                            marcarCamposPerfilApiIndisponivel();
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao carregar perfil:', error);
                     if (typeof window.aplicarDadosUsuarioReais === 'function') {
                         window.aplicarDadosUsuarioReais(null, {
                             modo: 'autenticado',
                             estado: 'indisponivel',
-                            fonte: 'carregarPerfilUsuario-erro',
+                            fonte: 'carregarPerfilUsuario-catch',
                             preservarDadosAtuais: true
                         });
                     }
@@ -7477,23 +7526,11 @@
                     } else {
                         marcarCamposPerfilApiIndisponivel();
                     }
+                } finally {
+                    window.__carregarPerfilUsuarioInflight = null;
                 }
-            } catch (error) {
-                console.error('❌ Erro ao carregar perfil:', error);
-                if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                    window.aplicarDadosUsuarioReais(null, {
-                        modo: 'autenticado',
-                        estado: 'indisponivel',
-                        fonte: 'carregarPerfilUsuario-catch',
-                        preservarDadosAtuais: true
-                    });
-                }
-                if (window.__agilbankUltimosDadosUsuarioReais) {
-                    atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
-                } else {
-                    marcarCamposPerfilApiIndisponivel();
-                }
-            }
+            })();
+            return window.__carregarPerfilUsuarioInflight;
         }
 
         function usarDadosPadrao() {
@@ -11599,12 +11636,50 @@
             }, 300);
         }
 
-        function agilbankReferralGetAppLink() {
-            var origin = window.location.origin || '';
-            var basePath = window.location.pathname || '/banco/index.html';
-            var bancoIndex = basePath.indexOf('/banco/');
-            var path = bancoIndex >= 0 ? basePath.slice(0, bancoIndex + 7) + 'index.html' : '/banco/index.html';
-            return origin + path + '?utm_source=indicacao&utm_medium=app&utm_campaign=indique_ganhe';
+        var agilbankReferralCodeCache = null;
+        var agilbankReferralLinkCache = null;
+
+        function agilbankReferralSanitizeCode(code) {
+            return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+
+        function agilbankReferralGetInstallLink(code) {
+            var safeCode = agilbankReferralSanitizeCode(code);
+            var base = 'https://aggibank.vercel.app/banco/instalar.html';
+            return safeCode ? base + '?ref=' + encodeURIComponent(safeCode) : base;
+        }
+
+        async function agilbankReferralLoadCode() {
+            if (agilbankReferralCodeCache) return agilbankReferralCodeCache;
+            if (!window.AgilBank || !window.AgilBank.auth || !window.AgilBank.auth.getToken()) {
+                return '';
+            }
+            try {
+                var response = await window.AgilBank.api.request('referrals/me', { method: 'GET' });
+                var body = await response.json().catch(function () { return {}; });
+                if (!response.ok || body.success === false) return '';
+                var data = body.data || {};
+                var code = agilbankReferralSanitizeCode(data.code);
+                if (code) agilbankReferralCodeCache = code;
+                return code;
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function agilbankReferralSetShareLink(link) {
+            agilbankReferralLinkCache = link || agilbankReferralGetInstallLink('');
+            var input = document.getElementById('agilReferralLinkInput');
+            if (input) input.value = agilbankReferralLinkCache;
+        }
+
+        async function agilbankReferralPrepareShareLink() {
+            var input = document.getElementById('agilReferralLinkInput');
+            if (input) input.value = 'Carregando link de convite...';
+            var code = await agilbankReferralLoadCode();
+            var link = agilbankReferralGetInstallLink(code);
+            agilbankReferralSetShareLink(link);
+            return link;
         }
 
         function agilbankReferralToast(message) {
@@ -11625,11 +11700,10 @@
             modal.setAttribute('aria-hidden', visible ? 'false' : 'true');
         }
 
-        function agilbankOpenReferralShareModal() {
-            var input = document.getElementById('agilReferralLinkInput');
-            if (input) input.value = agilbankReferralGetAppLink();
+        async function agilbankOpenReferralShareModal() {
             agilbankReferralSetVisible('agilReferralTeaser', false);
             agilbankReferralSetVisible('agilReferralShareModal', true);
+            await agilbankReferralPrepareShareLink();
         }
 
         function agilbankCloseReferralModals() {
@@ -11654,10 +11728,10 @@
         }
 
         async function agilbankShareReferralLink() {
-            var link = agilbankReferralGetAppLink();
+            var link = agilbankReferralLinkCache || await agilbankReferralPrepareShareLink();
             var payload = {
                 title: 'AgilBank',
-                text: 'Compartilhe o AgilBank e acompanhe suas recompensas no Indique e Ganhe.',
+                text: 'Instale o AgilBank pelo meu convite e abra sua conta.',
                 url: link
             };
             try {
@@ -12019,7 +12093,7 @@
             }
 
             if (e.target.matches('#agilReferralOpenShare') || e.target.closest('#agilReferralOpenShare')) {
-                agilbankOpenReferralShareModal();
+                void agilbankOpenReferralShareModal();
             }
 
             if (e.target.matches('#agilReferralNativeShare') || e.target.closest('#agilReferralNativeShare')) {
@@ -12582,16 +12656,12 @@
             });
         }
 
-        // Limite no header (sem abrir modal nem inferir produtos a partir de payload incompleto)
+        // Header / limite: um único disparo tardio — dedupe no legacyApiClient evita rajadas paralelas ao mesmo GET
         setTimeout(function () {
-            checkAndShowLimit();
-            setTimeout(function () {
+            if (typeof forceUpdateHeaderData === 'function') {
                 forceUpdateHeaderData();
-                if (typeof carregarPerfilUsuario === 'function') {
-                    carregarPerfilUsuario();
-                }
-            }, 1000);
-        }, 1000);
+            }
+        }, 1500);
 
         /**
          * Obsoleto: antes abria #agilModal com !important ignorando APIs.

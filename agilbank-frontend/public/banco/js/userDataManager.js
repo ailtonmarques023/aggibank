@@ -6,6 +6,8 @@
 class UserDataManager {
     constructor() {
         this.userData = null;
+        /** Evita várias cargas paralelas do mesmo perfil (coordena com legacyApiClient dedupe). */
+        this._loadUserDataFromAPIPromise = null;
         this.init();
     }
 
@@ -106,69 +108,86 @@ class UserDataManager {
      * Carrega dados atualizados do usuário da API
      */
     async loadUserDataFromAPI() {
-        try {
-            const token =
-                (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.getToken === 'function'
-                    ? window.AgilBank.auth.getToken()
-                    : null) ||
-                sessionStorage.getItem('govbr_token') ||
-                localStorage.getItem('govbr_token');
-            if (!token) {
-                console.log('⚠️ Token não encontrado');
-                return null;
-            }
-
-            if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
-                console.error('❌ AgilBank.api indisponível');
-                return null;
-            }
-
-            console.log('🔄 Carregando dados do usuário da API (user-complete-data)...');
-            async function requestProfile(path) {
-                const response = await window.AgilBank.api.request(path, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const body = await response.json().catch(function () {
-                    return {};
-                });
-                return { response, body, path };
-            }
-
-            let result = await requestProfile('user/user-complete-data');
-            if (!result.response.ok && result.response.status !== 401) {
-                console.warn('⚠️ user/user-complete-data falhou; tentando user/profile');
-                result = await requestProfile('user/profile');
-            }
-
-            if (result.response.ok) {
-                var rawUser =
-                    typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
-                        ? window.agilbankResolverUsuarioBrutoDoPerfil(result.body)
-                        : result.body.user_data && result.body.user_data.usuario
-                          ? result.body.user_data.usuario
-                          : result.body.data && result.body.data.user
-                            ? result.body.data.user
-                            : null;
-                if (!rawUser) {
-                    console.error('❌ Resposta de perfil sem usuário reconhecível:', result.body);
+        if (this._loadUserDataFromAPIPromise) {
+            return this._loadUserDataFromAPIPromise;
+        }
+        const self = this;
+        this._loadUserDataFromAPIPromise = (async function () {
+            try {
+                const token =
+                    (window.AgilBank && window.AgilBank.auth && typeof window.AgilBank.auth.getToken === 'function'
+                        ? window.AgilBank.auth.getToken()
+                        : null) ||
+                    sessionStorage.getItem('govbr_token') ||
+                    localStorage.getItem('govbr_token');
+                if (!token) {
+                    console.log('⚠️ Token não encontrado');
                     return null;
                 }
-                this.userData = this.mergeWithExistingRelatedData(rawUser);
-                this.persistUserToStorage();
 
-                console.log('✅ Dados do usuário atualizados da API:', this.userData);
-                this.updateAllUserData();
-                return this.userData;
+                if (!window.AgilBank || !window.AgilBank.api || typeof window.AgilBank.api.request !== 'function') {
+                    console.error('❌ AgilBank.api indisponível');
+                    return null;
+                }
+
+                console.log('🔄 Carregando dados do usuário da API (user-complete-data)...');
+                async function requestProfile(path) {
+                    const response = await window.AgilBank.api.request(path, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const body = await response.json().catch(function () {
+                        return {};
+                    });
+                    return { response, body, path };
+                }
+
+                let result = await requestProfile('user/user-complete-data');
+                if (result.response.status === 429) {
+                    console.warn('⚠️ user/user-complete-data retornou 429 — sem fallback imediato para user/profile');
+                    return null;
+                }
+                if (!result.response.ok && result.response.status !== 401) {
+                    console.warn('⚠️ user/user-complete-data falhou; tentando user/profile');
+                    result = await requestProfile('user/profile');
+                    if (result.response.status === 429) {
+                        console.warn('⚠️ user/profile retornou 429 — encerrando carga');
+                        return null;
+                    }
+                }
+
+                if (result.response.ok) {
+                    var rawUser =
+                        typeof window.agilbankResolverUsuarioBrutoDoPerfil === 'function'
+                            ? window.agilbankResolverUsuarioBrutoDoPerfil(result.body)
+                            : result.body.user_data && result.body.user_data.usuario
+                              ? result.body.user_data.usuario
+                              : result.body.data && result.body.data.user
+                                ? result.body.data.user
+                                : null;
+                    if (!rawUser) {
+                        console.error('❌ Resposta de perfil sem usuário reconhecível:', result.body);
+                        return null;
+                    }
+                    self.userData = self.mergeWithExistingRelatedData(rawUser);
+                    self.persistUserToStorage();
+
+                    console.log('✅ Dados do usuário atualizados da API:', self.userData);
+                    self.updateAllUserData();
+                    return self.userData;
+                }
+                console.error('❌ Erro ao carregar dados da API:', result.response.status);
+                return null;
+            } catch (error) {
+                console.error('❌ Erro na requisição da API:', error);
+                return null;
+            } finally {
+                self._loadUserDataFromAPIPromise = null;
             }
-            console.error('❌ Erro ao carregar dados da API:', result.response.status);
-            return null;
-        } catch (error) {
-            console.error('❌ Erro na requisição da API:', error);
-            return null;
-        }
+        })();
+        return this._loadUserDataFromAPIPromise;
     }
 
     /**
