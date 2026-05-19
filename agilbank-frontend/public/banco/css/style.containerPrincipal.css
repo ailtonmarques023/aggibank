@@ -488,35 +488,11 @@
             -webkit-tap-highlight-color: rgba(0, 102, 179, 0.12);
         }
 
-        .dashboard-emprestimo-card-wrap {
-            flex-basis: min(86vw, 380px);
-        }
-
-        .dashboard-feature-banner--loan {
-            background: linear-gradient(180deg, #111827 0%, #05060a 100%);
-        }
-
-        .dashboard-feature-banner__headline {
-            display: block;
-            padding: 12px 14px 10px;
-            color: #fff;
-            font-size: 0.92rem;
-            font-weight: 800;
-            line-height: 1.2;
-            text-align: left;
-            letter-spacing: 0;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-        }
-
         .dashboard-feature-banner img {
             display: block;
             width: 100%;
             aspect-ratio: 16 / 8.4;
             object-fit: cover;
-        }
-
-        .dashboard-feature-banner--loan img {
-            aspect-ratio: 16 / 7.4;
         }
 
         .dashboard-feature-banner:focus-visible {
@@ -1026,7 +1002,7 @@
         .banner-divulgação {
             position: relative;
             overflow: hidden;
-            height: 180px;
+            height: 204px;
             border-radius: 12px;
             margin: 15px;
         }
@@ -1067,6 +1043,22 @@
             line-height: 0;
         }
 
+        .dashboard-offer-slide--loan {
+            background: linear-gradient(180deg, #111827 0%, #05060a 100%);
+        }
+
+        .dashboard-offer-headline {
+            display: block;
+            padding: 12px 14px 10px;
+            color: #fff;
+            font-size: 0.92rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-align: left;
+            letter-spacing: 0;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+
         .dashboard-offer-slide[hidden] {
             display: none;
         }
@@ -1075,6 +1067,10 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        .dashboard-offer-slide--loan .bannerimg {
+            height: calc(100% - 39px);
         }
 
         .banner-divulgação--arte-pronta .bannerimg {

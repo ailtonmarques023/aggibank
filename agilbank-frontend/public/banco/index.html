@@ -2577,7 +2577,6 @@
             </div>
             <div id="dashboardLoanApprovedMiniWrap" class="dashboard-emprestimo-card-wrap dashboard-feature-slide" aria-label="Empréstimos e crédito pessoal" style="display:none;">
                 <button type="button" class="dashboard-feature-banner dashboard-feature-banner--loan" onclick="if(typeof activateCredito==='function')activateCredito();else window.location.assign('emprestimos.html');" aria-label="Crédito pessoal aprovado. Abrir crédito pessoal.">
-                    <span class="dashboard-feature-banner__headline">Mais crédito para você</span>
                     <img src="img/dashboard-credito-aprovado.png?v=20260519" alt="Crédito pessoal aprovado">
                 </button>
             </div>
@@ -2638,8 +2637,9 @@
                     <button type="button" class="dashboard-offer-slide" data-dashboard-offer="card" onclick="openDynamicCardForm()" aria-label="Pedir cartão AgilBank" hidden style="display: none;">
                         <img class="bannerimg" src="img/propaganda-cartao.png?v=20260518" alt="Banner do cartão AgilBank sem anuidade">
                     </button>
-                    <button type="button" class="dashboard-offer-slide" data-dashboard-offer="loan" onclick="activateCredito()" aria-label="Consultar crédito pessoal AgilBank" hidden style="display: none;">
-                        <img class="bannerimg" src="img/propaganda-emprestimo.png?v=20260518" alt="Banner de crédito pessoal AgilBank">
+                    <button type="button" class="dashboard-offer-slide dashboard-offer-slide--loan" data-dashboard-offer="loan" onclick="activateCredito()" aria-label="Consultar crédito pessoal AgilBank" hidden style="display: none;">
+                        <span class="dashboard-offer-headline">Mais crédito para você</span>
+                        <img class="bannerimg" src="img/propaganda-emprestimo.png?v=20260519" alt="Banner de crédito pessoal AgilBank">
                     </button>
                     <button type="button" class="dashboard-offer-slide" data-dashboard-offer="cdb" data-fatia0-nome="Investimentos CDB" onclick="if(typeof agilbankFatia0CtaEmBreveFromEl==='function')agilbankFatia0CtaEmBreveFromEl(this);else if(typeof agilbankFatia0CtaEmBreve==='function')agilbankFatia0CtaEmBreve('Investimentos CDB');" aria-label="Investir em CDB AgilBank" hidden style="display: none;">
                         <img class="bannerimg" src="img/propaganda-cdb.png?v=20260518" alt="Banner de investimento em CDB AgilBank">

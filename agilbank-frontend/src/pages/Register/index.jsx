@@ -46,6 +46,7 @@ const Register = () => {
   const [cepLoading, setCepLoading] = useState(false);
 
   const registeringRef = useRef(false);
+  const scrollAreaRef = useRef(null);
 
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
@@ -91,6 +92,11 @@ const Register = () => {
   useEffect(() => {
     setError('');
   }, [cpfForErrorClear, emailForErrorClear, senhaForErrorClear]);
+
+  /* Nova etapa: topo rolável ajuda navegação; reduz campo “atrás” do rodapé no mobile */
+  useEffect(() => {
+    scrollAreaRef.current?.scrollTo({ top: 0 });
+  }, [currentStep]);
 
   const fetchCep = async (cep) => {
     if (cep.length === 8) {
@@ -263,6 +269,15 @@ const Register = () => {
   };
 
   const progressIndex = Math.max(1, Math.min(currentStep, PROGRESS_TOTAL));
+
+  const scrollPaddingBottom =
+    currentStep === STEP.WELCOME
+      ? 'calc(9.75rem + env(safe-area-inset-bottom, 0px))'
+      : currentStep === STEP.TERMS && error
+        ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
+        : currentStep === STEP.TERMS
+          ? 'calc(11.5rem + env(safe-area-inset-bottom, 0px))'
+          : 'calc(10rem + env(safe-area-inset-bottom, 0px))';
 
   const EstadoOptions = (
     <>
@@ -493,11 +508,14 @@ const Register = () => {
             error={errors.cidade?.message}
           />
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="register-estado">
               Estado <span className="text-red-500">*</span>
             </label>
             <select
-              className="input min-h-[2.875rem] w-full rounded-xl border-gray-300 bg-gray-50 py-3 text-[1rem] focus:ring-agilbank-primary"
+              id="register-estado"
+              className={`input min-h-[2.875rem] w-full rounded-xl py-3 text-[1rem] focus:ring-agilbank-primary ${errors.estado ? 'border-red-300 bg-red-50/30' : 'border-gray-300 bg-gray-50'}`}
+              aria-invalid={errors.estado ? 'true' : 'false'}
+              aria-describedby={errors.estado ? 'register-estado-erro' : undefined}
               {...register('estado', {
                 required: 'Estado é obrigatório'
               })}
@@ -505,7 +523,7 @@ const Register = () => {
               {EstadoOptions}
             </select>
             {errors.estado ? (
-              <p className="mt-1 text-sm text-red-600" role="alert">
+              <p id="register-estado-erro" className="mt-1 text-sm text-red-600" role="alert">
                 {errors.estado.message}
               </p>
             ) : null}
@@ -521,7 +539,7 @@ const Register = () => {
         Conte um pouco sobre sua profissão
       </h1>
       <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
-        Nos ajuda a oferecer serviços alinhados ao seu perfil.
+        Isso nos ajuda a alinhar ofertas ao seu perfil.
       </p>
       <div className="space-y-5">
         <Input
@@ -573,9 +591,12 @@ const Register = () => {
       </p>
       <div className="space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">Senha (6 dígitos)</label>
+          <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="register-senha">
+            Senha (6 dígitos)
+          </label>
           <div className="relative">
             <input
+              id="register-senha"
               type={showPassword ? 'text' : 'password'}
               placeholder="●●●●●●"
               maxLength={6}
@@ -604,9 +625,12 @@ const Register = () => {
           {errors.senha ? <p className="mt-2 text-sm text-red-600">{errors.senha.message}</p> : null}
         </div>
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">Confirmar senha</label>
+          <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="register-confirmar-senha">
+            Confirmar senha
+          </label>
           <div className="relative">
             <input
+              id="register-confirmar-senha"
               type={showConfirmPassword ? 'text' : 'password'}
               placeholder="●●●●●●"
               maxLength={6}
@@ -740,6 +764,7 @@ const Register = () => {
         size="lg"
         className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
         onClick={nextStep}
+        disabled={loading}
       >
         Continuar
       </Button>
@@ -791,13 +816,21 @@ const Register = () => {
               <Link
                 to="/login"
                 className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
+                aria-label="Tenho conta: ir para o login"
               >
                 Tenho conta
               </Link>
             </div>
             {showProgress ? (
               <div className="space-y-2">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                <div
+                  role="progressbar"
+                  aria-valuenow={progressIndex}
+                  aria-valuemin={1}
+                  aria-valuemax={PROGRESS_TOTAL}
+                  aria-valuetext={`Etapa ${progressIndex} de ${PROGRESS_TOTAL}`}
+                  className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
+                >
                   <div
                     className="h-full rounded-full bg-agilbank-primary transition-all duration-500 ease-out"
                     style={{ width: `${(progressIndex / PROGRESS_TOTAL) * 100}%` }}
@@ -816,15 +849,22 @@ const Register = () => {
 
         {/* Conteúdo rolável */}
         <div
+          ref={scrollAreaRef}
           role="region"
           aria-label="Formulário de cadastro"
-          className={`flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide pb-[calc(6.75rem+env(safe-area-inset-bottom))] ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+          className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+          style={{ paddingBottom: scrollPaddingBottom }}
         >
           <form
             id="register-flow-form"
             onSubmit={handleSubmit(onSubmit)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && currentStep < STEP.TERMS) {
+              if (e.key !== 'Enter') return;
+              if (loading) {
+                e.preventDefault();
+                return;
+              }
+              if (currentStep < STEP.TERMS) {
                 e.preventDefault();
               }
             }}
@@ -856,6 +896,7 @@ const Register = () => {
                 <Link
                   to="/login"
                   className="w-full pb-3 text-center text-[0.95rem] font-medium text-agilbank-primary underline-offset-2 hover:underline"
+                  aria-label="Já tenho uma conta — ir para o login"
                 >
                   Já tenho uma conta
                 </Link>
@@ -866,6 +907,7 @@ const Register = () => {
                   <div
                     className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]"
                     role="alert"
+                    aria-live="assertive"
                   >
                     <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
                     <div className="min-w-0">
@@ -882,7 +924,12 @@ const Register = () => {
 
         {/* Loading fullscreen */}
         {loading ? (
-          <div className="register-loading-bg fixed inset-0 z-[200] flex flex-col items-center justify-center px-10 text-white" role="alert" aria-busy="true">
+          <div
+            className="register-loading-bg fixed inset-0 z-[200] flex flex-col items-center justify-center px-10 text-white"
+            role="status"
+            aria-busy="true"
+            aria-live="polite"
+          >
             <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" aria-hidden />
             <p className="text-center text-lg font-semibold tracking-tight">Salvando seus dados...</p>
             <p className="mt-4 text-center text-sm text-blue-100/90">Um instante, estamos criando sua conta com segurança.</p>

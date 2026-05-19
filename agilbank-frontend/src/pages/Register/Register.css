@@ -17,3 +17,9 @@
     #003366 100%
   );
 }
+
+/* Ajuda quando o teclado virtual aparece ou o navegador ajusta a viewport — mantém espaço até o último campo além da barra fixa */
+.register-scroll-area {
+  scroll-padding-bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
