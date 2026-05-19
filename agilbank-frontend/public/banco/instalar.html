@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0066b3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AgilBank">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Instalar AgilBank</title>
+  <link rel="manifest" href="/banco/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/banco/icons/apple-touch-icon.png">
+  <link rel="icon" href="/banco/icons/icon-192.png" type="image/png">
+  <link rel="preload" href="/banco/icons/icon-512.png" as="image">
+  <style>
+    :root {
+      --agil-blue: #0066b3;
+      --agil-blue-dark: #0a1628;
+      --agil-blue-soft: #e8f4fc;
+      --agil-ink: #172033;
+      --agil-muted: #5d6a7c;
+      --agil-border: rgba(0, 68, 120, 0.12);
+      --agil-card: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: Arial, Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(0, 102, 179, 0.18), transparent 36%),
+        linear-gradient(180deg, #f7fbff 0%, #edf3f8 100%);
+      color: var(--agil-ink);
+    }
+
+    .install-app {
+      width: 100%;
+      max-width: 520px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0 auto;
+      padding: calc(22px + env(safe-area-inset-top, 0px)) 18px calc(28px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      align-items: center;
+    }
+
+    .install-card {
+      width: 100%;
+      padding: 22px;
+      border: 1px solid var(--agil-border);
+      border-radius: 18px;
+      background: var(--agil-card);
+      box-shadow: 0 16px 34px rgba(10, 22, 40, 0.12);
+    }
+
+    .install-brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-bottom: 22px;
+    }
+
+    .install-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      box-shadow: 0 10px 20px rgba(0, 102, 179, 0.2);
+    }
+
+    .install-brand-text {
+      min-width: 0;
+    }
+
+    .install-eyebrow {
+      margin: 0 0 4px;
+      color: var(--agil-blue);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--agil-ink);
+      font-size: 1.65rem;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .install-text {
+      margin: 12px 0 0;
+      color: var(--agil-muted);
+      font-size: 0.96rem;
+      line-height: 1.48;
+    }
+
+    .install-status {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--agil-blue-soft);
+      border: 1px solid rgba(0, 102, 179, 0.16);
+    }
+
+    .install-status strong {
+      display: block;
+      color: var(--agil-blue-dark);
+      font-size: 0.96rem;
+      line-height: 1.3;
+    }
+
+    .install-status span {
+      display: block;
+      margin-top: 4px;
+      color: var(--agil-muted);
+      font-size: 0.86rem;
+      line-height: 1.42;
+    }
+
+    .manual-steps {
+      margin: 14px 0 0;
+      padding-left: 20px;
+      color: var(--agil-muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .manual-steps[hidden] {
+      display: none;
+    }
+
+    .install-actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .install-button,
+    .browser-link {
+      min-height: 50px;
+      border-radius: 12px;
+      font: inherit;
+      font-size: 0.96rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .install-button {
+      border: 0;
+      background: linear-gradient(90deg, var(--agil-blue), #0072ce);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(0, 102, 179, 0.22);
+    }
+
+    .install-button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .install-button[hidden],
+    .browser-link[hidden] {
+      display: none;
+    }
+
+    .browser-link {
+      border: 1px solid rgba(0, 102, 179, 0.22);
+      background: #fff;
+      color: var(--agil-blue);
+    }
+
+    .install-note {
+      margin: 18px 0 0;
+      color: var(--agil-muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="install-app">
+    <section class="install-card" aria-labelledby="installTitle">
+      <div class="install-brand">
+        <img class="install-icon" src="/banco/icons/icon-192.png" alt="AgilBank" width="72" height="72" decoding="async">
+        <div class="install-brand-text">
+          <p class="install-eyebrow">AgilBank</p>
+          <h1 id="installTitle">Instale o AgilBank no seu celular</h1>
+        </div>
+      </div>
+
+      <p class="install-text">
+        Salve o AgilBank na tela inicial para abrir sua conta digital com mais rapidez, em uma experiência parecida com app.
+      </p>
+
+      <div class="install-status" role="status" aria-live="polite">
+        <strong id="installStatusTitle">Verificando instalação</strong>
+        <span id="installStatusText">Aguarde enquanto conferimos se o navegador permite instalar o AgilBank neste dispositivo.</span>
+      </div>
+
+      <ol class="manual-steps" id="manualInstallSteps" hidden>
+        <li>No iPhone, use o Safari.</li>
+        <li>Toque no botão Compartilhar.</li>
+        <li>Escolha Adicionar à Tela de Início.</li>
+      </ol>
+
+      <div class="install-actions">
+        <button type="button" class="install-button" id="installButton">Instalar AgilBank</button>
+        <button type="button" class="install-button" id="openButton" hidden>Abrir AgilBank</button>
+        <a class="browser-link" id="browserLink" href="/banco/index.html">Entrar pelo navegador</a>
+      </div>
+
+      <p class="install-note">
+        Esta página não acessa dados bancários e não armazena saldo, extrato, Pix, cartão, usuário, CPF ou token.
+      </p>
+    </section>
+  </main>
+
+  <script src="/banco/js/pwa-register.js"></script>
+  <script src="/banco/js/pwa-install.js"></script>
+</body>
+</html>

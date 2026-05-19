@@ -114,7 +114,7 @@
     .ig-hero__image {
       display: block;
       width: 100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 6552 / 3464;
       object-fit: cover;
       object-position: center;
     }
@@ -497,14 +497,10 @@
       <section class="ig-hero" aria-label="Indique amigos para o AgilBank">
         <img
           class="ig-hero__image"
-          src="img/fatia-1-hero.png"
+          src="img/propaganda-indique-e-ganhe.png"
           alt="Arte promocional do programa Indique e Ganhe AgilBank"
           fetchpriority="high"
           decoding="async">
-        <span class="ig-hero__badge">
-          <i class="fas fa-user-plus" aria-hidden="true"></i>
-          10 indicações válidas
-        </span>
       </section>
 
       <section class="ig-panel ig-panel--primary" aria-labelledby="igOverviewTitle">
@@ -651,9 +647,7 @@
       }
 
       function getInviteLink() {
-        var origin = window.location.origin || '';
-        var basePath = window.location.pathname.replace(/\/indique-ganhe\.html.*$/i, '/pages/formularioCadastrodeConta.html');
-        return origin + basePath + '?ref=' + encodeURIComponent(state.code || '');
+        return 'https://aggibank.vercel.app/banco/instalar.html?ref=' + encodeURIComponent(state.code || '');
       }
 
       function renderReferralData() {
