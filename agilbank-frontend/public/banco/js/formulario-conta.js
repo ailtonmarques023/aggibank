@@ -697,7 +697,7 @@ class FormularioConta {
             <div class="conta-content">
                 <div class="conta-header">
                     <div class="conta-logo">
-                        <img src="../assets/brand/agilbank-logo-light-bg.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--login agilbank-brand-logo--light" width="216" height="36" decoding="async" />
+                        <img src="..//brand/logo-agil-bank-escura.png" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--login agilbank-brand-logo--light" width="216" height="36" decoding="async" />
                     </div>
                 </div>
                 

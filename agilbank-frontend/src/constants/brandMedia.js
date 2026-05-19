@@ -1,10 +1,20 @@
 /**
- * Arte oficial AgilBank servida pela pasta `public/brand/` (build → raiz `/brand/...`).
- * Mapa de uso: fundo claro → logoLightBg; fundo escuro/azul → logoDarkBg; marca compacta → icon.
+ * Marca AgilBank — PNG oficiais (cópias de `imagens/agilbank/`), servidos em `/brand/`.
+ * Regra visual: fundo azul/escuro → logo clara · fundo branco/claro → logo escura.
  */
 export const BRAND_MEDIA = Object.freeze({
-  logoLightBg: '/brand/agilbank-logo-light-bg.svg',
-  logoDarkBg: '/brand/agilbank-logo-dark-bg.svg',
-  icon: '/brand/agilbank-icon.svg',
-  png192: '/brand/agilbank-icon-192.png',
+  /** `logo agil bank clara.png` — usar em fundo azul/escuro */
+  logoClara: '/brand/logo-agil-bank-clara.png',
+  /** `logo agil bank escura.png` — usar em fundo branco/claro */
+  logoEscura: '/brand/logo-agil-bank-escura.png',
+  marcaClaraAlt: '/brand/agilbank-clara-1.png',
+  marcaEscuraAlt: '/brand/agilbank-escura.png',
+  /** `icone 192m x 192m.png` — favicon, chips, áreas pequenas */
+  icon192: '/brand/icone-192-oficial.png',
+  icon512: '/brand/icone-512-oficial.png',
+  /** Aliases usados pelos fluxos já existentes (mesmos arquivos oficiais) */
+  logoDarkBg: '/brand/logo-agil-bank-clara.png',
+  logoLightBg: '/brand/logo-agil-bank-escura.png',
+  icon: '/brand/icone-192-oficial.png',
+  png192: '/brand/icone-192-oficial.png',
 });

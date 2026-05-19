@@ -1,6 +1,6 @@
 /*
- * AgilBank — sistema de marca (Fase Z.1)
- * Logos em: assets/brand/*.svg — não duplicar SVG grande nos HTML.
+ * AgilBank — marca (PNG oficiais)
+ * Assets de referência em agilbank-frontend/imagens/agilbank/ — deploy espelho em /brand/*.png na raiz do site.
  */
 .agilbank-brand-logo {
   display: block;
@@ -9,19 +9,19 @@
   max-width: 100%;
 }
 
-/* Header compacto em barra azul (par: agilbank-logo-dark-bg.svg) */
+/* Header compacto em barra azul (par: /brand/logo-agil-bank-clara.png) */
 .agilbank-brand-logo--header {
   height: 24px;
   max-width: 150px;
   margin: 0 auto;
 }
 
-/* Marca em uso com arquivo agilbank-logo-light-bg.svg */
+/* Marca em uso em fundos claros (/brand/logo-agil-bank-escura.png) */
 .agilbank-brand-logo--light {
   object-fit: contain;
 }
 
-/* Marca em uso com arquivo agilbank-logo-dark-bg.svg */
+/* Marca em fundos escuros/azul institucional (/brand/logo-agil-bank-clara.png) */
 .agilbank-brand-logo--dark {
   object-fit: contain;
 }
@@ -44,7 +44,7 @@
   min-width: 0;
 }
 
-/* Wordmark só texto — headers mobile (sem ícone “A”); barra azul → agilbank-wordmark-header.svg */
+/* Faixa tipo wordmark sobre barra (/brand/logo-agil-bank-clara.png ou escura conforme contraste) */
 .agilbank-brand-wordmark-header {
   height: 28px;
   width: auto;
@@ -62,7 +62,7 @@
   margin-left: 0;
 }
 
-/* Marca completa (ícone + wordmark) na barra azul — agilbank-logo-dark-bg.svg */
+/* Marca completa na barra azul (/brand/logo-agil-bank-clara.png + .agilbank-brand-logo--topbar) */
 .top-bar .logo .agilbank-brand-logo--topbar {
   height: 26px;
   max-width: min(200px, 50vw);
@@ -71,7 +71,7 @@
   margin-right: auto;
 }
 
-/* Fundo claro → agilbank-wordmark-header-on-light.svg + esta classe */
+/* Fundo claro → PNG escura + classe --on-light se necessário */
 .agilbank-brand-wordmark-header--on-light {
   margin-left: 0;
   margin-right: auto;
