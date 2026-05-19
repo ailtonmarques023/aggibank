@@ -32,6 +32,7 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="assets/agilbank-brand.css">
+    <link rel="stylesheet" href="css/agilbank-kyc-gate.css">
     <link rel="stylesheet" href="css/style.modalAvisoEnviarGRU.css">
     <link rel="stylesheet" href="css/style.containerPix.css">
     <link rel="stylesheet" href="css/style.container.notificacao.css .css">
@@ -2596,10 +2597,7 @@
             </div>
         </div>
         <div class="dashboard-feature-dots" id="dashboardFeatureDots" aria-label="Indicador dos cards" hidden></div>
-        <div id="agilbankKycShortcutStrip" style="display:none;margin:10px 16px 0;padding:10px 14px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;" role="note">
-            <span style="font-size:0.875rem;color:#1e3a8a;line-height:1.35;">Confirme sua identidade para liberar cartão e crédito com segurança.</span>
-            <a id="agilbankKycShortcutLink" href="/verificacao-identidade" style="flex-shrink:0;font-weight:600;font-size:0.875rem;color:#0066b3;text-decoration:none;">Verificação de identidade</a>
-        </div>
+        <!-- KYC Fatia UX: sem aviso fixo na home — gate só ao pedir cartão/crédito (kycJourneyGate.js). -->
         <!-- Atalhos adicionais (grade) — sem título “Movimente sua conta” -->
         <div class="movimente">
             <!--menu de opçoes -->
@@ -7315,9 +7313,6 @@
                 if (loginContainer) {
                     loginContainer.style.display = 'none';
                 }
-                if (typeof window.agilbankKycSyncDashboardShortcut === 'function') {
-                    window.agilbankKycSyncDashboardShortcut();
-                }
                 // Badge de notificações (perfil: UserDataManager + forceUpdateHeaderData no bootstrapping)
                 setTimeout(function () {
                     if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
@@ -7376,10 +7371,6 @@
                     localStorage.setItem('agilbank_token', token);
                     localStorage.setItem('token', token);
                     console.log('💾 Token salvo (govbr_token, agilbank_token, token)');
-                    if (typeof window.agilbankKycSyncDashboardShortcut === 'function') {
-                        window.agilbankKycSyncDashboardShortcut();
-                    }
-                    
                     // Esconder formulário de login
                     const loginContainer = document.getElementById('loginContainer');
                     if (loginContainer) {

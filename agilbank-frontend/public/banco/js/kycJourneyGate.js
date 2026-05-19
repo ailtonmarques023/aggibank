@@ -1,11 +1,10 @@
 /**
- * Fatia 8.2 — Gate de identidade em fluxos sensíveis (sem mock; GET /api/me/kyc-status real).
- * Depende de legacyApiClient (AgilBank.api.request) e sessão Bearer já configurada.
+ * Fatia 8.2 — Gate de identidade em fluxos sensíveis (cartão / empréstimo).
+ * GET /api/me/kyc-status real (sem mock). Strip fixo na home removido — só modal ao bloquear.
  */
 (function initKycJourneyGate(window, document) {
     'use strict';
 
-    /** SPA React na mesma origem */
     var VERIFY_HREF = '/verificacao-identidade';
 
     function esc(s) {
@@ -34,43 +33,58 @@
         );
     }
 
+    var SECONDARY_LABEL = 'Agora não';
+
+    /** Blocos solicitados quando o usuário tenta fluxo sensível sem APPROVED. */
+    var UX_CARD_TITLE = 'Confirme sua identidade para pedir seu cartão';
+    var UX_CARD_INTRO =
+        'Para sua segurança, precisamos validar seu documento e uma selfie antes de seguir.';
+    var UX_LOAN_TITLE = 'Confirme sua identidade para solicitar empréstimo';
+    var UX_LOAN_INTRO = 'Essa etapa protege sua conta e evita uso indevido dos seus dados.';
+
     /**
      * @param {'loan'|'card'} product
      * @param {string} identityStatus
      * @param {{ message?: string }=} data
      */
     function buildCopy(product, identityStatus, data) {
-        var loanIntro =
-            'Antes de solicitar seu empréstimo, precisamos confirmar sua identidade. Isso protege sua conta e evita uso indevido dos seus dados.';
-        var cardIntro =
-            'Para solicitar seu cartão com segurança, confirme sua identidade com documento e selfie.';
-        var intro = product === 'card' ? cardIntro : loanIntro;
-
         var st = String(identityStatus || '').toUpperCase();
         var apiHint =
             data && typeof data.message === 'string' && data.message.trim() ? data.message.trim() : '';
 
         if (st === 'APPROVED') {
-            return { title: 'Identidade confirmada', intro: intro, detail: '', primaryLabel: 'Continuar', mode: 'ok' };
+            return {
+                title: 'Identidade confirmada',
+                intro: '',
+                detail: '',
+                primaryLabel: 'Continuar',
+                secondaryLabel: SECONDARY_LABEL,
+                mode: 'ok',
+            };
         }
 
         if (!st || st === 'NOT_STARTED') {
             return {
-                title: 'Verificação de identidade',
-                intro: intro,
+                title: product === 'card' ? UX_CARD_TITLE : UX_LOAN_TITLE,
+                intro: product === 'card' ? UX_CARD_INTRO : UX_LOAN_INTRO,
                 detail: '',
                 primaryLabel: 'Verificar agora',
+                secondaryLabel: SECONDARY_LABEL,
                 mode: 'verify',
             };
         }
 
         if (st === 'DRAFT' || st === 'PENDING_UPLOADS') {
+            var contIntro =
+                product === 'card'
+                    ? 'Continue enviando documento e selfie para concluir o pedido do cartão.'
+                    : 'Continue enviando documento e selfie para concluir sua solicitação.';
             return {
                 title: 'Continue sua verificação',
-                intro: intro,
-                detail:
-                    'Envie ou confirme os arquivos pendentes. Você pode retomar de onde parou.',
+                intro: contIntro,
+                detail: 'Envie ou confirme os arquivos pendentes. Você pode retomar de onde parou.',
                 primaryLabel: 'Continuar verificação',
+                secondaryLabel: SECONDARY_LABEL,
                 mode: 'continue',
             };
         }
@@ -82,6 +96,7 @@
                 detail:
                     'Assim que a análise for concluída, você poderá seguir com esta solicitação. Obrigado pela paciência.',
                 primaryLabel: 'Aguardar análise',
+                secondaryLabel: SECONDARY_LABEL,
                 mode: 'wait',
             };
         }
@@ -89,10 +104,14 @@
         if (st === 'RESUBMISSION_REQUIRED') {
             return {
                 title: 'Reenvio necessário',
-                intro: intro,
+                intro:
+                    product === 'card'
+                        ? 'Precisamos de novos envios antes de liberar seu cartão.'
+                        : 'Precisamos de novos envios antes de liberar sua solicitação.',
                 detail:
-                    'Precisamos que você reenvie seus documentos conforme as orientações da sua última interação.',
+                    'Reenvie seus documentos conforme as orientações da sua última interação.',
                 primaryLabel: 'Reenviar documentos',
+                secondaryLabel: SECONDARY_LABEL,
                 mode: 'resubmit',
             };
         }
@@ -104,15 +123,17 @@
                     'Não foi possível aprovar sua identidade neste momento. Você pode revisar os detalhes no fluxo de verificação ou falar com o suporte.',
                 detail: apiHint ? apiHint : '',
                 primaryLabel: 'Ver detalhes',
+                secondaryLabel: SECONDARY_LABEL,
                 mode: 'rejected',
             };
         }
 
         return {
-            title: 'Verificação de identidade',
-            intro: intro,
+            title: product === 'card' ? UX_CARD_TITLE : UX_LOAN_TITLE,
+            intro: product === 'card' ? UX_CARD_INTRO : UX_LOAN_INTRO,
             detail: apiHint || 'Consulte o status da sua verificação para continuar.',
             primaryLabel: 'Verificar agora',
+            secondaryLabel: SECONDARY_LABEL,
             mode: 'unknown',
         };
     }
@@ -133,51 +154,67 @@
 
         var overlay = document.createElement('div');
         overlay.id = 'agilbank-kyc-gate-overlay';
+        overlay.className = 'agilbank-kyc-gate-overlay';
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-labelledby', 'agilbank-kyc-gate-title');
-        overlay.style.cssText =
-            'position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.48);display:flex;align-items:center;justify-content:center;padding:16px;';
 
         var card = document.createElement('div');
-        card.style.cssText =
-            'max-width:420px;width:100%;background:#fff;border-radius:16px;padding:22px 20px 18px;box-shadow:0 20px 50px rgba(0,0,0,.18);font-family:system-ui,-apple-system,sans-serif;';
+        card.className = 'agilbank-kyc-gate-card';
 
         var primaryIsLink = copy.mode !== 'wait';
-        var primaryHref = primaryIsLink ? VERIFY_HREF : null;
+        var primaryHref = primaryIsLink ? VERIFY_HREF : '#';
 
-        card.innerHTML =
-            '<h2 id="agilbank-kyc-gate-title" style="margin:0 0 10px;font-size:1.15rem;color:#0f172a;">' +
-            esc(copy.title) +
-            '</h2>' +
-            '<p style="margin:0 0 12px;font-size:.95rem;line-height:1.45;color:#334155;">' +
-            esc(copy.intro) +
-            '</p>' +
-            (copy.detail
-                ? '<p style="margin:0 0 16px;font-size:.875rem;line-height:1.4;color:#64748b;">' +
-                  esc(copy.detail) +
-                  '</p>'
-                : '') +
-            '<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">' +
-            '<a id="agilbank-kyc-gate-primary" href="' +
-            esc(primaryHref || '#') +
-            '" style="display:inline-block;text-align:center;padding:12px 14px;border-radius:12px;background:#0066b3;color:#fff;font-weight:600;text-decoration:none;font-size:.95rem;">' +
-            esc(copy.primaryLabel) +
-            '</a>' +
-            '<button type="button" id="agilbank-kyc-gate-close" style="padding:10px 14px;border-radius:12px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:600;font-size:.9rem;cursor:pointer;">Fechar</button>' +
-            '</div>';
+        var titleEl = document.createElement('h2');
+        titleEl.id = 'agilbank-kyc-gate-title';
+        titleEl.className = 'agilbank-kyc-gate-title';
+        titleEl.textContent = copy.title;
 
+        card.appendChild(titleEl);
+
+        if (copy.intro) {
+            var lead = document.createElement('p');
+            lead.className = 'agilbank-kyc-gate-lead';
+            lead.textContent = copy.intro;
+            card.appendChild(lead);
+        }
+
+        if (copy.detail) {
+            var det = document.createElement('p');
+            det.className = 'agilbank-kyc-gate-detail';
+            det.textContent = copy.detail;
+            card.appendChild(det);
+        }
+
+        var actions = document.createElement('div');
+        actions.className = 'agilbank-kyc-gate-actions';
+
+        var primaryBtn = primaryIsLink ? document.createElement('a') : document.createElement('button');
+        primaryBtn.id = 'agilbank-kyc-gate-primary';
+        primaryBtn.className = 'agilbank-kyc-gate-btn agilbank-kyc-gate-btn--primary';
+        primaryBtn.textContent = copy.primaryLabel;
+        if (primaryIsLink) {
+            primaryBtn.setAttribute('href', primaryHref);
+        } else {
+            primaryBtn.type = 'button';
+            primaryBtn.classList.add('is-disabled-wait');
+            primaryBtn.setAttribute('aria-disabled', 'true');
+        }
+
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.id = 'agilbank-kyc-gate-close';
+        closeBtn.className = 'agilbank-kyc-gate-btn agilbank-kyc-gate-btn--secondary';
+        closeBtn.textContent = copy.secondaryLabel || SECONDARY_LABEL;
+
+        actions.appendChild(primaryBtn);
+        actions.appendChild(closeBtn);
+        card.appendChild(actions);
         overlay.appendChild(card);
         document.body.appendChild(overlay);
 
-        var primary = document.getElementById('agilbank-kyc-gate-primary');
-        var closeBtn = document.getElementById('agilbank-kyc-gate-close');
-
-        if (copy.mode === 'wait' && primary) {
-            primary.removeAttribute('href');
-            primary.style.opacity = '0.85';
-            primary.style.cursor = 'default';
-            primary.addEventListener('click', function (ev) {
+        if (copy.mode === 'wait' && primaryBtn) {
+            primaryBtn.addEventListener('click', function (ev) {
                 ev.preventDefault();
             });
         }
@@ -186,7 +223,7 @@
             removeOverlay();
         }
 
-        if (closeBtn) closeBtn.addEventListener('click', close);
+        closeBtn.addEventListener('click', close);
         overlay.addEventListener('click', function (ev) {
             if (ev.target === overlay) close();
         });
@@ -254,13 +291,9 @@
         }
     }
 
+    /** Placeholder compatível — aviso fixo na home não é mais utilizado (Fatia UX). */
     function syncDashboardShortcut() {
-        var strip = document.getElementById('agilbankKycShortcutStrip');
-        var link = document.getElementById('agilbankKycShortcutLink');
-        if (!strip || !link) return;
-        var token = getBearerToken();
-        strip.style.display = token ? 'flex' : 'none';
-        link.setAttribute('href', VERIFY_HREF);
+        /* noop: strip #agilbankKycShortcutStrip removida do dashboard */
     }
 
     window.agilbankKycVerifyHref = VERIFY_HREF;
@@ -268,11 +301,4 @@
     window.agilbankKycEnsureApproved = ensureApproved;
     window.agilbankKycSyncDashboardShortcut = syncDashboardShortcut;
     window.agilbankKycFetchPayload = fetchKycPayload;
-
-    document.addEventListener('DOMContentLoaded', function () {
-        syncDashboardShortcut();
-    });
-    window.addEventListener('agilbank-auth-changed', function () {
-        syncDashboardShortcut();
-    });
 })(window, document);

@@ -185,8 +185,8 @@
     applyKycGateUi(kycData) {
       const st = String((kycData && kycData.identityStatus) || "").toUpperCase();
       const introDefault =
-        "Antes de solicitar seu empréstimo, precisamos confirmar sua identidade. Isso protege sua conta e evita uso indevido dos seus dados.";
-      let title = "Verificação de identidade";
+        "Essa etapa protege sua conta e evita uso indevido dos seus dados.";
+      let title = "Confirme sua identidade para solicitar empréstimo";
       let intro = introDefault;
       let detail = "";
       let primaryLabel = "Verificar agora";
