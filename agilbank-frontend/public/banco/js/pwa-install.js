@@ -50,7 +50,7 @@
   function showManualInstructions(text) {
     setMessage('Instalação manual', text || 'Use o menu do navegador para adicionar o AgilBank à tela inicial.');
     if (manualSteps) manualSteps.hidden = false;
-    if (installButton) installButton.disabled = true;
+    if (installButton) installButton.disabled = false;
   }
 
   function setInstalledState() {
@@ -73,7 +73,7 @@
     }
 
     setMessage('Pronto para instalar', 'Quando o navegador liberar a instalação, toque no botão abaixo para adicionar o AgilBank à tela inicial.');
-    if (installButton) installButton.disabled = true;
+    if (installButton) installButton.disabled = false;
   }
 
   window.addEventListener('beforeinstallprompt', function (event) {

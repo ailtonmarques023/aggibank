@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   EyeIcon,
@@ -49,7 +49,6 @@ const Register = () => {
   const scrollAreaRef = useRef(null);
 
   const { register: registerUser } = useAuth();
-  const navigate = useNavigate();
 
   const {
     register,
@@ -237,9 +236,6 @@ const Register = () => {
 
       if (result.success) {
         setSuccess(true);
-        setTimeout(() => {
-          navigate('/login');
-        }, 3500);
       } else {
         const raw =
           (typeof result.message === 'string' && result.message) ||
@@ -782,13 +778,26 @@ const Register = () => {
             <h1 className="mb-4 text-2xl font-bold leading-snug tracking-tight text-gray-900 sm:text-[1.75rem]">
               Agora é com a gente!
             </h1>
-            <p className="mb-2 text-[0.975rem] leading-relaxed text-gray-600">
+            <p className="mb-6 text-[0.975rem] leading-relaxed text-gray-600">
               Sua conta foi criada com sucesso. Você já pode acessar o AgilBank.
             </p>
-            <p className="mb-12 text-[0.8rem] text-gray-500">Redirecionando ao login...</p>
-            <Link to="/login" className="text-sm font-semibold text-agilbank-primary hover:underline">
-              Ir ao login agora
-            </Link>
+            <p className="mb-6 text-[0.875rem] leading-relaxed text-gray-600">
+              Para sua segurança, confirme sua identidade com documento e selfie antes de solicitar cartão ou crédito.
+            </p>
+            <div className="flex w-full flex-col gap-3">
+              <Link
+                to="/login?next=/verificacao-identidade"
+                className="flex h-13 items-center justify-center rounded-xl bg-agilbank-primary px-4 text-[1rem] font-semibold text-white shadow-lg shadow-agilbank-primary/25"
+              >
+                Verificar minha identidade agora
+              </Link>
+              <Link
+                to="/login"
+                className="flex h-12 items-center justify-center rounded-xl border border-gray-200 bg-white px-4 text-[0.95rem] font-semibold text-gray-800"
+              >
+                Fazer depois — ir ao login
+              </Link>
+            </div>
           </div>
         </div>
       </div>

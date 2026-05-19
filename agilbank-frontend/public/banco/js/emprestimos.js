@@ -27,7 +27,9 @@
         selectedPrazo: null,
         simulation: null,
         insuranceChoice: null,
-        insuranceTermsAccepted: false
+        insuranceTermsAccepted: false,
+        kycApproved: false,
+        kycPayload: null
       };
 
       this.elements = this.getElements();
@@ -49,6 +51,13 @@
         stepManage: this.document.getElementById("abEmpStepManage"),
         manageRoot: this.document.getElementById("abEmpManageRoot"),
         stepBlocked: this.document.getElementById("abEmpStepBlocked"),
+        stepKyc: this.document.getElementById("abEmpStepKyc"),
+        kycTitle: this.document.getElementById("abEmpKycTitle"),
+        kycIntro: this.document.getElementById("abEmpKycIntro"),
+        kycDetail: this.document.getElementById("abEmpKycDetail"),
+        kycPrimaryLink: this.document.getElementById("abEmpKycPrimaryLink"),
+        kycWaitBtn: this.document.getElementById("abEmpKycWaitBtn"),
+        kycBackBtn: this.document.getElementById("abEmpKycBackBtn"),
         stepValue: this.document.getElementById("abEmpStepValue"),
         stepInstallments: this.document.getElementById("abEmpStepInstallments"),
         stepInsurance: this.document.getElementById("abEmpStepInsurance"),
@@ -107,6 +116,9 @@
         });
       }
       this.elements.backHomeBlockedBtn.addEventListener("click", () => this.redirectToHome());
+      if (this.elements.kycBackBtn) {
+        this.elements.kycBackBtn.addEventListener("click", () => this.redirectToHome());
+      }
       this.elements.valueInput.addEventListener("beforeinput", (event) => this.onValueBeforeInput(event));
       this.elements.valueInput.addEventListener("input", () => this.onValueInput());
       this.elements.valueInput.addEventListener("paste", (event) => this.onValuePaste(event));
@@ -170,6 +182,72 @@
 
     }
 
+    applyKycGateUi(kycData) {
+      const st = String((kycData && kycData.identityStatus) || "").toUpperCase();
+      const introDefault =
+        "Antes de solicitar seu empréstimo, precisamos confirmar sua identidade. Isso protege sua conta e evita uso indevido dos seus dados.";
+      let title = "Verificação de identidade";
+      let intro = introDefault;
+      let detail = "";
+      let primaryLabel = "Verificar agora";
+      let mode = "verify";
+
+      if (st === "DRAFT" || st === "PENDING_UPLOADS") {
+        title = "Continue sua verificação";
+        detail =
+          "Envie ou confirme os arquivos pendentes. Você pode retomar de onde parou.";
+        primaryLabel = "Continuar verificação";
+        mode = "continue";
+      } else if (st === "READY_FOR_REVIEW" || st === "UNDER_MANUAL_REVIEW") {
+        title = "Identidade em análise";
+        intro = "Sua identidade está em análise.";
+        detail =
+          "Assim que a análise for concluída, você poderá seguir com esta solicitação.";
+        primaryLabel = "Aguardar análise";
+        mode = "wait";
+      } else if (st === "RESUBMISSION_REQUIRED") {
+        title = "Reenvio necessário";
+        detail =
+          "Precisamos que você reenvie seus documentos conforme as orientações da sua última interação.";
+        primaryLabel = "Reenviar documentos";
+        mode = "resubmit";
+      } else if (st === "REJECTED") {
+        title = "Verificação não aprovada";
+        intro =
+          "Não foi possível aprovar sua identidade neste momento. Você pode revisar os detalhes no fluxo de verificação ou falar com o suporte.";
+        detail =
+          kycData && typeof kycData.message === "string" && kycData.message.trim()
+            ? kycData.message.trim()
+            : "";
+        primaryLabel = "Ver detalhes";
+        mode = "rejected";
+      }
+
+      if (this.elements.kycTitle) this.elements.kycTitle.textContent = title;
+      if (this.elements.kycIntro) this.elements.kycIntro.textContent = intro;
+      const detEl = this.elements.kycDetail;
+      if (detEl) {
+        if (detail) {
+          detEl.textContent = detail;
+          detEl.style.display = "";
+        } else {
+          detEl.textContent = "";
+          detEl.style.display = "none";
+        }
+      }
+      const link = this.elements.kycPrimaryLink;
+      const waitBtn = this.elements.kycWaitBtn;
+      if (mode === "wait" && link && waitBtn) {
+        link.hidden = true;
+        waitBtn.hidden = false;
+      } else if (link && waitBtn) {
+        link.hidden = false;
+        waitBtn.hidden = true;
+        link.textContent = primaryLabel;
+        link.setAttribute("href", "/verificacao-identidade");
+      }
+    }
+
     async bootstrapData() {
       this.setLoadingState("Validando sessao e carregando dados...");
 
@@ -203,6 +281,17 @@
       this.state.history = this.extractHistory(historyResult.data);
       this.renderHistory();
 
+      const kycResult = await this.requestLoan("me/kyc-status");
+      if (!kycResult.ok) {
+        this.setErrorState(
+          "Não foi possível consultar sua verificação de identidade. Tente novamente.",
+          { showRetry: true }
+        );
+        return;
+      }
+      this.state.kycPayload = kycResult.data;
+      this.state.kycApproved = String(kycResult.data.identityStatus || "") === "APPROVED";
+
       if (!this.state.isEligible) {
         this.elements.blockedReason.textContent =
           "Para solicitar credito, e necessario ter renda mensal informada acima de R$ 1.000,00.";
@@ -214,6 +303,12 @@
       if (focusLoan) {
         this.renderFullManagement();
         this.showStep("manage");
+        return;
+      }
+
+      if (!this.state.kycApproved) {
+        this.applyKycGateUi(this.state.kycPayload);
+        this.showStep("kyc");
         return;
       }
 
@@ -623,7 +718,7 @@
       const limiteMaximo = this.getLimiteMaximo();
       this.elements.valueLimitText.textContent = `Peça ate R$ ${this.formatMoney(limiteMaximo)}`;
       this.applyAmountDigits("");
-      this.showStep("value");
+      this.goToStep("value");
     }
 
     getLimiteMaximo() {
@@ -867,7 +962,11 @@
       const footer = this.elements.footer;
       const shell = this.elements.shell;
       const showFooter =
-        step === "loading" || step === "blocked" || step === "history" || step === "manage";
+        step === "loading" ||
+        step === "blocked" ||
+        step === "kyc" ||
+        step === "history" ||
+        step === "manage";
       if (footer) {
         footer.hidden = !showFooter;
       }
@@ -1116,7 +1215,7 @@
         this.redirectToHome();
         return;
       }
-      if (step === "value" || step === "blocked" || step === "loading") {
+      if (step === "value" || step === "blocked" || step === "loading" || step === "kyc") {
         this.redirectToHome();
         return;
       }
@@ -1137,6 +1236,11 @@
     }
 
     goToStep(step) {
+      if (step === "value" && !this.state.kycApproved && this.state.kycPayload) {
+        this.applyKycGateUi(this.state.kycPayload);
+        this.showStep("kyc");
+        return;
+      }
       if (step === "value" && !this.state.isEligible) {
         this.showStep("blocked");
         return;
@@ -1154,6 +1258,7 @@
         loading: this.elements.stepLoading,
         manage: this.elements.stepManage,
         blocked: this.elements.stepBlocked,
+        kyc: this.elements.stepKyc,
         value: this.elements.stepValue,
         installments: this.elements.stepInstallments,
         insurance: this.elements.stepInsurance,
@@ -1174,6 +1279,8 @@
         this.elements.topbarTitle.textContent = "Historico de propostas";
       } else if (step === "manage") {
         this.elements.topbarTitle.textContent = "Seu credito";
+      } else if (step === "kyc") {
+        this.elements.topbarTitle.textContent = "Verificação";
       } else {
         this.elements.topbarTitle.textContent = "Credito pessoal";
       }

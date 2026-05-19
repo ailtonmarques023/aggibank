@@ -9,6 +9,7 @@
     <script src="js/legacyAuthStore.js"></script>
     <script src="js/agilbankApiBase.js"></script>
     <script src="js/legacyApiClient.js"></script>
+    <script src="js/kycJourneyGate.js"></script>
     <script src="js/legacyNavigation.js"></script>
     <script>
         (function enforceSingleLoginScreen() {
@@ -2595,6 +2596,10 @@
             </div>
         </div>
         <div class="dashboard-feature-dots" id="dashboardFeatureDots" aria-label="Indicador dos cards" hidden></div>
+        <div id="agilbankKycShortcutStrip" style="display:none;margin:10px 16px 0;padding:10px 14px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;" role="note">
+            <span style="font-size:0.875rem;color:#1e3a8a;line-height:1.35;">Confirme sua identidade para liberar cartão e crédito com segurança.</span>
+            <a id="agilbankKycShortcutLink" href="/verificacao-identidade" style="flex-shrink:0;font-weight:600;font-size:0.875rem;color:#0066b3;text-decoration:none;">Verificação de identidade</a>
+        </div>
         <!-- Atalhos adicionais (grade) — sem título “Movimente sua conta” -->
         <div class="movimente">
             <!--menu de opçoes -->
@@ -6714,6 +6719,10 @@
                 alert('Você precisa estar logado para solicitar um cartão. Faça login primeiro.');
                 return;
             }
+            if (typeof window.agilbankKycEnsureApproved === 'function') {
+                var kycOk = await window.agilbankKycEnsureApproved('card');
+                if (!kycOk) return;
+            }
             window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = true;
             showCartaoGerenciamento();
             if (typeof window.agilbankRefreshPainelCartoes === 'function') {
@@ -6833,23 +6842,30 @@
 
         // Função para mostrar o container de empréstimo
         function solicitarEmprestimo() {
-            ocultarTodosContainers();
-            mostrarAnimacaoAgilBankSplash(() => {
-                // Mostrar o container de simulação de empréstimo
-                const emprestimoContainer = document.getElementById('emprestimoContainer');
-                const emprestimoContent = document.getElementById('emprestimoContent');
-                
-                emprestimoContainer.style.display = 'block';
-                emprestimoContent.style.display = 'block';
-                
-                // Garantir que o conteúdo interno também esteja visível
-                const emprestimoCont = emprestimoContent.querySelector('.emprestimo-content');
-                if (emprestimoCont) {
-                    emprestimoCont.style.display = 'block';
-                }
-                
-                window.scrollTo(0, 0);
-            });
+            function abrirFluxoEmprestimoLegacy() {
+                ocultarTodosContainers();
+                mostrarAnimacaoAgilBankSplash(() => {
+                    const emprestimoContainer = document.getElementById('emprestimoContainer');
+                    const emprestimoContent = document.getElementById('emprestimoContent');
+
+                    emprestimoContainer.style.display = 'block';
+                    emprestimoContent.style.display = 'block';
+
+                    const emprestimoCont = emprestimoContent.querySelector('.emprestimo-content');
+                    if (emprestimoCont) {
+                        emprestimoCont.style.display = 'block';
+                    }
+
+                    window.scrollTo(0, 0);
+                });
+            }
+            if (typeof window.agilbankKycEnsureApproved === 'function') {
+                window.agilbankKycEnsureApproved('loan').then(function (ok) {
+                    if (ok) abrirFluxoEmprestimoLegacy();
+                });
+                return;
+            }
+            abrirFluxoEmprestimoLegacy();
         }
 
         function mostrarTermosCondicoes() {
@@ -7299,6 +7315,9 @@
                 if (loginContainer) {
                     loginContainer.style.display = 'none';
                 }
+                if (typeof window.agilbankKycSyncDashboardShortcut === 'function') {
+                    window.agilbankKycSyncDashboardShortcut();
+                }
                 // Badge de notificações (perfil: UserDataManager + forceUpdateHeaderData no bootstrapping)
                 setTimeout(function () {
                     if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
@@ -7357,6 +7376,9 @@
                     localStorage.setItem('agilbank_token', token);
                     localStorage.setItem('token', token);
                     console.log('💾 Token salvo (govbr_token, agilbank_token, token)');
+                    if (typeof window.agilbankKycSyncDashboardShortcut === 'function') {
+                        window.agilbankKycSyncDashboardShortcut();
+                    }
                     
                     // Esconder formulário de login
                     const loginContainer = document.getElementById('loginContainer');

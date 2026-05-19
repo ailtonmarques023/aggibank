@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { authService } from '../services/authService';
 import { storeAuthSession } from '../utils/authStorage';
@@ -39,7 +39,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handlePasswordChange = (index, value) => {
     const numericValue = value.replace(/\D/g, '').slice(0, 1);
@@ -86,6 +86,12 @@ const Login = () => {
 
       if (data.success) {
         storeAuthSession(data.token, data.user);
+        const nextRaw = (searchParams.get('next') || '').trim();
+        const safeNext = nextRaw === '/verificacao-identidade' ? nextRaw : null;
+        if (safeNext) {
+          window.location.assign(safeNext);
+          return;
+        }
         window.location.replace('/banco/index.html');
       } else {
         setError(getLoginErrorMessage(data));

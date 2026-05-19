@@ -3394,10 +3394,19 @@ function agilbankRenderCtaSolicitacaoCartao(msgEl, texto) {
     var btn = document.getElementById('cartaoPainelCtaSolicitar');
     if (btn) {
         btn.onclick = function () {
-            window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = true;
-            if (typeof window.agilbankRefreshPainelCartoes === 'function') {
-                window.agilbankRefreshPainelCartoes();
+            function dispararRefreshSolicitacao() {
+                window.__agilbankAbrirSolicitacaoCartaoDepoisRefresh = true;
+                if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+                    window.agilbankRefreshPainelCartoes();
+                }
             }
+            if (typeof window.agilbankKycEnsureApproved === 'function') {
+                window.agilbankKycEnsureApproved('card').then(function (ok) {
+                    if (ok) dispararRefreshSolicitacao();
+                });
+                return;
+            }
+            dispararRefreshSolicitacao();
         };
     }
 }
