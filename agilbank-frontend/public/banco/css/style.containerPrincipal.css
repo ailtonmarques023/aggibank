@@ -409,7 +409,7 @@
             overflow-y: hidden;
             scroll-snap-type: x mandatory;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
+            scrollbar-width: none;
         }
 
         .dashboard-feature-cards.dashboard-feature-cards--no-cartao {
@@ -421,12 +421,48 @@
         }
 
         .dashboard-feature-cards::-webkit-scrollbar {
-            height: 4px;
+            display: none;
         }
 
         .dashboard-feature-cards::-webkit-scrollbar-thumb {
             background: rgba(0, 102, 179, 0.25);
             border-radius: 999px;
+        }
+
+        .dashboard-feature-dots {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            min-height: 16px;
+            margin: -4px 0 10px;
+        }
+
+        .dashboard-feature-dots[hidden] {
+            display: none;
+        }
+
+        .dashboard-feature-dot {
+            width: 7px;
+            height: 7px;
+            border: 0;
+            border-radius: 50%;
+            padding: 0;
+            background: rgba(0, 102, 179, 0.18);
+            cursor: pointer;
+            transition: width 0.18s ease, height 0.18s ease, background-color 0.18s ease, opacity 0.18s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .dashboard-feature-dot.is-active {
+            width: 13px;
+            height: 13px;
+            background: #0066b3;
+        }
+
+        .dashboard-feature-dot:focus-visible {
+            outline: 2px solid #0066b3;
+            outline-offset: 3px;
         }
 
         .dashboard-feature-slide {
@@ -452,11 +488,35 @@
             -webkit-tap-highlight-color: rgba(0, 102, 179, 0.12);
         }
 
+        .dashboard-emprestimo-card-wrap {
+            flex-basis: min(86vw, 380px);
+        }
+
+        .dashboard-feature-banner--loan {
+            background: linear-gradient(180deg, #111827 0%, #05060a 100%);
+        }
+
+        .dashboard-feature-banner__headline {
+            display: block;
+            padding: 12px 14px 10px;
+            color: #fff;
+            font-size: 0.92rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-align: left;
+            letter-spacing: 0;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+
         .dashboard-feature-banner img {
             display: block;
             width: 100%;
             aspect-ratio: 16 / 8.4;
             object-fit: cover;
+        }
+
+        .dashboard-feature-banner--loan img {
+            aspect-ratio: 16 / 7.4;
         }
 
         .dashboard-feature-banner:focus-visible {

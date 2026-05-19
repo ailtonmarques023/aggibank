@@ -298,6 +298,9 @@ describe('Auth Routes', () => {
         .expect(500);
 
       expect(response.body.code).toBe('INTERNAL_ERROR');
+      expect(response.body.message).toBe(
+        'Não foi possível concluir o cadastro no momento. Tente novamente mais tarde.'
+      );
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
@@ -319,8 +322,104 @@ describe('Auth Routes', () => {
         .expect(409);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.code).toBe('ACCOUNT_ALREADY_EXISTS');
-      expect(response.body.message).toBe('Este e-mail ou CPF já está sendo usado. Faça login ou use outros dados.');
+      expect(response.body.code).toBe('EMAIL_ALREADY_EXISTS');
+      expect(response.body.duplicateField).toBe('email');
+      expect(response.body.message).toBe('E-mail já cadastrado. Faça login ou use outro e-mail.');
+      expect(response.body.fields).toBeUndefined();
+    });
+
+    it('should return error when create fails with unique constraint on cpf', async () => {
+      const userData = {
+        nomeCompleto: 'Maria Silva',
+        email: 'maria-nova@test.com',
+        cpf: '52998224725',
+        telefone: '11999998888',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      prisma.user.create.mockRejectedValue({ code: 'P2002', meta: { target: ['cpf'] } });
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(409);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.code).toBe('CPF_ALREADY_EXISTS');
+      expect(response.body.duplicateField).toBe('cpf');
+      expect(response.body.message).toBe('CPF já cadastrado. Faça login ou use outro CPF.');
+      expect(response.body.fields).toBeUndefined();
+    });
+
+    it('retorna 409 quando email e cpf aparecem juntos na violacao UNIQUE', async () => {
+      const userData = {
+        nomeCompleto: 'Fulano Silva',
+        email: 'dup@example.com',
+        cpf: '52998224725',
+        telefone: '11999998888',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      prisma.user.create.mockRejectedValue({
+        code: 'P2002',
+        meta: { target: ['email', 'cpf'] },
+      });
+
+      const response = await request(app).post('/api/auth/register').send(userData).expect(409);
+
+      expect(response.body.code).toBe('EMAIL_AND_CPF_ALREADY_EXIST');
+      expect(response.body.duplicateField).toBe('email;cpf');
+      expect(response.body.message).toBe(
+        'E-mail e CPF já cadastrados. Verifique os dados ou faça login.'
+      );
+      expect(response.body.fields).toBeUndefined();
+    });
+
+    it('retorna 409 com mensagem especifica quando numeroConta duplica', async () => {
+      const userData = {
+        nomeCompleto: 'Outro Silva',
+        email: 'nova@example.com',
+        cpf: '39053344705',
+        telefone: '11988887777',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      prisma.user.create.mockRejectedValue({
+        code: 'P2002',
+        meta: { target: ['numeroConta'] },
+      });
+
+      const response = await request(app).post('/api/auth/register').send(userData).expect(409);
+
+      expect(response.body.code).toBe('NUMERO_CONTA_CONFLICT');
+      expect(response.body.message).toBe('Não foi possível gerar uma conta agora. Tente novamente.');
+      expect(response.body.fields).toBeUndefined();
+    });
+
+    it('retorna 409 com mensagem amigavel quando Prisma envia apenas constraint desconhecida', async () => {
+      const userData = {
+        nomeCompleto: 'Outro Silva',
+        email: 'x@example.com',
+        cpf: '85351346893',
+        telefone: '11977776666',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+      };
+
+      prisma.user.create.mockRejectedValue({
+        code: 'P2002',
+        meta: { target: ['usuarioId'] },
+      });
+
+      const response = await request(app).post('/api/auth/register').send(userData).expect(409);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.fields).toBeUndefined();
+      expect(response.body.message).toContain('em uso');
+      expect(JSON.stringify(response.body)).not.toMatch(/P2002|Prisma/i);
     });
 
     it('should return error for invalid data', async () => {
@@ -328,6 +427,7 @@ describe('Auth Routes', () => {
         nomeCompleto: 'João Silva',
         email: 'invalid-email',
         cpf: '123',
+        telefone: '(11) 98888-8888',
         dataNascimento: '1990-01-01',
         senha: '123'
       };
@@ -338,7 +438,10 @@ describe('Auth Routes', () => {
         .expect(400);
 
       expect(response.body.success).toBe(false);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
       expect(response.body.errors).toBeDefined();
+      expect(typeof response.body.message).toBe('string');
+      expect(response.body.message.length).toBeGreaterThan(5);
     });
   });
 

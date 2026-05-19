@@ -47,20 +47,35 @@ export const AuthProvider = ({ children }) => {
 
 
   const register = async (userData) => {
-    setLoading(true);
     try {
       const response = await api.post('/auth/register', userData);
-      setLoading(false);
       return {
         success: true,
         ...(response.data || {}),
         data: response.data?.data || response.data,
       };
     } catch (error) {
-      setLoading(false);
+      const payload = error.response?.data && typeof error.response.data === 'object' ? error.response.data : {};
+      const fromErrorsArr = Array.isArray(payload.errors)
+        ? payload.errors
+            .map((e) => (typeof e?.message === 'string' ? e.message.trim() : ''))
+            .filter(Boolean)
+        : [];
+
+      let msg =
+        (typeof payload.message === 'string' && payload.message.trim()) ||
+        (fromErrorsArr.length > 0 ? fromErrorsArr.join(' ') : null) ||
+        (typeof payload.error === 'string' && payload.error.trim());
+
+      const generic = 'Erro ao criar conta. Tente novamente.';
+      msg = msg || generic;
+
       return {
         success: false,
-        error: error.response?.data?.message || error.response?.data?.errors?.[0]?.message || 'Erro ao criar conta',
+        message: msg,
+        error: msg,
+        code: payload.code,
+        duplicateField: payload.duplicateField,
       };
     }
   };

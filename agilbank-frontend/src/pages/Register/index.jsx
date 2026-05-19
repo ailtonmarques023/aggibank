@@ -1,37 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeftIcon, 
-  EyeIcon, 
+import {
+  ArrowLeftIcon,
+  EyeIcon,
   EyeSlashIcon,
   CheckIcon,
-  ExclamationTriangleIcon,
-  DocumentTextIcon,
-  HomeIcon,
-  BriefcaseIcon,
-  CameraIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import Modal from '../../components/Modal';
+import './Register.css';
+
+const STEP = {
+  WELCOME: 0,
+  CPF: 1,
+  PERSONAL: 2,
+  ADDRESS: 3,
+  PROFESSIONAL: 4,
+  PASSWORD: 5,
+  TERMS: 6
+};
+
+const PROGRESS_TOTAL = 6;
+
+/** Evita exibir detalhes técnicos acidentais no fluxo de cadastro. */
+function sanitizeUserFacingError(message) {
+  if (message == null || typeof message !== 'string') return '';
+  const t = message.trim();
+  if (!t) return '';
+  if (/prisma|p2002|postgresql|unique constraint|stack trace|internal server error/i.test(t)) {
+    return 'Não foi possível concluir o cadastro. Tente novamente em instantes.';
+  }
+  return t;
+}
 
 const Register = () => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(STEP.WELCOME);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [cepData, setCepData] = useState(null);
-  const [documents, setDocuments] = useState({
-    identidade: null,
-    comprovante: null,
-    rosto: null
-  });
-  
-  const { register: registerUser, loading: authLoading } = useAuth();
+  const [cepLoading, setCepLoading] = useState(false);
+
+  const registeringRef = useRef(false);
+
+  const { register: registerUser } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -43,7 +59,6 @@ const Register = () => {
     trigger
   } = useForm({
     defaultValues: {
-      // Dados pessoais
       nomeCompleto: '',
       cpf: '',
       email: '',
@@ -51,8 +66,6 @@ const Register = () => {
       dataNascimento: '',
       senha: '',
       confirmarSenha: '',
-      
-      // Endereço
       cep: '',
       logradouro: '',
       numero: '',
@@ -60,14 +73,10 @@ const Register = () => {
       bairro: '',
       cidade: '',
       estado: '',
-      
-      // Dados profissionais
       profissao: '',
       empresa: '',
       cargo: '',
       rendaMensal: '',
-      
-      // Termos
       aceitaTermos: false,
       aceitaComunicacoes: false
     }
@@ -75,125 +84,125 @@ const Register = () => {
 
   const watchedValues = watch();
 
-  // Buscar CEP
+  const cpfForErrorClear = watch('cpf');
+  const emailForErrorClear = watch('email');
+  const senhaForErrorClear = watch('senha');
+
+  useEffect(() => {
+    setError('');
+  }, [cpfForErrorClear, emailForErrorClear, senhaForErrorClear]);
+
   const fetchCep = async (cep) => {
     if (cep.length === 8) {
       try {
+        setCepLoading(true);
         const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const data = await response.json();
-        
+
         if (!data.erro) {
-          setCepData(data);
           setValue('logradouro', data.logradouro);
           setValue('bairro', data.bairro);
           setValue('cidade', data.localidade);
           setValue('estado', data.uf);
         }
-      } catch (error) {
-        console.error('Erro ao buscar CEP:', error);
+      } catch (fetchErr) {
+        if (import.meta.env.DEV) console.error('Erro ao buscar CEP:', fetchErr);
+      } finally {
+        setCepLoading(false);
       }
     }
   };
 
-  // Validação de CPF
-  const validateCPF = (cpf) => {
-    cpf = cpf.replace(/[^\d]/g, '');
+  const validateCPF = (cpfRaw) => {
+    const cpf = cpfRaw.replace(/[^\d]/g, '');
     if (cpf.length !== 11) return false;
-    
-    // Verificar se todos os dígitos são iguais
     if (/^(\d)\1{10}$/.test(cpf)) return false;
-    
-    // Validar dígitos verificadores
     let sum = 0;
     for (let i = 0; i < 9; i++) {
-      sum += parseInt(cpf.charAt(i)) * (10 - i);
+      sum += parseInt(cpf.charAt(i), 10) * (10 - i);
     }
     let remainder = 11 - (sum % 11);
     if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(cpf.charAt(9))) return false;
-    
+    if (remainder !== parseInt(cpf.charAt(9), 10)) return false;
+
     sum = 0;
     for (let i = 0; i < 10; i++) {
-      sum += parseInt(cpf.charAt(i)) * (11 - i);
+      sum += parseInt(cpf.charAt(i), 10) * (11 - i);
     }
     remainder = 11 - (sum % 11);
     if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(cpf.charAt(10))) return false;
-    
+    if (remainder !== parseInt(cpf.charAt(10), 10)) return false;
+
     return true;
   };
 
-  // Formatação de CPF
-  const formatCPF = (value) => {
-    return value
+  const formatCPF = (value) =>
+    value
       .replace(/\D/g, '')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})/, '$1-$2')
       .slice(0, 14);
-  };
 
-  // Formatação de telefone
-  const formatPhone = (value) => {
-    return value
+  const formatPhone = (value) =>
+    value
       .replace(/\D/g, '')
       .replace(/(\d{2})(\d)/, '($1) $2')
       .replace(/(\d{4})(\d)/, '$1-$2')
       .replace(/(\d{4})-(\d)(\d{4})/, '$1$2-$3')
       .slice(0, 15);
-  };
 
-  // Formatação de CEP
-  const formatCEP = (value) => {
-    return value
+  const formatCEP = (value) =>
+    value
       .replace(/\D/g, '')
       .replace(/(\d{5})(\d)/, '$1-$2')
       .slice(0, 9);
-  };
-
-  const nextStep = async () => {
-    const fieldsToValidate = getFieldsForStep(currentStep);
-    const isValid = await trigger(fieldsToValidate);
-    
-    if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
-      setError('');
-    }
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-    setError('');
-  };
 
   const getFieldsForStep = (step) => {
     switch (step) {
-      case 1:
-        return ['nomeCompleto', 'cpf', 'email', 'telefone', 'dataNascimento', 'senha', 'confirmarSenha'];
-      case 2:
+      case STEP.CPF:
+        return ['cpf', 'dataNascimento'];
+      case STEP.PERSONAL:
+        return ['nomeCompleto', 'email', 'telefone'];
+      case STEP.ADDRESS:
         return ['cep', 'logradouro', 'numero', 'bairro', 'cidade', 'estado'];
-      case 3:
+      case STEP.PROFESSIONAL:
         return ['profissao'];
-      case 4:
+      case STEP.PASSWORD:
+        return ['senha', 'confirmarSenha'];
+      case STEP.TERMS:
         return ['aceitaTermos'];
       default:
         return [];
     }
   };
 
-  const handleFileUpload = (type, file) => {
-    setDocuments(prev => ({
-      ...prev,
-      [type]: file
-    }));
+  const applyErrorMessage = (raw) => {
+    const s = sanitizeUserFacingError(raw);
+    setError(s || 'Erro ao criar conta. Tente novamente.');
+  };
+
+  const nextStep = async () => {
+    const fieldsToValidate = getFieldsForStep(currentStep);
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      setCurrentStep((prev) => Math.min(prev + 1, STEP.TERMS));
+      setError('');
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, STEP.WELCOME));
+    setError('');
   };
 
   const onSubmit = async (data) => {
+    if (registeringRef.current || loading) return;
+    registeringRef.current = true;
     setLoading(true);
     setError('');
 
     try {
-      // Preparar dados para o backend
       const userData = {
         nomeCompleto: data.nomeCompleto,
         email: data.email,
@@ -219,70 +228,161 @@ const Register = () => {
       };
 
       const result = await registerUser(userData);
-      
+
       if (result.success) {
         setSuccess(true);
         setTimeout(() => {
           navigate('/login');
-        }, 3000);
+        }, 3500);
       } else {
-        setError(result.error);
+        const raw =
+          (typeof result.message === 'string' && result.message) ||
+          (typeof result.error === 'string' && result.error) ||
+          '';
+        applyErrorMessage(raw);
       }
-    } catch (error) {
-      setError('Erro ao criar conta. Tente novamente.');
-      console.error('Erro no registro:', error);
+    } catch (err) {
+      const payload = err.response?.data;
+      const validationJoin = Array.isArray(payload?.errors)
+        ? payload.errors
+            .map((e) => (typeof e?.message === 'string' ? e.message : ''))
+            .filter(Boolean)
+            .join(' ')
+            .trim()
+        : '';
+      const raw =
+        (typeof payload?.message === 'string' && payload.message.trim() && payload.message.trim()) ||
+        validationJoin ||
+        '';
+      applyErrorMessage(raw || 'Erro ao criar conta. Tente novamente.');
+      if (!raw && import.meta.env.DEV) console.error('Erro inesperado no registro (sem payload útil da API):', err);
     } finally {
       setLoading(false);
+      registeringRef.current = false;
     }
   };
 
-  const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Dados Pessoais</h2>
-        <p className="text-gray-600">Preencha suas informações básicas</p>
+  const progressIndex = Math.max(1, Math.min(currentStep, PROGRESS_TOTAL));
+
+  const EstadoOptions = (
+    <>
+      <option value="">UF</option>
+      <option value="AC">AC</option>
+      <option value="AL">AL</option>
+      <option value="AP">AP</option>
+      <option value="AM">AM</option>
+      <option value="BA">BA</option>
+      <option value="CE">CE</option>
+      <option value="DF">DF</option>
+      <option value="ES">ES</option>
+      <option value="GO">GO</option>
+      <option value="MA">MA</option>
+      <option value="MT">MT</option>
+      <option value="MS">MS</option>
+      <option value="MG">MG</option>
+      <option value="PA">PA</option>
+      <option value="PB">PB</option>
+      <option value="PR">PR</option>
+      <option value="PE">PE</option>
+      <option value="PI">PI</option>
+      <option value="RJ">RJ</option>
+      <option value="RN">RN</option>
+      <option value="RS">RS</option>
+      <option value="RO">RO</option>
+      <option value="RR">RR</option>
+      <option value="SC">SC</option>
+      <option value="SP">SP</option>
+      <option value="SE">SE</option>
+      <option value="TO">TO</option>
+    </>
+  );
+
+  const renderWelcome = () => (
+    <div className="flex flex-1 flex-col px-6 pb-6 pt-[calc(2rem+env(safe-area-inset-top,0))] sm:pt-12">
+      <div className="mb-10 flex justify-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-agilbank-primary shadow-lg shadow-agilbank-primary/25">
+          <span className="text-3xl font-bold text-white">A</span>
+        </div>
       </div>
+      <h1 className="mb-4 text-[1.65rem] font-bold leading-[1.2] tracking-tight text-gray-900 sm:text-[1.85rem] text-balance">
+        Seu AgilBank começa agora.
+      </h1>
+      <p className="mb-12 text-[0.975rem] leading-relaxed text-gray-600 text-balance">
+        Abra sua conta em poucos passos, com segurança e transparência.
+      </p>
+    </div>
+  );
 
-      <Input
-        label="Nome Completo *"
-        placeholder="João Silva Santos"
-        {...register('nomeCompleto', {
-          required: 'Nome completo é obrigatório',
-          minLength: { value: 2, message: 'Nome deve ter pelo menos 2 caracteres' }
-        })}
-        error={errors.nomeCompleto?.message}
-      />
+  const renderCpfStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+        Boas-vindas! Digite seu CPF
+      </h1>
+      <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
+        Usamos seu CPF para criar seu cadastro com segurança.
+      </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-5">
         <Input
-          label="CPF *"
+          label="CPF"
+          required
           placeholder="000.000.000-00"
+          autoComplete="off"
+          inputMode="numeric"
+          className="py-3.5 text-[1rem]"
           {...register('cpf', {
             required: 'CPF é obrigatório',
             validate: (value) => validateCPF(value) || 'CPF inválido'
           })}
           error={errors.cpf?.message}
-          onChange={(e) => {
-            const formatted = formatCPF(e.target.value);
-            setValue('cpf', formatted);
-          }}
+          onChange={(e) => setValue('cpf', formatCPF(e.target.value))}
         />
-
         <Input
-          label="Data de Nascimento *"
+          label="Data de nascimento"
+          required
           type="date"
+          className="py-3.5 text-[1rem]"
           {...register('dataNascimento', {
-            required: 'Data de nascimento é obrigatória'
+            required: 'Informe sua data de nascimento'
           })}
+          helperText="Necessário para cumprir regras de idade na abertura de conta."
           error={errors.dataNascimento?.message}
         />
       </div>
+    </>
+  );
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  const renderPersonalStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+        Agora, seus dados pessoais
+      </h1>
+      <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
+        Esses dados identificam você no aplicativo e nas comunicações oficiais.
+      </p>
+      <div className="space-y-5">
         <Input
-          label="E-mail *"
+          label="Nome completo"
+          required
+          placeholder="Como no documento"
+          className="py-3.5 text-[1rem]"
+          {...register('nomeCompleto', {
+            required: 'Nome completo é obrigatório',
+            minLength: { value: 2, message: 'Nome deve ter pelo menos 2 caracteres' },
+            pattern: {
+              value: /^[a-zA-ZÀ-ÿ\s]+$/,
+              message: 'Nome deve conter apenas letras e espaços'
+            }
+          })}
+          error={errors.nomeCompleto?.message}
+        />
+        <Input
+          label="E-mail"
+          required
           type="email"
-          placeholder="joao@email.com"
+          placeholder="seuemail@provedor.com"
+          autoComplete="email"
+          className="py-3.5 text-[1rem]"
           {...register('email', {
             required: 'E-mail é obrigatório',
             pattern: {
@@ -292,105 +392,37 @@ const Register = () => {
           })}
           error={errors.email?.message}
         />
-
         <Input
-          label="Telefone *"
+          label="Celular"
+          required
           placeholder="(11) 99999-9999"
+          autoComplete="tel"
+          inputMode="tel"
+          className="py-3.5 text-[1rem]"
           {...register('telefone', {
             required: 'Telefone é obrigatório'
           })}
           error={errors.telefone?.message}
-          onChange={(e) => {
-            const formatted = formatPhone(e.target.value);
-            setValue('telefone', formatted);
-          }}
+          onChange={(e) => setValue('telefone', formatPhone(e.target.value))}
         />
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Senha (6 dígitos) *
-          </label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              className="input w-full pr-10"
-              placeholder="123456"
-              maxLength="6"
-              {...register('senha', {
-                required: 'Senha é obrigatória',
-                minLength: { value: 6, message: 'Senha deve ter 6 dígitos' },
-                maxLength: { value: 6, message: 'Senha deve ter 6 dígitos' },
-                pattern: {
-                  value: /^\d{6}$/,
-                  message: 'Senha deve conter apenas números'
-                }
-              })}
-            />
-            <button
-              type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-              ) : (
-                <EyeIcon className="h-5 w-5 text-gray-400" />
-              )}
-            </button>
-          </div>
-          {errors.senha && (
-            <p className="mt-1 text-sm text-red-600">{errors.senha.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Confirmar Senha *
-          </label>
-          <div className="relative">
-            <input
-              type={showConfirmPassword ? 'text' : 'password'}
-              className="input w-full pr-10"
-              placeholder="123456"
-              maxLength="6"
-              {...register('confirmarSenha', {
-                required: 'Confirmação de senha é obrigatória',
-                validate: (value) => value === watchedValues.senha || 'Senhas não coincidem'
-              })}
-            />
-            <button
-              type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              {showConfirmPassword ? (
-                <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-              ) : (
-                <EyeIcon className="h-5 w-5 text-gray-400" />
-              )}
-            </button>
-          </div>
-          {errors.confirmarSenha && (
-            <p className="mt-1 text-sm text-red-600">{errors.confirmarSenha.message}</p>
-          )}
-        </div>
-      </div>
-    </div>
+    </>
   );
 
-  const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Endereço</h2>
-        <p className="text-gray-600">Informe seu endereço residencial</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  const renderAddressStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Onde você mora?</h1>
+      <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
+        Seu endereço será usado no cadastro e no envio de produtos físicos, quando solicitado.
+      </p>
+      <div className="space-y-5">
         <Input
-          label="CEP *"
+          label="CEP"
+          required
           placeholder="00000-000"
+          inputMode="numeric"
+          autoComplete="postal-code"
+          className="py-3.5 text-[1rem]"
           {...register('cep', {
             required: 'CEP é obrigatório',
             pattern: {
@@ -406,372 +438,461 @@ const Register = () => {
               fetchCep(formatted.replace(/\D/g, ''));
             }
           }}
+          helperText={cepLoading ? 'Buscando endereço...' : ''}
         />
-
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2">
+            <Input
+              label="Número"
+              required
+              placeholder="123"
+              className="py-3.5 text-[1rem]"
+              {...register('numero', {
+                required: 'Número é obrigatório'
+              })}
+              error={errors.numero?.message}
+            />
+          </div>
+          <Input
+            label="Comp."
+            placeholder="Apto"
+            className="py-3.5 text-[1rem]"
+            {...register('complemento')}
+            error={errors.complemento?.message}
+          />
+        </div>
         <Input
-          label="Número *"
-          placeholder="123"
-          {...register('numero', {
-            required: 'Número é obrigatório'
+          label="Logradouro"
+          required
+          placeholder="Rua, avenida..."
+          className="py-3.5 text-[1rem]"
+          {...register('logradouro', {
+            required: 'Logradouro é obrigatório'
           })}
-          error={errors.numero?.message}
+          error={errors.logradouro?.message}
         />
-
         <Input
-          label="Complemento"
-          placeholder="Apto 45, Bloco B"
-          {...register('complemento')}
-        />
-      </div>
-
-      <Input
-        label="Logradouro *"
-        placeholder="Rua das Flores"
-        {...register('logradouro', {
-          required: 'Logradouro é obrigatório'
-        })}
-        error={errors.logradouro?.message}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Input
-          label="Bairro *"
-          placeholder="Centro"
+          label="Bairro"
+          required
+          placeholder="Bairro"
+          className="py-3.5 text-[1rem]"
           {...register('bairro', {
             required: 'Bairro é obrigatório'
           })}
           error={errors.bairro?.message}
         />
-
-        <Input
-          label="Cidade *"
-          placeholder="São Paulo"
-          {...register('cidade', {
-            required: 'Cidade é obrigatória'
-          })}
-          error={errors.cidade?.message}
-        />
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Estado *
-          </label>
-          <select
-            className="input w-full"
-            {...register('estado', {
-              required: 'Estado é obrigatório'
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Cidade"
+            required
+            placeholder="Cidade"
+            className="py-3.5 text-[1rem]"
+            {...register('cidade', {
+              required: 'Cidade é obrigatória'
             })}
-          >
-            <option value="">Selecione</option>
-            <option value="AC">Acre</option>
-            <option value="AL">Alagoas</option>
-            <option value="AP">Amapá</option>
-            <option value="AM">Amazonas</option>
-            <option value="BA">Bahia</option>
-            <option value="CE">Ceará</option>
-            <option value="DF">Distrito Federal</option>
-            <option value="ES">Espírito Santo</option>
-            <option value="GO">Goiás</option>
-            <option value="MA">Maranhão</option>
-            <option value="MT">Mato Grosso</option>
-            <option value="MS">Mato Grosso do Sul</option>
-            <option value="MG">Minas Gerais</option>
-            <option value="PA">Pará</option>
-            <option value="PB">Paraíba</option>
-            <option value="PR">Paraná</option>
-            <option value="PE">Pernambuco</option>
-            <option value="PI">Piauí</option>
-            <option value="RJ">Rio de Janeiro</option>
-            <option value="RN">Rio Grande do Norte</option>
-            <option value="RS">Rio Grande do Sul</option>
-            <option value="RO">Rondônia</option>
-            <option value="RR">Roraima</option>
-            <option value="SC">Santa Catarina</option>
-            <option value="SP">São Paulo</option>
-            <option value="SE">Sergipe</option>
-            <option value="TO">Tocantins</option>
-          </select>
-          {errors.estado && (
-            <p className="mt-1 text-sm text-red-600">{errors.estado.message}</p>
-          )}
+            error={errors.cidade?.message}
+          />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Estado <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="input min-h-[2.875rem] w-full rounded-xl border-gray-300 bg-gray-50 py-3 text-[1rem] focus:ring-agilbank-primary"
+              {...register('estado', {
+                required: 'Estado é obrigatório'
+              })}
+            >
+              {EstadoOptions}
+            </select>
+            {errors.estado ? (
+              <p className="mt-1 text-sm text-red-600" role="alert">
+                {errors.estado.message}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Dados Profissionais</h2>
-        <p className="text-gray-600">Informe sua situação profissional</p>
-      </div>
-
-      <Input
-        label="Profissão/Ocupação *"
-        placeholder="Analista de Sistemas"
-        {...register('profissao', {
-          required: 'Profissão é obrigatória'
-        })}
-        error={errors.profissao?.message}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  const renderProfessionalStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+        Conte um pouco sobre sua profissão
+      </h1>
+      <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
+        Nos ajuda a oferecer serviços alinhados ao seu perfil.
+      </p>
+      <div className="space-y-5">
+        <Input
+          label="Profissão ou ocupação"
+          required
+          placeholder="Ex.: Analista, autônomo, aposentado..."
+          className="py-3.5 text-[1rem]"
+          {...register('profissao', {
+            required: 'Profissão é obrigatória'
+          })}
+          error={errors.profissao?.message}
+        />
         <Input
           label="Empresa"
-          placeholder="Tech Solutions Ltda"
+          placeholder="Opcional"
+          className="py-3.5 text-[1rem]"
           {...register('empresa')}
+          error={errors.empresa?.message}
         />
-
         <Input
           label="Cargo"
-          placeholder="Desenvolvedor Sênior"
+          placeholder="Opcional"
+          className="py-3.5 text-[1rem]"
           {...register('cargo')}
+          error={errors.cargo?.message}
         />
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">Renda mensal aproximada</label>
+          <select className="input min-h-[2.875rem] w-full rounded-xl border-gray-300 bg-gray-50 py-3 text-[1rem] focus:ring-agilbank-primary" {...register('rendaMensal')}>
+            <option value="">Prefiro não informar</option>
+            <option value="1000">Até R$ 1.000</option>
+            <option value="3000">R$ 1.000 a R$ 3.000</option>
+            <option value="5000">R$ 3.000 a R$ 5.000</option>
+            <option value="10000">R$ 5.000 a R$ 10.000</option>
+            <option value="20000">Mais de R$ 10.000</option>
+          </select>
+        </div>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Renda Mensal
-        </label>
-        <select className="input w-full" {...register('rendaMensal')}>
-          <option value="">Selecione sua renda mensal</option>
-          <option value="1000">Até R$ 1.000</option>
-          <option value="3000">R$ 1.000 a R$ 3.000</option>
-          <option value="5000">R$ 3.000 a R$ 5.000</option>
-          <option value="10000">R$ 5.000 a R$ 10.000</option>
-          <option value="20000">Mais de R$ 10.000</option>
-        </select>
-      </div>
-    </div>
+    </>
   );
 
-  const renderStep4 = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Confirmação</h2>
-        <p className="text-gray-600">Revise seus dados e aceite os termos</p>
+  const renderPasswordStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+        Crie sua senha de acesso
+      </h1>
+      <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
+        Escolha uma senha segura para proteger sua conta — 6 dígitos numéricos.
+      </p>
+      <div className="space-y-6">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">Senha (6 dígitos)</label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="●●●●●●"
+              maxLength={6}
+              inputMode="numeric"
+              autoComplete="new-password"
+              className="input min-h-[2.875rem] w-full rounded-xl border-gray-300 bg-gray-50 py-3 pr-11 text-[1.1rem] tracking-widest focus:ring-agilbank-primary"
+              {...register('senha', {
+                required: 'Senha é obrigatória',
+                minLength: { value: 6, message: 'Senha deve ter 6 dígitos' },
+                maxLength: { value: 6, message: 'Senha deve ter 6 dígitos' },
+                pattern: {
+                  value: /^\d{6}$/,
+                  message: 'Senha deve conter apenas números'
+                }
+              })}
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            >
+              {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
+          </div>
+          {errors.senha ? <p className="mt-2 text-sm text-red-600">{errors.senha.message}</p> : null}
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">Confirmar senha</label>
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="●●●●●●"
+              maxLength={6}
+              inputMode="numeric"
+              autoComplete="new-password"
+              className="input min-h-[2.875rem] w-full rounded-xl border-gray-300 bg-gray-50 py-3 pr-11 text-[1.1rem] tracking-widest focus:ring-agilbank-primary"
+              {...register('confirmarSenha', {
+                required: 'Confirme sua senha',
+                validate: (value) => value === watchedValues.senha || 'Senhas não coincidem'
+              })}
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+              onClick={() => setShowConfirmPassword((s) => !s)}
+              aria-label={showConfirmPassword ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+            >
+              {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
+          </div>
+          {errors.confirmarSenha ? (
+            <p className="mt-2 text-sm text-red-600">{errors.confirmarSenha.message}</p>
+          ) : null}
+        </div>
       </div>
+    </>
+  );
 
-      {/* Resumo dos dados */}
-      <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">Dados Pessoais</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-600">Nome:</span>
-            <p className="font-medium">{watchedValues.nomeCompleto}</p>
+  const renderTermsStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+        Antes de finalizar
+      </h1>
+      <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+        Revise e aceite para concluir a abertura da sua conta.
+      </p>
+      <div className="mb-8 rounded-2xl border border-gray-200 bg-gray-50/90 p-4 text-sm leading-relaxed text-gray-700">
+        <dl className="space-y-2">
+          <div className="flex justify-between gap-2">
+            <dt className="text-gray-500">Nome</dt>
+            <dd className="max-w-[60%] text-right font-medium text-gray-900">{watchedValues.nomeCompleto || '—'}</dd>
           </div>
-          <div>
-            <span className="text-gray-600">CPF:</span>
-            <p className="font-medium">{watchedValues.cpf}</p>
+          <div className="flex justify-between gap-2">
+            <dt className="text-gray-500">E-mail</dt>
+            <dd className="max-w-[60%] break-all text-right font-medium text-gray-900">{watchedValues.email || '—'}</dd>
           </div>
-          <div>
-            <span className="text-gray-600">E-mail:</span>
-            <p className="font-medium">{watchedValues.email}</p>
+          <div className="flex justify-between gap-2">
+            <dt className="text-gray-500">CPF</dt>
+            <dd className="font-medium text-gray-900">{watchedValues.cpf || '—'}</dd>
           </div>
-          <div>
-            <span className="text-gray-600">Telefone:</span>
-            <p className="font-medium">{watchedValues.telefone}</p>
-          </div>
-        </div>
-
-        <h3 className="font-semibold text-gray-900 mt-4">Endereço</h3>
-        <div className="text-sm">
-          <p className="font-medium">
-            {watchedValues.logradouro}, {watchedValues.numero}
-            {watchedValues.complemento && `, ${watchedValues.complemento}`}
-          </p>
-          <p className="text-gray-600">
-            {watchedValues.bairro} - {watchedValues.cidade}/{watchedValues.estado}
-          </p>
-          <p className="text-gray-600">CEP: {watchedValues.cep}</p>
-        </div>
-
-        <h3 className="font-semibold text-gray-900 mt-4">Dados Profissionais</h3>
-        <div className="text-sm">
-          <p className="font-medium">{watchedValues.profissao}</p>
-          {watchedValues.empresa && <p className="text-gray-600">{watchedValues.empresa}</p>}
-          {watchedValues.cargo && <p className="text-gray-600">{watchedValues.cargo}</p>}
-        </div>
+        </dl>
       </div>
-
-      {/* Termos e condições */}
-      <div className="space-y-4">
-        <div className="flex items-start">
+      <div className="space-y-5 pt-2">
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <input
             type="checkbox"
-            id="aceitaTermos"
-            className="mt-1 h-4 w-4 text-agilbank-primary focus:ring-agilbank-primary border-gray-300 rounded"
+            className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
             {...register('aceitaTermos', {
-              required: 'Você deve aceitar os termos de uso'
+              required: 'Aceite dos termos e condições é obrigatório'
             })}
           />
-          <label htmlFor="aceitaTermos" className="ml-2 text-sm text-gray-700">
+          <span className="text-[0.9rem] text-gray-700">
             Li e aceito os{' '}
-            <Link to="/terms" className="text-agilbank-primary hover:text-blue-700 underline">
+            <Link to="/terms" className="font-medium text-agilbank-primary underline-offset-4 hover:underline">
               termos e condições
             </Link>{' '}
-            para abertura de conta *
-          </label>
-        </div>
-        {errors.aceitaTermos && (
-          <p className="text-sm text-red-600">{errors.aceitaTermos.message}</p>
-        )}
-
-        <div className="flex items-start">
+            para abertura de conta.
+          </span>
+        </label>
+        {errors.aceitaTermos ? (
+          <p className="-mt-3 text-sm text-red-600">{errors.aceitaTermos.message}</p>
+        ) : null}
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
           <input
             type="checkbox"
-            id="aceitaComunicacoes"
-            className="mt-1 h-4 w-4 text-agilbank-primary focus:ring-agilbank-primary border-gray-300 rounded"
+            className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
             {...register('aceitaComunicacoes')}
           />
-          <label htmlFor="aceitaComunicacoes" className="ml-2 text-sm text-gray-700">
-            Aceito receber comunicações sobre produtos e serviços
-          </label>
-        </div>
+          <span className="text-[0.9rem] text-gray-600">
+            Aceito receber comunicações sobre produtos e serviços AgilBank.
+          </span>
+        </label>
       </div>
-    </div>
+    </>
   );
 
-  const renderSuccess = () => (
-    <div className="text-center py-12">
-      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <CheckIcon className="h-8 w-8 text-green-600" />
-      </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Conta criada com sucesso!</h2>
-      <p className="text-gray-600 mb-6">
-        Enviamos um email de confirmação para <strong>{watchedValues.email}</strong>
-      </p>
-      <p className="text-sm text-gray-500">
-        Você será redirecionado para o login em alguns segundos...
-      </p>
-    </div>
-  );
+  const renderStepBody = () => {
+    switch (currentStep) {
+      case STEP.WELCOME:
+        return renderWelcome();
+      case STEP.CPF:
+        return renderCpfStep();
+      case STEP.PERSONAL:
+        return renderPersonalStep();
+      case STEP.ADDRESS:
+        return renderAddressStep();
+      case STEP.PROFESSIONAL:
+        return renderProfessionalStep();
+      case STEP.PASSWORD:
+        return renderPasswordStep();
+      case STEP.TERMS:
+        return renderTermsStep();
+      default:
+        return null;
+    }
+  };
+
+  /* --- Layout shell (mobile-first, max 430px no desktop) --- */
+  const showProgress = currentStep >= STEP.CPF && currentStep <= STEP.TERMS;
+
+  const footerPrimaryActions = () => {
+    if (currentStep >= STEP.TERMS) {
+      return (
+        <Button
+          type="submit"
+          form="register-flow-form"
+          variant="primary"
+          size="lg"
+          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          loading={loading}
+          disabled={loading}
+        >
+          Criar conta
+        </Button>
+      );
+    }
+    return (
+      <Button
+        type="button"
+        variant="primary"
+        size="lg"
+        className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+        onClick={nextStep}
+      >
+        Continuar
+      </Button>
+    );
+  };
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
-          {renderSuccess()}
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/80 px-3 py-6 sm:bg-zinc-100 sm:py-10">
+        <div className="register-hero-bg relative flex w-full max-w-[430px] flex-col rounded-3xl shadow-2xl sm:rounded-[2rem] sm:border sm:border-white/70">
+          <div className="flex flex-1 flex-col px-8 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-24 text-center">
+            <div className="mx-auto mb-10 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+              <CheckIcon className="h-11 w-11 text-agilbank-success" />
+            </div>
+            <h1 className="mb-4 text-2xl font-bold leading-snug tracking-tight text-gray-900 sm:text-[1.75rem]">
+              Agora é com a gente!
+            </h1>
+            <p className="mb-2 text-[0.975rem] leading-relaxed text-gray-600">
+              Sua conta foi criada com sucesso. Você já pode acessar o AgilBank.
+            </p>
+            <p className="mb-12 text-[0.8rem] text-gray-500">Redirecionando ao login...</p>
+            <Link to="/login" className="text-sm font-semibold text-agilbank-primary hover:underline">
+              Ir ao login agora
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link to="/login" className="inline-flex items-center text-agilbank-primary hover:text-blue-700 mb-4">
-            <ArrowLeftIcon className="h-5 w-5 mr-2" />
-            Voltar ao login
-          </Link>
-          <div className="w-16 h-16 bg-agilbank-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">A</span>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Criar Conta</h1>
-          <p className="text-gray-600">Abra sua conta no AgilBank em poucos passos</p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            {[1, 2, 3, 4].map((step) => (
-              <div
-                key={step}
-                className={`flex items-center ${
-                  step <= currentStep ? 'text-agilbank-primary' : 'text-gray-400'
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step <= currentStep
-                      ? 'bg-agilbank-primary text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {step}
-                </div>
-                {step < 4 && (
-                  <div
-                    className={`w-16 h-1 mx-2 ${
-                      step < currentStep ? 'bg-agilbank-primary' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="text-center text-sm text-gray-600">
-            Passo {currentStep} de 4
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow p-8">
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mt-0.5" />
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">Erro</h3>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
-            {currentStep === 4 && renderStep4()}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <Button
+  const shellOuter = (
+    <div className={`flex min-h-[100dvh] justify-center ${currentStep === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : 'bg-zinc-200/75'} px-3 py-0 sm:py-10`}>
+      <div className={`relative flex w-full max-w-[430px] flex-col min-h-[100dvh] sm:min-h-0 shadow-2xl sm:rounded-[2rem] sm:border border-white/40 overflow-hidden bg-white ${currentStep === STEP.WELCOME ? 'register-hero-bg' : ''}`}>
+        {/* Header + progress */}
+        {currentStep !== STEP.WELCOME ? (
+          <header className="sticky top-0 z-20 border-b border-gray-100/90 bg-white/95 px-4 pb-4 pt-[calc(env(safe-area-inset-top,0)+0.875rem)] backdrop-blur">
+            <div className="relative mb-5 flex items-center justify-center gap-4">
+              <button
                 type="button"
-                variant="secondary"
+                aria-label="Voltar"
+                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-700 hover:bg-gray-100 active:bg-gray-200"
                 onClick={prevStep}
-                disabled={currentStep === 1}
               >
-                Anterior
-              </Button>
-
-              {currentStep < 4 ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={nextStep}
-                >
-                  Próximo
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="primary"
-                  loading={loading}
-                  disabled={loading}
-                >
-                  Criar Conta
-                </Button>
-              )}
+                <ArrowLeftIcon className="h-6 w-6" />
+              </button>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-agilbank-primary shadow-sm">
+                <span className="text-sm font-bold text-white">A</span>
+              </div>
+              <Link
+                to="/login"
+                className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
+              >
+                Tenho conta
+              </Link>
             </div>
+            {showProgress ? (
+              <div className="space-y-2">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full bg-agilbank-primary transition-all duration-500 ease-out"
+                    style={{ width: `${(progressIndex / PROGRESS_TOTAL) * 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  <span>Etapa</span>
+                  <span aria-live="polite">
+                    {progressIndex} / {PROGRESS_TOTAL}
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </header>
+        ) : null}
+
+        {/* Conteúdo rolável */}
+        <div
+          role="region"
+          aria-label="Formulário de cadastro"
+          className={`flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide pb-[calc(6.75rem+env(safe-area-inset-bottom))] ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+        >
+          <form
+            id="register-flow-form"
+            onSubmit={handleSubmit(onSubmit)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < STEP.TERMS) {
+                e.preventDefault();
+              }
+            }}
+          >
+            {/* Enter só envia na etapa final (termos) */}
+            <fieldset className={currentStep === STEP.WELCOME ? 'min-h-0 sm:min-h-[50vh]' : 'min-h-[50vh]'} disabled={loading}>
+              {renderStepBody()}
+            </fieldset>
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Já tem uma conta?{' '}
-            <Link to="/login" className="text-agilbank-primary hover:text-blue-700 font-medium">
-              Fazer login
-            </Link>
-          </p>
-        </div>
+        {/* Barra inferior fixa */}
+        <footer className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 flex justify-center">
+          <div className="pointer-events-auto flex w-full max-w-[430px] flex-col gap-3 rounded-t-[1.25rem] border-t border-gray-100 bg-white/95 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_40px_rgba(0,36,71,0.08)] backdrop-blur-md">
+            {currentStep === STEP.WELCOME ? (
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/25"
+                  onClick={() => {
+                    setCurrentStep(STEP.CPF);
+                    setError('');
+                  }}
+                >
+                  Criar minha conta
+                </Button>
+                <Link
+                  to="/login"
+                  className="w-full pb-3 text-center text-[0.95rem] font-medium text-agilbank-primary underline-offset-2 hover:underline"
+                >
+                  Já tenho uma conta
+                </Link>
+              </>
+            ) : (
+              <>
+                {currentStep === STEP.TERMS && error ? (
+                  <div
+                    className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]"
+                    role="alert"
+                  >
+                    <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-red-900">Algo deu errado</p>
+                      <p className="break-words text-red-800/95">{sanitizeUserFacingError(error)}</p>
+                    </div>
+                  </div>
+                ) : null}
+                {footerPrimaryActions()}
+              </>
+            )}
+          </div>
+        </footer>
+
+        {/* Loading fullscreen */}
+        {loading ? (
+          <div className="register-loading-bg fixed inset-0 z-[200] flex flex-col items-center justify-center px-10 text-white" role="alert" aria-busy="true">
+            <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" aria-hidden />
+            <p className="text-center text-lg font-semibold tracking-tight">Salvando seus dados...</p>
+            <p className="mt-4 text-center text-sm text-blue-100/90">Um instante, estamos criando sua conta com segurança.</p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
+
+  return shellOuter;
 };
 
 export default Register;

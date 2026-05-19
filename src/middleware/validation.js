@@ -28,6 +28,13 @@ const redactValidationValue = (field, value) => {
   return value;
 };
 
+const normalizeCpfDigits = (value) => {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  return String(value).replace(/\D/g, '');
+};
+
 // Middleware para tratar erros de validação
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -45,6 +52,13 @@ const handleValidationErrors = (req, res, next) => {
       message: error.msg,
       value: redactValidationValue(error.path, error.value)
     }));
+
+    const clientMessage =
+      validationErrors.length === 1
+        ? validationErrors[0].msg
+        : validationErrors.length <= 4
+          ? validationErrors.map((e) => e.msg).join(' ')
+          : `${validationErrors[0].msg} Revise também os outros ${validationErrors.length - 1} pontos indicados abaixo.`;
     
     logger.warn('Erro de validação:', {
       requestId: req.requestId,
@@ -57,7 +71,7 @@ const handleValidationErrors = (req, res, next) => {
     
     return res.status(400).json({
       success: false,
-      message: 'Dados inválidos',
+      message: clientMessage,
       errors: errorMessages,
       code: 'VALIDATION_ERROR'
     });
@@ -70,26 +84,38 @@ const handleValidationErrors = (req, res, next) => {
 const validateUserRegistration = [
   body('nomeCompleto')
     .trim()
+    .notEmpty()
+    .withMessage('Nome completo é obrigatório')
     .isLength({ min: 2, max: 100 })
     .withMessage('Nome deve ter entre 2 e 100 caracteres')
     .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
     .withMessage('Nome deve conter apenas letras e espaços'),
   
   body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('E-mail é obrigatório')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Email inválido'),
+    .withMessage('E-mail inválido')
+    .normalizeEmail(),
   
   body('cpf')
+    .notEmpty()
+    .withMessage('CPF é obrigatório')
+    .customSanitizer(normalizeCpfDigits)
     .matches(/^\d{11}$/)
-    .withMessage('CPF deve conter exatamente 11 dígitos'),
+    .withMessage('CPF inválido. Informe os 11 dígitos.'),
   
   body('telefone')
-    .optional()
-    .matches(/^(\d{10,11}|\(\d{2}\)\s\d{4,5}-\d{4})$/)
-    .withMessage('Telefone deve conter 10 ou 11 dígitos'),
+    .notEmpty()
+    .withMessage('Telefone é obrigatório')
+    .customSanitizer(normalizeCpfDigits)
+    .matches(/^\d{10,11}$/)
+    .withMessage('Telefone inválido. Use DDD + número (10 ou 11 dígitos).'),
   
   body('dataNascimento')
+    .notEmpty()
+    .withMessage('Data de nascimento é obrigatória')
     .isISO8601()
     .withMessage('Data de nascimento inválida')
     .custom((date) => {
@@ -98,7 +124,7 @@ const validateUserRegistration = [
       const age = today.getFullYear() - birthDate.getFullYear();
       
       if (age < 18) {
-        throw new Error('Usuário deve ser maior de 18 anos');
+        throw new Error('Você precisa ter pelo menos 18 anos');
       }
       
       if (age > 120) {
@@ -109,8 +135,10 @@ const validateUserRegistration = [
     }),
   
   body('senha')
+    .notEmpty()
+    .withMessage('Senha é obrigatória')
     .matches(/^\d{6}$/)
-    .withMessage('Senha deve conter exatamente 6 dígitos numéricos'),
+    .withMessage('A senha deve ter exatamente 6 dígitos numéricos'),
   
   // Validações para endereço (opcional)
   body('endereco.cep')
@@ -166,13 +194,6 @@ const validateUserRegistration = [
   
   handleValidationErrors
 ];
-
-const normalizeCpfDigits = (value) => {
-  if (value === undefined || value === null) {
-    return '';
-  }
-  return String(value).replace(/\D/g, '');
-};
 
 // Esqueci senha — e-mail + CPF (11 dígitos após normalização)
 const validateForgotPassword = [

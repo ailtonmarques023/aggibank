@@ -2924,6 +2924,53 @@ function agilbankDashboardFeatureSlidesVisiveis() {
     });
 }
 
+function agilbankDashboardFeatureCurrentIndex() {
+    var host = document.getElementById('dashboardFeatureCards');
+    var visibleSlides = agilbankDashboardFeatureSlidesVisiveis();
+    if (!host || !visibleSlides.length) return 0;
+    var currentIndex = 0;
+    for (var i = 0; i < visibleSlides.length; i += 1) {
+        if (visibleSlides[i].offsetLeft <= host.scrollLeft + 8) {
+            currentIndex = i;
+        }
+    }
+    return currentIndex;
+}
+
+function agilbankSyncDashboardFeatureDots() {
+    var host = document.getElementById('dashboardFeatureCards');
+    var dots = document.getElementById('dashboardFeatureDots');
+    if (!host || !dots) return;
+    var visibleSlides = agilbankDashboardFeatureSlidesVisiveis();
+    dots.hidden = visibleSlides.length < 2;
+    dots.innerHTML = '';
+    if (visibleSlides.length < 2) return;
+    var currentIndex = agilbankDashboardFeatureCurrentIndex();
+    visibleSlides.forEach(function (slide, index) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'dashboard-feature-dot' + (index === currentIndex ? ' is-active' : '');
+        dot.setAttribute('aria-label', 'Ir para card ' + (index + 1));
+        dot.setAttribute('aria-current', index === currentIndex ? 'true' : 'false');
+        dot.addEventListener('click', function () {
+            agilbankPauseDashboardFeatureAutoScroll();
+            host.scrollTo({ left: slide.offsetLeft, behavior: 'smooth' });
+        });
+        dots.appendChild(dot);
+    });
+}
+
+function agilbankUpdateDashboardFeatureDotsActive() {
+    var dots = document.getElementById('dashboardFeatureDots');
+    if (!dots || dots.hidden) return;
+    var currentIndex = agilbankDashboardFeatureCurrentIndex();
+    Array.prototype.slice.call(dots.querySelectorAll('.dashboard-feature-dot')).forEach(function (dot, index) {
+        var active = index === currentIndex;
+        dot.classList.toggle('is-active', active);
+        dot.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+}
+
 function agilbankSyncDashboardFeatureCarouselHost() {
     var host = document.getElementById('dashboardFeatureCards');
     if (!host) return;
@@ -2932,6 +2979,37 @@ function agilbankSyncDashboardFeatureCarouselHost() {
     if (visibleSlides.length) {
         host.scrollTo({ left: visibleSlides[0].offsetLeft, behavior: 'auto' });
     }
+    agilbankSyncDashboardFeatureDots();
+    agilbankStartDashboardFeatureAutoScroll();
+}
+
+function agilbankPauseDashboardFeatureAutoScroll() {
+    window.__agilbankFeatureCarouselPausedUntil = Date.now() + 9000;
+}
+
+function agilbankStartDashboardFeatureAutoScroll() {
+    if (window.__agilbankFeatureCarouselTimer) return;
+    var host = document.getElementById('dashboardFeatureCards');
+    if (host && !host.__agilbankFeatureCarouselBound) {
+        host.__agilbankFeatureCarouselBound = true;
+        host.addEventListener('scroll', function () {
+            window.clearTimeout(window.__agilbankFeatureCarouselDotTimer);
+            window.__agilbankFeatureCarouselDotTimer = window.setTimeout(agilbankUpdateDashboardFeatureDotsActive, 80);
+        });
+        host.addEventListener('pointerdown', agilbankPauseDashboardFeatureAutoScroll);
+        host.addEventListener('touchstart', agilbankPauseDashboardFeatureAutoScroll, { passive: true });
+    }
+    window.__agilbankFeatureCarouselTimer = window.setInterval(function () {
+        var carousel = document.getElementById('dashboardFeatureCards');
+        if (!carousel || carousel.style.display === 'none') return;
+        if (window.__agilbankFeatureCarouselPausedUntil && Date.now() < window.__agilbankFeatureCarouselPausedUntil) return;
+        var visibleSlides = agilbankDashboardFeatureSlidesVisiveis();
+        if (visibleSlides.length < 2) return;
+        var currentIndex = agilbankDashboardFeatureCurrentIndex();
+        var next = visibleSlides[(currentIndex + 1) % visibleSlides.length];
+        carousel.scrollTo({ left: next.offsetLeft, behavior: 'smooth' });
+        window.setTimeout(agilbankUpdateDashboardFeatureDotsActive, 350);
+    }, 4500);
 }
 
 function agilbankSetDashboardApprovedFeatureVisible(kind, visible) {

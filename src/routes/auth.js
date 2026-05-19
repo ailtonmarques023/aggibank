@@ -39,6 +39,96 @@ const FORGOT_PASSWORD_PUBLIC_MESSAGE =
 
 const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
 
+/**
+ * Campos UNIQUE do modelo `User` (Prisma) sob violação P2002.
+ */
+function extractDuplicateSchemaFields(metaTarget) {
+  if (metaTarget == null) return [];
+  const list = Array.isArray(metaTarget) ? metaTarget : [metaTarget];
+  const canonical = [];
+
+  function add(kind) {
+    if (!canonical.includes(kind)) canonical.push(kind);
+  }
+
+  for (const entry of list) {
+    const rawEntry = typeof entry === 'string' ? entry : String(entry);
+    const s = rawEntry.toLowerCase().trim();
+    if (!s) continue;
+    const compact = s.replace(/^usuarios?\.?/, '').replace(/_key$/i, '').replace(/_unique$/i, '');
+
+    /** Prisma (PostgreSQL) costuma usar os nomes exatos das colunas mapeadas. */
+    const candidates = [...new Set([s, compact, compact.split(/\W+/).filter(Boolean).join(' ')])].join('|');
+
+    if (/\bemail\b|_email|\.email\b|email$/i.test(candidates)) {
+      add('email');
+    }
+    if (/\bcpf\b|_cpf|\.cpf\b|cpf$/i.test(candidates)) {
+      add('cpf');
+    }
+    if (/numeroconta|numero_conta|numeroconta$/i.test(candidates)) {
+      add('numeroConta');
+    }
+  }
+
+  return canonical;
+}
+
+/** Resposta JSON para cadastro quando viola constraint UNIQUE (P2002). */
+function conflictFromRegisterDuplicates(metaTarget) {
+  const fields = extractDuplicateSchemaFields(metaTarget);
+
+  const hasEmail = fields.includes('email');
+  const hasCpf = fields.includes('cpf');
+  const hasNumeroConta = fields.includes('numeroConta');
+
+  let duplicateField = null;
+  let code = 'REGISTER_DUPLICATE';
+  let message = 'Os dados informados já estão vinculados a uma conta. Faça login ou altere-os.';
+
+  if (hasEmail && hasCpf) {
+    duplicateField = 'email;cpf';
+    code = 'EMAIL_AND_CPF_ALREADY_EXIST';
+    message = 'E-mail e CPF já cadastrados. Verifique os dados ou faça login.';
+  } else if (hasEmail) {
+    duplicateField = 'email';
+    code = 'EMAIL_ALREADY_EXISTS';
+    message = 'E-mail já cadastrado. Faça login ou use outro e-mail.';
+  } else if (hasCpf) {
+    duplicateField = 'cpf';
+    code = 'CPF_ALREADY_EXISTS';
+    message = 'CPF já cadastrado. Faça login ou use outro CPF.';
+  } else if (hasNumeroConta) {
+    duplicateField = 'numeroConta';
+    code = 'NUMERO_CONTA_CONFLICT';
+    message = 'Não foi possível gerar uma conta agora. Tente novamente.';
+  } else if (fields.length === 1) {
+    duplicateField = fields[0];
+    code = `DUPLICATE_${String(fields[0]).toUpperCase()}`;
+    message = 'Não foi possível concluir o cadastro. Confira seus dados ou tente novamente em instantes.';
+  } else {
+    message =
+      'Não foi possível concluir o cadastro porque alguns dados já estão em uso. Verifique suas informações ou faça login.';
+    code = 'REGISTER_DUPLICATE';
+  }
+
+  logger.security('registration_duplicate', {
+    prismaTarget: metaTarget,
+    fields,
+    duplicateField,
+    code,
+    clientMessage: message,
+  });
+
+  /** Sem `fields`/detalhes técnicos do Prisma no JSON enviado ao cliente. */
+  return {
+    success: false,
+    message,
+    code,
+    duplicateField,
+  };
+}
+
 /** Resposta alinhada ao contrato de erro de envio (Resend oficial; SMTP legado opcional). */
 function emailProviderMisconfiguredMessage() {
   return 'O servidor não está configurado para enviar e-mail. Em produção configure RESEND_API_KEY e EMAIL_FROM (domínio verificado no Resend). SMTP legado exige ALLOW_EMAIL_SMTP_FALLBACK=true apenas se a infraestrutura permitir saída SMTP.';
@@ -402,20 +492,17 @@ router.post('/register', validateUserRegistration, async (req, res) => {
 
   } catch (error) {
     if (error.code === 'P2002') {
-      const targetFields = Array.isArray(error.meta?.target) ? error.meta.target : [String(error.meta?.target || 'cadastro')];
-      const target = targetFields.join(', ');
-      logger.security('registration_duplicate', { target });
-      return res.status(409).json({
-        success: false,
-        message: 'Este e-mail ou CPF já está sendo usado. Faça login ou use outros dados.',
-        code: 'ACCOUNT_ALREADY_EXISTS'
-      });
+      logger.warn(
+        { prismaCode: error.code, meta: error.meta },
+        'register_prisma_unique_violation_detail'
+      );
+      return res.status(409).json(conflictFromRegisterDuplicates(error.meta?.target));
     }
 
     logger.error('Erro no registro:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
+      message: 'Não foi possível concluir o cadastro no momento. Tente novamente mais tarde.',
       code: 'INTERNAL_ERROR'
     });
   }
