@@ -50,9 +50,10 @@
         .cartoes-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 20px;
             padding: 0 15px;
+            justify-items: center;
         }
         
         /* cartao-item */
@@ -60,14 +61,15 @@
             position: relative;
             overflow: hidden;
             background: linear-gradient(142deg, #07305f 0%, #0066b3 52%, #12a4e8 100%);
-            border-radius: 14px;
-            padding: 16px;
+            border-radius: 12px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: clamp(210px, 38vh, 300px);
+            width: min(100%, 260px);
+            min-height: 158px;
             border: 1px solid rgba(255, 255, 255, 0.28);
-            box-shadow: 0 10px 24px rgba(0, 66, 132, 0.24);
+            box-shadow: 0 8px 18px rgba(0, 66, 132, 0.2);
             color: #ffffff;
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -113,44 +115,44 @@
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.16);
             color: #ffffff;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
-            padding: 5px 8px;
+            padding: 4px 7px;
             white-space: nowrap;
         }
 
         .cartao-item-centro {
             display: grid;
-            gap: 12px;
+            gap: 8px;
         }
 
         .cartao-chip {
-            width: 36px;
-            height: 27px;
-            border-radius: 6px;
+            width: 28px;
+            height: 21px;
+            border-radius: 5px;
             background: linear-gradient(135deg, #f4d27a 0%, #b88b2f 100%);
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
         }
 
         .cartao-item-rodape {
             display: grid;
-            gap: 6px;
+            gap: 4px;
         }
 
         .cartao-item-rodape span {
             color: rgba(255, 255, 255, 0.78);
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
         }
 
         .cartao-item-rodape strong {
             color: #ffffff;
-            font-size: 20px;
+            font-size: 17px;
             font-weight: 800;
         }
         /* cartao-item .cartao-nome */
         .cartao-item .cartao-nome {
-            font-size: 15px;
+            font-size: 13px;
             color: #ffffff;
             font-weight: 800;
             margin-bottom: 0;
@@ -158,7 +160,7 @@
         /* cartao-item .cartao-numero */
         .cartao-item .cartao-numero {
             color: #ffffff;
-            font-size: 18px;
+            font-size: 14px;
             letter-spacing: 0;
         }
         /* cartao-item .cartao-action */

@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Button from './Button';
+import { BRAND_MEDIA } from '../constants/brandMedia';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -37,11 +38,15 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-agilbank-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">AgilBank</span>
+          <Link to="/" className="flex min-w-0 items-center shrink-0">
+            <img
+              src={BRAND_MEDIA.logoLightBg}
+              alt="AgilBank"
+              className="h-8 w-auto max-h-8 max-w-[min(200px,55vw)] object-contain sm:h-9 sm:max-h-9"
+              width={200}
+              height={36}
+              decoding="async"
+            />
           </Link>
 
           {/* Desktop Navigation */}

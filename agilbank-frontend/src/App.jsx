@@ -12,6 +12,7 @@ import Terms from './pages/Terms';
 import Register from './pages/Register/index.jsx';
 import KycVerification from './pages/KycVerification/index.jsx';
 import { hasAcceptedTerms } from './utils/helpers';
+import { BRAND_MEDIA } from './constants/brandMedia';
 
 // Componente para verificar se o usuário aceitou os termos
 const TermsChecker = ({ children }) => {
@@ -153,9 +154,14 @@ const AppContent = () => {
               <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full space-y-8">
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <span className="text-agilbank-primary text-2xl font-bold">A</span>
-                    </div>
+                    <img
+                      src={BRAND_MEDIA.logoDarkBg}
+                      alt="AgilBank"
+                      className="mx-auto mb-4 block h-auto max-h-[52px] w-auto max-w-[min(260px,80vw)] object-contain"
+                      width={260}
+                      height={52}
+                      decoding="async"
+                    />
                     <h2 className="text-3xl font-bold text-white mb-2">
                       Recuperar Senha
                     </h2>

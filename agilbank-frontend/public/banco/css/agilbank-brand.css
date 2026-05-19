@@ -62,6 +62,15 @@
   margin-left: 0;
 }
 
+/* Marca completa (ícone + wordmark) na barra azul — agilbank-logo-dark-bg.svg */
+.top-bar .logo .agilbank-brand-logo--topbar {
+  height: 26px;
+  max-width: min(200px, 50vw);
+  width: auto;
+  margin-left: 0;
+  margin-right: auto;
+}
+
 /* Fundo claro → agilbank-wordmark-header-on-light.svg + esta classe */
 .agilbank-brand-wordmark-header--on-light {
   margin-left: 0;

@@ -1,29 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { BRAND_MEDIA } from '../constants/brandMedia';
 
 const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3 sm:py-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm sm:text-lg">AB</span>
-              </div>
-              <span className="ml-2 sm:ml-3 text-lg sm:text-xl font-semibold text-gray-900">AgilBank</span>
-            </div>
-            <Link
-              to="/login"
-              className="bg-blue-600 text-white px-4 py-2 sm:px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm sm:text-base"
-            >
-              Entrar
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="bg-white py-8 sm:py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 text-center">
@@ -121,11 +102,15 @@ const Home = () => {
       <footer className="bg-gray-900 text-white py-8 sm:py-12">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm sm:text-lg">AB</span>
-              </div>
-              <span className="text-lg sm:text-xl font-semibold">AgilBank</span>
+            <div className="mb-4 sm:mb-6 flex items-center justify-center">
+              <img
+                src={BRAND_MEDIA.logoDarkBg}
+                alt="AgilBank"
+                className="h-9 w-auto max-h-10 max-w-[min(220px,70vw)] object-contain"
+                width={200}
+                height={40}
+                decoding="async"
+              />
             </div>
             <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
               © 2024 AgilBank. Todos os direitos reservados.

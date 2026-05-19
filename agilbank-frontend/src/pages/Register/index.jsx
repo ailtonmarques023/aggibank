@@ -12,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth.jsx';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import './Register.css';
+import { BRAND_MEDIA } from '../../constants/brandMedia';
 
 const STEP = {
   WELCOME: 0,
@@ -311,9 +312,14 @@ const Register = () => {
   const renderWelcome = () => (
     <div className="flex flex-1 flex-col px-6 pb-6 pt-[calc(2rem+env(safe-area-inset-top,0))] sm:pt-12">
       <div className="mb-10 flex justify-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-agilbank-primary shadow-lg shadow-agilbank-primary/25">
-          <span className="text-3xl font-bold text-white">A</span>
-        </div>
+        <img
+          src={BRAND_MEDIA.logoLightBg}
+          alt="AgilBank"
+          className="h-14 w-auto max-w-[min(280px,85vw)] object-contain drop-shadow-sm"
+          width={280}
+          height={56}
+          decoding="async"
+        />
       </div>
       <h1 className="mb-4 text-[1.65rem] font-bold leading-[1.2] tracking-tight text-gray-900 sm:text-[1.85rem] text-balance">
         Seu AgilBank começa agora.
@@ -819,9 +825,14 @@ const Register = () => {
               >
                 <ArrowLeftIcon className="h-6 w-6" />
               </button>
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-agilbank-primary shadow-sm">
-                <span className="text-sm font-bold text-white">A</span>
-              </div>
+              <img
+                src={BRAND_MEDIA.icon}
+                alt="AgilBank"
+                className="h-9 w-9 object-contain"
+                width={36}
+                height={36}
+                decoding="async"
+              />
               <Link
                 to="/login"
                 className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"

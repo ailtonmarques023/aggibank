@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { BRAND_MEDIA } from '../constants/brandMedia';
 import { authService } from '../services/authService';
 import { storeAuthSession } from '../utils/authStorage';
 
@@ -114,8 +115,14 @@ const Login = () => {
             {/* Logo AgilBank */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center mb-4">
-                <span className="text-3xl font-bold text-blue-600">Agil</span>
-                <span className="text-3xl font-bold text-green-600">Bank</span>
+                <img
+                  src={BRAND_MEDIA.logoLightBg}
+                  alt="AgilBank"
+                  className="mx-auto h-10 w-auto max-w-[260px] object-contain sm:h-11"
+                  width={216}
+                  height={40}
+                  decoding="async"
+                />
               </div>
               <p className="text-gray-600 text-sm">
                 Acesse sua conta para continuar
@@ -253,9 +260,14 @@ const Login = () => {
                 className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
               >
                 <div className="flex items-center">
-                  <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center mr-2">
-                    <span className="text-white text-xs font-bold">AB</span>
-                  </div>
+                  <img
+                    src={BRAND_MEDIA.icon}
+                    alt="AgilBank"
+                    className="mr-2 h-5 w-5 object-contain"
+                    width={20}
+                    height={20}
+                    decoding="async"
+                  />
                   <span>AgilBank</span>
                 </div>
               </button>

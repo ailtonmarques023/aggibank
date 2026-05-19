@@ -269,8 +269,7 @@ class LoginSystem {
 
         gate.style.display = 'block';
         gate.innerHTML =
-            '<div class="login-header"><div class="logo-container"><div class="agilbank-logo-text">' +
-            '<span class="logo-agil">Agil</span><span class="logo-bank">Bank</span></div></div>' +
+            '<div class="login-header"><div class="logo-container"><img src="assets/brand/agilbank-logo-light-bg.svg" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--login agilbank-brand-logo--light" width="216" height="36" decoding="async" /></div>' +
             '<p class="login-subtitle">Verificação de e-mail necessária</p></div>' +
             '<div class="login-error-message" id="agilVerifyGateErr" style="display:none;margin-bottom:12px;"></div>' +
             '<p class="login-footer-text" style="text-align:left;line-height:1.5;margin:0 0 16px;">' +

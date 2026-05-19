@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Button from '../../components/Button';
 import { useAuth } from '../../hooks/useAuth.jsx';
+import { BRAND_MEDIA } from '../../constants/brandMedia';
 
 const Home = () => {
   const { isAuthenticated } = useAuth();
@@ -51,6 +52,14 @@ const Home = () => {
       <section className="bg-gradient-to-br from-agilbank-primary to-blue-700 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
+            <img
+              src={BRAND_MEDIA.logoDarkBg}
+              alt="AgilBank"
+              className="mx-auto mb-8 block h-auto max-h-14 w-auto max-w-[min(320px,85vw)] object-contain md:max-h-16"
+              width={320}
+              height={64}
+              decoding="async"
+            />
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Seu banco digital
               <span className="block text-blue-200">do futuro</span>
@@ -144,9 +153,14 @@ const Home = () => {
             <div className="relative">
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <div className="text-center">
-                  <div className="w-20 h-20 bg-agilbank-primary rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-white text-2xl font-bold">A</span>
-                  </div>
+                  <img
+                    src={BRAND_MEDIA.logoLightBg}
+                    alt="AgilBank"
+                    className="mx-auto mb-6 h-auto max-h-16 w-auto max-w-[240px] object-contain"
+                    width={240}
+                    height={48}
+                    decoding="async"
+                  />
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">
                     AgilBank Digital
                   </h3>

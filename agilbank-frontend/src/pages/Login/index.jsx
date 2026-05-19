@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { BRAND_MEDIA } from '../../constants/brandMedia';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -54,10 +55,15 @@ const Login = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Header - Estilo gov.br */}
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 flex items-center justify-center">
-            <div className="bg-blue-600 text-white rounded-lg p-2">
-              <span className="text-xl font-bold">AB</span>
-            </div>
+          <div className="mx-auto flex h-14 max-w-[280px] items-center justify-center">
+            <img
+              src={BRAND_MEDIA.logoLightBg}
+              alt="AgilBank"
+              className="h-auto max-h-14 w-full object-contain"
+              width={280}
+              height={56}
+              decoding="async"
+            />
           </div>
           <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
             Acesse sua conta

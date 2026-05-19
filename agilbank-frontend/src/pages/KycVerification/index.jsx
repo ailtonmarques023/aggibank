@@ -20,6 +20,7 @@ import {
   putFileToPresignedUrl,
   sha256HexFromFile,
 } from '../../services/kycService';
+import { BRAND_MEDIA } from '../../constants/brandMedia';
 
 /** Etapas numéricas após boas-vindas (barra de progresso). */
 const STEP = {
@@ -668,9 +669,14 @@ export default function KycVerification() {
               >
                 <ArrowLeftIcon className="h-6 w-6" />
               </button>
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-agilbank-primary shadow-sm">
-                <span className="text-sm font-bold text-white">A</span>
-              </div>
+              <img
+                src={BRAND_MEDIA.icon}
+                alt="AgilBank"
+                className="h-9 w-9 object-contain"
+                width={36}
+                height={36}
+                decoding="async"
+              />
               <Link
                 to="/transactions"
                 className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
