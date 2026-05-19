@@ -1,0 +1,794 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  FingerPrintIcon,
+  PhotoIcon,
+  DocumentTextIcon,
+} from '@heroicons/react/24/outline';
+import Button from '../../components/Button';
+import '../Register/Register.css';
+import {
+  KYC_ALLOWED_MIME_TYPES,
+  KYC_MAX_FILE_BYTES,
+  fetchKycStatus,
+  presignKycUpload,
+  confirmKycUpload,
+  submitKycForReview,
+  putFileToPresignedUrl,
+  sha256HexFromFile,
+} from '../../services/kycService';
+
+/** Etapas numéricas após boas-vindas (barra de progresso). */
+const STEP = {
+  WELCOME: 0,
+  DOC_FRONT: 1,
+  DOC_BACK: 2,
+  SELFIE: 3,
+  REVIEW: 4,
+};
+
+const PROGRESS_TOTAL = 4;
+
+const FLOW_CONFIG = [
+  null,
+  {
+    artifactType: 'DOCUMENT_FRONT',
+    title: 'Envie a frente do documento',
+    subtitle: 'RG ou CNH — foto colorida, legível e sem cortes.',
+    Icon: DocumentTextIcon,
+  },
+  {
+    artifactType: 'DOCUMENT_BACK',
+    title: 'Envie o verso do documento',
+    subtitle: 'Mesmo documento da frente. Evite reflexos e sombras nas informações.',
+    Icon: DocumentTextIcon,
+  },
+  {
+    artifactType: 'SELFIE_PORTRAIT',
+    title: 'Tire uma selfie',
+    subtitle: 'Rosto centralizado, boa iluminação e sem óculos escuros ou boné.',
+    Icon: PhotoIcon,
+  },
+];
+
+function sanitizeFacingMessage(raw) {
+  if (raw == null || typeof raw !== 'string') return '';
+  const t = raw.trim();
+  if (/unique constraint|prisma|postgresql|internal server error|stack/i.test(t)) {
+    return 'Não foi possível concluir. Tente novamente em instantes.';
+  }
+  return t;
+}
+
+function parseApiError(err, fallback) {
+  const body = err?.response?.data;
+  const msg =
+    typeof body?.message === 'string' && body.message.trim()
+      ? body.message.trim()
+      : typeof err?.message === 'string'
+        ? err.message.trim()
+        : '';
+  const code = typeof body?.code === 'string' ? body.code : '';
+  const merged = sanitizeFacingMessage(msg || fallback || '');
+  const out = new Error(merged || fallback || 'Erro ao processar solicitação.');
+  out.code = code;
+  out.httpStatus = err?.response?.status;
+  return out;
+}
+
+function mimeAllowed(file) {
+  const m = (file.type || '').trim().toLowerCase();
+  if (m && KYC_ALLOWED_MIME_TYPES.includes(m)) return { ok: true, mime: m };
+  const name = file.name || '';
+  const ext = name.split('.').pop()?.toLowerCase();
+  const guess =
+    ext === 'jpg' || ext === 'jpeg'
+      ? 'image/jpeg'
+      : ext === 'png'
+        ? 'image/png'
+        : ext === 'webp'
+          ? 'image/webp'
+          : '';
+  if (guess && KYC_ALLOWED_MIME_TYPES.includes(guess)) return { ok: true, mime: guess };
+  return { ok: false, mime: '' };
+}
+
+export default function KycVerification() {
+  const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const previewRegistry = useRef([]);
+
+  const [bootLoading, setBootLoading] = useState(true);
+  const [bootError, setBootError] = useState('');
+  const [kycStatus, setKycStatus] = useState(null);
+  const [step, setStep] = useState(STEP.WELCOME);
+  const [forceFlow, setForceFlow] = useState(false);
+
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [stepError, setStepError] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [featureDisabledHint, setFeatureDisabledHint] = useState('');
+
+  /** pré-visualização local por tipo de artefato */
+  const [localPreviewUrlByType, setLocalPreviewUrlByType] = useState({});
+
+  const registerObjectUrl = useCallback((url) => {
+    previewRegistry.current.push(url);
+    return url;
+  }, []);
+
+  const revokePreviewForType = useCallback((artifactType) => {
+    setLocalPreviewUrlByType((prev) => {
+      const cur = prev[artifactType];
+      if (cur) {
+        try {
+          URL.revokeObjectURL(cur);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      const next = { ...prev };
+      delete next[artifactType];
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      previewRegistry.current.forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch (_) {
+          /* ignore */
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [step]);
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      const data = await fetchKycStatus();
+      setKycStatus(data);
+      setFeatureDisabledHint('');
+      return data;
+    } catch (err) {
+      const e = parseApiError(err, 'Não foi possível carregar seu status.');
+      if (e.httpStatus === 503 || e.code === 'FEATURE_KYC_DISABLED') {
+        setFeatureDisabledHint(
+          'O envio de documentos está temporariamente indisponível. Tente mais tarde ou fale com o suporte.'
+        );
+      }
+      throw e;
+    }
+  }, []);
+
+  const syncStepFromStatus = useCallback((data) => {
+    if (!data) return;
+    const { identityStatus, submittedArtifacts, canSubmitForReview } = data;
+
+    if (
+      identityStatus === 'NOT_STARTED' ||
+      !submittedArtifacts ||
+      submittedArtifacts.length === 0
+    ) {
+      setStep(STEP.WELCOME);
+      return;
+    }
+
+    if (identityStatus === 'DRAFT' || identityStatus === 'PENDING_UPLOADS') {
+      const order = ['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'];
+      const nextMissing = order.find((t) => !submittedArtifacts.includes(t));
+      if (nextMissing === 'DOCUMENT_FRONT') setStep(STEP.DOC_FRONT);
+      else if (nextMissing === 'DOCUMENT_BACK') setStep(STEP.DOC_BACK);
+      else if (nextMissing === 'SELFIE_PORTRAIT') setStep(STEP.SELFIE);
+      else if (canSubmitForReview) setStep(STEP.REVIEW);
+      else setStep(STEP.WELCOME);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setBootLoading(true);
+      try {
+        setBootError('');
+        const data = await refreshStatus();
+        if (cancelled || !data) return;
+        syncStepFromStatus(data);
+      } catch (err) {
+        if (!cancelled) setBootError(parseApiError(err, 'Não foi possível carregar o status.').message);
+      } finally {
+        if (!cancelled) setBootLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshStatus, syncStepFromStatus]);
+
+  const terminalKind = useMemo(() => {
+    if (!kycStatus || bootLoading) return null;
+    const { identityStatus } = kycStatus;
+    if (identityStatus === 'APPROVED') return 'approved';
+    if (identityStatus === 'READY_FOR_REVIEW' || identityStatus === 'UNDER_MANUAL_REVIEW') {
+      return 'waiting';
+    }
+    if (identityStatus === 'RESUBMISSION_REQUIRED') return 'resubmit';
+    if (identityStatus === 'REJECTED') return 'rejected';
+    return null;
+  }, [kycStatus, bootLoading]);
+
+  const showBlockingTerminal = terminalKind && terminalKind !== 'approved' && !forceFlow;
+
+  const progressIndex = Math.min(Math.max(step, 1), PROGRESS_TOTAL);
+
+  const scrollPaddingBottom =
+    step === STEP.WELCOME
+      ? 'calc(9.75rem + env(safe-area-inset-bottom, 0px))'
+      : step === STEP.REVIEW && reviewError
+        ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
+        : step >= STEP.DOC_FRONT && step <= STEP.SELFIE
+          ? 'calc(11rem + env(safe-area-inset-bottom, 0px))'
+          : 'calc(10.5rem + env(safe-area-inset-bottom, 0px))';
+
+  const openPicker = () => fileInputRef.current?.click();
+
+  const handlePickFile = async (event) => {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    setStepError('');
+    const { ok, mime } = mimeAllowed(file);
+    if (!ok) {
+      setStepError('Use JPG, PNG ou WebP.');
+      return;
+    }
+    if (file.size <= 0 || file.size > KYC_MAX_FILE_BYTES) {
+      setStepError(`O arquivo deve ter até ${Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB.`);
+      return;
+    }
+
+    const cfg = FLOW_CONFIG[step];
+    if (!cfg) return;
+
+    revokePreviewForType(cfg.artifactType);
+    const previewUrl = registerObjectUrl(URL.createObjectURL(file));
+    setLocalPreviewUrlByType((prev) => ({ ...prev, [cfg.artifactType]: previewUrl }));
+
+    setUploadBusy(true);
+    try {
+      const checksum = await sha256HexFromFile(file);
+      const presignPayload = await presignKycUpload({
+        artifactType: cfg.artifactType,
+        mimeType: mime,
+        byteSize: file.size,
+      });
+
+      await putFileToPresignedUrl(presignPayload.uploadUrl, file, presignPayload.headers);
+
+      await confirmKycUpload({
+        artifactId: presignPayload.artifactId,
+        checksumSHA256: checksum,
+      });
+
+      await refreshStatus();
+      setStep((s) => Math.min(s + 1, STEP.REVIEW));
+    } catch (err) {
+      const e = parseApiError(err, 'Falha ao enviar o arquivo.');
+      setStepError(e.message || 'Falha ao enviar o arquivo.');
+      revokePreviewForType(cfg.artifactType);
+      if (e.code === 'FEATURE_KYC_DISABLED' || e.httpStatus === 503) {
+        setFeatureDisabledHint(
+          'O envio de documentos está temporariamente indisponível. Tente mais tarde.'
+        );
+      }
+    } finally {
+      setUploadBusy(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    setReviewError('');
+    setSubmitBusy(true);
+    try {
+      await submitKycForReview();
+      await refreshStatus();
+      setForceFlow(false);
+    } catch (err) {
+      const e = parseApiError(err, 'Não foi possível enviar para análise.');
+      setReviewError(e.message);
+    } finally {
+      setSubmitBusy(false);
+    }
+  };
+
+  const goBack = () => {
+    setStepError('');
+    setStep((s) => Math.max(STEP.WELCOME, s - 1));
+  };
+
+  const renderWelcome = () => (
+    <div className="flex flex-1 flex-col px-6 pb-6 pt-[calc(2rem+env(safe-area-inset-top,0))] sm:pt-12">
+      <div className="mb-10 flex justify-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-agilbank-primary shadow-lg shadow-agilbank-primary/25">
+          <FingerPrintIcon className="h-9 w-9 text-white" aria-hidden />
+        </div>
+      </div>
+      <h1 className="mb-4 text-[1.65rem] font-bold leading-[1.2] tracking-tight text-gray-900 sm:text-[1.85rem] text-balance">
+        Complete sua verificação de identidade
+      </h1>
+      <p className="mb-6 text-[0.975rem] leading-relaxed text-gray-600 text-balance">
+        Para sua segurança e conformidade regulatória, precisamos conferir seus documentos. Use fotos claras e recentes.
+      </p>
+      <div className="rounded-2xl border border-amber-100 bg-amber-50/90 px-4 py-3 text-[0.82rem] leading-snug text-amber-950">
+        <strong className="font-semibold">Transparência:</strong> a análise é feita pela equipe AgilBank. Não há garantia de
+        tempo de resposta nem de aprovação automática.
+      </div>
+    </div>
+  );
+
+  const renderUploadStep = () => {
+    const cfg = FLOW_CONFIG[step];
+    if (!cfg) return null;
+    const Icon = cfg.Icon;
+    const previewUrl = localPreviewUrlByType[cfg.artifactType];
+
+    return (
+      <>
+        <div className="mb-6 flex justify-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
+            <Icon className="h-8 w-8" aria-hidden />
+          </div>
+        </div>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">{cfg.title}</h1>
+        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">{cfg.subtitle}</p>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={KYC_ALLOWED_MIME_TYPES.join(',')}
+          className="hidden"
+          aria-hidden
+          tabIndex={-1}
+          onChange={handlePickFile}
+        />
+
+        <div className="space-y-4">
+          {previewUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-inner">
+              <img src={previewUrl} alt="" className="mx-auto max-h-56 w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center">
+              <PhotoIcon className="mb-3 h-10 w-10 text-gray-400" aria-hidden />
+              <p className="text-sm text-gray-600">Nenhuma imagem selecionada</p>
+            </div>
+          )}
+
+          {stepError ? (
+            <div
+              className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]"
+              role="alert"
+            >
+              <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+              <p className="break-words text-red-900">{stepError}</p>
+            </div>
+          ) : null}
+
+          <p className="text-center text-[0.75rem] leading-snug text-gray-500">
+            JPG, PNG ou WebP · até {Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB · não armazenamos base64 na conta;
+            upload vai direto ao ambiente seguro.
+          </p>
+        </div>
+      </>
+    );
+  };
+
+  const renderReview = () => {
+    const submitted = kycStatus?.submittedArtifacts || [];
+    const req = ['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'];
+    const labels = {
+      DOCUMENT_FRONT: 'Frente do documento',
+      DOCUMENT_BACK: 'Verso do documento',
+      SELFIE_PORTRAIT: 'Selfie',
+    };
+
+    return (
+      <>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Revise e envie</h1>
+        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+          Confira se suas fotos estão legíveis. Depois do envio, nossa equipe fará a análise manual.
+        </p>
+
+        <ul className="mb-8 space-y-3">
+          {req.map((key) => {
+            const ok = submitted.includes(key);
+            return (
+              <li
+                key={key}
+                className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${
+                  ok ? 'border-emerald-200 bg-emerald-50/70' : 'border-gray-200 bg-white'
+                }`}
+              >
+                {ok ? (
+                  <CheckCircleIcon className="h-7 w-7 shrink-0 text-emerald-600" aria-hidden />
+                ) : (
+                  <ExclamationTriangleIcon className="h-7 w-7 shrink-0 text-amber-500" aria-hidden />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{labels[key]}</p>
+                  <p className="text-xs text-gray-600">{ok ? 'Confirmado no servidor' : 'Ainda pendente'}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        {localPreviewUrlByType.DOCUMENT_FRONT || localPreviewUrlByType.DOCUMENT_BACK || localPreviewUrlByType.SELFIE_PORTRAIT ? (
+          <p className="mb-4 text-[0.8rem] text-gray-500">Pré-visualizações locais abaixo (não substituem a confirmação no servidor).</p>
+        ) : null}
+
+        <div className="mb-8 grid grid-cols-3 gap-2">
+          {req.map((key) =>
+            localPreviewUrlByType[key] ? (
+              <div key={key} className="overflow-hidden rounded-lg border border-gray-200">
+                <img src={localPreviewUrlByType[key]} alt="" className="h-24 w-full object-cover" />
+              </div>
+            ) : null
+          )}
+        </div>
+
+        {reviewError ? (
+          <div className="mb-6 flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
+            <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+            <p className="break-words text-red-900">{reviewError}</p>
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[0.82rem] leading-snug text-blue-950">
+          Ao enviar, você declara que as imagens são fiéis ao seu documento oficial. A aprovação depende da conferência humana e pode
+          levar tempo útil.
+        </div>
+      </>
+    );
+  };
+
+  const renderTerminalApproved = () => (
+    <div className="flex flex-col items-center px-6 pb-10 pt-[calc(3rem+env(safe-area-inset-top,0))] text-center">
+      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+        <CheckCircleIcon className="h-11 w-11 text-agilbank-success" aria-hidden />
+      </div>
+      <h1 className="mb-3 text-2xl font-bold text-gray-900">Identidade verificada</h1>
+      <p className="max-w-xs text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
+      <Link
+        to="/transactions"
+        className="mt-10 text-sm font-semibold text-agilbank-primary underline-offset-2 hover:underline"
+      >
+        Voltar ao app
+      </Link>
+    </div>
+  );
+
+  const renderTerminalWaiting = () => (
+    <div className="flex flex-col items-center px-6 pb-10 pt-[calc(3rem+env(safe-area-inset-top,0))] text-center">
+      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-blue-100">
+        <FingerPrintIcon className="h-10 w-10 text-agilbank-primary" aria-hidden />
+      </div>
+      <h1 className="mb-3 text-2xl font-bold text-gray-900">Agora é com a gente!</h1>
+      <p className="max-w-xs text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
+      <p className="mt-6 max-w-xs text-[0.82rem] leading-snug text-gray-500">
+        Não há prazo garantido nem promessa de aprovação automática. Você será avisado quando houver atualização.
+      </p>
+      <Link to="/transactions" className="mt-10 text-sm font-semibold text-agilbank-primary hover:underline">
+        Voltar ao app
+      </Link>
+    </div>
+  );
+
+  const renderTerminalResubmit = () => (
+    <div className="flex flex-col px-6 pb-10 pt-[calc(3rem+env(safe-area-inset-top,0))]">
+      <div className="mb-6 flex justify-center">
+        <div className="rounded-full bg-amber-100 p-4">
+          <ExclamationTriangleIcon className="h-10 w-10 text-amber-700" aria-hidden />
+        </div>
+      </div>
+      <h1 className="mb-3 text-center text-2xl font-bold text-gray-900">Precisamos que você envie de novo</h1>
+      <p className="mb-8 text-center text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
+      <Button
+        type="button"
+        variant="primary"
+        size="lg"
+        className="w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20"
+        onClick={() => {
+          setForceFlow(true);
+          setStep(STEP.WELCOME);
+          setReviewError('');
+          setStepError('');
+        }}
+      >
+        Reenviar documentos
+      </Button>
+      <Link to="/transactions" className="mt-6 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+        Voltar ao app
+      </Link>
+    </div>
+  );
+
+  const renderTerminalRejected = () => (
+    <div className="flex flex-col px-6 pb-10 pt-[calc(3rem+env(safe-area-inset-top,0))]">
+      <div className="mb-6 flex justify-center">
+        <div className="rounded-full bg-red-100 p-4">
+          <ExclamationTriangleIcon className="h-10 w-10 text-red-600" aria-hidden />
+        </div>
+      </div>
+      <h1 className="mb-3 text-center text-2xl font-bold text-gray-900">Identidade não aprovada</h1>
+      <p className="mb-8 text-center text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
+      <Button
+        type="button"
+        variant="secondary"
+        size="lg"
+        className="w-full rounded-xl py-4 font-semibold"
+        onClick={() => {
+          setForceFlow(true);
+          setStep(STEP.WELCOME);
+        }}
+      >
+        Tentar novo envio
+      </Button>
+      <Link to="/transactions" className="mt-6 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+        Voltar ao app
+      </Link>
+    </div>
+  );
+
+  if (bootLoading) {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/80 px-3 py-10">
+        <div className="flex w-full max-w-[430px] flex-col items-center justify-center rounded-3xl bg-white p-12 shadow-2xl sm:rounded-[2rem]">
+          <div className="mb-6 h-11 w-11 animate-spin rounded-full border-[3px] border-agilbank-primary/25 border-t-agilbank-primary" />
+          <p className="text-center text-sm font-medium text-gray-700">Carregando verificação…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (bootError && !kycStatus) {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/80 px-3 py-10">
+        <div className="w-full max-w-[430px] rounded-3xl bg-white p-8 shadow-2xl sm:rounded-[2rem]">
+          <div className="mb-6 flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-[0.9rem] text-red-900">
+            <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+            <p>{bootError}</p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            className="mb-4 w-full rounded-xl py-3 font-semibold"
+            onClick={async () => {
+              setBootLoading(true);
+              setBootError('');
+              try {
+                const data = await refreshStatus();
+                syncStepFromStatus(data);
+              } catch (err) {
+                setBootError(parseApiError(err, 'Não foi possível carregar o status.').message);
+              } finally {
+                setBootLoading(false);
+              }
+            }}
+          >
+            Tentar novamente
+          </Button>
+          <Link to="/transactions" className="block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+            Voltar ao app
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (featureDisabledHint && !kycStatus) {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/80 px-3 py-10">
+        <div className="w-full max-w-[430px] rounded-3xl bg-white p-8 shadow-2xl sm:rounded-[2rem]">
+          <p className="text-center text-gray-800">{featureDisabledHint}</p>
+          <Link to="/transactions" className="mt-8 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+            Voltar
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (terminalKind === 'approved') {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/75 px-3 py-0 sm:py-10">
+        <div className="relative flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:rounded-[2rem] sm:border border-white/40">
+          {renderTerminalApproved()}
+        </div>
+      </div>
+    );
+  }
+
+  if (showBlockingTerminal && terminalKind === 'waiting') {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/75 px-3 py-0 sm:py-10">
+        <div className="relative flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:rounded-[2rem] sm:border border-white/40">
+          {renderTerminalWaiting()}
+        </div>
+      </div>
+    );
+  }
+
+  if (showBlockingTerminal && terminalKind === 'resubmit') {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/75 px-3 py-0 sm:py-10">
+        <div className="relative flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:rounded-[2rem] sm:border border-white/40">
+          {renderTerminalResubmit()}
+        </div>
+      </div>
+    );
+  }
+
+  if (showBlockingTerminal && terminalKind === 'rejected') {
+    return (
+      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/75 px-3 py-0 sm:py-10">
+        <div className="relative flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:rounded-[2rem] sm:border border-white/40">
+          {renderTerminalRejected()}
+        </div>
+      </div>
+    );
+  }
+
+  const shell = (
+    <div
+      className={`flex min-h-[100dvh] justify-center ${step === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : 'bg-zinc-200/75'} px-3 py-0 sm:py-10`}
+    >
+      <div
+        className={`relative flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:rounded-[2rem] sm:border border-white/40 ${step === STEP.WELCOME ? 'register-hero-bg' : ''}`}
+      >
+        {step !== STEP.WELCOME ? (
+          <header className="sticky top-0 z-20 border-b border-gray-100/90 bg-white/95 px-4 pb-4 pt-[calc(env(safe-area-inset-top,0)+0.875rem)] backdrop-blur">
+            <div className="relative mb-5 flex items-center justify-center gap-4">
+              <button
+                type="button"
+                aria-label="Voltar"
+                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-700 hover:bg-gray-100 active:bg-gray-200"
+                onClick={goBack}
+              >
+                <ArrowLeftIcon className="h-6 w-6" />
+              </button>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-agilbank-primary shadow-sm">
+                <span className="text-sm font-bold text-white">A</span>
+              </div>
+              <Link
+                to="/transactions"
+                className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
+              >
+                Fechar
+              </Link>
+            </div>
+            <div className="space-y-2">
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
+                role="progressbar"
+                aria-valuenow={progressIndex}
+                aria-valuemin={1}
+                aria-valuemax={PROGRESS_TOTAL}
+              >
+                <div
+                  className="h-full rounded-full bg-agilbank-primary transition-all duration-500 ease-out"
+                  style={{ width: `${(progressIndex / PROGRESS_TOTAL) * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                <span>Verificação</span>
+                <span aria-live="polite">
+                  {progressIndex} / {PROGRESS_TOTAL}
+                </span>
+              </div>
+            </div>
+          </header>
+        ) : null}
+
+        <div
+          ref={scrollRef}
+          className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain ${step === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+          style={{ paddingBottom: scrollPaddingBottom }}
+        >
+          {featureDisabledHint ? (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[0.85rem] text-amber-950">
+              {featureDisabledHint}
+            </div>
+          ) : null}
+
+          {step === STEP.WELCOME ? renderWelcome() : null}
+          {step >= STEP.DOC_FRONT && step <= STEP.SELFIE ? renderUploadStep() : null}
+          {step === STEP.REVIEW ? renderReview() : null}
+        </div>
+
+        <footer className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 flex justify-center">
+          <div className="pointer-events-auto flex w-full max-w-[430px] flex-col gap-3 rounded-t-[1.25rem] border-t border-gray-100 bg-white/95 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_40px_rgba(0,36,71,0.08)] backdrop-blur-md">
+            {step === STEP.WELCOME ? (
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/25"
+                  onClick={() => setStep(STEP.DOC_FRONT)}
+                  disabled={!!featureDisabledHint}
+                >
+                  Começar
+                </Button>
+                <Link
+                  to="/transactions"
+                  className="w-full pb-3 text-center text-[0.95rem] font-medium text-agilbank-primary underline-offset-2 hover:underline"
+                >
+                  Agora não
+                </Link>
+              </>
+            ) : null}
+
+            {step >= STEP.DOC_FRONT && step <= STEP.SELFIE ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                className="w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+                onClick={openPicker}
+                disabled={uploadBusy || !!featureDisabledHint}
+              >
+                {uploadBusy ? 'Enviando…' : localPreviewUrlByType[FLOW_CONFIG[step]?.artifactType] ? 'Trocar imagem e enviar' : 'Selecionar imagem'}
+              </Button>
+            ) : null}
+
+            {step === STEP.REVIEW ? (
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+                  disabled={!kycStatus?.canSubmitForReview || submitBusy || !!featureDisabledHint}
+                  onClick={handleSubmitReview}
+                >
+                  {submitBusy ? 'Enviando…' : 'Enviar para análise'}
+                </Button>
+                {!kycStatus?.canSubmitForReview ? (
+                  <p className="text-center text-[0.78rem] text-gray-500">Confirme os três arquivos antes de enviar.</p>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        </footer>
+
+        {uploadBusy || submitBusy ? (
+          <div
+            className="register-loading-bg fixed inset-0 z-[200] flex flex-col items-center justify-center px-10 text-white"
+            role="status"
+            aria-busy="true"
+          >
+            <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" />
+            <p className="text-center text-lg font-semibold tracking-tight">
+              {submitBusy ? 'Enviando para análise…' : 'Processando seu arquivo…'}
+            </p>
+            <p className="mt-4 text-center text-sm text-blue-100/90">Não feche esta tela.</p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  return shell;
+}

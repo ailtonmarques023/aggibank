@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Transactions from './pages/Transactions';
 import Terms from './pages/Terms';
 import Register from './pages/Register/index.jsx';
+import KycVerification from './pages/KycVerification/index.jsx';
 import { hasAcceptedTerms } from './utils/helpers';
 
 // Componente para verificar se o usuário aceitou os termos
@@ -112,6 +113,12 @@ const AppContent = () => {
             <DefaultLayout>
               <Transactions />
             </DefaultLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/verificacao-identidade" element={
+          <ProtectedRoute>
+            <KycVerification />
           </ProtectedRoute>
         } />
 

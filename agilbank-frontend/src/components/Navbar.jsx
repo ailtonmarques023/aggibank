@@ -6,7 +6,8 @@ import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  IdentificationIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Button from './Button';
@@ -59,6 +60,12 @@ const Navbar = () => {
                 >
                   Conta
                 </Link>
+                <Link
+                  to="/verificacao-identidade"
+                  className="text-gray-600 hover:text-agilbank-primary transition-colors"
+                >
+                  Identidade
+                </Link>
               </>
             ) : (
               <>
@@ -110,6 +117,15 @@ const Navbar = () => {
                     >
                       <Cog6ToothIcon className="h-4 w-4 mr-2" />
                       Configurações
+                    </Link>
+
+                    <Link
+                      to="/verificacao-identidade"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <IdentificationIcon className="h-4 w-4 mr-2" />
+                      Verificação de identidade
                     </Link>
                     
                     <Link
@@ -181,6 +197,13 @@ const Navbar = () => {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Conta
+                  </Link>
+                  <Link
+                    to="/verificacao-identidade"
+                    className="block px-4 py-2 text-gray-600 hover:text-agilbank-primary hover:bg-gray-50 rounded-lg transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Verificação de identidade
                   </Link>
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="px-4 py-2">
