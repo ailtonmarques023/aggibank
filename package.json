@@ -23,7 +23,8 @@
     "efi:s4:reconcile-fees": "node scripts/efi-reconcile-provider-fees.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "test:identity-kyc-integration": "jest --config jest.identity-kyc.config.js"
   },
   "keywords": [
     "agilbank",
@@ -35,6 +36,8 @@
   "author": "AgilBank Team",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1049.0",
+    "@aws-sdk/s3-request-presigner": "^3.1049.0",
     "@prisma/client": "^6.16.2",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",

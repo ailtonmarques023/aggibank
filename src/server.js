@@ -29,6 +29,9 @@ const chargeRoutes = require('./routes/charges');
 const depositRoutes = require('./routes/deposits');
 const transferRoutes = require('./routes/transfers');
 const emailRoutes = require('./routes/email');
+const referralRoutes = require('./routes/referrals');
+const meKycRoutes = require('./routes/meKyc');
+const internalKycRoutes = require('./routes/internalKyc');
 const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, isRedisAvailable, getRedis } = require('./utils/redis');
 const { sanitizeUrlForAccessLog } = require('./utils/logSanitizer');
@@ -362,6 +365,9 @@ app.use('/api/charges', chargeRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/me', meKycRoutes);
+app.use('/api/internal/kyc', internalKycRoutes);
 
 // Documentação Swagger
 if (process.env.NODE_ENV !== 'production') {

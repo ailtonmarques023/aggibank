@@ -351,6 +351,58 @@
       color: #c47e00;
     }
 
+    .ig-codebox {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--ig-soft);
+      border: 1px solid var(--ig-border);
+    }
+
+    .ig-codebox__label {
+      margin: 0;
+      color: var(--ig-muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .ig-codebox__value {
+      margin: 0;
+      color: var(--ig-blue);
+      font-size: 1.28rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      overflow-wrap: anywhere;
+    }
+
+    .ig-history {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .ig-history__item {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--ig-soft);
+      border: 1px solid var(--ig-border);
+      font-size: 0.82rem;
+    }
+
+    .ig-history__item strong {
+      color: var(--ig-ink);
+    }
+
+    .ig-history__item span {
+      color: var(--ig-muted);
+      white-space: nowrap;
+    }
+
     .ig-share-panel {
       scroll-margin-top: 76px;
     }
@@ -515,10 +567,15 @@
         <h2 class="ig-section-title" id="igStatusTitle">Status do convite</h2>
         <div class="ig-status">
           <i class="fas fa-circle-info" aria-hidden="true"></i>
-          <span>
+          <span id="igStatusText">
             O código de convite ainda não foi gerado para esta conta. Quando estiver disponível, ele aparecerá nesta tela junto com o link de compartilhamento e o histórico das indicações.
           </span>
         </div>
+        <div class="ig-codebox" id="igCodeBox" hidden>
+          <p class="ig-codebox__label">Seu código</p>
+          <p class="ig-codebox__value" id="igReferralCode">----</p>
+        </div>
+        <div class="ig-history" id="igHistory" hidden></div>
       </section>
 
       <div class="ig-actions" aria-label="Ações do programa">
@@ -536,6 +593,9 @@
 
   <div class="ig-toast" id="igToast" role="status" aria-live="polite"></div>
 
+  <script src="js/agilbankApiBase.js"></script>
+  <script src="js/legacyAuthStore.js"></script>
+  <script src="js/legacyApiClient.js"></script>
   <script>
     (function () {
       'use strict';
@@ -545,7 +605,9 @@
         requiredReferrals: 10,
         rewardPerCycle: 25,
         blockedReward: 0,
-        availableReward: 0
+        availableReward: 0,
+        code: '',
+        recent: []
       };
 
       function formatMoney(value) {
@@ -567,7 +629,8 @@
       }
 
       function renderProgress() {
-        var capped = Math.min(state.validReferrals, state.requiredReferrals);
+        var current = state.currentCycleProgress != null ? state.currentCycleProgress : state.validReferrals;
+        var capped = Math.min(current, state.requiredReferrals);
         var percent = (capped / state.requiredReferrals) * 100;
         var bar = document.getElementById('igProgressBar');
         var label = document.getElementById('igProgressLabel');
@@ -579,13 +642,88 @@
         if (available) available.textContent = formatMoney(state.availableReward);
       }
 
+      function getInviteLink() {
+        var origin = window.location.origin || '';
+        var basePath = window.location.pathname.replace(/\/indique-ganhe\.html.*$/i, '/pages/formularioCadastrodeConta.html');
+        return origin + basePath + '?ref=' + encodeURIComponent(state.code || '');
+      }
+
+      function renderReferralData() {
+        renderProgress();
+        var statusText = document.getElementById('igStatusText');
+        var codeBox = document.getElementById('igCodeBox');
+        var codeEl = document.getElementById('igReferralCode');
+        var history = document.getElementById('igHistory');
+
+        if (state.code) {
+          if (statusText) statusText.textContent = 'Seu código está ativo. Compartilhe o convite e acompanhe as indicações válidas nesta tela.';
+          if (codeBox) codeBox.hidden = false;
+          if (codeEl) codeEl.textContent = state.code;
+        }
+
+        if (history) {
+          history.hidden = !state.recent.length;
+          history.innerHTML = state.recent.map(function (item) {
+            return '<div class="ig-history__item"><strong>' +
+              (item.referredName || 'Convidado') +
+              '</strong><span>' +
+              (item.status || 'PENDENTE') +
+              '</span></div>';
+          }).join('');
+        }
+      }
+
+      async function loadReferralData() {
+        if (!window.AgilBank || !window.AgilBank.auth || !window.AgilBank.auth.getToken()) {
+          showToast('Faça login para gerar e acompanhar seu código de convite.');
+          return;
+        }
+        try {
+          var response = await window.AgilBank.api.request('referrals/me', { method: 'GET' });
+          var body = await response.json().catch(function () { return {}; });
+          if (!response.ok || body.success === false) {
+            throw new Error(body.message || 'Não foi possível carregar o Indique e Ganhe.');
+          }
+          var data = body.data || {};
+          state.validReferrals = Number(data.validReferrals || 0);
+          state.pendingReferrals = Number(data.pendingReferrals || 0);
+          state.requiredReferrals = Number(data.requiredReferrals || 10);
+          state.rewardPerCycle = Number(data.rewardPerCycle || 25);
+          state.blockedReward = Number(data.blockedReward || 0);
+          state.availableReward = Number(data.availableReward || 0);
+          state.currentCycleProgress = Number(data.currentCycleProgress || 0);
+          state.code = data.code || '';
+          state.recent = Array.isArray(data.recent) ? data.recent : [];
+          renderReferralData();
+        } catch (error) {
+          showToast(error && error.message ? error.message : 'Não foi possível carregar o Indique e Ganhe.');
+        }
+      }
+
       document.getElementById('igBack').addEventListener('click', function () {
         if (window.history.length > 1) window.history.back();
         else window.location.href = 'index.html';
       });
 
       document.getElementById('igShareBtn').addEventListener('click', function () {
-        showToast('Seu código de convite ainda não está disponível. Assim que for liberado, você poderá compartilhar por aqui.');
+        if (!state.code) {
+          showToast('Seu código de convite ainda não está disponível. Faça login e aguarde carregar.');
+          return;
+        }
+        var link = getInviteLink();
+        if (navigator.share) {
+          navigator.share({
+            title: 'Abra sua conta AgilBank',
+            text: 'Use meu código no AgilBank: ' + state.code,
+            url: link
+          }).catch(function () {});
+          return;
+        }
+        navigator.clipboard.writeText(link).then(function () {
+          showToast('Link de convite copiado.');
+        }).catch(function () {
+          showToast(link);
+        });
       });
 
       document.getElementById('igRulesBtn').addEventListener('click', function () {
@@ -593,6 +731,7 @@
       });
 
       renderProgress();
+      loadReferralData();
     })();
   </script>
 </body>

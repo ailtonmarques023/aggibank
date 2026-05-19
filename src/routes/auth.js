@@ -21,6 +21,10 @@ const logger = require('../utils/logger');
 const { sendEmail, sendPasswordResetEmail } = require('../utils/email');
 const { recordAudit } = require('../utils/auditLog');
 const { isRedisAvailable, getRedis } = require('../utils/redis');
+const {
+  attachReferralToNewUser,
+  qualifyReferralForVerifiedUser,
+} = require('../services/referralService');
 
 const router = express.Router();
 const CPF_LOGIN_REGEX = /^\d{11}$/;
@@ -373,7 +377,7 @@ const getLoginIdentifier = (body) => {
  */
 router.post('/register', validateUserRegistration, async (req, res) => {
   try {
-    const { nomeCompleto, email, cpf, telefone, dataNascimento, senha, endereco, dadosProfissionais } = req.body;
+    const { nomeCompleto, email, cpf, telefone, dataNascimento, senha, endereco, dadosProfissionais, referralCode } = req.body;
 
     // Criptografar senha
     const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
@@ -444,6 +448,17 @@ router.post('/register', validateUserRegistration, async (req, res) => {
 
     const publicUser = toPublicRegisterUser(user);
 
+    let referral = { status: 'none' };
+    if (referralCode) {
+      const attached = await attachReferralToNewUser({
+        referredUserId: user.id,
+        referralCode,
+      });
+      referral = attached
+        ? { status: 'registered', code: attached.referralCode }
+        : { status: 'ignored' };
+    }
+
     logger.banking('user_registration', user.id, {
       email,
       numeroConta: `${numeroConta}-${digitoConta}`,
@@ -487,6 +502,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
         user: publicUser,
         message: 'Verifique seu email para ativar sua conta',
         verificationEmail,
+        referral,
       },
     });
 
@@ -1180,7 +1196,7 @@ router.post('/verify-email', async (req, res) => {
     }
 
     // Ativar conta
-    await prisma.user.update({
+    const verifiedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         isVerificado: true,
@@ -1188,6 +1204,15 @@ router.post('/verify-email', async (req, res) => {
         tokenVerificacao: null
       }
     });
+
+    try {
+      await qualifyReferralForVerifiedUser(verifiedUser.id);
+    } catch (referralError) {
+      logger.warn(referralError, {
+        context: 'verify-email-qualify-referral',
+        userId: verifiedUser.id,
+      });
+    }
 
     logger.banking('email_verified', user.id);
 

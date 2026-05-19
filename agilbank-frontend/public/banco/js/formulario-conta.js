@@ -28,6 +28,18 @@ class FormularioConta {
         }
     }
 
+    getReferralCodeFromContext() {
+        const params = new URLSearchParams(window.location.search || '');
+        const fromUrl = params.get('ref') || params.get('referral') || params.get('referralCode') || params.get('indicacao');
+        const fromStorage = window.localStorage ? window.localStorage.getItem('agilbank_referral_code') : '';
+        const raw = fromUrl || fromStorage || '';
+        const code = String(raw).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (code && window.localStorage) {
+            window.localStorage.setItem('agilbank_referral_code', code);
+        }
+        return code;
+    }
+
     bindEvents() {
         console.log('Vinculando eventos...');
         try {
@@ -425,7 +437,8 @@ class FormularioConta {
             // Termos
             aceitaTermos: document.getElementById('contaTermos')?.checked || false,
             aceitaComunicacoes: document.getElementById('contaComunicacoes')?.checked || false,
-            aceitaPolitica: document.getElementById('contaPolitica')?.checked || false
+            aceitaPolitica: document.getElementById('contaPolitica')?.checked || false,
+            referralCode: this.getReferralCodeFromContext()
         };
     }
     
@@ -496,6 +509,11 @@ class FormularioConta {
 
         if (telefone) {
             payload.telefone = telefone;
+        }
+
+        const referralCode = String(formData.referralCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (referralCode) {
+            payload.referralCode = referralCode;
         }
 
         const hasEndereco = [cep, logradouro, numero, bairro, cidade, estado].some((x) => x && String(x).trim());

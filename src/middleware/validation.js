@@ -139,6 +139,15 @@ const validateUserRegistration = [
     .withMessage('Senha é obrigatória')
     .matches(/^\d{6}$/)
     .withMessage('A senha deve ter exatamente 6 dígitos numéricos'),
+
+  body('referralCode')
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ min: 4, max: 20 })
+    .withMessage('Código de indicação inválido')
+    .matches(/^[a-zA-Z0-9-]+$/)
+    .withMessage('Código de indicação inválido'),
   
   // Validações para endereço (opcional)
   body('endereco.cep')

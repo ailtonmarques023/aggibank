@@ -54,8 +54,69 @@ model User {
   accountDeposits     AccountDeposit[]
   internalTransfersFrom InternalTransfer[] @relation("InternalTransferFrom")
   internalTransfersTo   InternalTransfer[] @relation("InternalTransferTo")
+  referralCode          ReferralCode?
+  referralsMade         Referral[]         @relation("ReferralReferrer")
+  referredBy            Referral?          @relation("ReferralReferred")
+  referralRewards       ReferralReward[]
+  identitySubmissions   IdentitySubmission[] @relation("UserIdentitySubmissions")
+  /// Cópia de leitura para gates/admin; fonte jurídica do fluxo: IdentitySubmission.status
+  identityReviewStatus     IdentityReviewStatus @default(NONE)
+  identityApprovedAt       DateTime?
+  lastIdentitySubmissionId String?               @unique
+  lastIdentitySubmission   IdentitySubmission?   @relation("UserLastIdentitySubmission", fields: [lastIdentitySubmissionId], references: [id], onDelete: SetNull)
 
   @@map("usuarios")
+}
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@map("referral_codes")
+}
+
+model Referral {
+  id              String    @id @default(cuid())
+  referrerUserId  String
+  referredUserId  String    @unique
+  referralCode    String
+  status          String    @default("PENDENTE")
+  qualifiedAt     DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  referrer        User      @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred        User      @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerUserId, status])
+  @@index([referralCode])
+  @@map("referrals")
+}
+
+model ReferralReward {
+  id                String        @id @default(cuid())
+  userId            String
+  cycleNumber       Int
+  requiredCount     Int           @default(10)
+  amount            Decimal       @db.Decimal(10, 2)
+  status            String        @default("BLOQUEADO")
+  blockedMovementId String?
+  releasedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blockedMovement   Movimentacao? @relation("ReferralRewardBlockedMovement", fields: [blockedMovementId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, cycleNumber])
+  @@index([userId, status])
+  @@map("referral_rewards")
 }
 
 /// Transferência interna entre contas AgilBank (Fase W). Ledger obrigatório; sem Pix/TED.
@@ -314,8 +375,9 @@ model Movimentacao {
   idempotencyKey   String?  @unique
   dataMovimentacao DateTime @default(now())
   createdAt        DateTime @default(now())
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shipmentFees     CardShipment[] @relation("ShipmentFeeMovement")
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shipmentFees     CardShipment[]   @relation("ShipmentFeeMovement")
+  referralRewards  ReferralReward[] @relation("ReferralRewardBlockedMovement")
 
   @@map("movimentacoes")
 }
@@ -584,3 +646,81 @@ model PixWebhookEvent {
   @@index([providerEventId])
   @@map("pix_webhook_events")
 }
+
+// --- KYC / identidade (documental). User.isVerificado = apenas e-mail (ADR Fatia 3). ---
+
+enum IdentityReviewStatus {
+  NONE
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED_RESUBMISSION
+}
+
+enum IdentitySubmissionStatus {
+  DRAFT
+  PENDING_UPLOADS
+  READY_FOR_REVIEW
+  UNDER_MANUAL_REVIEW
+  APPROVED
+  REJECTED
+  RESUBMISSION_REQUIRED
+}
+
+enum IdentityArtifactType {
+  DOCUMENT_FRONT
+  DOCUMENT_BACK
+  SELFIE_PORTRAIT
+}
+
+enum IdentityArtifactUploadStatus {
+  AWAITING_UPLOAD
+  UPLOAD_CONFIRMED
+  QUARANTINED
+  DELETED_AFTER_POLICY
+}
+
+model IdentitySubmission {
+  id                         String                     @id @default(cuid())
+  userId                     String
+  status                     IdentitySubmissionStatus   @default(DRAFT)
+  versionOrAttempt           Int                        @default(1)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  submittedForReviewAt       DateTime?
+  decidedAt                  DateTime?
+  decisionActorType          String?
+  decisionActorId            String?
+  rejectReasonCode           String?
+  userFacingMessageSanitized String?
+
+  user                        User                             @relation("UserIdentitySubmissions", fields: [userId], references: [id], onDelete: Cascade)
+  userPointingLastSubmission  User?                            @relation("UserLastIdentitySubmission")
+  artifacts                   IdentitySubmissionArtifact[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status, createdAt])
+  @@index([status, submittedForReviewAt])
+  @@map("identity_submissions")
+}
+
+model IdentitySubmissionArtifact {
+  id              String                       @id @default(cuid())
+  submissionId    String
+  type            IdentityArtifactType
+  uploadStatus    IdentityArtifactUploadStatus @default(AWAITING_UPLOAD)
+  bucket          String
+  objectKey       String                       @unique
+  storageProvider String                       @default("S3_COMPAT")
+  mimeType        String?
+  byteSize        Int?
+  checksumSHA256  String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  submission IdentitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, type])
+  @@map("identity_submission_artifacts")
+}
+

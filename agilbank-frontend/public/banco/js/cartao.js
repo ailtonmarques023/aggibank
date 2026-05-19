@@ -1129,6 +1129,19 @@ function agilbankStatusCartaoAtivo(c) {
     return s === 'aprovado' || s === 'ativo';
 }
 
+function agilbankStatusCartaoVisualizavel(c) {
+    if (!c) return false;
+    var s = String(c.status || 'pendente').trim().toLowerCase();
+    return (
+        agilbankStatusCartaoAtivo(c) ||
+        s === 'bloqueado' ||
+        s === 'blocked' ||
+        s === 'emitido' ||
+        s === 'emitida' ||
+        s === 'entregue'
+    );
+}
+
 function agilbankFormatarNumeroCartaoApi(c) {
     if (!c) return 'Indisponível';
     if (c.maskedNumber && String(c.maskedNumber).trim()) return String(c.maskedNumber).trim();
@@ -2075,16 +2088,21 @@ function agilbankMensagemErroVirtual(res, body, fallback) {
 }
 
 function agilbankAplicarEstadoVirtualNaoEmitido(baseCard) {
+    if (baseCard) {
+        agilbankPopularDetalheCartaoNaUi(baseCard, { titulo: 'Cartão virtual', virtual: true });
+    }
+
     var num = document.getElementById('numeroCartaoVirtual');
     if (num) num.textContent = 'Cartão virtual ainda não emitido';
     var val = document.getElementById('validadeCartaoVirtual');
     if (val) val.textContent = '--/--';
     var criar = document.getElementById('cartaoVirtualBtnCriar');
     if (criar) {
+        var canEmit = agilbankStatusCartaoAtivo(baseCard);
         criar.style.display = '';
-        criar.disabled = false;
-        criar.style.pointerEvents = '';
-        criar.title = '';
+        criar.disabled = !canEmit;
+        criar.style.pointerEvents = canEmit ? '' : 'none';
+        criar.title = canEmit ? '' : 'Cartão base bloqueado. Desbloqueie para emitir cartão virtual.';
         criar.textContent = 'Emitir cartão virtual';
     }
     var bloquear = document.getElementById('btnBloquearCartaoVirtual');
@@ -2094,9 +2112,6 @@ function agilbankAplicarEstadoVirtualNaoEmitido(baseCard) {
         bloquear.title = 'Cartão virtual ainda não emitido';
     }
     window.__agilbankVirtualCardSelecionado = null;
-    if (baseCard) {
-        agilbankPopularDetalheCartaoNaUi(baseCard, { titulo: 'Cartão virtual', virtual: true });
-    }
 }
 
 async function agilbankCarregarCartaoVirtualSelecionado(baseCard, quiet) {
@@ -2169,10 +2184,11 @@ function agilbankAtualizarBotoesPainelCartoes() {
     }
 
     var ok = agilbankStatusCartaoAtivo(c);
+    var canView = agilbankStatusCartaoVisualizavel(c);
     setDis(bSt, false);
-    setDis(bVer, !ok);
-    setDis(bFi, !ok);
-    setDis(bVi, !ok);
+    setDis(bVer, !canView);
+    setDis(bFi, !canView);
+    setDis(bVi, !canView);
 }
 
 function agilbankPainelCartoesBindAcoes() {
@@ -2475,7 +2491,7 @@ async function agilbankCartaoAcaoStatus() {
 function agilbankCartaoAcaoVer() {
     var c = agilbankGetCartaoSelecionado();
     if (!c) return;
-    if (!agilbankStatusCartaoAtivo(c)) {
+    if (!agilbankStatusCartaoVisualizavel(c)) {
         if (typeof showErrorModal === 'function') {
             showErrorModal('Em análise', 'Este cartão ainda está em análise. Os detalhes ficam disponíveis após aprovação.');
         }
@@ -2490,7 +2506,7 @@ function agilbankCartaoAcaoVer() {
 function agilbankCartaoAcaoFisico() {
     var c = agilbankGetCartaoSelecionado();
     if (!c) return;
-    if (!agilbankStatusCartaoAtivo(c)) {
+    if (!agilbankStatusCartaoVisualizavel(c)) {
         if (typeof showErrorModal === 'function') {
             showErrorModal('Em análise', 'Cartão físico indisponível enquanto o pedido estiver em análise.');
         }
@@ -2505,7 +2521,7 @@ function agilbankCartaoAcaoFisico() {
 function agilbankCartaoAcaoVirtual() {
     var c = agilbankGetCartaoSelecionado();
     if (!c) return;
-    if (!agilbankStatusCartaoAtivo(c)) {
+    if (!agilbankStatusCartaoVisualizavel(c)) {
         showErrorModal('Cartão virtual', 'Cartão base ainda não aprovado/ativo para cartão virtual.');
         return;
     }

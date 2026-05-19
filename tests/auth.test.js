@@ -5,6 +5,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../src/utils/logger');
 const { sendPasswordResetEmail, sendEmail } = require('../src/utils/email');
+const referralService = require('../src/services/referralService');
+
+jest.mock('../src/services/referralService', () => ({
+  attachReferralToNewUser: jest.fn(() => Promise.resolve(null)),
+  qualifyReferralForVerifiedUser: jest.fn(() => Promise.resolve(null)),
+}));
 
 describe('Auth Routes', () => {
   beforeEach(() => {
@@ -80,7 +86,60 @@ describe('Auth Routes', () => {
           }),
         })
       );
-      expect(prisma.configuracoesUsuario.create).not.toHaveBeenCalled();
+    expect(prisma.configuracoesUsuario.create).not.toHaveBeenCalled();
+    });
+
+    it('vincula cadastro a código de indicação quando enviado', async () => {
+      const userData = {
+        nomeCompleto: 'Ana Silva',
+        email: 'ana@test.com',
+        cpf: '12345678902',
+        telefone: '(11) 99999-9999',
+        dataNascimento: '1990-01-01',
+        senha: '123456',
+        referralCode: 'ABCD1234',
+      };
+
+      prisma.user.create.mockResolvedValue({
+        id: 'new-user-id',
+        ...userData,
+        tokenVerificacao: 'verification-token',
+        saldoAtual: 0,
+        saldoBloqueado: 0,
+        limiteCartao: null,
+        limitePixDiario: 1000,
+        limitePixMensal: 10000,
+        scoreCredito: 0,
+        numeroConta: '123456',
+        digitoConta: '78',
+        agencia: '0001',
+        isAtivo: true,
+        isVerificado: false,
+        dataVerificacao: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        endereco: null,
+        dadosProfissionais: null,
+        configuracoes: {},
+      });
+
+      referralService.attachReferralToNewUser.mockResolvedValueOnce({
+        referralCode: 'ABCD1234',
+      });
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      expect(referralService.attachReferralToNewUser).toHaveBeenCalledWith({
+        referredUserId: 'new-user-id',
+        referralCode: 'ABCD1234',
+      });
+      expect(response.body.data.referral).toEqual({
+        status: 'registered',
+        code: 'ABCD1234',
+      });
     });
 
     it('retorna 201 com endereco, dadosProfissionais e configuracoes no user publico', async () => {
