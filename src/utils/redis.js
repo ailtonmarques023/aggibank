@@ -267,6 +267,7 @@ function getRedisHealthSummary() {
   return { configured: true, status: 'disconnected' };
 }
 
+const cache = {
   set: async (key, value, ttl = 3600) => {
     if (!isRedisAvailable()) {
       redisLog.warn('Redis indisponível; operação cache.set ignorada');
