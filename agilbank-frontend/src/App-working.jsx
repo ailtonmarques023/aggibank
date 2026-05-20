@@ -232,7 +232,7 @@ const Home = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Não tem uma conta?{' '}
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
                 Abrir Conta AgilBank
               </a>
             </p>

@@ -90,7 +90,7 @@ const Home = () => {
             Junte-se a milhares de brasileiros que já escolheram o AgilBank
           </p>
           <Link
-            to="/login"
+            to="/register"
             className="bg-white text-blue-600 px-6 py-3 sm:px-8 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-gray-50 transition-colors"
           >
             Abrir conta gratuita

@@ -2181,7 +2181,7 @@
 
             <div class="login-footer">
                 <p class="login-footer-text">Não tem uma conta?</p>
-                <a href="pages/formularioCadastrodeConta.html" class="login-footer-link">Abrir Conta AgilBank</a>
+                <a href="/register" class="login-footer-link">Abrir Conta AgilBank</a>
             </div>
         </div>
     </div>
@@ -6016,289 +6016,8 @@
         </div>
     </div> 
 
-    <!-- Formulário de Abertura de Conta -->
-    <div class="conta-container" id="contaContainer" style="display: none;">
-        <div class="conta-header">
-            <div class="conta-header-left">
-                <button class="conta-back-btn" id="contaBackBtn">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h1 class="conta-title">Abertura de Conta</h1>
-            </div>
-            <img src="/brand/logo-agil-bank-escura.png" alt="AgilBank" class="conta-logo agilbank-brand-logo agilbank-brand-logo--login agilbank-brand-logo--light">
-        </div>
-
-        <div class="conta-content">
-            <!-- Barra de Progresso -->
-            <div class="conta-progress">
-                <div class="conta-progress-bar">
-                    <div class="conta-progress-fill" id="contaProgressFill"></div>
-                </div>
-                <div class="conta-steps">
-                    <div class="conta-step active" data-step="1">
-                        <div class="conta-step-number">1</div>
-                        <div class="conta-step-label">Dados Pessoais</div>
-                    </div>
-                    <div class="conta-step" data-step="2">
-                        <div class="conta-step-number">2</div>
-                        <div class="conta-step-label">Endereço</div>
-                    </div>
-                    <div class="conta-step" data-step="3">
-                        <div class="conta-step-number">3</div>
-                        <div class="conta-step-label">Profissional</div>
-                    </div>
-                    <div class="conta-step" data-step="4">
-                        <div class="conta-step-number">4</div>
-                        <div class="conta-step-label">Confirmação</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Formulário Principal -->
-            <form id="contaForm" class="conta-form">
-                
-                <!-- Seção 1: Dados Pessoais -->
-                <div class="conta-form-section active" data-section="1">
-                    <h3 class="conta-form-section-title">Dados Pessoais</h3>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaNomeCompleto" class="conta-form-label required">Nome Completo</label>
-                        <input type="text" id="contaNomeCompleto" class="conta-form-input" placeholder="Digite seu nome completo" required>
-                        <div class="conta-form-error" id="error-contaNomeCompleto"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaCpf" class="conta-form-label required">CPF</label>
-                        <input type="text" id="contaCpf" class="conta-form-input" placeholder="000.000.000-00" required>
-                        <div class="conta-form-error" id="error-contaCpf"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaEmail" class="conta-form-label required">Email</label>
-                        <input type="email" id="contaEmail" class="conta-form-input" placeholder="seu@email.com" required>
-                        <div class="conta-form-error" id="error-contaEmail"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaTelefone" class="conta-form-label required">Telefone</label>
-                        <input type="tel" id="contaTelefone" class="conta-form-input" placeholder="(11) 99999-9999" required>
-                        <div class="conta-form-error" id="error-contaTelefone"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaDataNascimento" class="conta-form-label required">Data de Nascimento</label>
-                        <input type="date" id="contaDataNascimento" class="conta-form-input" required>
-                        <div class="conta-form-error" id="error-contaDataNascimento"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaSenha" class="conta-form-label required">Senha (6 dígitos)</label>
-                        <input type="password" id="contaSenha" class="conta-form-input" placeholder="000000" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="new-password" required>
-                        <div class="conta-form-error" id="error-contaSenha"></div>
-                    </div>
-                </div>
-
-                <!-- Seção 2: Endereço -->
-                <div class="conta-form-section" data-section="2">
-                    <h3 class="conta-form-section-title">Endereço</h3>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaCep" class="conta-form-label required">CEP</label>
-                        <input type="text" id="contaCep" class="conta-form-input" placeholder="00000-000" required>
-                        <div class="conta-form-error" id="error-contaCep"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaRua" class="conta-form-label required">Rua</label>
-                        <input type="text" id="contaRua" class="conta-form-input" placeholder="Nome da rua" required>
-                        <div class="conta-form-error" id="error-contaRua"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaNumero" class="conta-form-label required">Número</label>
-                        <input type="text" id="contaNumero" class="conta-form-input" placeholder="123" required>
-                        <div class="conta-form-error" id="error-contaNumero"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaComplemento" class="conta-form-label">Complemento</label>
-                        <input type="text" id="contaComplemento" class="conta-form-input" placeholder="Apartamento, casa, etc.">
-                        <div class="conta-form-error" id="error-contaComplemento"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaBairro" class="conta-form-label required">Bairro</label>
-                        <input type="text" id="contaBairro" class="conta-form-input" placeholder="Nome do bairro" required>
-                        <div class="conta-form-error" id="error-contaBairro"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaCidade" class="conta-form-label required">Cidade</label>
-                        <input type="text" id="contaCidade" class="conta-form-input" placeholder="Nome da cidade" required>
-                        <div class="conta-form-error" id="error-contaCidade"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaEstado" class="conta-form-label required">Estado</label>
-                        <select id="contaEstado" class="conta-form-select" required>
-                            <option value="">Selecione o estado</option>
-                            <option value="AC">Acre</option>
-                            <option value="AL">Alagoas</option>
-                            <option value="AP">Amapá</option>
-                            <option value="AM">Amazonas</option>
-                            <option value="BA">Bahia</option>
-                            <option value="CE">Ceará</option>
-                            <option value="DF">Distrito Federal</option>
-                            <option value="ES">Espírito Santo</option>
-                            <option value="GO">Goiás</option>
-                            <option value="MA">Maranhão</option>
-                            <option value="MT">Mato Grosso</option>
-                            <option value="MS">Mato Grosso do Sul</option>
-                            <option value="MG">Minas Gerais</option>
-                            <option value="PA">Pará</option>
-                            <option value="PB">Paraíba</option>
-                            <option value="PR">Paraná</option>
-                            <option value="PE">Pernambuco</option>
-                            <option value="PI">Piauí</option>
-                            <option value="RJ">Rio de Janeiro</option>
-                            <option value="RN">Rio Grande do Norte</option>
-                            <option value="RS">Rio Grande do Sul</option>
-                            <option value="RO">Rondônia</option>
-                            <option value="RR">Roraima</option>
-                            <option value="SC">Santa Catarina</option>
-                            <option value="SP">São Paulo</option>
-                            <option value="SE">Sergipe</option>
-                            <option value="TO">Tocantins</option>
-                        </select>
-                        <div class="conta-form-error" id="error-contaEstado"></div>
-                    </div>
-                </div>
-
-                <!-- Seção 3: Informações Profissionais -->
-                <div class="conta-form-section" data-section="3">
-                    <h3 class="conta-form-section-title">Informações Profissionais</h3>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaProfissao" class="conta-form-label required">Profissão</label>
-                        <input type="text" id="contaProfissao" class="conta-form-input" placeholder="Sua profissão" required>
-                        <div class="conta-form-error" id="error-contaProfissao"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaEmpresa" class="conta-form-label">Empresa</label>
-                        <input type="text" id="contaEmpresa" class="conta-form-input" placeholder="Nome da empresa">
-                        <div class="conta-form-error" id="error-contaEmpresa"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaCargo" class="conta-form-label">Cargo</label>
-                        <input type="text" id="contaCargo" class="conta-form-input" placeholder="Seu cargo na empresa">
-                        <div class="conta-form-error" id="error-contaCargo"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaRenda" class="conta-form-label required">Renda Mensal</label>
-                        <input type="number" id="contaRenda" class="conta-form-input" placeholder="0.00" step="0.01" required>
-                        <div class="conta-form-error" id="error-contaRenda"></div>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label for="contaEstadoCivil" class="conta-form-label required">Estado Civil</label>
-                        <select id="contaEstadoCivil" class="conta-form-select" required>
-                            <option value="">Selecione o estado civil</option>
-                            <option value="solteiro">Solteiro(a)</option>
-                            <option value="casado">Casado(a)</option>
-                            <option value="divorciado">Divorciado(a)</option>
-                            <option value="viuvo">Viúvo(a)</option>
-                            <option value="uniao_estavel">União Estável</option>
-                        </select>
-                        <div class="conta-form-error" id="error-contaEstadoCivil"></div>
-                    </div>
-                </div>
-
-                <!-- Seção 4: Confirmação -->
-                <div class="conta-form-section" data-section="4">
-                    <h3 class="conta-form-section-title">Confirmação dos Dados</h3>
-                    
-                    <div class="conta-confirmation">
-                        <h4>Dados Pessoais</h4>
-                        <p><strong>Nome:</strong> <span id="confirmNome"></span></p>
-                        <p><strong>CPF:</strong> <span id="confirmCpf"></span></p>
-                        <p><strong>Email:</strong> <span id="confirmEmail"></span></p>
-                        <p><strong>Telefone:</strong> <span id="confirmTelefone"></span></p>
-                        
-                        <h4>Endereço</h4>
-                        <p><strong>CEP:</strong> <span id="confirmCep"></span></p>
-                        <p><strong>Endereço:</strong> <span id="confirmEndereco"></span></p>
-                        
-                        <h4>Profissional</h4>
-                        <p><strong>Profissão:</strong> <span id="confirmProfissao"></span></p>
-                        <p><strong>Renda:</strong> <span id="confirmRenda"></span></p>
-                    </div>
-                    
-                    <div class="conta-form-group">
-                        <label class="conta-checkbox-label">
-                            <input type="checkbox" id="contaTermos" required>
-                            <span class="conta-checkbox-text">
-                                Li e aceito os <a href="#" class="conta-link" onclick="alert('Termos de Uso serão implementados em breve'); return false;">Termos de Uso</a> e 
-                                <a href="#" class="conta-link" onclick="alert('Política de Privacidade será implementada em breve'); return false;">Política de Privacidade</a>
-                            </span>
-                        </label>
-                        <div class="conta-form-error" id="error-contaTermos"></div>
-                    </div>
-                </div>
-            </form>
-
-            <!-- Loading -->
-            <div class="conta-loading">
-                <div class="conta-spinner"></div>
-                <p>Processando sua solicitação...</p>
-            </div>
-
-          
-
-            <!-- Tela de Sucesso -->
-            <div class="conta-success" style="display: none;">
-                <div class="conta-success-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <h2 class="conta-success-title">Conta Criada com Sucesso!</h2>
-                <p class="conta-success-message">
-                    Parabéns, <span id="contaUserName">Usuário</span>! Sua conta foi criada e está ativa.
-                </p>
-                
-                <div class="conta-account-info">
-                    <h3>Informações da Conta</h3>
-                    <p><strong>Número da Conta:</strong></p>
-                    <div class="conta-account-number" id="contaAccountNumber">001-1234-123456-7</div>
-                    <p><strong>Agência:</strong> 1234</p>
-                    <p><strong>Banco:</strong> AgilBank</p>
-                </div>
-
-                <div class="conta-buttons">
-                    <button class="conta-btn conta-btn-secondary" onclick="voltarParaLogin()">
-                        Voltar ao Login
-                    </button>
-                    <button class="conta-btn conta-btn-primary" onclick="fazerLoginAposConta()">
-                        Fazer Login
-                    </button>
-                </div>
-            </div>
-
-            <!-- Botões de Navegação -->
-            <div class="conta-buttons">
-                <button class="conta-btn conta-btn-secondary" id="contaPrevBtn" style="display: none;">
-                    Anterior
-                </button>
-                <button class="conta-btn conta-btn-primary" id="contaNextBtn">
-                    Próximo
-                </button>
-                <button class="conta-btn conta-btn-primary" id="contaSubmitBtn" style="display: none;">
-                    Criar Conta
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Cadastro oficial: apenas SPA /register. #contaContainer vazio (compat ids legados, IVAR remocao form HTML). -->
+    <div id="contaContainer" class="conta-container" style="display:none !important;" hidden aria-hidden="true"></div>
 
     <!-- rodape  -->
     <footer>
@@ -7302,17 +7021,38 @@
         }
 
         // Função para verificar se usuário já está logado
+        function agilbankMostrarAppPrincipalSeguro() {
+            const loginContainer = document.getElementById('loginContainer');
+            const mainApp = document.getElementById('mainApp');
+            const dashboard = document.getElementById('container');
+
+            if (loginContainer) {
+                loginContainer.style.display = 'none';
+            }
+
+            if (mainApp) {
+                mainApp.style.display = 'block';
+            }
+
+            if (window.loginSystem && typeof window.loginSystem.showMainApp === 'function') {
+                window.loginSystem.showMainApp();
+                return;
+            }
+
+            if (window.AgilBank && window.AgilBank.nav && typeof window.AgilBank.nav.show === 'function') {
+                window.AgilBank.nav.show('dashboard', { scroll: false });
+            } else if (dashboard) {
+                dashboard.style.display = 'block';
+            }
+        }
+
         function verificarLoginExistente() {
             console.log('🔍 Verificando se usuário já está logado...');
             
             const token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
             if (token) {
                 console.log('✅ Token encontrado, usuário já está logado');
-                // Esconder formulário de login
-                const loginContainer = document.getElementById('loginContainer');
-                if (loginContainer) {
-                    loginContainer.style.display = 'none';
-                }
+                agilbankMostrarAppPrincipalSeguro();
                 // Badge de notificações (perfil: UserDataManager + forceUpdateHeaderData no bootstrapping)
                 setTimeout(function () {
                     if (typeof agilbankAtualizarBadgeNotificacoesRodape === 'function') {
@@ -10775,66 +10515,15 @@
     
     // Função de teste para o formulário
     function testarFormulario() {
-        console.log('🧪 TESTE: Abrindo formulário...');
-        
-        // Esconder login
-        const login = document.getElementById('loginContainer');
-        if (login) {
-            login.style.display = 'none';
-            console.log('✅ Login escondido');
-        }
-        
-        // Mostrar formulário
-        const formulario = document.getElementById('contaContainer');
-        if (formulario) {
-            // Remover TODOS os estilos inline primeiro
-            formulario.removeAttribute('style');
-            
-            // Aplicar estilos diretamente
-            formulario.style.cssText = `
-                display: flex !important;
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%) !important;
-                z-index: 999999 !important;
-                align-items: center !important;
-                justify-content: center !important;
-                padding: 20px !important;
-                box-sizing: border-box !important;
-            `;
-            
-            console.log('✅ Formulário FORÇADO a aparecer');
-            console.log('🔍 Estilo aplicado:', formulario.style.cssText);
-            
-            // Forçar conteúdo também
-            const conteudo = formulario.querySelector('.conta-content');
-            if (conteudo) {
-                conteudo.style.cssText = `
-                    display: block !important;
-                    background: white !important;
-                    border-radius: 20px !important;
-                    padding: 30px !important;
-                    width: 100% !important;
-                    max-width: 500px !important;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
-                    position: relative !important;
-                `;
-                console.log('✅ Conteúdo FORÇADO a aparecer');
+        console.log('🧪 TESTE: Cadastro oficial em /register (fluxo SPA mobile-first)');
+        try {
+            if (typeof abrirFormularioConta === 'function') {
+                abrirFormularioConta();
+                return;
             }
-            
-            // Forçar primeira seção
-            const secao1 = formulario.querySelector('[data-section="1"]');
-            if (secao1) {
-                secao1.style.cssText = 'display: block !important;';
-                secao1.classList.add('active');
-                console.log('✅ Seção 1 FORÇADA a aparecer');
-            }
-        } else {
-            console.log('❌ Formulário não encontrado');
-        }
+        } catch (e) { /* noop */ }
+        const qs = window.location.search || '';
+        window.location.assign('/register' + qs);
     }
 
     // Função para fechar o formulário
@@ -10852,7 +10541,7 @@
         }
     }
     
-    // Cadastro oficial: FormularioConta em js/formulario-conta.js (POST /api/auth/register).
+    // Cadastro oficial: SPA /register. formulario-conta.js é stub (sem POST register legado); abrirFormularioConta só redireciona.
     // Removido fluxo inline montarPayloadRegistro / proximoPasso / finalizarCadastro — sem onclick no DOM (IVAR-PRIME 2026-05-07).
 
     // Teste adicional - verificar se a função existe

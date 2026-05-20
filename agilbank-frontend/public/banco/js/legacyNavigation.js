@@ -84,6 +84,12 @@
     }
 
     function show(name, options) {
+        // Cadastro oficial: SPA React /register (mobile-first). Fluxo HTML legado descontinuado.
+        if (name === 'conta') {
+            const qs = window.location.search || '';
+            window.location.assign('/register' + qs);
+            return false;
+        }
         const id = CONTAINERS[name] || name;
         const element = getElement(id);
         const settings = Object.assign({ display: 'block', scroll: true }, options || {});

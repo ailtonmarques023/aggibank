@@ -10,7 +10,7 @@
   var manualSteps = document.getElementById('manualInstallSteps');
   var referralCode = getReferralCode();
   var appUrl = withReferral('/banco/index.html');
-  var signupUrl = withReferral('/banco/pages/formularioCadastrodeConta.html');
+  var signupUrl = withReferral('/register');
 
   function isIos() {
     var ua = window.navigator.userAgent || '';

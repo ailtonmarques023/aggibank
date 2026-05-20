@@ -349,6 +349,7 @@ class LoginSystem {
         
         const loginContainer = document.getElementById('loginContainer');
         const mainApp = document.getElementById('mainApp');
+        const dashboard = document.getElementById('container');
         
         if (loginContainer) {
             loginContainer.style.display = 'none';
@@ -362,6 +363,12 @@ class LoginSystem {
             console.log('✅ Main app exibido');
         } else {
             console.log('❌ Main app não encontrado');
+        }
+
+        if (window.AgilBank && window.AgilBank.nav && typeof window.AgilBank.nav.show === 'function') {
+            window.AgilBank.nav.show('dashboard', { scroll: false });
+        } else if (dashboard) {
+            dashboard.style.display = 'block';
         }
         
         this.updateUserInfo();
