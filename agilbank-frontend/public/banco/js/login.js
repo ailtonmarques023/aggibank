@@ -346,18 +346,18 @@ class LoginSystem {
     showMainApp() {
         this.hideVerificationGate();
         console.log('🔄 Mostrando aplicação principal...');
-        
+
         const loginContainer = document.getElementById('loginContainer');
         const mainApp = document.getElementById('mainApp');
         const dashboard = document.getElementById('container');
-        
+
         if (loginContainer) {
             loginContainer.style.display = 'none';
             console.log('✅ Login container escondido');
         } else {
             console.log('❌ Login container não encontrado');
         }
-        
+
         if (mainApp) {
             mainApp.style.display = 'block';
             console.log('✅ Main app exibido');
@@ -365,12 +365,29 @@ class LoginSystem {
             console.log('❌ Main app não encontrado');
         }
 
-        if (window.AgilBank && window.AgilBank.nav && typeof window.AgilBank.nav.show === 'function') {
-            window.AgilBank.nav.show('dashboard', { scroll: false });
-        } else if (dashboard) {
-            dashboard.style.display = 'block';
+        /** Garante dashboard visível mesmo se legacyNavigation falhar — evita tela branca pós-login. */
+        try {
+            if (window.AgilBank && window.AgilBank.nav && typeof window.AgilBank.nav.show === 'function') {
+                var navOk = window.AgilBank.nav.show('dashboard', { scroll: false });
+                if (!navOk && dashboard) {
+                    dashboard.style.display = 'block';
+                    console.warn('⚠️ nav.show(dashboard) retornou false — exibição manual do container.');
+                }
+            } else if (dashboard) {
+                dashboard.style.display = 'block';
+            }
+            if (dashboard && dashboard.style.display === 'none' && typeof window.getComputedStyle === 'function') {
+                var vis = window.getComputedStyle(dashboard).display;
+                if (vis === 'none') {
+                    dashboard.style.display = 'block';
+                    console.warn('⚠️ #container ficou oculto após navegação — forçando display:block.');
+                }
+            }
+        } catch (navErr) {
+            console.warn('⚠️ Erro ao exibir dashboard legado:', navErr);
+            if (dashboard) dashboard.style.display = 'block';
         }
-        
+
         this.updateUserInfo();
         console.log('✅ Aplicação principal exibida com sucesso');
     }

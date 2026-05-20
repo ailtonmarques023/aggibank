@@ -2093,16 +2093,16 @@ function agilbankAplicarEstadoVirtualNaoEmitido(baseCard) {
     }
 
     var num = document.getElementById('numeroCartaoVirtual');
-    if (num) num.textContent = 'Cartão virtual ainda não emitido';
+    if (num) num.textContent = 'Ainda não emitido';
     var val = document.getElementById('validadeCartaoVirtual');
     if (val) val.textContent = '--/--';
     var criar = document.getElementById('cartaoVirtualBtnCriar');
     if (criar) {
         var canEmit = agilbankStatusCartaoAtivo(baseCard);
         criar.style.display = '';
-        criar.disabled = !canEmit;
-        criar.style.pointerEvents = canEmit ? '' : 'none';
-        criar.title = canEmit ? '' : 'Cartão base bloqueado. Desbloqueie para emitir cartão virtual.';
+        criar.disabled = false;
+        criar.style.pointerEvents = '';
+        criar.title = canEmit ? '' : 'Seu cartão base está bloqueado. Desbloqueie para emitir um cartão virtual.';
         criar.textContent = 'Emitir cartão virtual';
     }
     var bloquear = document.getElementById('btnBloquearCartaoVirtual');
@@ -2110,6 +2110,14 @@ function agilbankAplicarEstadoVirtualNaoEmitido(baseCard) {
         bloquear.textContent = 'Bloquear';
         bloquear.disabled = true;
         bloquear.title = 'Cartão virtual ainda não emitido';
+    }
+    var lista = document.getElementById('movimentacoesListaCartaoVirtual');
+    if (lista) {
+        lista.innerHTML =
+            '<div class="sem-movimentacoes">' +
+            '<i class="fas fa-shield-alt" aria-hidden="true"></i>' +
+            '<p>Você ainda não tem cartão virtual. Crie um para compras online com mais segurança.</p>' +
+            '</div>';
     }
     window.__agilbankVirtualCardSelecionado = null;
 }
@@ -2749,7 +2757,84 @@ window.copiarDadosCartao = function () {
 window.verTodasMovimentacoes = function () {
     agilbankBloquearAcaoSensivelCartao('Movimentações completas indisponíveis no momento.');
 };
-window.criarCartaoVirtual = function () {
+
+function agilbankFecharModalConfirmacaoCartaoVirtual() {
+    var modal = document.getElementById('agilbankVirtualConfirmModal');
+    if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+    }
+}
+
+function agilbankMensagemBaseVirtualIndisponivel(card) {
+    var status = String((card && card.status) || '').trim().toLowerCase();
+    if (status === 'bloqueado' || status === 'blocked') {
+        return 'Seu cartão base está bloqueado. Desbloqueie para emitir um cartão virtual.';
+    }
+    return 'Cartão base ainda não aprovado/ativo para emissão virtual.';
+}
+
+function agilbankAbrirModalConfirmacaoCartaoVirtual() {
+    var selected = agilbankGetCartaoSelecionado();
+    if (!selected || !selected.id) {
+        showErrorModal('Cartão virtual', 'Nenhum cartão base selecionado.');
+        return;
+    }
+    if (!agilbankStatusCartaoAtivo(selected)) {
+        showErrorModal('Cartão virtual', agilbankMensagemBaseVirtualIndisponivel(selected));
+        return;
+    }
+
+    agilbankFecharModalConfirmacaoCartaoVirtual();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'agilbankVirtualConfirmModal';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'agilbankVirtualConfirmTitle');
+    overlay.style.cssText = [
+        'position:fixed',
+        'inset:0',
+        'z-index:1000001',
+        'display:flex',
+        'align-items:center',
+        'justify-content:center',
+        'padding:18px',
+        'background:rgba(6,18,32,.72)'
+    ].join(';');
+
+    overlay.innerHTML =
+        '<div style="width:min(100%,360px);background:#fff;border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.28);color:#122033;font-family:Arial,Roboto,sans-serif;">' +
+        '<div style="width:46px;height:46px;border-radius:14px;background:#e8f4fc;color:#0066b3;display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:20px;"><i class="fas fa-credit-card" aria-hidden="true"></i></div>' +
+        '<h2 id="agilbankVirtualConfirmTitle" style="margin:0 0 8px;font-size:1.18rem;line-height:1.25;color:#071a2f;">Emitir cartão virtual?</h2>' +
+        '<p style="margin:0;color:#4b5d73;font-size:.94rem;line-height:1.45;">Você vai criar um cartão virtual vinculado ao seu cartão principal.</p>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;">' +
+        '<button type="button" id="agilbankVirtualCancelBtn" style="min-height:44px;border-radius:10px;border:1px solid #c9d8e6;background:#fff;color:#0066b3;font-weight:800;cursor:pointer;">Cancelar</button>' +
+        '<button type="button" id="agilbankVirtualEmitBtn" style="min-height:44px;border-radius:10px;border:0;background:#0066b3;color:#fff;font-weight:800;cursor:pointer;">Emitir cartão virtual</button>' +
+        '</div>' +
+        '</div>';
+
+    overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) {
+            agilbankFecharModalConfirmacaoCartaoVirtual();
+        }
+    });
+
+    document.body.appendChild(overlay);
+
+    var cancel = document.getElementById('agilbankVirtualCancelBtn');
+    if (cancel) cancel.onclick = agilbankFecharModalConfirmacaoCartaoVirtual;
+
+    var emit = document.getElementById('agilbankVirtualEmitBtn');
+    if (emit) {
+        emit.onclick = function () {
+            agilbankFecharModalConfirmacaoCartaoVirtual();
+            agilbankEmitirCartaoVirtualConfirmado();
+        };
+        emit.focus();
+    }
+}
+
+function agilbankEmitirCartaoVirtualConfirmado() {
     var btn = document.getElementById('cartaoVirtualBtnCriar');
     var selected = agilbankGetCartaoSelecionado();
     if (!selected || !selected.id) {
@@ -2757,7 +2842,7 @@ window.criarCartaoVirtual = function () {
         return;
     }
     if (!agilbankStatusCartaoAtivo(selected)) {
-        showErrorModal('Cartão virtual', 'Cartão base ainda não aprovado/ativo para emissão virtual.');
+        showErrorModal('Cartão virtual', agilbankMensagemBaseVirtualIndisponivel(selected));
         return;
     }
     agilbankSetBtnLoading(btn, true, 'Emitindo...');
@@ -2777,6 +2862,10 @@ window.criarCartaoVirtual = function () {
     }).finally(function () {
         agilbankSetBtnLoading(btn, false);
     });
+}
+
+window.criarCartaoVirtual = function () {
+    agilbankAbrirModalConfirmacaoCartaoVirtual();
 };
 
 function renderCartoesReaisGrid(cartoes) {
@@ -3334,7 +3423,7 @@ function agilbankSincronizarOfertasCartaoDashboard() {
     if (typeof agilbankRefreshPainelCartoes === 'function') {
         agilbankRefreshPainelCartoes().catch(function (e) {
             console.warn('agilbankSincronizarOfertasCartaoDashboard:', e);
-            agilbankSetDashboardCardOffersVisible(false);
+            agilbankSetDashboardCardOffersVisible(true);
         });
     }
 }
@@ -3352,7 +3441,7 @@ function renderCartoesErroCarregamento() {
     if (flow) flow.style.display = 'none';
     if (listaSec) listaSec.style.display = 'block';
 
-    agilbankSetDashboardCardOffersVisible(false);
+    agilbankSetDashboardCardOffersVisible(true);
 
     var grid = document.getElementById('cartoesReaisGrid');
     if (grid) {
@@ -4190,12 +4279,14 @@ setTimeout(() => {
 }, 1000);
 
 function startCountdown() {
+    const countdownElement = document.getElementById('countdown');
+    if (!countdownElement) {
+        return;
+    }
     let hours = 72;
     let minutes = 0;
     let seconds = 0;
-    
-    const countdownElement = document.getElementById('countdown');
-    
+
     const timer = setInterval(() => {
         if (seconds > 0) {
             seconds--;
@@ -4208,9 +4299,10 @@ function startCountdown() {
             seconds = 59;
         } else {
             clearInterval(timer);
+            return;
         }
-        
-        countdownElement.textContent = 
+
+        countdownElement.textContent =
             `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }, 1000);
 }

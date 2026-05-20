@@ -6230,13 +6230,20 @@
             }
 
             if (estadoInd || !dados) {
-                if (preservarDadosAtuais && window.__agilbankHeaderTemDadosReais) {
-                    console.warn('⚠️ Refresh de usuário falhou; mantendo últimos dados reais do header.', opcoes.fonte || 'fonte-desconhecida');
+                /** Preservar cache real mesmo se o flag de header ainda não foi setado (ordem de race / refresh). */
+                if (
+                    preservarDadosAtuais &&
+                    (window.__agilbankHeaderTemDadosReais || window.__agilbankUltimosDadosUsuarioReais)
+                ) {
+                    console.warn(
+                        '⚠️ Refresh de usuário falhou; mantendo últimos dados reais do header/cache.',
+                        opcoes.fonte || 'fonte-desconhecida'
+                    );
                     return;
                 }
                 saldoReal = null;
                 var msgNome = 'Dados indisponíveis';
-                var msgMail = 'Não foi possível carregar. Tente atualizar a página.';
+                var msgMail = 'Não foi possível atualizar seus dados agora. Tente novamente.';
                 var i1 = document.getElementById('user-name');
                 var i2 = document.getElementById('user-email');
                 var i3 = document.getElementById('user-account');
@@ -7147,6 +7154,67 @@
             }
         }
 
+        /** Mantém #mainApp e #container visíveis após falha de rede/API (evita sensação de “tela branca”). */
+        function agilbankGarantirShellLegadoVisivel() {
+            try {
+                var mainApp = document.getElementById('mainApp');
+                var dash = document.getElementById('container');
+                var loginC = document.getElementById('loginContainer');
+                var token =
+                    window.AgilBank?.auth?.getToken?.() ||
+                    (typeof getAuthToken === 'function' ? getAuthToken() : null);
+                if (token && loginC) {
+                    loginC.style.display = 'none';
+                }
+                if (mainApp) mainApp.style.display = 'block';
+                if (dash) dash.style.display = 'block';
+            } catch (e) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[AgilBank] agilbankGarantirShellLegadoVisivel:', e);
+                }
+            }
+        }
+
+        function agilbankEsconderBootLoaderLegadoSePreso() {
+            try {
+                var el = document.querySelector('.loading-animation-container');
+                if (el && (el.style.display === 'flex' || el.style.display === 'block')) {
+                    el.style.display = 'none';
+                }
+            } catch (e) {
+                /* ignore */
+            }
+        }
+
+        /** Um único aviso não bloqueante; não refaz loop com forceUpdateHeaderData. */
+        function agilbankMostrarAvisoAtualizacaoPerfilFalhou() {
+            if (window.__agilbankPerfilUpdateBannerVisible) return;
+            window.__agilbankPerfilUpdateBannerVisible = true;
+            try {
+                if (document.querySelector('[data-agilbank-perfil-degraded="1"]')) return;
+                var bar = document.createElement('div');
+                bar.setAttribute('role', 'status');
+                bar.setAttribute('data-agilbank-perfil-degraded', '1');
+                bar.style.cssText =
+                    'position:fixed;bottom:0;left:0;right:0;z-index:2147483645;padding:10px 14px;' +
+                    'background:#0f172a;color:#f8fafc;font:14px/1.4 system-ui,sans-serif;text-align:center;' +
+                    'box-shadow:0 -2px 8px rgba(0,0,0,.2);';
+                bar.textContent = 'Não foi possível atualizar seus dados agora. Tente novamente.';
+                document.body.appendChild(bar);
+            } catch (e) {
+                if (typeof console !== 'undefined' && console.warn) console.warn('perfil degraded banner:', e);
+            }
+        }
+
+        function agilbankAtualizarInterfacePerfilSeguro(payload) {
+            try {
+                atualizarInterfacePerfil(payload);
+            } catch (e) {
+                console.warn('[AgilBank] atualizarInterfacePerfil:', e);
+                agilbankGarantirShellLegadoVisivel();
+            }
+        }
+
         // Função para carregar dados do perfil do usuário
         async function carregarPerfilUsuario() {
             if (window.__carregarPerfilUsuarioInflight) {
@@ -7166,15 +7234,28 @@
 
                 try {
                     async function requisitarPerfil(path) {
-                        var response = await window.AgilBank.api.request(path, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            credentials: 'include'
-                        });
-                        var body = await response.json().catch(function () { return {}; });
-                        return { response: response, body: body, path: path };
+                        try {
+                            var response = await window.AgilBank.api.request(path, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include'
+                            });
+                            var body = await response.json().catch(function () { return {}; });
+                            return { response: response, body: body, path: path };
+                        } catch (reqErr) {
+                            console.warn('[carregarPerfilUsuario] requisitarPerfil exceção:', path, reqErr);
+                            var syn = new Response(
+                                JSON.stringify({
+                                    success: false,
+                                    code: 'REQUEST_WRAPPER_ERROR',
+                                    message: String(reqErr && reqErr.message ? reqErr.message : 'request_failed')
+                                }),
+                                { status: 503, statusText: 'Unavailable', headers: { 'Content-Type': 'application/json' } }
+                            );
+                            return { response: syn, body: {}, path: path };
+                        }
                     }
 
                     var tentativaPrincipal = await requisitarPerfil('user/user-complete-data');
@@ -7192,7 +7273,7 @@
                             });
                         }
                         if (window.__agilbankUltimosDadosUsuarioReais) {
-                            atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                            agilbankAtualizarInterfacePerfilSeguro(window.__agilbankUltimosDadosUsuarioReais);
                         } else {
                             marcarCamposPerfilApiIndisponivel();
                         }
@@ -7212,7 +7293,7 @@
                                 });
                             }
                             if (window.__agilbankUltimosDadosUsuarioReais) {
-                                atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                                agilbankAtualizarInterfacePerfilSeguro(window.__agilbankUltimosDadosUsuarioReais);
                             } else {
                                 marcarCamposPerfilApiIndisponivel();
                             }
@@ -7228,7 +7309,7 @@
                             : null;
                         if (!usuarioBruto && window.__agilbankUltimosDadosUsuarioReais) {
                             console.warn('⚠️ API sem usuário reconhecível; reaproveitando cache real');
-                            atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                            agilbankAtualizarInterfacePerfilSeguro(window.__agilbankUltimosDadosUsuarioReais);
                             return;
                         }
                         if (!usuarioBruto) {
@@ -7236,7 +7317,7 @@
                             return;
                         }
                         console.log('✅ Perfil carregado com sucesso:', tentativa.path);
-                        atualizarInterfacePerfil(profile);
+                        agilbankAtualizarInterfacePerfilSeguro(profile);
                     } else if (tentativa.response.status === 401) {
                         console.log('🔒 Sessão inválida ou expirada');
                         if (typeof window.aplicarDadosUsuarioReais === 'function') {
@@ -7259,10 +7340,11 @@
                             });
                         }
                         if (window.__agilbankUltimosDadosUsuarioReais) {
-                            atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                            agilbankAtualizarInterfacePerfilSeguro(window.__agilbankUltimosDadosUsuarioReais);
                         } else {
                             marcarCamposPerfilApiIndisponivel();
                         }
+                        agilbankMostrarAvisoAtualizacaoPerfilFalhou();
                     }
                 } catch (error) {
                     console.error('❌ Erro ao carregar perfil:', error);
@@ -7275,12 +7357,15 @@
                         });
                     }
                     if (window.__agilbankUltimosDadosUsuarioReais) {
-                        atualizarInterfacePerfil(window.__agilbankUltimosDadosUsuarioReais);
+                        agilbankAtualizarInterfacePerfilSeguro(window.__agilbankUltimosDadosUsuarioReais);
                     } else {
                         marcarCamposPerfilApiIndisponivel();
                     }
+                    agilbankMostrarAvisoAtualizacaoPerfilFalhou();
                 } finally {
                     window.__carregarPerfilUsuarioInflight = null;
+                    agilbankEsconderBootLoaderLegadoSePreso();
+                    agilbankGarantirShellLegadoVisivel();
                 }
             })();
             return window.__carregarPerfilUsuarioInflight;
@@ -7333,6 +7418,7 @@
             if (bairro) bairro.textContent = 'Indisponível';
             if (cidadeEstado) cidadeEstado.textContent = 'Indisponível';
             if (cep) cep.textContent = 'CEP: Indisponível';
+            agilbankGarantirShellLegadoVisivel();
         }
 
         function atualizarInterfacePerfil(profile) {
@@ -7472,7 +7558,7 @@
 
         window.atualizarInterfacePerfilDoNormalizado = function atualizarInterfacePerfilDoNormalizado(dadosNormalizados) {
             if (!dadosNormalizados || typeof dadosNormalizados !== 'object') return;
-            atualizarInterfacePerfil(dadosNormalizados);
+            agilbankAtualizarInterfacePerfilSeguro(dadosNormalizados);
         };
 
         // Função para formatar telefone
@@ -11836,6 +11922,9 @@
         async function checkUserCardAndShowModal(options) {
             var forceShow = options && options.forceShow === true;
             try {
+                if (typeof hideAgilModal === 'function') {
+                    hideAgilModal();
+                }
                 console.log('🔍 Verificando dados do usuário (modal cartão/crédito contextual)...');
 
                 var token =
@@ -11879,6 +11968,9 @@
                     !loansResult.value
                 ) {
                     console.warn('[agilModal] Falha inesperada ao obter produtos. Modal de oferta não será aberto.');
+                    if (typeof window.agilbankSetDashboardOffersState === 'function') {
+                        window.agilbankSetDashboardOffersState({ card: true, loan: true });
+                    }
                     return;
                 }
 
@@ -11893,6 +11985,9 @@
                         loansOk: loansWrap.ok,
                         loansStatus: loansWrap.status,
                     });
+                    if (typeof window.agilbankSetDashboardOffersState === 'function') {
+                        window.agilbankSetDashboardOffersState({ card: true, loan: true });
+                    }
                     return;
                 }
 
@@ -12208,47 +12303,55 @@
 
         // Função para forçar atualização dos dados do header
         function forceUpdateHeaderData() {
-            console.log('[AgilBank][debug] forceUpdateHeaderData');
-            var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
-            if (!token) {
-                if (window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
-                    console.warn('⚠️ forceUpdateHeaderData sem token; preservando dados atuais do header.');
-                    return;
-                }
-                if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                    window.aplicarDadosUsuarioReais(null, { modo: 'publico', fonte: 'forceUpdateHeaderData' });
-                }
-                console.log('⚠️ Sem token — header em modo público');
-                return;
-            }
-            var storedUserData = localStorage.getItem('user_data');
-            if (storedUserData) {
-                try {
-                    var parsedData = JSON.parse(storedUserData);
-                    var u = parsedData.user_data && parsedData.user_data.usuario ? parsedData.user_data.usuario : null;
-                    var norm = u && typeof window.normalizarDadosUsuarioBruto === 'function'
-                        ? window.normalizarDadosUsuarioBruto(u)
-                        : null;
-                    if (norm && (norm.email || norm.nomeCompleto)) {
-                        if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                            window.aplicarDadosUsuarioReais(u, { modo: 'autenticado', fonte: 'forceUpdateHeaderData-storage' });
-                        }
-                        console.log('✅ Header atualizado a partir de user_data no storage');
+            try {
+                console.log('[AgilBank][debug] forceUpdateHeaderData');
+                var token = window.AgilBank?.auth?.getToken?.() || getAuthToken();
+                if (!token) {
+                    if (window.__agilbankHeaderTemDadosReais && window.__agilbankUltimosDadosUsuarioReais) {
+                        console.warn('⚠️ forceUpdateHeaderData sem token; preservando dados atuais do header.');
                         return;
                     }
-                } catch (err) {
-                    console.error('❌ Erro ao parsear user_data:', err);
+                    if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                        window.aplicarDadosUsuarioReais(null, { modo: 'publico', fonte: 'forceUpdateHeaderData' });
+                    }
+                    console.log('⚠️ Sem token — header em modo público');
+                    return;
                 }
-            }
-            if (typeof carregarPerfilUsuario === 'function') {
-                carregarPerfilUsuario();
-            } else if (typeof window.aplicarDadosUsuarioReais === 'function') {
-                window.aplicarDadosUsuarioReais(null, {
-                    modo: 'autenticado',
-                    estado: 'indisponivel',
-                    fonte: 'forceUpdateHeaderData',
-                    preservarDadosAtuais: true
-                });
+                var storedUserData = localStorage.getItem('user_data');
+                if (storedUserData) {
+                    try {
+                        var parsedData = JSON.parse(storedUserData);
+                        var u = parsedData.user_data && parsedData.user_data.usuario ? parsedData.user_data.usuario : null;
+                        var norm = u && typeof window.normalizarDadosUsuarioBruto === 'function'
+                            ? window.normalizarDadosUsuarioBruto(u)
+                            : null;
+                        if (norm && (norm.email || norm.nomeCompleto)) {
+                            if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                                window.aplicarDadosUsuarioReais(u, { modo: 'autenticado', fonte: 'forceUpdateHeaderData-storage' });
+                            }
+                            console.log('✅ Header atualizado a partir de user_data no storage');
+                            return;
+                        }
+                    } catch (err) {
+                        console.error('❌ Erro ao parsear user_data:', err);
+                    }
+                }
+                if (typeof carregarPerfilUsuario === 'function') {
+                    Promise.resolve(carregarPerfilUsuario()).catch(function (e) {
+                        console.warn('[AgilBank] forceUpdateHeaderData → carregarPerfilUsuario:', e);
+                        agilbankGarantirShellLegadoVisivel();
+                    });
+                } else if (typeof window.aplicarDadosUsuarioReais === 'function') {
+                    window.aplicarDadosUsuarioReais(null, {
+                        modo: 'autenticado',
+                        estado: 'indisponivel',
+                        fonte: 'forceUpdateHeaderData',
+                        preservarDadosAtuais: true
+                    });
+                }
+            } catch (e) {
+                console.warn('[AgilBank] forceUpdateHeaderData:', e);
+                agilbankGarantirShellLegadoVisivel();
             }
         }
 

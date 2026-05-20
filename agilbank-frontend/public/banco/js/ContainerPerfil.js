@@ -15,65 +15,65 @@ const dispositivosModal = document.querySelector('.dispositivos-modal');
 const fecharModalBtns = document.querySelectorAll('.fechar-modal');
 const loadingElement = document.querySelector('.perfil-loading');
 
-// Manipulação do botão de editar foto
-editarFotoBtn.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = e => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const avatarIcon = document.querySelector('.avatar-img');
-            // Criar um elemento de imagem
-            const img = document.createElement('img');
-            img.src = event.target.result;
-            img.style.width = '90px';
-            img.style.height = '90px';
-            img.style.objectFit = 'cover';
-            img.style.borderRadius = '50%';
-            img.style.position = 'absolute';
-            img.style.top = '0';
-            img.style.left = '0';
-            
-            // Substituir o ícone pela imagem
-            avatarIcon.parentNode.replaceChild(img, avatarIcon);
-            
-            // Adicionar classe para estilização
-            img.classList.add('custom-avatar');
+if (editarFotoBtn) {
+    editarFotoBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = e => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const avatarIcon = document.querySelector('.avatar-img');
+                if (!avatarIcon || !avatarIcon.parentNode) return;
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.style.width = '90px';
+                img.style.height = '90px';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '50%';
+                img.style.position = 'absolute';
+                img.style.top = '0';
+                img.style.left = '0';
+                avatarIcon.parentNode.replaceChild(img, avatarIcon);
+                img.classList.add('custom-avatar');
+            };
+            reader.readAsDataURL(file);
         };
-        reader.readAsDataURL(file);
-    };
-    input.click();
-});
+        input.click();
+    });
+}
 
-// Manipulação do botão de editar perfil
-editarPerfilBtn.addEventListener('click', () => {
-    mostrarModal(edicaoModal);
-});
+if (editarPerfilBtn) {
+    editarPerfilBtn.addEventListener('click', () => {
+        mostrarModal(edicaoModal);
+    });
+}
 
-// Manipulação dos botões de editar contato
-editarContatoBtns.forEach(btn => {
+editarContatoBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
         mostrarModal(edicaoModal);
     });
 });
 
-// Manipulação do botão de editar endereço
-editarEnderecoBtn.addEventListener('click', () => {
-    mostrarModal(edicaoModal);
-});
+if (editarEnderecoBtn) {
+    editarEnderecoBtn.addEventListener('click', () => {
+        mostrarModal(edicaoModal);
+    });
+}
 
-// Manipulação do botão de alterar senha
-alterarSenhaBtn.addEventListener('click', () => {
-    // Aqui implementaria a lógica para alteração de senha
-    console.log('Alterar senha');
-});
+if (alterarSenhaBtn) {
+    alterarSenhaBtn.addEventListener('click', () => {
+        console.log('Alterar senha');
+    });
+}
 
-// Manipulação do botão de ver dispositivos
-verDispositivosBtn.addEventListener('click', () => {
-    mostrarModal(dispositivosModal);
-});
+if (verDispositivosBtn) {
+    verDispositivosBtn.addEventListener('click', () => {
+        mostrarModal(dispositivosModal);
+    });
+}
 
 // Manipulação do switch de biometria
 const biometriaSwitch = document.querySelector('.switch input');
@@ -89,7 +89,7 @@ const removerDispositivoBtns = document.querySelectorAll('.remover-dispositivo')
 removerDispositivoBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
         const dispositivo = e.target.closest('.dispositivo-item');
-        if (!dispositivo.classList.contains('atual')) {
+        if (dispositivo && !dispositivo.classList.contains('atual')) {
             dispositivo.remove();
         }
     });
@@ -195,7 +195,11 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
                 <button class="ok-notification">OK</button>
             </div>
         `;
-        document.querySelector('.perfil-container').appendChild(notificationModal);
+        var root =
+            document.querySelector('.perfil-container') ||
+            document.getElementById('perfilContainer') ||
+            document.body;
+        root.appendChild(notificationModal);
     }
 
     const modalBody = notificationModal.querySelector('.notification-body p');
@@ -203,12 +207,15 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     const closeModalBtn = notificationModal.querySelector('.fechar-modal');
     const okBtn = notificationModal.querySelector('.ok-notification');
 
-    // Set styling based on type
+    if (!modalBody || !modalTitle || !closeModalBtn || !okBtn) {
+        console.warn('[perfil] Estrutura do modal de notificação incompleta.');
+        return;
+    }
+
     notificationModal.classList.remove('error', 'success', 'warning');
     notificationModal.classList.add(tipo);
 
-    // Set title based on type
-    switch(tipo) {
+    switch (tipo) {
         case 'error':
             modalTitle.textContent = 'Erro';
             break;
@@ -225,7 +232,6 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     modalBody.textContent = mensagem;
     notificationModal.style.display = 'block';
 
-    // Close modal functions
     const closeModal = () => {
         notificationModal.style.display = 'none';
     };
@@ -233,7 +239,6 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
     closeModalBtn.addEventListener('click', closeModal);
     okBtn.addEventListener('click', closeModal);
 
-    // Close on outside click
     notificationModal.addEventListener('click', (e) => {
         if (e.target === notificationModal) {
             closeModal();

@@ -1,61 +1,75 @@
 // Função para voltar para a tela principal
 function voltarParaPrincipal() {
     ocultarTodosContainers();
-    document.getElementById('creditoContainer').style.display = 'none';
-    document.getElementById('container').style.display = 'block';
+    var credEl = document.getElementById('creditoContainer');
+    if (credEl) credEl.style.display = 'none';
+    var cont = document.getElementById('container');
+    if (cont) cont.style.display = 'block';
 }
 
-// Variáveis para controle do slider
 let currentSlide = 0;
-const slides = document.querySelectorAll('.credito-slide');
-const dots = document.querySelectorAll('.slider-dots .dot');
 
-// Função para mostrar slide específico
+function refreshCreditoSliderDom() {
+    return {
+        slides: Array.prototype.slice.call(document.querySelectorAll('.credito-slide')),
+        dots: Array.prototype.slice.call(document.querySelectorAll('.slider-dots .dot')),
+        slider: document.querySelector('.credito-slider'),
+    };
+}
+
 function showSlide(n) {
-    // Reseta o índice se passar dos limites
-    if (n >= slides.length) currentSlide = 0;
-    if (n < 0) currentSlide = slides.length - 1;
+    const { slides, dots, slider } = refreshCreditoSliderDom();
 
-    // Atualiza a posição do slider e aplica fade
-    const slider = document.querySelector('.credito-slider');
-    
-    // Esconde todos os slides
-    slides.forEach(slide => {
+    if (!slider || !slides.length) {
+        return;
+    }
+
+    if (n >= slides.length) currentSlide = 0;
+    else if (n < 0) currentSlide = slides.length - 1;
+    else currentSlide = n;
+
+    slides.forEach((slide) => {
         slide.style.opacity = '0';
         slide.style.transition = 'opacity 0.5s ease-in-out';
     });
 
-    // Mostra o slide atual com fade
+    const idx = currentSlide;
+
     setTimeout(() => {
-        slider.style.transform = `translateX(-${currentSlide * 100}%)`;
-        slides[currentSlide].style.opacity = '1';
+        slider.style.transform = `translateX(-${idx * 100}%)`;
+        const cur = slides[idx];
+        if (cur) cur.style.opacity = '1';
     }, 6000);
 
-    // Remove classe active de todos os dots
-    dots.forEach(dot => {
+    dots.forEach((dot) => {
         dot.classList.remove('active');
     });
-
-    // Ativa o dot correspondente
-    dots[currentSlide].classList.add('active');
+    if (dots[idx]) {
+        dots[idx].classList.add('active');
+    }
 }
 
-// Função para avançar slides
 function autoSlide() {
+    const { slides } = refreshCreditoSliderDom();
+    if (!slides.length) return;
     currentSlide++;
     showSlide(currentSlide);
 }
 
-// Inicia o slider
-showSlide(currentSlide);
+(function initCreditoCarousel() {
+    const { slides, dots } = refreshCreditoSliderDom();
+    if (!slides.length || !dots.length) {
+        return;
+    }
 
-// Configura o intervalo para avançar automaticamente
-setInterval(autoSlide, 5000);
+    showSlide(currentSlide);
 
-// Adiciona listeners para os dots
-dots.forEach((dot, index) => {
-    dot.addEventListener('click', () => {
-        currentSlide = index;
-        showSlide(currentSlide);
+    setInterval(autoSlide, 5000);
+
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            currentSlide = index;
+            showSlide(currentSlide);
+        });
     });
-});
+})();

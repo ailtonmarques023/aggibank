@@ -127,11 +127,43 @@
             });
     }
 
+    function syntheticNetworkFailureResponse(originalError) {
+        try {
+            var hint =
+                originalError && originalError.message
+                    ? String(originalError.message).slice(0, 200)
+                    : 'fetch_failed';
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    message: 'Falha de rede ao contatar a API.',
+                    code: 'NETWORK_FETCH_FAILED',
+                    hint: hint,
+                }),
+                {
+                    status: 503,
+                    statusText: 'Network Unavailable',
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+        } catch (_) {
+            return new Response(null, { status: 503, statusText: 'Network Unavailable' });
+        }
+    }
+
     function runFetch(path, requestOptions, headers) {
         return window
             .fetch(buildUrl(path), Object.assign({}, requestOptions, { headers }))
             .then(function (response) {
                 return applyAfterFetch(response);
+            })
+            .catch(function (err) {
+                console.warn(
+                    '[AgilBank][api] fetch falhou (rede/CORS/abort/timeout) — resposta sintética 503:',
+                    normalizeDedupePath(path),
+                    err
+                );
+                return syntheticNetworkFailureResponse(err);
             });
     }
 

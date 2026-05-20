@@ -132,16 +132,25 @@ class UserDataManager {
 
                 console.log('🔄 Carregando dados do usuário da API (user-complete-data)...');
                 async function requestProfile(path) {
-                    const response = await window.AgilBank.api.request(path, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    const body = await response.json().catch(function () {
-                        return {};
-                    });
-                    return { response, body, path };
+                    try {
+                        const response = await window.AgilBank.api.request(path, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const body = await response.json().catch(function () {
+                            return {};
+                        });
+                        return { response, body, path };
+                    } catch (e) {
+                        console.warn('[UserDataManager] requestProfile exceção:', path, e);
+                        var fallback = new Response(
+                            JSON.stringify({ success: false, code: 'USERDATA_MANAGER_REQUEST' }),
+                            { status: 503, headers: { 'Content-Type': 'application/json' } }
+                        );
+                        return { response: fallback, body: {}, path: path };
+                    }
                 }
 
                 let result = await requestProfile('user/user-complete-data');
