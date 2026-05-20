@@ -1,0 +1,70 @@
+# Dependencies - reinstalled during build
+node_modules/
+node_modules/.cache/
+agilbank-frontend/node_modules/
+
+# Cache directories - primary cause of "no space left on device"
+.cache/
+.npm/
+.yarn/
+**/.cache/
+
+# Build output - regenerated during build
+dist/
+build/
+.next/
+.turbo/
+coverage/
+
+# Prisma generated client - regenerated via `prisma generate`
+# (keep schema.prisma, exclude generated output)
+src/generated/
+
+# Environment files - injected at runtime via Railway
+.env
+.env.*
+!.env.example
+
+# Version control
+.git/
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+uploads/
+
+# Certificates - sensitive, never in image
+*.p12
+*.pfx
+*.pem
+certs/
+
+# Dev/test tooling not needed in production image
+.eslintrc*
+.eslintignore
+jest.config.js
+jest.identity-kyc.config.js
+**/*.test.js
+**/*.spec.js
+
+# Local docs and reports
+docs/
+docs-reports/
+
+# Legacy subproject out of scope
+gov.br1/
+
+# Frontend subproject (separate service)
+agilbank-frontend/
