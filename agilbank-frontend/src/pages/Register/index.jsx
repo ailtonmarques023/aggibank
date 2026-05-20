@@ -155,17 +155,18 @@ function pipelineErrorMessage(err, fallback) {
 }
 
 const REGISTER_LOADING_MESSAGES = {
-  creating: {
-    title: 'Criando sua conta…',
-    detail: 'Registramos seus dados iniciais de forma protegida.',
+  /**
+   * Passo 6 (termos) → passo 7 (documento): overlay temporário.
+   * Não comunica conclusão da jornada — só continuidade até os próximos passos.
+   */
+  intermediate: {
+    title: 'Salvando seus dados iniciais…',
+    detail: 'Estamos preparando os próximos passos.',
   },
-  session: {
-    title: 'Abrindo sua sessão…',
-    detail: 'Entrando com seu e-mail e senha para continuar aqui mesmo.',
-  },
+  /** Último instante após login silencioso antes de exibir a captura de documento. */
   afterKyc: {
     title: 'Carregando próximos passos…',
-    detail: 'Só um instante para preparar fotos do documento e selfie.',
+    detail: 'Só um instante para abrir a etapa de documento e selfie.',
   },
 };
 
@@ -186,7 +187,7 @@ const Register = () => {
   const [reviewError, setReviewError] = useState('');
   /** Conta já criada (POST OK) mas login silencioso falhou — oferecer retry SEM novo register. */
   const [needsSilentLoginRetry, setNeedsSilentLoginRetry] = useState(false);
-  const [registrationLoadingCopy, setRegistrationLoadingCopy] = useState(REGISTER_LOADING_MESSAGES.creating);
+  const [registrationLoadingCopy, setRegistrationLoadingCopy] = useState(REGISTER_LOADING_MESSAGES.intermediate);
   const [featureDisabledHint, setFeatureDisabledHint] = useState('');
   const [localPreviewUrlByType, setLocalPreviewUrlByType] = useState({});
   /** Overlay KYC granular: checksum | presign | put | confirm | refresh */
@@ -453,7 +454,7 @@ const Register = () => {
     setLoading(true);
     setError('');
     try {
-      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.session);
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
       await signInSilentlyThenOpenKyc(emailTrim, senhaPlain);
     } catch (_) {
       applyErrorMessage(
@@ -463,7 +464,7 @@ const Register = () => {
     } finally {
       setLoading(false);
       registeringRef.current = false;
-      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
     }
   };
 
@@ -475,7 +476,7 @@ const Register = () => {
     setLoading(true);
     setError('');
     setNeedsSilentLoginRetry(false);
-    setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
+    setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
 
     try {
       if (!registrationPostSucceededRef.current) {
@@ -521,7 +522,7 @@ const Register = () => {
        * O backend não retorna JWT no register; abrimos sessão com POST /auth/login usando o mesmo e-mail/senha.
        * isVerificado (e-mail) permanece pendente até o usuário clicar no link enviado.
        */
-      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.session);
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
       const progressed = await signInSilentlyThenOpenKyc(data.email.trim(), data.senha);
       if (progressed) registrationPostSucceededRef.current = false;
       if (!progressed) return;
@@ -532,7 +533,7 @@ const Register = () => {
     } finally {
       setLoading(false);
       registeringRef.current = false;
-      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
     }
   };
 
@@ -1282,11 +1283,8 @@ const Register = () => {
         <CheckIcon className="h-11 w-11 text-agilbank-success" aria-hidden />
       </div>
       <h1 className="mb-4 text-[1.6rem] font-bold leading-tight text-gray-900 sm:text-2xl">Conta criada com sucesso</h1>
-      <p className="mb-8 max-w-sm text-[0.95rem] leading-relaxed text-gray-600">
-        Bem-vindo ao AgilBank. Sua conta já foi criada e você pode acessar o app. Para usar cartão e crédito, mantenha sua identidade validada.
-      </p>
-      <p className="max-w-sm text-[0.82rem] leading-snug text-gray-500">
-        Abra o link que enviamos no e-mail para validar seu contato. Isso é independente das fotos do documento.
+      <p className="mb-0 max-w-sm text-[0.95rem] leading-relaxed text-gray-600">
+        Bem-vindo ao AgilBank. Enviamos um e-mail para confirmar seu cadastro.
       </p>
     </div>
   );
