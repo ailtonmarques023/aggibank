@@ -301,6 +301,7 @@ jest.mock('../src/utils/redis', () => ({
   disconnectRedis: jest.fn(),
   isRedisAvailable: jest.fn(() => false),
   getRedis: jest.fn(),
+  getRedisHealthSummary: jest.fn(() => ({ configured: false, status: 'not_configured' })),
   cache: {
     set: jest.fn(),
     get: jest.fn(),

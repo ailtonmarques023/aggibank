@@ -37,20 +37,23 @@ const FLOW_CONFIG = [
   null,
   {
     artifactType: 'DOCUMENT_FRONT',
-    title: 'Envie a frente do documento',
-    subtitle: 'RG ou CNH — foto colorida, legível e sem cortes.',
+    title: 'Envie seu documento',
+    subtitle:
+      'Precisamos de uma foto nítida da frente e do verso do seu documento para proteger sua conta — comece pela frente (RG ou CNH).',
     Icon: DocumentTextIcon,
   },
   {
     artifactType: 'DOCUMENT_BACK',
-    title: 'Envie o verso do documento',
-    subtitle: 'Mesmo documento da frente. Evite reflexos e sombras nas informações.',
+    title: 'Envie seu documento',
+    subtitle:
+      'Agora fotografe o verso do mesmo documento, bem legível, sem reflexos nem cortes nas informações.',
     Icon: DocumentTextIcon,
   },
   {
     artifactType: 'SELFIE_PORTRAIT',
-    title: 'Tire uma selfie',
-    subtitle: 'Rosto centralizado, boa iluminação e sem óculos escuros ou boné.',
+    title: 'Validação facial',
+    subtitle:
+      'Agora tire uma selfie em um local iluminado. Essa etapa ajuda a confirmar que é você mesmo na solicitação.',
     Icon: PhotoIcon,
   },
 ];
@@ -306,7 +309,7 @@ export default function KycVerification() {
       await refreshStatus();
       setForceFlow(false);
     } catch (err) {
-      const e = parseApiError(err, 'Não foi possível enviar para análise.');
+      const e = parseApiError(err, 'Não foi possível concluir o envio.');
       setReviewError(e.message);
     } finally {
       setSubmitBusy(false);
@@ -332,8 +335,7 @@ export default function KycVerification() {
         Para sua segurança e conformidade regulatória, precisamos conferir seus documentos. Use fotos claras e recentes.
       </p>
       <div className="rounded-2xl border border-amber-100 bg-amber-50/90 px-4 py-3 text-[0.82rem] leading-snug text-amber-950">
-        <strong className="font-semibold">Transparência:</strong> a análise é feita pela equipe AgilBank. Não há garantia de
-        tempo de resposta nem de aprovação automática.
+        <strong className="font-semibold">Dica:</strong> você pode concluir as fotos quando achar melhor. Cartão e crédito podem depender dessa conferência estar concluída.
       </div>
     </div>
   );
@@ -406,9 +408,9 @@ export default function KycVerification() {
 
     return (
       <>
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Revise e envie</h1>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Revise suas fotos</h1>
         <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-          Confira se suas fotos estão legíveis. Depois do envio, nossa equipe fará a análise manual.
+          Confira se suas fotos estão legíveis. Em seguida, enviamos suas imagens pelo fluxo seguro já usado pelo app.
         </p>
 
         <ul className="mb-8 space-y-3">
@@ -457,8 +459,7 @@ export default function KycVerification() {
         ) : null}
 
         <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[0.82rem] leading-snug text-blue-950">
-          Ao enviar, você declara que as imagens são fiéis ao seu documento oficial. A aprovação depende da conferência humana e pode
-          levar tempo útil.
+          Ao enviar, você declara que as imagens correspondem ao seu documento oficial. A validação da identidade segue políticas da AgilBank e pode incluir revisão quando necessário para produtos específicos.
         </div>
       </>
     );
@@ -488,7 +489,7 @@ export default function KycVerification() {
       <h1 className="mb-3 text-2xl font-bold text-gray-900">Agora é com a gente!</h1>
       <p className="max-w-xs text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
       <p className="mt-6 max-w-xs text-[0.82rem] leading-snug text-gray-500">
-        Não há prazo garantido nem promessa de aprovação automática. Você será avisado quando houver atualização.
+        A validação da identidade segue quando houver atualização disponível para sua conta neste aplicativo — não garantimos tempo de retorno específico.
       </p>
       <Link to="/transactions" className="mt-10 text-sm font-semibold text-agilbank-primary hover:underline">
         Voltar ao app
@@ -532,7 +533,7 @@ export default function KycVerification() {
           <ExclamationTriangleIcon className="h-10 w-10 text-red-600" aria-hidden />
         </div>
       </div>
-      <h1 className="mb-3 text-center text-2xl font-bold text-gray-900">Identidade não aprovada</h1>
+      <h1 className="mb-3 text-center text-2xl font-bold text-gray-900">Não confirmamos a identidade com essas fotos</h1>
       <p className="mb-8 text-center text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
       <Button
         type="button"
@@ -769,7 +770,7 @@ export default function KycVerification() {
                   disabled={!kycStatus?.canSubmitForReview || submitBusy || !!featureDisabledHint}
                   onClick={handleSubmitReview}
                 >
-                  {submitBusy ? 'Enviando…' : 'Enviar para análise'}
+                  {submitBusy ? 'Enviando…' : 'Enviar fotos'}
                 </Button>
                 {!kycStatus?.canSubmitForReview ? (
                   <p className="text-center text-[0.78rem] text-gray-500">Confirme os três arquivos antes de enviar.</p>
@@ -787,7 +788,7 @@ export default function KycVerification() {
           >
             <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" />
             <p className="text-center text-lg font-semibold tracking-tight">
-              {submitBusy ? 'Enviando para análise…' : 'Processando seu arquivo…'}
+              {submitBusy ? 'Enviando suas fotos…' : 'Processando seu arquivo…'}
             </p>
             <p className="mt-4 text-center text-sm text-blue-100/90">Não feche esta tela.</p>
           </div>

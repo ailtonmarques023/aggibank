@@ -1,334 +1,468 @@
 const Redis = require('ioredis');
+const logger = require('./logger');
+
+const redisLog = logger.child({ component: 'redis' });
 
 let redis = null;
+let connectInFlight = null;
 
-// Configuração do Redis
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD,
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3,
-  lazyConnect: true,
-  keepAlive: 30000,
-  connectTimeout: 10000,
-  commandTimeout: 5000,
-  retryDelayOnClusterDown: 300,
-  enableOfflineQueue: false,
-  maxLoadingTimeout: 5000,
-  retryStrategy: () => null,
-};
+const hasConfiguredRedisUrl = () =>
+  !!(process.env.REDIS_URL && String(process.env.REDIS_URL).trim());
 
-// Função para conectar ao Redis
-const connectRedis = async () => {
+function sanitizeRedisLogFields(err) {
+  if (!err) {
+    return { message: 'unknown_error', code: null, errno: null };
+  }
+
   try {
-    if (process.env.REDIS_URL) {
-      redis = new Redis(process.env.REDIS_URL, {
-        lazyConnect: true,
-        enableOfflineQueue: false,
-        maxRetriesPerRequest: 1,
-        connectTimeout: 5000,
-        retryStrategy: () => null,
-      });
-    } else {
-      redis = new Redis(redisConfig);
-    }
-    
-    // Event listeners
-    redis.on('connect', () => {
-      console.log('✅ Conectado ao Redis');
-    });
-    
-    redis.on('ready', () => {
-      console.log('✅ Redis pronto para uso');
-    });
-    
-    redis.on('error', (error) => {
-      console.error('❌ Erro no Redis:', error);
-    });
-    
-    redis.on('close', () => {
-      console.warn('⚠️ Conexão com Redis fechada');
-    });
-    
-    redis.on('reconnecting', () => {
-      console.log('🔄 Reconectando ao Redis...');
-    });
-    
-    // Com lazyConnect + enableOfflineQueue:false, comandos antes de connect() falham.
-    if (redis.status === 'wait' || redis.status === 'end') {
-      await redis.connect();
-    }
-    await redis.ping();
-    console.log('✅ Teste de conexão com Redis bem-sucedido');
-    
-    return redis;
-  } catch (error) {
-    console.error('❌ Erro ao conectar com Redis:', error);
-    if (redis) {
-      try {
-        redis.disconnect();
-      } catch (_) {}
-      redis = null;
-    }
-    throw error;
-  }
-};
+    const rawMsg = String(err.message || err);
+    /** Nunca logar URL completa, host interno Railway ou parte de URI com credencial. */
+    const safeMsg = rawMsg
+      .replace(/redis:\/\/[^\s'"]+/gi, '[redis-uri]')
+      .replace(/redis:[/][/][^\s'"]+/gi, '[redis-uri]')
+      .replace(/\b[^\s:/@]+\.(railway|up\.railway)\.[a-z.]+(?::\d+)?\b/gi, '[redis-host]')
+      .slice(0, 500);
 
-// Função para desconectar do Redis
-const disconnectRedis = async () => {
-  if (redis) {
+    return {
+      message: safeMsg,
+      code: err.code ? String(err.code) : null,
+      errno: err.errno !== undefined ? err.errno : null,
+      name: err.name ? String(err.name) : null,
+    };
+  } catch (_) {
+    return { message: 'sanitize_failed', code: null, errno: null };
+  }
+}
+
+function redisRetryDelayMs(times) {
+  const tRaw = Number(times);
+  /** ioredis: times começa em 1 para a primeira retentativa. */
+  const t = Number.isFinite(tRaw) ? Math.floor(tRaw) : 1;
+  const expo = Math.max(0, t - 1);
+  /** 200 ms → até 60 s com backoff + jitter modesto */
+  const base = Math.min(200 * Math.pow(2, Math.min(expo, 14)), 60000);
+  const jitter = expo > 0 ? Math.floor(Math.random() * Math.min(base, 1000)) : 0;
+  return Math.min(base + jitter, 60000);
+}
+
+function buildRedisOptions() {
+  const connectTimeout = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '12000', 10) || 12000;
+
+  return {
+    lazyConnect: true,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES_PER_REQUEST || '20', 10) || 20,
+    connectTimeout,
+    keepAlive: 30000,
+    /** Reconnect em quedas transientes (ECONNRESET, etc.). */
+    retryStrategy: (attempts) => redisRetryDelayMs(attempts),
+    reconnectOnError(err) {
+      const code = String(err.code || '').toUpperCase();
+      const msg = String(err.message || '');
+      if (
+        code === 'ECONNRESET' ||
+        code === 'ECONNREFUSED' ||
+        code === 'ETIMEDOUT' ||
+        code === 'EPIPE' ||
+        code === 'READONLY'
+      ) {
+        return true;
+      }
+      if (/READONLY|ECONNRESET|ETIMEDOUT|broken pipe|EPIPE/i.test(msg)) {
+        return true;
+      }
+      return false;
+    },
+  };
+}
+
+
+
+function withTimeout(promise, ms, label) {
+  const timeoutMs = Math.max(100, ms);
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(
+        Object.assign(new Error(`redis_${label}_timeout_${timeoutMs}`), {
+          code: 'REDIS_TIMEOUT',
+        }),
+      );
+    }, timeoutMs);
+  });
+  const wrapped = promise.finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+  return Promise.race([wrapped, timeoutPromise]).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
+function attachRuntimeListeners(instance) {
+  instance.on('connect', () => {
+    redisLog.info('Socket TCP do Redis estabelecido');
+  });
+
+  instance.on('ready', () => {
+    redisLog.info({ ioredisStatus: instance.status }, 'Redis disponível para comandos');
+  });
+
+  instance.on('error', (err) => {
+    const sanitized = sanitizeRedisLogFields(err);
+    redisLog.warn(
+      Object.assign({}, sanitized, { ioredisStatus: instance.status }),
+      'Erro no Redis',
+    );
+  });
+
+  instance.on('close', () => {
+    redisLog.warn({ ioredisStatus: instance.status }, 'Conexão com Redis fechada');
+  });
+
+  /** ioredis v5 emits `end`. Mesma mensagem agregada de fechamento. */
+  instance.on('end', () => {
+    redisLog.warn({ ioredisStatus: instance.status }, 'Conexão com Redis fechada');
+  });
+
+  /** delay em ms até a próxima tentativa quando aplicável */
+  instance.on('reconnecting', (delay) => {
+    redisLog.warn(
+      { delayMs: delay !== undefined ? delay : null, ioredisStatus: instance.status },
+      'Redis em reconexão',
+    );
+  });
+}
+
+async function destroyClientSilently() {
+  const c = redis;
+  redis = null;
+  if (!c) return;
+  try {
+    c.removeAllListeners();
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    await c.quit();
+  } catch (_) {
     try {
-      await redis.quit();
-      console.log('✅ Desconectado do Redis');
-    } catch (error) {
-      console.error('❌ Erro ao desconectar do Redis:', error);
+      c.disconnect();
+    } catch (__) {
+      /* ignore */
     }
   }
+}
+
+async function bootstrapClient(instance) {
+  const connectBudget = parseInt(process.env.REDIS_BOOT_CONNECT_MS || '15000', 10) || 15000;
+  const pingBudget = parseInt(process.env.REDIS_BOOT_PING_MS || '12000', 10) || 12000;
+
+  await withTimeout(instance.connect(), connectBudget, 'connect');
+  await withTimeout(instance.ping(), pingBudget, 'ping');
+  redisLog.info('Ping inicial do Redis concluído com sucesso');
+}
+
+/**
+ * Produção deve abortar apenas se esse ping inicial falhar (Railway/redis indisponível no boot).
+ * Quedas após ready são tratadas com reconexão automática pelo ioredis — sem encerrar o processo.
+ */
+async function connectRedisInternal() {
+  if (!hasConfiguredRedisUrl()) {
+    if (redis) await destroyClientSilently();
+    return null;
+  }
+
+  if (redis && redis.status === 'ready') {
+    return redis;
+  }
+
+  if (redis) {
+    await destroyClientSilently();
+  }
+
+  const common = buildRedisOptions();
+  const url = String(process.env.REDIS_URL || '').trim();
+  if (!url) {
+    await destroyClientSilently();
+    return null;
+  }
+
+  redis = new Redis(url, common);
+
+  attachRuntimeListeners(redis);
+
+  await bootstrapClient(redis).catch(async (err) => {
+    const sanitized = sanitizeRedisLogFields(err);
+    redisLog.error(sanitized, 'Falha no bootstrap do Redis');
+    await destroyClientSilently();
+    throw err;
+  });
+
+  return redis;
+}
+
+const connectRedis = async () => {
+  const url = String(process.env.REDIS_URL || '').trim();
+  if (!url) {
+    return null;
+  }
+  if (redis && redis.status === 'ready') {
+    return redis;
+  }
+
+  if (connectInFlight) {
+    return connectInFlight;
+  }
+
+  connectInFlight = (async () => {
+    try {
+      return await connectRedisInternal();
+    } finally {
+      connectInFlight = null;
+    }
+  })();
+
+  return connectInFlight;
 };
 
-// Função para verificar se Redis está disponível
-const isRedisAvailable = () => {
-  return !!(redis && redis.status === 'ready');
+const disconnectRedis = async () => {
+  if (!redis) return;
+  redisLog.info('Disconnect Redis solicitado');
+  await destroyClientSilently();
 };
 
-// Função para obter instância do Redis
+const isRedisAvailable = () => !!(redis && redis.status === 'ready');
+
 const getRedis = () => {
   if (!redis || redis.status !== 'ready') {
-    throw new Error('Redis não está disponível');
+    const err = new Error('Redis não está disponível');
+    err.code = 'REDIS_UNAVAILABLE';
+    throw err;
   }
   return redis;
 };
 
-// Funções auxiliares para cache
-const cache = {
-  // Definir valor no cache
+/**
+ * Estado agregado para health checks (sem credenciais e sem REDIS_URL).
+ * `status`: connected | reconnecting | disconnected | not_configured
+ */
+function getRedisHealthSummary() {
+  const configured = hasConfiguredRedisUrl();
+  if (!configured) {
+    return { configured: false, status: 'not_configured' };
+  }
+
+  if (!redis) {
+    return { configured: true, status: 'disconnected' };
+  }
+
+  const s = redis.status;
+  if (s === 'ready') {
+    return { configured: true, status: 'connected' };
+  }
+  /** Conectando / reconectando são expostos como reconnecting */
+  if (s === 'reconnecting' || s === 'connect' || s === 'wait') {
+    return { configured: true, status: 'reconnecting' };
+  }
+  return { configured: true, status: 'disconnected' };
+}
+
   set: async (key, value, ttl = 3600) => {
     if (!isRedisAvailable()) {
-      console.warn('Redis não disponível, pulando cache');
+      redisLog.warn('Redis indisponível; operação cache.set ignorada');
       return false;
     }
-    
+
     try {
       const serializedValue = JSON.stringify(value);
       await redis.setex(key, ttl, serializedValue);
-      console.debug(`Cache definido: ${key} (TTL: ${ttl}s)`);
+      redisLog.debug(`Cache definido: ${key} (TTL: ${ttl}s)`);
       return true;
     } catch (error) {
-      console.error('Erro ao definir cache:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao definir cache');
       return false;
     }
   },
-  
-  // Obter valor do cache
+
   get: async (key) => {
     if (!isRedisAvailable()) {
       return null;
     }
-    
+
     try {
       const value = await redis.get(key);
       if (value) {
-        console.debug(`Cache encontrado: ${key}`);
+        redisLog.debug(`Cache encontrado: ${key}`);
         return JSON.parse(value);
       }
       return null;
     } catch (error) {
-      console.error('Erro ao obter cache:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao obter cache');
       return null;
     }
   },
-  
-  // Deletar valor do cache
+
   del: async (key) => {
     if (!isRedisAvailable()) {
       return false;
     }
-    
+
     try {
       await redis.del(key);
-      console.debug(`Cache removido: ${key}`);
+      redisLog.debug(`Cache removido: ${key}`);
       return true;
     } catch (error) {
-      console.error('Erro ao remover cache:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao remover cache');
       return false;
     }
   },
-  
-  // Verificar se chave existe
+
   exists: async (key) => {
     if (!isRedisAvailable()) {
       return false;
     }
-    
+
     try {
       const exists = await redis.exists(key);
       return exists === 1;
     } catch (error) {
-      console.error('Erro ao verificar existência no cache:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao verificar existência no cache');
       return false;
     }
   },
-  
-  // Definir TTL para uma chave
+
   expire: async (key, ttl) => {
     if (!isRedisAvailable()) {
       return false;
     }
-    
+
     try {
       await redis.expire(key, ttl);
       return true;
     } catch (error) {
-      console.error('Erro ao definir TTL no cache:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao definir TTL no cache');
       return false;
     }
   },
-  
-  // Obter TTL de uma chave
+
   ttl: async (key) => {
     if (!isRedisAvailable()) {
       return -1;
     }
-    
+
     try {
       return await redis.ttl(key);
     } catch (error) {
-      console.error('Erro ao obter TTL do cache:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao obter TTL do cache');
       return -1;
     }
   },
 };
 
-// Funções específicas para sessões
 const session = {
-  // Salvar sessão
-  save: async (sessionId, data, ttl = 86400) => { // 24 horas
+  save: async (sessionId, data, ttl = 86400) => {
     return await cache.set(`session:${sessionId}`, data, ttl);
   },
-  
-  // Obter sessão
+
   get: async (sessionId) => {
     return await cache.get(`session:${sessionId}`);
   },
-  
-  // Deletar sessão
+
   delete: async (sessionId) => {
     return await cache.del(`session:${sessionId}`);
   },
-  
-  // Verificar se sessão existe
+
   exists: async (sessionId) => {
     return await cache.exists(`session:${sessionId}`);
   },
 };
 
-// Funções específicas para rate limiting
 const rateLimit = {
-  // Verificar rate limit
   check: async (key, limit, window) => {
     if (!isRedisAvailable()) {
       return { allowed: true, remaining: limit };
     }
-    
+
     try {
       const current = await redis.incr(key);
-      
+
       if (current === 1) {
         await redis.expire(key, window);
       }
-      
+
       const remaining = Math.max(0, limit - current);
       const allowed = current <= limit;
-      
+
       return { allowed, remaining, current };
     } catch (error) {
-      console.error('Erro ao verificar rate limit:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao verificar rate limit');
       return { allowed: true, remaining: limit };
     }
   },
-  
-  // Resetar rate limit
+
   reset: async (key) => {
     if (!isRedisAvailable()) {
       return false;
     }
-    
+
     try {
       await redis.del(key);
       return true;
     } catch (error) {
-      console.error('Erro ao resetar rate limit:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao resetar rate limit');
       return false;
     }
   },
 };
 
-// Funções específicas para notificações em tempo real
 const notifications = {
-  // Publicar notificação
   publish: async (channel, message) => {
     if (!isRedisAvailable()) {
       return false;
     }
-    
+
     try {
       await redis.publish(channel, JSON.stringify(message));
-      console.debug(`Notificação publicada no canal: ${channel}`);
+      redisLog.debug(`Notificação publicada no canal: ${channel}`);
       return true;
     } catch (error) {
-      console.error('Erro ao publicar notificação:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao publicar notificação');
       return false;
     }
   },
-  
-  // Subscrever a canal
+
   subscribe: (channel, callback) => {
     if (!isRedisAvailable()) {
       return null;
     }
-    
+
     try {
       const subscriber = redis.duplicate();
       subscriber.subscribe(channel);
-      
-      subscriber.on('message', (ch, message) => {
+
+      subscriber.on('message', (ch, incoming) => {
         try {
-          const data = JSON.parse(message);
+          const data = JSON.parse(incoming);
           callback(data);
         } catch (error) {
-          console.error('Erro ao processar mensagem do Redis:', error);
+          redisLog.error(sanitizeRedisLogFields(error), 'Erro ao processar mensagem do Redis');
         }
       });
-      
+
       return subscriber;
     } catch (error) {
-      console.error('Erro ao subscrever canal:', error);
+      redisLog.error(sanitizeRedisLogFields(error), 'Erro ao subscrever canal');
       return null;
     }
   },
 };
-
-// Graceful shutdown
-process.on('beforeExit', async () => {
-  await disconnectRedis();
-});
-
-process.on('SIGINT', async () => {
-  await disconnectRedis();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await disconnectRedis();
-  process.exit(0);
-});
 
 module.exports = {
   connectRedis,
   disconnectRedis,
   isRedisAvailable,
   getRedis,
+  getRedisHealthSummary,
   cache,
   session,
   rateLimit,

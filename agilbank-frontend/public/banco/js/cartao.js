@@ -1273,13 +1273,19 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
         var bqv = document.getElementById('btnBloquearCartaoVirtual');
         if (bqv) {
             var stv = String(c.status || '').toLowerCase();
-            bqv.textContent = stv === 'bloqueado' ? 'Desbloquear' : 'Bloquear';
-            bqv.disabled = !agilbankStatusCartaoAtivo(c) && stv !== 'bloqueado';
-            bqv.title = bqv.disabled ? 'Indisponível no momento' : '';
+            var virtualAtual = window.__agilbankVirtualCardSelecionado;
+            var baseStatus = String((virtualAtual && virtualAtual.baseStatus) || '').toLowerCase();
+            var baseBloqueado = baseStatus === 'bloqueado' || baseStatus === 'blocked';
+            bqv.textContent = stv === 'bloqueado' ? 'Desbloquear cartão virtual' : 'Bloquear cartão virtual';
+            bqv.disabled = false;
+            bqv.title = stv === 'bloqueado' && baseBloqueado
+                ? 'Seu cartão base está bloqueado. Desbloqueie para reativar o cartão virtual.'
+                : '';
             bqv.onclick = function () {
                 agilbankToggleBloqueioCartaoVirtual(bqv);
             };
         }
+        agilbankRenderStatusCartaoVirtual(window.__agilbankVirtualCardSelecionado, c);
     } else {
         var nf = document.getElementById('numeroCartaoFisico');
         if (nf) nf.textContent = numTxt;
@@ -2107,10 +2113,11 @@ function agilbankAplicarEstadoVirtualNaoEmitido(baseCard) {
     }
     var bloquear = document.getElementById('btnBloquearCartaoVirtual');
     if (bloquear) {
-        bloquear.textContent = 'Bloquear';
+        bloquear.textContent = 'Bloquear cartão virtual';
         bloquear.disabled = true;
         bloquear.title = 'Cartão virtual ainda não emitido';
     }
+    agilbankRenderStatusCartaoVirtual(null, baseCard);
     var lista = document.getElementById('movimentacoesListaCartaoVirtual');
     if (lista) {
         lista.innerHTML =
@@ -2120,6 +2127,35 @@ function agilbankAplicarEstadoVirtualNaoEmitido(baseCard) {
             '</div>';
     }
     window.__agilbankVirtualCardSelecionado = null;
+}
+
+function agilbankRenderStatusCartaoVirtual(virtual, baseCard) {
+    var box = document.getElementById('cartaoVirtualStatusBox');
+    var value = document.getElementById('cartaoVirtualStatusValue');
+    var text = document.getElementById('cartaoVirtualStatusText');
+    if (!box || !value || !text) return;
+
+    box.classList.remove('is-blocked', 'is-empty');
+
+    if (!virtual) {
+        box.classList.add('is-empty');
+        value.textContent = 'Não emitido';
+        text.textContent = agilbankStatusCartaoAtivo(baseCard)
+            ? 'Você ainda não tem cartão virtual. Crie um para compras online com mais segurança.'
+            : 'Seu cartão base está bloqueado. Desbloqueie para emitir um cartão virtual.';
+        return;
+    }
+
+    var status = String(virtual.status || '').trim().toLowerCase();
+    if (status === 'bloqueado' || status === 'blocked') {
+        box.classList.add('is-blocked');
+        value.textContent = 'Bloqueado';
+        text.textContent = 'Este cartão virtual está bloqueado. O cartão físico permanece separado.';
+        return;
+    }
+
+    value.textContent = 'Ativo';
+    text.textContent = 'Cartão virtual ativo para compras online. Você pode bloqueá-lo sem bloquear o cartão físico.';
 }
 
 async function agilbankCarregarCartaoVirtualSelecionado(baseCard, quiet) {
@@ -2139,12 +2175,14 @@ async function agilbankCarregarCartaoVirtualSelecionado(baseCard, quiet) {
                 agilbankAplicarEstadoVirtualNaoEmitido(selected);
                 return null;
             }
+            virtual.baseStatus = selected.status;
             window.__agilbankVirtualCardSelecionado = virtual;
             var merged = Object.assign({}, selected, {
                 status: virtual.status,
                 maskedNumber: virtual.maskedNumber || selected.maskedNumber,
                 last4: virtual.last4 || selected.last4,
-                validade: virtual.validade || selected.validade
+                validade: virtual.validade || selected.validade,
+                baseStatus: selected.status
             });
             agilbankPopularDetalheCartaoNaUi(merged, { titulo: 'Cartão virtual', virtual: true });
             var criar = document.getElementById('cartaoVirtualBtnCriar');
@@ -2674,6 +2712,10 @@ async function agilbankToggleBloqueioCartaoVirtual(button) {
         return;
     }
     var st = String(virtual.status || '').toLowerCase();
+    if (st === 'bloqueado' && !agilbankStatusCartaoAtivo(selected)) {
+        showErrorModal('Cartão virtual', 'Seu cartão base está bloqueado. Desbloqueie para reativar o cartão virtual.');
+        return;
+    }
     var suffix = st === 'bloqueado' ? '/virtual/unblock' : '/virtual/block';
     var label = st === 'bloqueado' ? 'Desbloqueando...' : 'Bloqueando...';
     try {
@@ -2687,7 +2729,10 @@ async function agilbankToggleBloqueioCartaoVirtual(button) {
             return;
         }
         await agilbankCarregarCartaoVirtualSelecionado(selected, true);
-        showErrorModal('Sucesso', result.body.message || 'Status do cartão virtual atualizado.');
+        var msg = result.body.message || (st === 'bloqueado'
+            ? 'Cartão virtual desbloqueado com sucesso.'
+            : 'Cartão virtual bloqueado com sucesso.');
+        showErrorModal('Sucesso', msg);
     } catch (error) {
         showErrorModal('Cartão virtual', (error && error.message) || 'Falha de conexão ao alterar status do cartão virtual.');
     } finally {

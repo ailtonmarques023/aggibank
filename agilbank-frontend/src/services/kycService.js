@@ -46,7 +46,7 @@ export async function confirmKycUpload(body) {
 
 export async function submitKycForReview() {
   const { data } = await api.post('/me/kyc/submit');
-  return unwrap(data, 'Não foi possível enviar para análise.');
+  return unwrap(data, 'Não foi possível concluir o envio.');
 }
 
 /**

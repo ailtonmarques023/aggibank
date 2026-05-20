@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   EyeIcon,
   EyeSlashIcon,
   CheckIcon,
-  ExclamationTriangleIcon
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  PhotoIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../hooks/useAuth.jsx';
@@ -13,6 +16,16 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import './Register.css';
 import { BRAND_MEDIA } from '../../constants/brandMedia';
+import {
+  KYC_ALLOWED_MIME_TYPES,
+  KYC_MAX_FILE_BYTES,
+  fetchKycStatus,
+  presignKycUpload,
+  confirmKycUpload,
+  submitKycForReview,
+  putFileToPresignedUrl,
+  sha256HexFromFile,
+} from '../../services/kycService';
 
 const STEP = {
   WELCOME: 0,
@@ -21,10 +34,75 @@ const STEP = {
   ADDRESS: 3,
   PROFESSIONAL: 4,
   PASSWORD: 5,
-  TERMS: 6
+  TERMS: 6,
+  DOC_FRONT: 7,
+  DOC_BACK: 8,
+  SELFIE: 9,
+  KYC_REVIEW: 10,
+  EMAIL_NOTICE: 11,
+  ALL_DONE: 12,
 };
 
-const PROGRESS_TOTAL = 6;
+const JOURNEY_TOTAL = 10;
+
+function journeyNumerator(step) {
+  switch (step) {
+    case STEP.WELCOME:
+      return 0;
+    case STEP.CPF:
+      return 1;
+    case STEP.PERSONAL:
+      return 2;
+    case STEP.ADDRESS:
+      return 3;
+    case STEP.PROFESSIONAL:
+      return 4;
+    case STEP.PASSWORD:
+      return 5;
+    case STEP.TERMS:
+      return 6;
+    case STEP.DOC_FRONT:
+    case STEP.DOC_BACK:
+      return 7;
+    case STEP.SELFIE:
+    case STEP.KYC_REVIEW:
+      return 8;
+    case STEP.EMAIL_NOTICE:
+      return 9;
+    case STEP.ALL_DONE:
+      return 10;
+    default:
+      return 0;
+  }
+}
+
+function parseKycFacingError(err, fallback) {
+  const body = err?.response?.data;
+  const msg =
+    typeof body?.message === 'string' && body.message.trim()
+      ? body.message.trim()
+      : typeof err?.message === 'string'
+        ? err.message.trim()
+        : '';
+  const sanitized = sanitizeUserFacingError(msg || fallback || '');
+  const out = new Error(sanitized || fallback || 'Erro ao processar solicitação.');
+  out.code = typeof body?.code === 'string' ? body.code : '';
+  out.httpStatus = err?.response?.status;
+  return out;
+}
+
+function mimeAllowed(file) {
+  const m = (file.type || '').trim().toLowerCase();
+  if (m && KYC_ALLOWED_MIME_TYPES.includes(m)) return { ok: true, mime: m };
+  const ext = String(file.name || '')
+    .split('.')
+    .pop()
+    ?.toLowerCase();
+  const guess =
+    ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : '';
+  if (guess && KYC_ALLOWED_MIME_TYPES.includes(guess)) return { ok: true, mime: guess };
+  return { ok: false, mime: '' };
+}
 
 /** Evita exibir detalhes técnicos acidentais no fluxo de cadastro. */
 function sanitizeUserFacingError(message) {
@@ -37,19 +115,89 @@ function sanitizeUserFacingError(message) {
   return t;
 }
 
+/** Mensagem amigável por falha HTTP no pipeline KYC sem alterar a API */
+function pipelineErrorMessage(err, fallback) {
+  const bodyMsg =
+    typeof err?.response?.data?.message === 'string'
+      ? sanitizeUserFacingError(err.response.data.message)
+      : '';
+  if (bodyMsg && bodyMsg.length > 3) return bodyMsg;
+
+  const status = err?.response?.status;
+  const storageHint = /armazenamento|O armazenamento/i.test(String(err?.message || ''));
+  if (storageHint) {
+    if (status === 403 || status === 401) {
+      return 'Não conseguimos salvar sua imagem (acesso negado pelo armazenamento). Use \"Tentar novamente\" ou conclua em Verificação de identidade.';
+    }
+    return 'O armazenamento não aceitou esta imagem. Verifique sua conexão Wi-Fi ou dados móveis e tente novamente.';
+  }
+  if (status === 502 || status === 503 || status === 504) {
+    return 'Servidores ocupados neste momento. Aguarde um instante e toque em \"Tentar novamente\".';
+  }
+  if (status === 408 || status === 429 || err?.code === 'ECONNABORTED') {
+    return 'A conexão expirou ou houve excesso de pedidos. Espere poucos segundos e tente de novo.';
+  }
+  const url =
+    typeof err?.config?.url === 'string' ? err.config.url : typeof err?.request?.responseURL === 'string' ? err.request.responseURL : '';
+  if (/confirm-upload/i.test(url) || /confirm-upload/i.test(String(err?.message || ''))) {
+    const fb = sanitizeUserFacingError(fallback || '');
+    return fb || 'Não confirmamos o arquivo no servidor. Selecione a foto novamente.';
+  }
+  if (/presign|\/me\/kyc\/presign/i.test(url)) {
+    return 'Não foi possível preparar o envio. Tente novamente em instantes.';
+  }
+  if (status >= 400 && status < 500 && fallback) {
+    return sanitizeUserFacingError(fallback) || 'Não foi possível concluir este passo. Tente de novo.';
+  }
+  const fb = sanitizeUserFacingError(fallback || '');
+  return fb || 'Erro ao processar. Use \"Tentar novamente\" ou concluir mais tarde em Verificação de identidade.';
+}
+
+const REGISTER_LOADING_MESSAGES = {
+  creating: {
+    title: 'Criando sua conta…',
+    detail: 'Registramos seus dados iniciais de forma protegida.',
+  },
+  session: {
+    title: 'Abrindo sua sessão…',
+    detail: 'Entrando com seu e-mail e senha para continuar aqui mesmo.',
+  },
+  afterKyc: {
+    title: 'Carregando próximos passos…',
+    detail: 'Só um instante para preparar fotos do documento e selfie.',
+  },
+};
+
 const Register = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(STEP.WELCOME);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
+  /** Após POST /register + sessão por login silencioso (register não devolve JWT). */
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [kycStatus, setKycStatus] = useState(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [kycStepError, setKycStepError] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  /** Conta já criada (POST OK) mas login silencioso falhou — oferecer retry SEM novo register. */
+  const [needsSilentLoginRetry, setNeedsSilentLoginRetry] = useState(false);
+  const [registrationLoadingCopy, setRegistrationLoadingCopy] = useState(REGISTER_LOADING_MESSAGES.creating);
+  const [featureDisabledHint, setFeatureDisabledHint] = useState('');
+  const [localPreviewUrlByType, setLocalPreviewUrlByType] = useState({});
+  /** Overlay KYC granular: checksum | presign | put | confirm | refresh */
+  const [uploadPhaseCopy, setUploadPhaseCopy] = useState(null);
+  const [submitOverlayCopy, setSubmitOverlayCopy] = useState(null);
 
   const registeringRef = useRef(false);
   const scrollAreaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const previewRegistry = useRef([]);
 
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, login } = useAuth();
 
   const {
     register,
@@ -97,6 +245,56 @@ const Register = () => {
   useEffect(() => {
     scrollAreaRef.current?.scrollTo({ top: 0 });
   }, [currentStep]);
+
+  const registerObjectUrl = useCallback((url) => {
+    previewRegistry.current.push(url);
+    return url;
+  }, []);
+
+  const revokePreviewForType = useCallback((artifactType) => {
+    setLocalPreviewUrlByType((prev) => {
+      const cur = prev[artifactType];
+      if (cur) {
+        try {
+          URL.revokeObjectURL(cur);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      const next = { ...prev };
+      delete next[artifactType];
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      previewRegistry.current.forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch (_) {
+          /* ignore */
+        }
+      });
+    };
+  }, []);
+
+  const refreshKycStatus = useCallback(async () => {
+    try {
+      const data = await fetchKycStatus();
+      setKycStatus(data);
+      setFeatureDisabledHint('');
+      return data;
+    } catch (err) {
+      const e = parseKycFacingError(err, 'Não foi possível atualizar seu status.');
+      if (e.httpStatus === 503 || e.code === 'FEATURE_KYC_DISABLED') {
+        setFeatureDisabledHint(
+          'O envio de documentos está temporariamente indisponível. Você pode continuar usando o AgilBank e concluir isso mais tarde na área Verificação de identidade.'
+        );
+      }
+      throw e;
+    }
+  }, []);
 
   const fetchCep = async (cep) => {
     if (cep.length === 8) {
@@ -198,15 +396,83 @@ const Register = () => {
   };
 
   const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, STEP.WELCOME));
-    setError('');
+    setKycStepError('');
+    setReviewError('');
+    if (!accountCreated) {
+      setNeedsSilentLoginRetry(false);
+      setCurrentStep((prev) => Math.max(prev - 1, STEP.WELCOME));
+      setError('');
+      return;
+    }
+    /** Conta já criada: não navegar antes da etapa do documento (evita segundo POST /register). */
+    if (currentStep === STEP.DOC_FRONT) return;
+    if (currentStep === STEP.DOC_BACK) setCurrentStep(STEP.DOC_FRONT);
+    else if (currentStep === STEP.SELFIE) setCurrentStep(STEP.DOC_BACK);
+    else if (currentStep === STEP.KYC_REVIEW) setCurrentStep(STEP.SELFIE);
+    else if (currentStep === STEP.EMAIL_NOTICE) setCurrentStep(STEP.KYC_REVIEW);
+    else if (currentStep === STEP.ALL_DONE) setCurrentStep(STEP.EMAIL_NOTICE);
   };
 
-  const onSubmit = async (data) => {
+  const signInSilentlyThenOpenKyc = async (emailTrim, senhaPlain) => {
+    const loginRes = await login(emailTrim, senhaPlain);
+    if (!loginRes.success) {
+      const raw = typeof loginRes.message === 'string' && loginRes.message.trim() ? loginRes.message.trim() : '';
+      applyErrorMessage(
+        `${sanitizeUserFacingError(raw) || 'O cadastro pode ter sido criado.'} Use “Tentar abrir sessão novamente” abaixo. Se seguir assim, vá em Entrar manualmente.`
+      );
+      setNeedsSilentLoginRetry(true);
+      return false;
+    }
+
+    setNeedsSilentLoginRetry(false);
+    setAccountCreated(true);
+    setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.afterKyc);
+    try {
+      await refreshKycStatus();
+    } catch (_) {
+      /* Hint de indisponibilidade pode ficar aplicado pelo refresh */
+    }
+    setCurrentStep(STEP.DOC_FRONT);
+    return true;
+  };
+
+  const retrySilentLoginOnly = async () => {
+    const emailTrim = watchedValues.email?.trim();
+    const senhaPlain = watchedValues.senha;
+    if (!emailTrim || typeof senhaPlain !== 'string' || senhaPlain.length !== 6) {
+      setError(
+        'Precisamos do mesmo e-mail e da sua senha de 6 dígitos. Volte um passo e confira ou use Entrar manualmente.'
+      );
+      return;
+    }
     if (registeringRef.current || loading) return;
     registeringRef.current = true;
     setLoading(true);
     setError('');
+    try {
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.session);
+      await signInSilentlyThenOpenKyc(emailTrim, senhaPlain);
+    } catch (_) {
+      applyErrorMessage(
+        'Não foi possível abrir sessão neste momento. Tente novamente ou use login manual pelo menu Entrar.'
+      );
+      setNeedsSilentLoginRetry(true);
+    } finally {
+      setLoading(false);
+      registeringRef.current = false;
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
+    }
+  };
+
+  const onSubmit = async (data) => {
+    if (currentStep !== STEP.TERMS) return;
+    if (needsSilentLoginRetry) return;
+    if (registeringRef.current || loading) return;
+    registeringRef.current = true;
+    setLoading(true);
+    setError('');
+    setNeedsSilentLoginRetry(false);
+    setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
 
     try {
       const userData = {
@@ -235,15 +501,22 @@ const Register = () => {
 
       const result = await registerUser(userData);
 
-      if (result.success) {
-        setSuccess(true);
-      } else {
+      if (!result.success) {
         const raw =
           (typeof result.message === 'string' && result.message) ||
           (typeof result.error === 'string' && result.error) ||
           '';
         applyErrorMessage(raw);
+        return;
       }
+
+      /**
+       * O backend não retorna JWT no register; abrimos sessão com POST /auth/login usando o mesmo e-mail/senha.
+       * isVerificado (e-mail) permanece pendente até o usuário clicar no link enviado.
+       */
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.session);
+      const progressed = await signInSilentlyThenOpenKyc(data.email.trim(), data.senha);
+      if (!progressed) return;
     } catch (err) {
       const payload = err.response?.data;
       const validationJoin = Array.isArray(payload?.errors)
@@ -259,22 +532,162 @@ const Register = () => {
         '';
       applyErrorMessage(raw || 'Erro ao criar conta. Tente novamente.');
       if (!raw && import.meta.env.DEV) console.error('Erro inesperado no registro (sem payload útil da API):', err);
+      setNeedsSilentLoginRetry(false);
     } finally {
       setLoading(false);
       registeringRef.current = false;
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
     }
   };
 
-  const progressIndex = Math.max(1, Math.min(currentStep, PROGRESS_TOTAL));
+  const artifactForUiStep = (uiStep) => {
+    if (uiStep === STEP.DOC_FRONT) return 'DOCUMENT_FRONT';
+    if (uiStep === STEP.DOC_BACK) return 'DOCUMENT_BACK';
+    if (uiStep === STEP.SELFIE) return 'SELFIE_PORTRAIT';
+    return null;
+  };
+
+  const handlePickFile = async (event) => {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    const at = artifactForUiStep(currentStep);
+    if (!at) return;
+
+    setKycStepError('');
+    const { ok, mime } = mimeAllowed(file);
+    if (!ok) {
+      setKycStepError('Use JPG, PNG ou WebP.');
+      return;
+    }
+    if (file.size <= 0 || file.size > KYC_MAX_FILE_BYTES) {
+      setKycStepError(`O arquivo deve ter até ${Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB.`);
+      return;
+    }
+
+    revokePreviewForType(at);
+    const previewUrl = registerObjectUrl(URL.createObjectURL(file));
+    setLocalPreviewUrlByType((prev) => ({ ...prev, [at]: previewUrl }));
+
+    setUploadBusy(true);
+    setUploadPhaseCopy({
+      title: 'Preparando envio…',
+      detail: 'Lemos sua foto e validamos formato antes do envio seguro.',
+    });
+    try {
+      let checksum;
+      try {
+        checksum = await sha256HexFromFile(file);
+      } catch (_) {
+        setKycStepError(
+          'Não foi possível preparar esta imagem. Escolha outro arquivo JPG, PNG ou WebP bem nítido e tente novamente.'
+        );
+        revokePreviewForType(at);
+        return;
+      }
+
+      setUploadPhaseCopy({
+        title: 'Reservando espaço para envio…',
+        detail: 'Comunicação com servidor AgilBank (pré‑assinatura do arquivo).',
+      });
+      const presignPayload = await presignKycUpload({
+        artifactType: at,
+        mimeType: mime,
+        byteSize: file.size
+      });
+
+      const isSelfie = at === 'SELFIE_PORTRAIT';
+      setUploadPhaseCopy({
+        title: isSelfie ? 'Enviando sua selfie…' : 'Enviando o documento…',
+        detail: 'Upload direto para o armazenamento seguro.',
+      });
+      await putFileToPresignedUrl(presignPayload.uploadUrl, file, presignPayload.headers);
+
+      setUploadPhaseCopy({
+        title: 'Confirmando arquivo…',
+        detail: 'Garantimos que sua imagem chegou completa aos nossos servidores.',
+      });
+      await confirmKycUpload({
+        artifactId: presignPayload.artifactId,
+        checksumSHA256: checksum
+      });
+
+      setUploadPhaseCopy({
+        title: 'Atualizando seu progresso…',
+        detail: 'Sincronizando as etapas desta abertura de conta.',
+      });
+      await refreshKycStatus();
+      if (currentStep === STEP.DOC_FRONT) setCurrentStep(STEP.DOC_BACK);
+      else if (currentStep === STEP.DOC_BACK) setCurrentStep(STEP.SELFIE);
+      else if (currentStep === STEP.SELFIE) setCurrentStep(STEP.KYC_REVIEW);
+    } catch (err) {
+      const parsed = parseKycFacingError(err, '');
+      const msg = pipelineErrorMessage(err, parsed.message || 'Não foi possível enviar. Toque em Tentar novamente.');
+      setKycStepError(msg);
+      revokePreviewForType(at);
+      if (parsed.code === 'FEATURE_KYC_DISABLED' || parsed.httpStatus === 503) {
+        setFeatureDisabledHint(
+          'O envio de documentos está temporariamente indisponível. Use “Continuar mais tarde” e finalize quando quiser na área Verificação de identidade.'
+        );
+      }
+    } finally {
+      setUploadBusy(false);
+      setUploadPhaseCopy(null);
+    }
+  };
+
+  const handleSubmitReviewRegister = async () => {
+    setReviewError('');
+    setSubmitBusy(true);
+    setSubmitOverlayCopy({
+      title: 'Finalizando cadastro das fotos…',
+      detail: 'Registrando frente, verso e selfie pela jornada de abertura.',
+    });
+    try {
+      await submitKycForReview();
+      await refreshKycStatus();
+      setCurrentStep(STEP.EMAIL_NOTICE);
+    } catch (err) {
+      const parsed = parseKycFacingError(err, 'Não foi possível registrar o envio das fotos neste momento.');
+      setReviewError(pipelineErrorMessage(err, parsed.message));
+      if (parsed.code === 'FEATURE_KYC_DISABLED' || parsed.httpStatus === 503) {
+        setFeatureDisabledHint(
+          'O envio de documentos está temporariamente indisponível. Use “Continuar mais tarde” e finalize quando quiser na área Verificação de identidade.'
+        );
+      }
+    } finally {
+      setSubmitBusy(false);
+      setSubmitOverlayCopy(null);
+    }
+  };
+
+  const openPicker = () => fileInputRef.current?.click();
+
+  const pgNum = journeyNumerator(currentStep);
+  const showProgress = pgNum >= 1 && currentStep !== STEP.ALL_DONE && currentStep !== STEP.WELCOME;
+
+  const progressIndex = pgNum;
 
   const scrollPaddingBottom =
     currentStep === STEP.WELCOME
       ? 'calc(9.75rem + env(safe-area-inset-bottom, 0px))'
-      : currentStep === STEP.TERMS && error
-        ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
+      : currentStep === STEP.TERMS && (error || needsSilentLoginRetry)
+        ? 'calc(16rem + env(safe-area-inset-bottom, 0px))'
         : currentStep === STEP.TERMS
           ? 'calc(11.5rem + env(safe-area-inset-bottom, 0px))'
-          : 'calc(10rem + env(safe-area-inset-bottom, 0px))';
+          : currentStep === STEP.KYC_REVIEW
+            ? reviewError
+              ? 'calc(15rem + env(safe-area-inset-bottom, 0px))'
+              : 'calc(12.5rem + env(safe-area-inset-bottom, 0px))'
+            : currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE
+              ? kycStepError
+                ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
+                : 'calc(12rem + env(safe-area-inset-bottom, 0px))'
+              : currentStep === STEP.EMAIL_NOTICE || currentStep === STEP.ALL_DONE
+                ? 'calc(12rem + env(safe-area-inset-bottom, 0px))'
+                : 'calc(10rem + env(safe-area-inset-bottom, 0px))';
 
   const EstadoOptions = (
     <>
@@ -325,7 +738,8 @@ const Register = () => {
         Seu AgilBank começa agora.
       </h1>
       <p className="mb-12 text-[0.975rem] leading-relaxed text-gray-600 text-balance">
-        Abra sua conta em poucos passos, com segurança e transparência.
+        Em poucas telas você informa seus dados e cria a conta. Fotos do documento e uma selfie ficam só para segurança — sem
+        burocracia desnecessária.
       </p>
     </div>
   );
@@ -667,7 +1081,7 @@ const Register = () => {
         Antes de finalizar
       </h1>
       <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-        Revise e aceite para concluir a abertura da sua conta.
+        Revise e aceite. Assim criamos sua conta agora — documento e selfie vêm nos passos seguintes, na mesma tela.
       </p>
       <div className="mb-8 rounded-2xl border border-gray-200 bg-gray-50/90 p-4 text-sm leading-relaxed text-gray-700">
         <dl className="space-y-2">
@@ -719,6 +1133,168 @@ const Register = () => {
     </>
   );
 
+  const artifactLabelPt = {
+    DOCUMENT_FRONT: 'Frente do documento',
+    DOCUMENT_BACK: 'Verso do documento',
+    SELFIE_PORTRAIT: 'Selfie',
+  };
+
+  const renderDocumentCaptureStep = () => {
+    const at = artifactForUiStep(currentStep);
+    const previewUrl = at ? localPreviewUrlByType[at] : null;
+    const isFront = currentStep === STEP.DOC_FRONT;
+
+    return (
+      <>
+        <div className="mb-6 flex justify-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
+            <DocumentTextIcon className="h-8 w-8" aria-hidden />
+          </div>
+        </div>
+        <p className="mb-3 inline-block rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+          {isFront ? 'Frente' : 'Verso'}
+        </p>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Envie seu documento</h1>
+        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+          Precisamos de uma foto nítida da frente e do verso do seu documento para proteger sua conta.
+        </p>
+
+        <div className="space-y-4">
+          {previewUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-inner">
+              <img src={previewUrl} alt="" className="mx-auto max-h-56 w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center">
+              <PhotoIcon className="mb-3 h-10 w-10 text-gray-400" aria-hidden />
+              <p className="text-sm text-gray-600">Nenhuma imagem enviada ainda</p>
+            </div>
+          )}
+
+          {kycStepError ? (
+            <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
+              <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+              <p className="break-words text-red-900">{kycStepError}</p>
+            </div>
+          ) : null}
+
+          <p className="text-center text-[0.75rem] leading-snug text-gray-500">
+            JPG, PNG ou WebP · até {Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB
+          </p>
+        </div>
+      </>
+    );
+  };
+
+  const renderSelfieCaptureStep = () => {
+    const previewUrl = localPreviewUrlByType.SELFIE_PORTRAIT;
+    return (
+      <>
+        <div className="mb-6 flex justify-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
+            <PhotoIcon className="h-8 w-8" aria-hidden />
+          </div>
+        </div>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Validação facial</h1>
+        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+          Agora tire uma selfie em um local iluminado. Essa etapa ajuda a confirmar que é você mesmo quem está abrindo a conta.
+        </p>
+        <div className="space-y-4">
+          {previewUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-inner">
+              <img src={previewUrl} alt="" className="mx-auto max-h-56 w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center">
+              <PhotoIcon className="mb-3 h-10 w-10 text-gray-400" aria-hidden />
+              <p className="text-sm text-gray-600">Nenhuma selfie enviada ainda</p>
+            </div>
+          )}
+          {kycStepError ? (
+            <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
+              <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+              <p className="break-words text-red-900">{kycStepError}</p>
+            </div>
+          ) : null}
+          <p className="text-center text-[0.75rem] leading-snug text-gray-500">
+            JPG, PNG ou WebP · até {Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB
+          </p>
+        </div>
+      </>
+    );
+  };
+
+  const renderRegisterKycReviewStep = () => {
+    const submitted = kycStatus?.submittedArtifacts || [];
+    const req = ['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'];
+    return (
+      <>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Revise suas fotos</h1>
+        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+          Confira se frente, verso e selfie estão legíveis. Quando estiver tudo certo, envie para concluir esta etapa de segurança cadastral.
+        </p>
+        <ul className="mb-8 space-y-3">
+          {req.map((key) => {
+            const ok = submitted.includes(key);
+            return (
+              <li
+                key={key}
+                className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${
+                  ok ? 'border-emerald-200 bg-emerald-50/70' : 'border-gray-200 bg-white'
+                }`}
+              >
+                {ok ? (
+                  <CheckCircleIcon className="h-7 w-7 shrink-0 text-emerald-600" aria-hidden />
+                ) : (
+                  <ExclamationTriangleIcon className="h-7 w-7 shrink-0 text-amber-500" aria-hidden />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{artifactLabelPt[key]}</p>
+                  <p className="text-xs text-gray-600">{ok ? 'Recebido' : 'Pendente'}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        {reviewError ? (
+          <div className="mb-6 flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
+            <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
+            <p className="break-words text-red-900">{reviewError}</p>
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
+  const renderEmailNoticeStep = () => (
+    <>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Confirme seu e-mail</h1>
+      <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+        Enviamos um link para validar seu e-mail (comunicações oficiais). Confira também a pasta de spam ou promoções.
+      </p>
+      <div className="rounded-2xl border border-gray-200 bg-gray-50/90 px-4 py-3 text-sm text-gray-800">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Enviado para</p>
+        <p className="break-all font-medium text-gray-900">{watchedValues.email || '—'}</p>
+      </div>
+    </>
+  );
+
+  const renderAllDoneStep = () => (
+    <div className="flex flex-col items-center pb-4 text-center">
+      <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+        <CheckIcon className="h-11 w-11 text-agilbank-success" aria-hidden />
+      </div>
+      <h1 className="mb-4 text-[1.6rem] font-bold leading-tight text-gray-900 sm:text-2xl">Conta criada com sucesso</h1>
+      <p className="mb-8 max-w-sm text-[0.95rem] leading-relaxed text-gray-600">
+        Bem-vindo ao AgilBank. Sua conta já foi criada e você pode acessar o app. Para usar cartão e crédito, mantenha sua identidade validada.
+      </p>
+      <p className="max-w-sm text-[0.82rem] leading-snug text-gray-500">
+        Abra o link que enviamos no e-mail para validar seu contato. Isso é independente das fotos do documento.
+      </p>
+    </div>
+  );
+
   const renderStepBody = () => {
     switch (currentStep) {
       case STEP.WELCOME:
@@ -735,16 +1311,66 @@ const Register = () => {
         return renderPasswordStep();
       case STEP.TERMS:
         return renderTermsStep();
+      case STEP.DOC_FRONT:
+      case STEP.DOC_BACK:
+        return renderDocumentCaptureStep();
+      case STEP.SELFIE:
+        return renderSelfieCaptureStep();
+      case STEP.KYC_REVIEW:
+        return renderRegisterKycReviewStep();
+      case STEP.EMAIL_NOTICE:
+        return renderEmailNoticeStep();
+      case STEP.ALL_DONE:
+        return renderAllDoneStep();
       default:
         return null;
     }
   };
 
-  /* --- Layout shell (mobile-first, max 430px no desktop) --- */
-  const showProgress = currentStep >= STEP.CPF && currentStep <= STEP.TERMS;
-
-  const footerPrimaryActions = () => {
-    if (currentStep >= STEP.TERMS) {
+  const renderCompactFooterPrimary = () => {
+    if (currentStep <= STEP.WELCOME) return null;
+    if (currentStep < STEP.TERMS) {
+      return (
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          onClick={nextStep}
+          disabled={loading}
+        >
+          Continuar
+        </Button>
+      );
+    }
+    if (currentStep === STEP.TERMS) {
+      const loginQs = watchedValues.email
+        ? `?email=${encodeURIComponent(String(watchedValues.email).trim())}`
+        : '';
+      if (needsSilentLoginRetry) {
+        return (
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+              loading={loading}
+              disabled={loading}
+              onClick={retrySilentLoginOnly}
+            >
+              Tentar abrir sessão novamente
+            </Button>
+            <Link
+              to={`/login${loginQs}`}
+              className="flex h-12 w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 text-[0.95rem] font-semibold text-gray-900"
+              aria-label="Ir para entrar manualmente"
+            >
+              Entrar manualmente
+            </Link>
+          </>
+        );
+      }
       return (
         <Button
           type="submit"
@@ -753,63 +1379,80 @@ const Register = () => {
           size="lg"
           className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
           loading={loading}
-          disabled={loading}
+          disabled={loading || needsSilentLoginRetry}
         >
           Criar conta
         </Button>
       );
     }
-    return (
-      <Button
-        type="button"
-        variant="primary"
-        size="lg"
-        className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
-        onClick={nextStep}
-        disabled={loading}
-      >
-        Continuar
-      </Button>
-    );
+    if (currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE) {
+      return (
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          onClick={openPicker}
+          disabled={uploadBusy || !!featureDisabledHint}
+          loading={uploadBusy}
+        >
+          {uploadBusy ? 'Enviando…' : localPreviewUrlByType[artifactForUiStep(currentStep)] ? 'Trocar foto e enviar' : 'Selecionar foto e enviar'}
+        </Button>
+      );
+    }
+    if (currentStep === STEP.KYC_REVIEW) {
+      return (
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          disabled={!kycStatus?.canSubmitForReview || submitBusy || !!featureDisabledHint}
+          loading={submitBusy}
+          onClick={handleSubmitReviewRegister}
+        >
+          {submitBusy ? 'Enviando…' : 'Enviar fotos'}
+        </Button>
+      );
+    }
+    if (currentStep === STEP.EMAIL_NOTICE) {
+      return (
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          onClick={() => setCurrentStep(STEP.ALL_DONE)}
+        >
+          Continuar
+        </Button>
+      );
+    }
+    if (currentStep === STEP.ALL_DONE) {
+      return (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+            onClick={() => navigate('/transactions')}
+          >
+            Acessar o app
+          </Button>
+          <Link
+            to="/verificacao-identidade"
+            className="block w-full rounded-xl border border-gray-200 bg-white py-3 text-center text-[0.95rem] font-semibold text-gray-800"
+          >
+            Verificação de identidade
+          </Link>
+        </>
+      );
+    }
+    return null;
   };
 
-  if (success) {
-    return (
-      <div className="flex min-h-[100dvh] justify-center bg-zinc-200/80 px-3 py-6 sm:bg-zinc-100 sm:py-10">
-        <div className="register-hero-bg relative flex w-full max-w-[430px] flex-col rounded-3xl shadow-2xl sm:rounded-[2rem] sm:border sm:border-white/70">
-          <div className="flex flex-1 flex-col px-8 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-24 text-center">
-            <div className="mx-auto mb-10 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-              <CheckIcon className="h-11 w-11 text-agilbank-success" />
-            </div>
-            <h1 className="mb-4 text-2xl font-bold leading-snug tracking-tight text-gray-900 sm:text-[1.75rem]">
-              Agora é com a gente!
-            </h1>
-            <p className="mb-6 text-[0.975rem] leading-relaxed text-gray-600">
-              Sua conta foi criada com sucesso. Você já pode acessar o AgilBank.
-            </p>
-            <p className="mb-6 text-[0.875rem] leading-relaxed text-gray-600">
-              Para sua segurança, confirme sua identidade com documento e selfie antes de solicitar cartão ou crédito.
-            </p>
-            <div className="flex w-full flex-col gap-3">
-              <Link
-                to="/login?next=/verificacao-identidade"
-                className="flex h-13 items-center justify-center rounded-xl bg-agilbank-primary px-4 text-[1rem] font-semibold text-white shadow-lg shadow-agilbank-primary/25"
-              >
-                Verificar minha identidade agora
-              </Link>
-              <Link
-                to="/login"
-                className="flex h-12 items-center justify-center rounded-xl border border-gray-200 bg-white px-4 text-[0.95rem] font-semibold text-gray-800"
-              >
-                Fazer depois — ir ao login
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  /* --- Layout shell (mobile-first, max 430px no desktop) --- */
   const shellOuter = (
     <div className={`flex min-h-[100dvh] justify-center ${currentStep === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : 'bg-zinc-200/75'} px-3 py-0 sm:py-10`}>
       <div className={`relative flex w-full max-w-[430px] flex-col min-h-[100dvh] sm:min-h-0 shadow-2xl sm:rounded-[2rem] sm:border border-white/40 overflow-hidden bg-white ${currentStep === STEP.WELCOME ? 'register-hero-bg' : ''}`}>
@@ -834,11 +1477,11 @@ const Register = () => {
                 decoding="async"
               />
               <Link
-                to="/login"
+                to={accountCreated ? '/transactions' : '/login'}
                 className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
-                aria-label="Tenho conta: ir para o login"
+                aria-label={accountCreated ? 'Ir para o app' : 'Tenho conta: ir para o login'}
               >
-                Tenho conta
+                {accountCreated ? 'Ir ao app' : 'Tenho conta'}
               </Link>
             </div>
             {showProgress ? (
@@ -847,19 +1490,19 @@ const Register = () => {
                   role="progressbar"
                   aria-valuenow={progressIndex}
                   aria-valuemin={1}
-                  aria-valuemax={PROGRESS_TOTAL}
-                  aria-valuetext={`Etapa ${progressIndex} de ${PROGRESS_TOTAL}`}
+                  aria-valuemax={JOURNEY_TOTAL}
+                  aria-valuetext={`Etapa ${progressIndex} de ${JOURNEY_TOTAL}`}
                   className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
                 >
                   <div
                     className="h-full rounded-full bg-agilbank-primary transition-all duration-500 ease-out"
-                    style={{ width: `${(progressIndex / PROGRESS_TOTAL) * 100}%` }}
+                    style={{ width: `${(progressIndex / JOURNEY_TOTAL) * 100}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-[11px] font-medium uppercase tracking-wide text-gray-500">
                   <span>Etapa</span>
                   <span aria-live="polite">
-                    {progressIndex} / {PROGRESS_TOTAL}
+                    {progressIndex} / {JOURNEY_TOTAL}
                   </span>
                 </div>
               </div>
@@ -884,7 +1527,7 @@ const Register = () => {
                 e.preventDefault();
                 return;
               }
-              if (currentStep < STEP.TERMS) {
+              if (currentStep !== STEP.TERMS) {
                 e.preventDefault();
               }
             }}
@@ -893,6 +1536,18 @@ const Register = () => {
             <fieldset className={currentStep === STEP.WELCOME ? 'min-h-0 sm:min-h-[50vh]' : 'min-h-[50vh]'} disabled={loading}>
               {renderStepBody()}
             </fieldset>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={KYC_ALLOWED_MIME_TYPES.join(',')}
+              className="hidden"
+              aria-hidden
+              tabIndex={-1}
+              {...(currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE
+                ? { capture: currentStep === STEP.SELFIE ? 'user' : 'environment' }
+                : {})}
+              onChange={handlePickFile}
+            />
           </form>
         </div>
 
@@ -936,7 +1591,44 @@ const Register = () => {
                     </div>
                   </div>
                 ) : null}
-                {footerPrimaryActions()}
+                {featureDisabledHint && accountCreated && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.KYC_REVIEW ? (
+                  <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[0.85rem]" role="status">
+                    <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-amber-600" aria-hidden />
+                    <p className="min-w-0 text-amber-950">{featureDisabledHint}</p>
+                  </div>
+                ) : null}
+                {currentStep === STEP.KYC_REVIEW && !kycStatus?.canSubmitForReview ? (
+                  <p className="text-center text-[0.78rem] text-gray-500">Envie os três arquivos antes de seguir.</p>
+                ) : null}
+                {renderCompactFooterPrimary()}
+                {accountCreated && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.KYC_REVIEW && !uploadBusy && !submitBusy ? (
+                  <>
+                    {!featureDisabledHint &&
+                    ((currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE && kycStepError) ||
+                      (currentStep === STEP.KYC_REVIEW && reviewError)) ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="lg"
+                        className="h-12 w-full rounded-xl border-gray-300 py-3 text-[0.95rem] font-semibold"
+                        disabled={uploadBusy || submitBusy || !!featureDisabledHint}
+                        onClick={currentStep === STEP.KYC_REVIEW ? handleSubmitReviewRegister : openPicker}
+                      >
+                        Tentar novamente
+                      </Button>
+                    ) : null}
+                    <Link
+                      to="/verificacao-identidade"
+                      className="block w-full rounded-xl px-4 py-2.5 text-center text-[0.9rem] font-medium text-agilbank-primary underline-offset-2 hover:underline"
+                      aria-label="Continuar fotos mais tarde em Verificação de identidade"
+                    >
+                      Continuar mais tarde
+                    </Link>
+                    <p className="text-center text-[0.72rem] leading-snug text-gray-400">
+                      Sua conta continua válida e você volta para as fotos no mesmo fluxo dentro do app, quando preferir.
+                    </p>
+                  </>
+                ) : null}
               </>
             )}
           </div>
@@ -951,8 +1643,27 @@ const Register = () => {
             aria-live="polite"
           >
             <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" aria-hidden />
-            <p className="text-center text-lg font-semibold tracking-tight">Salvando seus dados...</p>
-            <p className="mt-4 text-center text-sm text-blue-100/90">Um instante, estamos criando sua conta com segurança.</p>
+            <p className="text-center text-lg font-semibold tracking-tight">{registrationLoadingCopy.title}</p>
+            <p className="mt-4 text-center text-sm text-blue-100/90">{registrationLoadingCopy.detail}</p>
+          </div>
+        ) : null}
+
+        {uploadBusy || submitBusy ? (
+          <div
+            className="register-loading-bg fixed inset-0 z-[200] flex flex-col items-center justify-center px-10 text-white"
+            role="status"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" aria-hidden />
+            <p className="text-center text-lg font-semibold tracking-tight">
+              {submitBusy ? submitOverlayCopy?.title ?? 'Finalizando cadastro das fotos…' : uploadPhaseCopy?.title ?? 'Preparando envio…'}
+            </p>
+            <p className="mt-4 text-center text-sm text-blue-100/90">
+              {submitBusy
+                ? submitOverlayCopy?.detail ?? 'Um instante até registrarmos tudo.'
+                : uploadPhaseCopy?.detail ?? 'Não feche o app até a barra sumir.'}
+            </p>
           </div>
         ) : null}
       </div>

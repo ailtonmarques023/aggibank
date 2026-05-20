@@ -33,7 +33,7 @@ const referralRoutes = require('./routes/referrals');
 const meKycRoutes = require('./routes/meKyc');
 const internalKycRoutes = require('./routes/internalKyc');
 const { requireInternalApiKey } = require('./middleware/auth');
-const { connectRedis, isRedisAvailable, getRedis } = require('./utils/redis');
+const { connectRedis, disconnectRedis, isRedisAvailable, getRedis, getRedisHealthSummary } = require('./utils/redis');
 const { sanitizeUrlForAccessLog } = require('./utils/logSanitizer');
 
 const app = express();
@@ -240,15 +240,17 @@ async function runDatabaseReadinessProbe() {
   }
 }
 
-// Health check (liveness)
+// Health check (liveness + visão agregada do Redis sem segredos)
 app.get('/api/health', (req, res) => {
+  const redisHealth = getRedisHealthSummary();
   res.json({
     status: 'healthy',
     mode: 'liveness',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV,
-    version: process.env.npm_package_version || '1.0.0'
+    version: process.env.npm_package_version || '1.0.0',
+    redis: redisHealth,
   });
 });
 
@@ -302,10 +304,12 @@ app.get('/api/ops/metrics', requireInternalApiKey('OPS_METRICS_INTERNAL_KEY'), (
       configured: hasRedisUrl,
       available: isRedisAvailable(),
       fallback: !isRedisAvailable(),
+      connectivity: getRedisHealthSummary(),
     },
   };
 
-  if (!isRedisAvailable()) {
+  /** Sem Redis configurado — apenas métricas em processo (comportamento legado). */
+  if (!hasRedisUrl) {
     return res.status(200).json({
       success: true,
       category: 'operational_metric',
@@ -313,7 +317,31 @@ app.get('/api/ops/metrics', requireInternalApiKey('OPS_METRICS_INTERNAL_KEY'), (
     });
   }
 
-  return getRedis().mget(
+  /** Redis obrigatório para contadores distribuídos: degrade explícito. */
+  if (!isRedisAvailable()) {
+    return res.status(503).json({
+      success: false,
+      category: 'operational_error',
+      code: 'REDIS_UNAVAILABLE',
+      message: 'Métricas distribuídas temporariamente indisponíveis (Redis).',
+      data: base,
+    });
+  }
+
+  let redisInst;
+  try {
+    redisInst = getRedis();
+  } catch (syncErr) {
+    return res.status(503).json({
+      success: false,
+      category: 'operational_error',
+      code: 'REDIS_UNAVAILABLE',
+      message: 'Métricas distribuídas temporariamente indisponíveis (Redis).',
+      data: base,
+    });
+  }
+
+  return redisInst.mget(
     'ops:metrics:auth:failures',
     'ops:metrics:auth:refresh_failures',
     'ops:metrics:http:errors_5xx',
@@ -338,9 +366,11 @@ app.get('/api/ops/metrics', requireInternalApiKey('OPS_METRICS_INTERNAL_KEY'), (
       component: 'ops_metrics',
       error: error && error.message ? error.message : String(error || ''),
     });
-    return res.status(200).json({
-      success: true,
-      category: 'operational_metric',
+    return res.status(503).json({
+      success: false,
+      category: 'operational_error',
+      code: 'REDIS_UNAVAILABLE',
+      message: 'Métricas distribuídas temporariamente indisponíveis (Redis).',
       data: base,
     });
   });
@@ -486,14 +516,23 @@ async function startServer() {
 }
 
 // Graceful shutdown
+// Graceful shutdown: encerra cliente Redis antes de sair (evita `beforeExit`/loops async no processo Node).
 process.on('SIGTERM', () => {
-  console.log('🛑 Recebido SIGTERM, encerrando servidor graciosamente...');
-  process.exit(0);
+  logger.info({
+    category: 'operational_metric',
+    component: 'process',
+    signal: 'SIGTERM',
+  }, 'Recebido SIGTERM, encerrando servidor');
+  disconnectRedis().catch(() => {}).finally(() => process.exit(0));
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 Recebido SIGINT, encerrando servidor graciosamente...');
-  process.exit(0);
+  logger.info({
+    category: 'operational_metric',
+    component: 'process',
+    signal: 'SIGINT',
+  }, 'Recebido SIGINT, encerrando servidor');
+  disconnectRedis().catch(() => {}).finally(() => process.exit(0));
 });
 
 // Tratamento de erros não capturados

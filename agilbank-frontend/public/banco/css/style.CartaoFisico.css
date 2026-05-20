@@ -523,6 +523,64 @@ padding: 0 15px;
     font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
 }
 
+.cartao-virtual-status {
+    width: 100%;
+    max-width: 420px;
+    margin: 12px auto 0;
+    padding: 14px;
+    border: 1px solid rgba(0, 102, 179, 0.16);
+    border-radius: 12px;
+    background: #f3f9ff;
+}
+
+.cartao-virtual-status__label {
+    display: block;
+    color: #5b6d82;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cartao-virtual-status__value {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    margin-top: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #d9f7e7;
+    color: #08723d;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.cartao-virtual-status__text {
+    margin: 10px 0 0;
+    color: #40566d;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.cartao-virtual-status.is-blocked {
+    border-color: rgba(180, 83, 9, 0.22);
+    background: #fff7ed;
+}
+
+.cartao-virtual-status.is-blocked .cartao-virtual-status__value {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.cartao-virtual-status.is-empty {
+    background: #f8fafc;
+    border-color: rgba(91, 109, 130, 0.22);
+}
+
+.cartao-virtual-status.is-empty .cartao-virtual-status__value {
+    background: #e5edf5;
+    color: #40566d;
+}
+
 .cartao-mock-meta {
     width: 100%;
     max-width: 420px;
