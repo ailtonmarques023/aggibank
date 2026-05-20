@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { resolveLoginUserFacingMessage } from '../services/loginMessage';
+import { resolveRegisterFailure } from '../services/registerMessage';
 import { clearStoredAuth, getStoredAuth, storeAuthSession } from '../utils/authStorage';
 
 const AuthContext = createContext(null);
@@ -20,7 +22,9 @@ export const AuthProvider = ({ children }) => {
         // Set token for API requests
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       } catch (error) {
-        console.error('Erro ao fazer parse do userData ou token inválido:', error);
+        if (import.meta.env.DEV) {
+          console.error('Erro ao fazer parse do userData ou token inválido:', error);
+        }
         logout(); // Clear corrupted data
       }
     }
@@ -41,7 +45,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       setLoading(false);
-      return { success: false, message: error.response?.data?.message || 'Erro ao fazer login' };
+      return { success: false, message: resolveLoginUserFacingMessage(error) };
     }
   };
 
@@ -55,27 +59,14 @@ export const AuthProvider = ({ children }) => {
         data: response.data?.data || response.data,
       };
     } catch (error) {
-      const payload = error.response?.data && typeof error.response.data === 'object' ? error.response.data : {};
-      const fromErrorsArr = Array.isArray(payload.errors)
-        ? payload.errors
-            .map((e) => (typeof e?.message === 'string' ? e.message.trim() : ''))
-            .filter(Boolean)
-        : [];
-
-      let msg =
-        (typeof payload.message === 'string' && payload.message.trim()) ||
-        (fromErrorsArr.length > 0 ? fromErrorsArr.join(' ') : null) ||
-        (typeof payload.error === 'string' && payload.error.trim());
-
-      const generic = 'Erro ao criar conta. Tente novamente.';
-      msg = msg || generic;
-
+      const mapped = resolveRegisterFailure(error);
       return {
         success: false,
-        message: msg,
-        error: msg,
-        code: payload.code,
-        duplicateField: payload.duplicateField,
+        message: mapped.message,
+        error: mapped.message,
+        code: mapped.code,
+        duplicateField: mapped.duplicateField,
+        httpStatus: mapped.httpStatus,
       };
     }
   };

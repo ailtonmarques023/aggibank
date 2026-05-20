@@ -10,11 +10,14 @@ export const authService = {
         ...(response.data?.data || {}),
       };
     } catch (error) {
-      throw error.response?.data || {
-        code: error.code,
-        message: error.message,
-        request: Boolean(error.request),
-      };
+      /** Preserva HTTP status/códigos Axios para classify credenciais x rede/rate-limit */
+      const base = typeof error.response?.data === 'object' && error.response.data !== null ? { ...error.response.data } : {};
+      throw Object.assign(base, {
+        loginHttpStatus: typeof error.response?.status === 'number' ? error.response.status : null,
+        loginAxiosCode: typeof error.code === 'string' ? error.code : '',
+        loginHadRequest:
+          !!(error.request && typeof error.response === 'undefined'),
+      });
     }
   },
 
@@ -31,7 +34,9 @@ export const authService = {
     try {
       await api.post('/auth/logout');
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      if (import.meta.env.DEV) {
+        console.error('Erro ao fazer logout:', error);
+      }
     } finally {
       clearStoredAuth();
     }
@@ -46,3 +51,5 @@ export const authService = {
     }
   }
 };
+
+export { resolveLoginUserFacingMessage } from './loginMessage';

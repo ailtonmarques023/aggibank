@@ -41,6 +41,10 @@ function resendVerificationMinIntervalMs() {
 const FORGOT_PASSWORD_PUBLIC_MESSAGE =
   'Se os dados estiverem corretos, enviaremos as instruções para o e-mail cadastrado.';
 
+/** Login: mesma mensagem pública para credencial ausente/errada/inativa — reduz enumeração. */
+const LOGIN_CREDENTIAL_MISMATCH_PUBLIC_MESSAGE =
+  'Não encontramos uma conta com esses dados ou a senha está incorreta.';
+
 const RESET_TOKEN_INVALID_MESSAGE = 'Token inválido ou expirado.';
 
 /**
@@ -565,7 +569,7 @@ router.post('/login', validateLogin, async (req, res) => {
       });
       return res.status(429).json({
         success: false,
-        message: 'Muitas tentativas inválidas. Aguarde alguns minutos antes de tentar novamente.',
+        message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
         code: 'AUTH_RATE_LIMITED',
         category: 'operational_error',
       });
@@ -584,7 +588,7 @@ router.post('/login', validateLogin, async (req, res) => {
       logger.security('login_failed', { identifierType: loginIdentifier.type, reason: 'user_not_found' });
       return res.status(401).json({
         success: false,
-        message: 'Conta não encontrada. Abra sua conta AgilBank.',
+        message: LOGIN_CREDENTIAL_MISMATCH_PUBLIC_MESSAGE,
         code: 'INVALID_CREDENTIALS'
       });
     }
@@ -596,7 +600,7 @@ router.post('/login', validateLogin, async (req, res) => {
       logger.security('login_failed', { identifierType: loginIdentifier.type, reason: 'invalid_password' });
       return res.status(401).json({
         success: false,
-        message: 'Senha incorreta. Confira os 6 dígitos.',
+        message: LOGIN_CREDENTIAL_MISMATCH_PUBLIC_MESSAGE,
         code: 'INVALID_CREDENTIALS'
       });
     }
@@ -607,8 +611,8 @@ router.post('/login', validateLogin, async (req, res) => {
       logger.security('login_failed', { userId: user.id, reason: 'account_inactive' });
       return res.status(401).json({
         success: false,
-        message: 'Conta desativada',
-        code: 'ACCOUNT_DEACTIVATED'
+        message: LOGIN_CREDENTIAL_MISMATCH_PUBLIC_MESSAGE,
+        code: 'INVALID_CREDENTIALS'
       });
     }
 

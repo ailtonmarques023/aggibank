@@ -3,36 +3,16 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { BRAND_MEDIA } from '../constants/brandMedia';
 import { authService } from '../services/authService';
+import { resolveLoginUserFacingMessage } from '../services/loginMessage';
 import { storeAuthSession } from '../utils/authStorage';
 
-const LOGIN_ERROR_MESSAGES = {
-  ACCOUNT_NOT_FOUND: 'Conta não encontrada. Abra sua conta AgilBank.',
-  INVALID_PASSWORD: 'Senha incorreta. Confira os 6 dígitos.',
-  VALIDATION_ERROR: 'Informe um e-mail válido ou CPF com 11 números.',
+const LOGIN_CLIENT_VALIDATION = {
+  identifierInvalid: 'Informe um e-mail válido ou CPF com 11 números.',
 };
 
 const isEmail = (identifier) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 const isCpf = (identifier) => /^\d{11}$/.test(identifier);
 const isValidIdentifier = (identifier) => isEmail(identifier) || isCpf(identifier);
-
-const getLoginErrorMessage = (error) => {
-  const errorCode = error?.code || error?.error || error?.type;
-
-  if (LOGIN_ERROR_MESSAGES[errorCode]) {
-    return LOGIN_ERROR_MESSAGES[errorCode];
-  }
-
-  if (
-    error?.request ||
-    error?.code === 'ERR_NETWORK' ||
-    error?.code === 'ECONNABORTED' ||
-    error?.message === 'Network Error'
-  ) {
-    return 'Não foi possível conectar ao AgilBank agora.';
-  }
-
-  return error?.message || 'Não foi possível conectar ao AgilBank agora.';
-};
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -71,7 +51,7 @@ const Login = () => {
     const identifier = email.trim();
 
     if (!isValidIdentifier(identifier)) {
-      setError(LOGIN_ERROR_MESSAGES.VALIDATION_ERROR);
+      setError(LOGIN_CLIENT_VALIDATION.identifierInvalid);
       setLoading(false);
       return;
     }
@@ -85,20 +65,30 @@ const Login = () => {
     try {
       const data = await authService.login(identifier, passwordString);
 
-      if (data.success) {
-        storeAuthSession(data.token, data.user);
-        const nextRaw = (searchParams.get('next') || '').trim();
-        const safeNext = nextRaw === '/verificacao-identidade' ? nextRaw : null;
-        if (safeNext) {
-          window.location.assign(safeNext);
-          return;
-        }
-        window.location.replace('/banco/index.html');
-      } else {
-        setError(getLoginErrorMessage(data));
+      if (!data.success) {
+        const synthetic = Object.assign({}, data || {}, {
+          loginHttpStatus:
+            typeof data.loginHttpStatus === 'number'
+              ? data.loginHttpStatus
+              : typeof data.httpStatus === 'number'
+                ? data.httpStatus
+                : undefined,
+          success: false,
+        });
+        setError(resolveLoginUserFacingMessage(synthetic));
+        return;
       }
+
+      storeAuthSession(data.token, data.user);
+      const nextRaw = (searchParams.get('next') || '').trim();
+      const safeNext = nextRaw === '/verificacao-identidade' ? nextRaw : null;
+      if (safeNext) {
+        window.location.assign(safeNext);
+        return;
+      }
+      window.location.replace('/banco/index.html');
     } catch (err) {
-      setError(getLoginErrorMessage(err));
+      setError(resolveLoginUserFacingMessage(err));
     } finally {
       setLoading(false);
     }

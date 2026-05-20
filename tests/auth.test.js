@@ -639,7 +639,9 @@ describe('Auth Routes', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Senha incorreta. Confira os 6 dígitos.');
+      expect(response.body.message).toBe(
+        'Não encontramos uma conta com esses dados ou a senha está incorreta.'
+      );
       expect(prisma.token.create).not.toHaveBeenCalled();
     });
 
@@ -657,7 +659,9 @@ describe('Auth Routes', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Conta não encontrada. Abra sua conta AgilBank.');
+      expect(response.body.message).toBe(
+        'Não encontramos uma conta com esses dados ou a senha está incorreta.'
+      );
       expect(logger.security).toHaveBeenCalledWith('login_failed', {
         identifierType: 'cpf',
         reason: 'user_not_found'
@@ -689,7 +693,9 @@ describe('Auth Routes', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('desativada');
+      expect(response.body.message).toBe(
+        'Não encontramos uma conta com esses dados ou a senha está incorreta.'
+      );
     });
   });
 

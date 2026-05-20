@@ -41,49 +41,53 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 const hasRedisUrl = !!(process.env.REDIS_URL && String(process.env.REDIS_URL).trim());
+const isProduction = process.env.NODE_ENV === 'production';
+
+/** Origens de browser permitidas sempre em produção (Railway pode subir sem CORS_ORIGIN). */
+const DEFAULT_BROWSER_ORIGINS_PRODUCTION = ['https://aggibank.vercel.app'];
+
+function normalizeBrowserOrigin(raw) {
+  const t = String(raw || '').trim();
+  if (!t) return '';
+  const noTrail = t.replace(/\/+$/, '');
+  try {
+    const url = noTrail.includes('://') ? noTrail : `https://${noTrail}`;
+    return new URL(url).origin;
+  } catch (_) {
+    return noTrail;
+  }
+}
 
 function parseAllowedCorsOrigins() {
-  const raw = String(process.env.CORS_ORIGIN || '').trim();
-  const list = raw
-    ? raw
-        .split(',')
-        .map((v) => v.trim())
-        .filter(Boolean)
-    : [];
+  const list = [];
+  const corsRaw = String(process.env.CORS_ORIGIN || '').trim();
+  if (corsRaw) {
+    corsRaw.split(',').forEach((piece) => {
+      const o = normalizeBrowserOrigin(piece);
+      if (o && !list.includes(o)) list.push(o);
+    });
+  }
   const fe = String(process.env.FRONTEND_URL || '').trim();
   if (fe) {
-    try {
-      const origin = new URL(fe).origin;
-      if (origin && !list.includes(origin)) list.push(origin);
-    } catch (_) {
-      /* ignore FRONTEND_URL inválida */
-    }
+    const o = normalizeBrowserOrigin(fe);
+    if (o && !list.includes(o)) list.push(o);
+  }
+  if (isProduction) {
+    DEFAULT_BROWSER_ORIGINS_PRODUCTION.forEach((o) => {
+      if (o && !list.includes(o)) list.push(o);
+    });
   }
   return list;
 }
 
 function isCorsAllowedOrigin(origin, allowedOrigins) {
   if (!origin) return true; // chamadas server-to-server / curl sem Origin
-  if (allowedOrigins.includes('*')) return true;
+  /** Nunca refletir "*": credentials:true exige origin explícito. */
   return allowedOrigins.includes(origin);
 }
 
-// Middleware de segurança
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}));
-
-const isProduction = process.env.NODE_ENV === 'production';
-
-// CORS com endurecimento em producao e flexibilidade em dev
-// Origens lidas por requisição para refletir env atual após deploy/alteração de variáveis.
+// CORS antes de helmet e antes de rate limit nas rotas /api/*
+// Origens recalculadas por requisição para refletir env após deploy/alteração de variáveis.
 app.use(cors({
   origin(origin, callback) {
     if (!isProduction) return callback(null, true);
@@ -99,7 +103,19 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-request-id', 'x-internal-key', 'Idempotency-Key'],
-  optionsSuccessStatus: 200,
+  optionsSuccessStatus: 204,
+}));
+
+// Middleware de segurança (após CORS para preflight não competir com CSP aplicada só às camadas seguintes)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
 }));
 
 // Rate limiting
@@ -111,6 +127,7 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
 });
 
 app.use('/api/', limiter);
@@ -120,7 +137,7 @@ const authLimiter = rateLimit({
   max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS, 10) || 20,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: (req) => req.method === 'OPTIONS' || process.env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'Muitas tentativas de autenticação. Tente novamente em alguns minutos.',

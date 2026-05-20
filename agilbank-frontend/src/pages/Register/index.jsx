@@ -26,6 +26,7 @@ import {
   putFileToPresignedUrl,
   sha256HexFromFile,
 } from '../../services/kycService';
+import { resolveRegisterFailure } from '../../services/registerMessage';
 
 const STEP = {
   WELCOME: 0,
@@ -193,6 +194,8 @@ const Register = () => {
   const [submitOverlayCopy, setSubmitOverlayCopy] = useState(null);
 
   const registeringRef = useRef(false);
+  /** POST /register já retornou sucesso nesta página; próximo submit só tenta login silencioso. */
+  const registrationPostSucceededRef = useRef(false);
   const scrollAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const previewRegistry = useRef([]);
@@ -475,39 +478,43 @@ const Register = () => {
     setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.creating);
 
     try {
-      const userData = {
-        nomeCompleto: data.nomeCompleto,
-        email: data.email,
-        cpf: data.cpf.replace(/\D/g, ''),
-        telefone: data.telefone.replace(/\D/g, ''),
-        dataNascimento: data.dataNascimento,
-        senha: data.senha,
-        endereco: {
-          cep: data.cep.replace(/\D/g, ''),
-          logradouro: data.logradouro,
-          numero: data.numero,
-          complemento: data.complemento || '',
-          bairro: data.bairro,
-          cidade: data.cidade,
-          estado: data.estado
-        },
-        dadosProfissionais: {
-          profissao: data.profissao,
-          empresa: data.empresa || '',
-          cargo: data.cargo || '',
-          rendaMensal: data.rendaMensal || ''
+      if (!registrationPostSucceededRef.current) {
+        const userData = {
+          nomeCompleto: data.nomeCompleto,
+          email: data.email,
+          cpf: data.cpf.replace(/\D/g, ''),
+          telefone: data.telefone.replace(/\D/g, ''),
+          dataNascimento: data.dataNascimento,
+          senha: data.senha,
+          endereco: {
+            cep: data.cep.replace(/\D/g, ''),
+            logradouro: data.logradouro,
+            numero: data.numero,
+            complemento: data.complemento || '',
+            bairro: data.bairro,
+            cidade: data.cidade,
+            estado: data.estado
+          },
+          dadosProfissionais: {
+            profissao: data.profissao,
+            empresa: data.empresa || '',
+            cargo: data.cargo || '',
+            rendaMensal: data.rendaMensal || ''
+          }
+        };
+
+        const result = await registerUser(userData);
+
+        if (!result.success) {
+          registrationPostSucceededRef.current = false;
+          const raw =
+            (typeof result.message === 'string' && result.message) ||
+            (typeof result.error === 'string' && result.error) ||
+            '';
+          applyErrorMessage(raw);
+          return;
         }
-      };
-
-      const result = await registerUser(userData);
-
-      if (!result.success) {
-        const raw =
-          (typeof result.message === 'string' && result.message) ||
-          (typeof result.error === 'string' && result.error) ||
-          '';
-        applyErrorMessage(raw);
-        return;
+        registrationPostSucceededRef.current = true;
       }
 
       /**
@@ -516,22 +523,11 @@ const Register = () => {
        */
       setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.session);
       const progressed = await signInSilentlyThenOpenKyc(data.email.trim(), data.senha);
+      if (progressed) registrationPostSucceededRef.current = false;
       if (!progressed) return;
     } catch (err) {
-      const payload = err.response?.data;
-      const validationJoin = Array.isArray(payload?.errors)
-        ? payload.errors
-            .map((e) => (typeof e?.message === 'string' ? e.message : ''))
-            .filter(Boolean)
-            .join(' ')
-            .trim()
-        : '';
-      const raw =
-        (typeof payload?.message === 'string' && payload.message.trim() && payload.message.trim()) ||
-        validationJoin ||
-        '';
-      applyErrorMessage(raw || 'Erro ao criar conta. Tente novamente.');
-      if (!raw && import.meta.env.DEV) console.error('Erro inesperado no registro (sem payload útil da API):', err);
+      applyErrorMessage(resolveRegisterFailure(err).message);
+      if (import.meta.env.DEV) console.error('Erro inesperado no registro:', err);
       setNeedsSilentLoginRetry(false);
     } finally {
       setLoading(false);
