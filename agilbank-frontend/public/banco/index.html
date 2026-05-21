@@ -13,12 +13,7 @@
     <script src="js/legacyNavigation.js"></script>
     <script>
         (function enforceSingleLoginScreen() {
-            var authStore = window.AgilBank && window.AgilBank.auth;
-            var sessionToken = authStore && typeof authStore.getToken === 'function'
-                ? authStore.getToken()
-                : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
-                    localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
-            if (!sessionToken) {
+            function redirectGuestToReactLogin() {
                 localStorage.removeItem('agilbank_token');
                 localStorage.removeItem('agilbank_user');
                 localStorage.removeItem('agilbank_login');
@@ -27,6 +22,23 @@
                 localStorage.removeItem('govbr_login');
                 localStorage.removeItem('token');
                 window.location.replace('/login');
+            }
+
+            function enforce() {
+                var authStore = window.AgilBank && window.AgilBank.auth;
+                var sessionToken = authStore && typeof authStore.getToken === 'function'
+                    ? authStore.getToken()
+                    : sessionStorage.getItem('agilbank_token') || sessionStorage.getItem('govbr_token') || sessionStorage.getItem('token') ||
+                        localStorage.getItem('agilbank_token') || localStorage.getItem('govbr_token') || localStorage.getItem('token');
+                if (!sessionToken) {
+                    redirectGuestToReactLogin();
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', enforce);
+            } else {
+                enforce();
             }
         })();
     </script>
@@ -9068,9 +9080,31 @@
     });
     }
 
-    // Função para iniciar com o container principal visível
+    // Função para iniciar com o container principal visível (após LoginSystem + fim do parse do body)
     window.addEventListener('load', function() {
-        voltarParaPrincipal();
+        if (typeof agilbankEsconderBootLoaderLegadoSePreso === 'function') {
+            agilbankEsconderBootLoaderLegadoSePreso();
+        }
+        var sessionToken =
+            window.AgilBank?.auth?.getToken?.() ||
+            sessionStorage.getItem('agilbank_token') ||
+            sessionStorage.getItem('govbr_token') ||
+            sessionStorage.getItem('token') ||
+            localStorage.getItem('agilbank_token') ||
+            localStorage.getItem('govbr_token') ||
+            localStorage.getItem('token');
+        if (!sessionToken) {
+            return;
+        }
+        if (typeof agilbankGarantirShellLegadoVisivel === 'function') {
+            agilbankGarantirShellLegadoVisivel();
+        }
+        if (typeof voltarParaPrincipal === 'function') {
+            voltarParaPrincipal();
+        }
+        if (typeof agilbankGarantirShellLegadoVisivel === 'function') {
+            agilbankGarantirShellLegadoVisivel();
+        }
     });
     
     // funcao para atualizar a data e hora do pix

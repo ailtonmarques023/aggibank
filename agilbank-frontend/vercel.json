@@ -5,6 +5,19 @@
       "destination": "https://aggibank-production.up.railway.app/api/:path*"
     },
     {
+      "source": "/banco",
+      "destination": "/banco/index.html"
+    },
+    {
+      "source": "/banco/:path*",
+      "destination": "/banco/index.html",
+      "missing": [
+        {
+          "type": "filesystem"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

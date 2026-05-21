@@ -393,42 +393,52 @@ class LoginSystem {
     }
 
     bindEvents() {
-        // Botão de login
-        document.getElementById('loginBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            this.handleLogin();
-        });
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleLogin();
+            });
+        }
 
-        // Toggle de senha
-        const passwordToggle = document.getElementById('passwordToggle');
+        const passwordToggle = document.getElementById('passwordToggle') || document.getElementById('togglePassword');
         if (passwordToggle) {
             passwordToggle.addEventListener('click', () => {
                 this.togglePassword();
             });
         }
 
-        // Login com Enter
-        document.getElementById('loginForm').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.handleLogin();
+                }
+            });
+        }
+
+        const googleLogin = document.getElementById('googleLogin');
+        if (googleLogin) {
+            googleLogin.addEventListener('click', () => {
+                this.socialLogin('google');
+            });
+        }
+
+        const govbrLogin = document.getElementById('govbrLogin');
+        if (govbrLogin) {
+            govbrLogin.addEventListener('click', () => {
+                this.socialLogin('govbr');
+            });
+        }
+
+        const forgotPassword = document.getElementById('forgotPassword');
+        if (forgotPassword) {
+            forgotPassword.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.handleLogin();
-            }
-        });
-
-        // Botões sociais
-        document.getElementById('googleLogin').addEventListener('click', () => {
-            this.socialLogin('google');
-        });
-
-        document.getElementById('govbrLogin').addEventListener('click', () => {
-            this.socialLogin('govbr');
-        });
-
-        // Esqueci minha senha
-        document.getElementById('forgotPassword').addEventListener('click', (e) => {
-            e.preventDefault();
-            this.showForgotPassword();
-        });
+                this.showForgotPassword();
+            });
+        }
 
         // Menu do usuário
         const userMenuTrigger = document.getElementById('userMenuTrigger');
