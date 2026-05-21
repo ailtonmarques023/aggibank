@@ -46,7 +46,7 @@ function redisRetryDelayMs(times) {
 }
 
 function buildRedisOptions() {
-  const connectTimeout = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '12000', 10) || 12000;
+  const connectTimeout = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '30000', 10) || 30000;
 
   return {
     lazyConnect: true,
@@ -154,8 +154,8 @@ async function destroyClientSilently() {
 }
 
 async function bootstrapClient(instance) {
-  const connectBudget = parseInt(process.env.REDIS_BOOT_CONNECT_MS || '15000', 10) || 15000;
-  const pingBudget = parseInt(process.env.REDIS_BOOT_PING_MS || '12000', 10) || 12000;
+  const connectBudget = parseInt(process.env.REDIS_BOOT_CONNECT_MS || '45000', 10) || 45000;
+  const pingBudget = parseInt(process.env.REDIS_BOOT_PING_MS || '30000', 10) || 30000;
 
   await withTimeout(instance.connect(), connectBudget, 'connect');
   await withTimeout(instance.ping(), pingBudget, 'ping');
