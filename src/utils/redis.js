@@ -49,6 +49,8 @@ function buildRedisOptions() {
   const connectTimeout = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '30000', 10) || 30000;
 
   return {
+    /** Railway private network (redis.railway.internal): dual-stack IPv4/IPv6. */
+    family: 0,
     lazyConnect: true,
     enableOfflineQueue: false,
     maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES_PER_REQUEST || '20', 10) || 20,
