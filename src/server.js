@@ -485,7 +485,7 @@ async function startServer() {
       console.warn('⚠️ Banco de dados não disponível, continuando sem banco:', dbError.message);
     }
 
-    // Em producao, Redis e obrigatorio para manter hardening distribuido consistente.
+    // Redis e opcional; falhas de conexao nao abortam o bootstrap — a aplicacao degrada graciosamente.
     if (hasRedisUrl) {
       try {
         await connectRedis();
@@ -494,30 +494,19 @@ async function startServer() {
           component: 'redis',
         });
       } catch (redisError) {
-        if (isProduction) {
-          logger.fatal('Redis obrigatorio indisponivel em producao; abortando bootstrap', {
-            category: 'operational_error',
-            component: 'redis',
-            reason: 'redis_connect_failed_production',
-            error: redisError && redisError.message ? redisError.message : String(redisError || ''),
-          });
-          process.exit(1);
-        }
-
-        logger.warn('Redis indisponivel; fallback seguro em memoria ativo', {
+        logger.warn('Redis indisponivel; iniciando sem cache distribuido', {
           category: 'operational_error',
           component: 'redis',
-          reason: 'redis_connect_failed',
+          reason: isProduction ? 'redis_connect_failed_production' : 'redis_connect_failed',
           error: redisError && redisError.message ? redisError.message : String(redisError || ''),
         });
       }
     } else if (isProduction) {
-      logger.fatal('REDIS_URL ausente em producao; abortando bootstrap', {
+      logger.warn('REDIS_URL ausente em producao; iniciando sem cache distribuido', {
         category: 'operational_error',
         component: 'redis',
         reason: 'redis_not_configured_production',
       });
-      process.exit(1);
     } else {
       logger.warn('REDIS_URL ausente; fallback seguro em memoria ativo', {
         category: 'operational_error',
