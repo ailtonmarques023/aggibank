@@ -163,7 +163,10 @@ async function bootstrapClient(instance) {
 }
 
 /**
- * Produção deve abortar apenas se esse ping inicial falhar (Railway/redis indisponível no boot).
+ * Tenta conectar e fazer ping no Redis durante o bootstrap.
+ * Se a conexão falhar, loga um aviso e retorna null — a aplicação sobe normalmente
+ * com cache desabilitado. O ioredis não é instanciado em modo de reconexão automática
+ * nesse caso; uma nova tentativa ocorrerá na próxima chamada a connectRedis().
  * Quedas após ready são tratadas com reconexão automática pelo ioredis — sem encerrar o processo.
  */
 async function connectRedisInternal() {
@@ -191,12 +194,22 @@ async function connectRedisInternal() {
 
   attachRuntimeListeners(redis);
 
-  await bootstrapClient(redis).catch(async (err) => {
-    const sanitized = sanitizeRedisLogFields(err);
-    redisLog.error(sanitized, 'Falha no bootstrap do Redis');
-    await destroyClientSilently();
-    throw err;
-  });
+  const bootstrapOk = await bootstrapClient(redis).then(
+    () => true,
+    async (err) => {
+      const sanitized = sanitizeRedisLogFields(err);
+      redisLog.warn(
+        Object.assign({}, sanitized, { ioredisStatus: redis ? redis.status : 'destroyed' }),
+        'Falha no bootstrap do Redis; aplicacao continuara sem cache (reconexao automatica ativa)',
+      );
+      await destroyClientSilently();
+      return false;
+    },
+  );
+
+  if (!bootstrapOk) {
+    return null;
+  }
 
   return redis;
 }
