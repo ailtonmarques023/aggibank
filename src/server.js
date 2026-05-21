@@ -32,6 +32,7 @@ const emailRoutes = require('./routes/email');
 const referralRoutes = require('./routes/referrals');
 const meKycRoutes = require('./routes/meKyc');
 const internalKycRoutes = require('./routes/internalKyc');
+const onboardingRoutes = require('./routes/onboarding');
 const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, disconnectRedis, isRedisAvailable, getRedis, getRedisHealthSummary } = require('./utils/redis');
 const { sanitizeUrlForAccessLog } = require('./utils/logSanitizer');
@@ -413,6 +414,7 @@ app.use('/api/deposits', depositRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/referrals', referralRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/me', meKycRoutes);
 app.use('/api/internal/kyc', internalKycRoutes);
 
