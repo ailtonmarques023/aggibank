@@ -724,3 +724,46 @@ model IdentitySubmissionArtifact {
   @@map("identity_submission_artifacts")
 }
 
+// --- Proposta temporária de abertura de conta (F1 — sem User/conta bancária até finalize) ---
+
+enum AccountApplicationStatus {
+  DRAFT
+  DATA_RECEIVED
+  DOCUMENTS_PENDING
+  READY_TO_FINALIZE
+  FINALIZED
+  EXPIRED
+  CANCELLED
+}
+
+model AccountApplication {
+  id                    String                   @id @default(cuid())
+  status                AccountApplicationStatus @default(DRAFT)
+  /// Protocolo opaco exibível ao cliente (sem PII).
+  protocolNumber        String                   @unique
+  /// HMAC-SHA256 do token de onboarding; nunca persistir token em claro.
+  tokenHash             String
+  tokenExpiresAt        DateTime
+  expiresAt             DateTime
+  nomeCompleto          String?
+  email                 String?
+  cpf                   String?
+  telefone              String?
+  dataNascimento        DateTime?
+  senhaHash             String?
+  aceitaTermos          Boolean                  @default(false)
+  aceitaComunicacoes    Boolean                  @default(false)
+  enderecoJson          Json?
+  dadosProfissionaisJson Json?
+  finalizedAt           DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  @@index([status, createdAt])
+  @@index([tokenHash])
+  @@index([cpf, status])
+  @@index([email, status])
+  @@map("account_applications")
+}
+
