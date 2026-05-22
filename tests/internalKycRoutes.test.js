@@ -31,6 +31,8 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
     prisma.identitySubmission.update.mockReset();
     prisma.identitySubmission.updateMany.mockReset();
     prisma.user.update.mockReset();
+    prisma.accountApplication.update.mockReset();
+    prisma.accountApplication.updateMany.mockReset();
     prisma.identitySubmissionArtifact.findUnique.mockReset();
     identityStorage.createPresignedReadUrl.mockReset();
     identityStorage.isIdentityStorageFeatureFlagOn.mockReturnValue(true);
@@ -60,6 +62,37 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
       .query({ status: 'READY_FOR_REVIEW' })
       .set({ 'x-internal-key': 'wrong' });
     expect(bad.status).toBe(403);
+  });
+
+  it('lista inclui submission de proposta com accountApplicationId', async () => {
+    prisma.identitySubmission.findMany.mockResolvedValue([
+      {
+        id: 'sub-prop',
+        userId: null,
+        accountApplicationId: 'app-prop-1',
+        status: 'READY_FOR_REVIEW',
+        versionOrAttempt: 1,
+        createdAt: new Date('2026-05-01T10:00:00Z'),
+        updatedAt: new Date('2026-05-01T10:00:00Z'),
+        submittedForReviewAt: new Date('2026-05-01T11:00:00Z'),
+        decidedAt: null,
+        accountApplication: {
+          status: 'DOCUMENTS_PENDING',
+          protocolNumber: 'APP-PROP01',
+        },
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/internal/kyc/submissions')
+      .query({ status: 'READY_FOR_REVIEW' })
+      .set(hdr());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.items[0].ownerType).toBe('PROPOSAL');
+    expect(res.body.data.items[0].accountApplicationId).toBe('app-prop-1');
+    expect(res.body.data.items[0].protocolNumber).toBe('APP-PROP01');
+    expect(res.body.data.items[0].userId).toBeNull();
   });
 
   it('lista apenas submissions filtradas por query status', async () => {
@@ -319,6 +352,196 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
       expect(blob).not.toMatch(/amazonaws\.com/i);
       expect(blob).not.toContain('supersecretLeak');
     });
+  });
+
+  it('detalhe de proposta sem userId não quebra', async () => {
+    prisma.identitySubmission.findUnique.mockResolvedValue({
+      id: 's-prop-det',
+      userId: null,
+      accountApplicationId: 'app-det-1',
+      status: 'READY_FOR_REVIEW',
+      versionOrAttempt: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      submittedForReviewAt: new Date(),
+      decidedAt: null,
+      decisionActorType: null,
+      decisionActorId: null,
+      rejectReasonCode: null,
+      userFacingMessageSanitized: null,
+      accountApplication: {
+        status: 'DOCUMENTS_PENDING',
+        protocolNumber: 'APP-DET001',
+      },
+      artifacts: [],
+    });
+
+    const res = await request(app).get('/api/internal/kyc/submissions/s-prop-det').set(hdr());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.ownerType).toBe('PROPOSAL');
+    expect(res.body.data.accountApplicationId).toBe('app-det-1');
+    expect(res.body.data.userId).toBeNull();
+    expect(res.body.data.applicationStatus).toBe('DOCUMENTS_PENDING');
+  });
+
+  it('decisão APPROVED em proposta atualiza AccountApplication e não User', async () => {
+    let subRow = {
+      id: 'sub-prop-ok',
+      userId: null,
+      accountApplicationId: 'app-ok',
+      status: 'READY_FOR_REVIEW',
+      versionOrAttempt: 1,
+      submittedForReviewAt: new Date(),
+      decidedAt: null,
+      decisionActorType: null,
+      decisionActorId: null,
+      rejectReasonCode: null,
+      userFacingMessageSanitized: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    prisma.identitySubmission.findUnique.mockImplementation((args) => {
+      const hasArtifacts = !!(args.include && args.include.artifacts);
+      if (hasArtifacts) {
+        return Promise.resolve({
+          ...subRow,
+          artifacts: [],
+          accountApplication: { status: 'DOCUMENTS_PENDING', protocolNumber: 'APP-OK' },
+        });
+      }
+      return Promise.resolve(subRow);
+    });
+    prisma.identitySubmission.updateMany.mockImplementation(({ data }) => {
+      subRow = { ...subRow, ...data };
+      return Promise.resolve({ count: 1 });
+    });
+    prisma.accountApplication.update.mockResolvedValue({
+      id: 'app-ok',
+      status: 'DOCUMENTS_APPROVED',
+    });
+
+    const res = await request(app)
+      .post('/api/internal/kyc/submissions/sub-prop-ok/decision')
+      .set(hdr())
+      .send({ resolution: 'APPROVED', operatorReference: 'op:prop-approve' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.applicationStatus).toBe('DOCUMENTS_APPROVED');
+    expect(prisma.accountApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app-ok' },
+      data: { status: 'DOCUMENTS_APPROVED' },
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('decisão RESUBMISSION_REQUIRED em proposta atualiza AccountApplication', async () => {
+    let subRow = {
+      id: 'sub-prop-rs',
+      userId: null,
+      accountApplicationId: 'app-rs',
+      status: 'UNDER_MANUAL_REVIEW',
+      versionOrAttempt: 1,
+      submittedForReviewAt: new Date(),
+      decidedAt: null,
+      decisionActorType: null,
+      decisionActorId: null,
+      rejectReasonCode: null,
+      userFacingMessageSanitized: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    prisma.identitySubmission.findUnique.mockImplementation((args) => {
+      const hasArtifacts = !!(args.include && args.include.artifacts);
+      if (hasArtifacts) {
+        return Promise.resolve({
+          ...subRow,
+          artifacts: [],
+          accountApplication: { status: 'DOCUMENTS_PENDING', protocolNumber: 'APP-RS' },
+        });
+      }
+      return Promise.resolve(subRow);
+    });
+    prisma.identitySubmission.updateMany.mockImplementation(({ data }) => {
+      subRow = { ...subRow, ...data };
+      return Promise.resolve({ count: 1 });
+    });
+    prisma.accountApplication.update.mockResolvedValue({
+      id: 'app-rs',
+      status: 'RESUBMISSION_REQUIRED',
+    });
+
+    const res = await request(app)
+      .post('/api/internal/kyc/submissions/sub-prop-rs/decision')
+      .set(hdr())
+      .send({
+        resolution: 'RESUBMISSION_REQUIRED',
+        operatorReference: 'op:prop-rs',
+        rejectReasonCode: 'GLARE_ON_DOC',
+        userFacingMessageSanitized: 'Evite reflexo no documento.',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.applicationStatus).toBe('RESUBMISSION_REQUIRED');
+    expect(prisma.accountApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app-rs' },
+      data: { status: 'RESUBMISSION_REQUIRED' },
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('decisão REJECTED em proposta atualiza AccountApplication REJECTED', async () => {
+    let subRow = {
+      id: 'sub-prop-rej',
+      userId: null,
+      accountApplicationId: 'app-rej',
+      status: 'READY_FOR_REVIEW',
+      versionOrAttempt: 1,
+      submittedForReviewAt: new Date(),
+      decidedAt: null,
+      decisionActorType: null,
+      decisionActorId: null,
+      rejectReasonCode: null,
+      userFacingMessageSanitized: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    prisma.identitySubmission.findUnique.mockImplementation((args) => {
+      const hasArtifacts = !!(args.include && args.include.artifacts);
+      if (hasArtifacts) {
+        return Promise.resolve({
+          ...subRow,
+          artifacts: [],
+          accountApplication: { status: 'DOCUMENTS_PENDING', protocolNumber: 'APP-REJ' },
+        });
+      }
+      return Promise.resolve(subRow);
+    });
+    prisma.identitySubmission.updateMany.mockImplementation(({ data }) => {
+      subRow = { ...subRow, ...data };
+      return Promise.resolve({ count: 1 });
+    });
+    prisma.accountApplication.update.mockResolvedValue({
+      id: 'app-rej',
+      status: 'REJECTED',
+    });
+
+    const res = await request(app)
+      .post('/api/internal/kyc/submissions/sub-prop-rej/decision')
+      .set(hdr())
+      .send({
+        resolution: 'REJECTED',
+        operatorReference: 'op:prop-reject',
+        rejectReasonCode: 'FRAUD_SUSPECT',
+        userFacingMessageSanitized: 'Não foi possível validar sua identidade.',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.applicationStatus).toBe('REJECTED');
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('detail GET não inclui objectKey bruto nos artefatos', async () => {

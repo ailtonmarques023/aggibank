@@ -145,10 +145,10 @@ async function completeOnboardingSession(sessionId) {
 function deriveNextStep(status) {
   const st = String(status || '');
   if (st === 'DRAFT' || st === 'DATA_RECEIVED') return 'PERSONAL_DATA';
-  if (st === 'DOCUMENTS_PENDING') return 'DOCUMENTS';
-  if (st === 'READY_TO_FINALIZE') return 'TERMS_AND_FINALIZE';
-  if (st === 'FINALIZED') return 'DONE';
-  if (st === 'CANCELLED' || st === 'EXPIRED') return 'RESTART';
+  if (st === 'DOCUMENTS_PENDING' || st === 'RESUBMISSION_REQUIRED') return 'DOCUMENTS';
+  if (st === 'DOCUMENTS_APPROVED' || st === 'READY_TO_FINALIZE') return 'TERMS_AND_FINALIZE';
+  if (st === 'FINALIZED') return 'LOGIN';
+  if (st === 'REJECTED' || st === 'CANCELLED' || st === 'EXPIRED') return 'RESTART';
   return 'STATUS';
 }
 

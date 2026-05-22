@@ -58,6 +58,7 @@ model User {
   referralsMade         Referral[]         @relation("ReferralReferrer")
   referredBy            Referral?          @relation("ReferralReferred")
   referralRewards       ReferralReward[]
+  accountApplicationFromOnboarding AccountApplication? @relation("AccountApplicationFinalizedUser")
   identitySubmissions   IdentitySubmission[] @relation("UserIdentitySubmissions")
   /// Cópia de leitura para gates/admin; fonte jurídica do fluxo: IdentitySubmission.status
   identityReviewStatus     IdentityReviewStatus @default(NONE)
@@ -738,6 +739,9 @@ enum AccountApplicationStatus {
   DRAFT
   DATA_RECEIVED
   DOCUMENTS_PENDING
+  DOCUMENTS_APPROVED
+  RESUBMISSION_REQUIRED
+  REJECTED
   READY_TO_FINALIZE
   FINALIZED
   EXPIRED
@@ -772,10 +776,13 @@ model AccountApplication {
   dadosProfissionaisJson Json?
   finalizedAt           DateTime?
   cancelledAt           DateTime?
+  /// Usuário criado no finalize (idempotência e rastreio).
+  userId                String?                  @unique
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   onboardingSessions    OnboardingSession[]
   identitySubmissions   IdentitySubmission[]
+  user                  User?                    @relation("AccountApplicationFinalizedUser", fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([tokenHash])

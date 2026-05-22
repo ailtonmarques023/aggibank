@@ -94,12 +94,15 @@ router.post('/submissions/:id/decision', async (req, res, next) => {
     });
 
     await recordAudit({
-      userId: result.submission && result.submission.userId,
+      userId: result.submission && result.submission.userId ? result.submission.userId : null,
       action: 'KYC_INTERNAL_DECISION',
       entity: 'IdentitySubmission',
       entityId: result.submission.id,
       metadata: {
         resolution: result.decision,
+        ownerType: result.submission.ownerType,
+        accountApplicationId: result.submission.accountApplicationId || null,
+        applicationStatus: result.applicationStatus || null,
         reasonCodePresent: !!(result.submission.rejectReasonCode && String(result.submission.rejectReasonCode).trim()),
         publicMessageChars: result.submission.userFacingMessageSanitized
           ? result.submission.userFacingMessageSanitized.length

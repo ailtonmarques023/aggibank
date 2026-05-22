@@ -94,6 +94,7 @@ function deriveProgress(row) {
   const termsAccepted = row.aceitaTermos === true;
   const documentsComplete =
     row.status === 'DOCUMENTS_PENDING' ||
+    row.status === 'DOCUMENTS_APPROVED' ||
     row.status === 'READY_TO_FINALIZE' ||
     row.status === 'FINALIZED';
 
@@ -103,7 +104,7 @@ function deriveProgress(row) {
     professionalDataComplete,
     termsAccepted,
     documentsComplete,
-    readyToFinalize: false,
+    readyToFinalize: row.status === 'DOCUMENTS_APPROVED',
   };
 }
 
@@ -238,4 +239,10 @@ module.exports = {
   noteDuplicateIdentifiers,
   toPublicStatus,
   TERMINAL_STATUSES,
+  normalizeCpfDigits,
+  normalizeEmail,
+  hasPersonalDataComplete,
+  hasAddressComplete,
+  hasProfessionalComplete,
+  httpError,
 };

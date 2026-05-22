@@ -90,23 +90,49 @@ function artifactPublicShape(a) {
   };
 }
 
+function isProposalSubmission(row) {
+  return Boolean(row && row.accountApplicationId && !row.userId);
+}
+
+/**
+ * @param {'APPROVED' | 'REJECTED' | 'RESUBMISSION_REQUIRED'} resolution
+ * @returns {'DOCUMENTS_APPROVED' | 'REJECTED' | 'RESUBMISSION_REQUIRED'}
+ */
+function mapResolutionToApplicationStatus(resolution) {
+  if (resolution === 'APPROVED') return 'DOCUMENTS_APPROVED';
+  if (resolution === 'REJECTED') return 'REJECTED';
+  return 'RESUBMISSION_REQUIRED';
+}
+
 function submissionListItem(row) {
+  const proposal = isProposalSubmission(row);
   return {
     id: row.id,
-    userId: row.userId,
+    userId: row.userId ?? null,
+    accountApplicationId: row.accountApplicationId ?? null,
+    ownerType: proposal ? 'PROPOSAL' : 'USER',
     status: row.status,
     versionOrAttempt: row.versionOrAttempt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     submittedForReviewAt: row.submittedForReviewAt ?? null,
     decidedAt: row.decidedAt ?? null,
+    ...(proposal && row.accountApplication
+      ? {
+          applicationStatus: row.accountApplication.status,
+          protocolNumber: row.accountApplication.protocolNumber,
+        }
+      : {}),
   };
 }
 
 function submissionDetail(row) {
+  const proposal = isProposalSubmission(row);
   return {
     id: row.id,
-    userId: row.userId,
+    userId: row.userId ?? null,
+    accountApplicationId: row.accountApplicationId ?? null,
+    ownerType: proposal ? 'PROPOSAL' : 'USER',
     status: row.status,
     versionOrAttempt: row.versionOrAttempt,
     createdAt: row.createdAt,
@@ -117,8 +143,55 @@ function submissionDetail(row) {
     decisionActorId: row.decisionActorId ?? null,
     rejectReasonCode: row.rejectReasonCode ?? null,
     userFacingMessageSanitized: row.userFacingMessageSanitized ?? null,
+    ...(proposal && row.accountApplication
+      ? {
+          applicationStatus: row.accountApplication.status,
+          protocolNumber: row.accountApplication.protocolNumber,
+        }
+      : {}),
     artifacts: (row.artifacts || []).map(artifactPublicShape),
   };
+}
+
+/**
+ * @param {import('@prisma/client').Prisma.TransactionClient} tx
+ * @param {import('@prisma/client').IdentitySubmission} sub
+ * @param {'APPROVED' | 'REJECTED' | 'RESUBMISSION_REQUIRED'} resolution
+ * @param {Date} now
+ */
+async function syncOwnerAfterIdentityDecision(tx, sub, resolution, now) {
+  if (isProposalSubmission(sub)) {
+    const appStatus = mapResolutionToApplicationStatus(resolution);
+    await tx.accountApplication.update({
+      where: { id: sub.accountApplicationId },
+      data: { status: appStatus },
+    });
+    return;
+  }
+
+  if (!sub.userId) {
+    throw new ValidationError('VALIDATION_ERROR', 'Submissão sem proprietário User ou proposta');
+  }
+
+  if (resolution === 'APPROVED') {
+    await tx.user.update({
+      where: { id: sub.userId },
+      data: {
+        identityReviewStatus: 'APPROVED',
+        identityApprovedAt: now,
+        lastIdentitySubmissionId: sub.id,
+      },
+    });
+    return;
+  }
+
+  await tx.user.update({
+    where: { id: sub.userId },
+    data: {
+      identityReviewStatus: 'REJECTED_RESUBMISSION',
+      identityApprovedAt: null,
+    },
+  });
 }
 
 /**
@@ -149,12 +222,19 @@ async function listSubmissionsByStatus({ status, limit = 50, cursorCreatedAtIso,
     select: {
       id: true,
       userId: true,
+      accountApplicationId: true,
       status: true,
       versionOrAttempt: true,
       createdAt: true,
       updatedAt: true,
       submittedForReviewAt: true,
       decidedAt: true,
+      accountApplication: {
+        select: {
+          status: true,
+          protocolNumber: true,
+        },
+      },
     },
   });
 
@@ -169,6 +249,12 @@ async function getSubmissionDetailInternal(id) {
     where: { id: String(id || '').trim() },
     include: {
       artifacts: true,
+      accountApplication: {
+        select: {
+          status: true,
+          protocolNumber: true,
+        },
+      },
     },
   });
   if (!row) return null;
@@ -248,14 +334,7 @@ async function applySubmissionDecision({
       });
       if (locked.count === 0) throw new InvalidSubmissionStateError();
 
-      await tx.user.update({
-        where: { id: sub.userId },
-        data: {
-          identityReviewStatus: 'APPROVED',
-          identityApprovedAt: now,
-          lastIdentitySubmissionId: sid,
-        },
-      });
+      await syncOwnerAfterIdentityDecision(tx, sub, 'APPROVED', now);
       return;
     }
 
@@ -273,13 +352,7 @@ async function applySubmissionDecision({
       });
       if (locked.count === 0) throw new InvalidSubmissionStateError();
 
-      await tx.user.update({
-        where: { id: sub.userId },
-        data: {
-          identityReviewStatus: 'REJECTED_RESUBMISSION',
-          identityApprovedAt: null,
-        },
-      });
+      await syncOwnerAfterIdentityDecision(tx, sub, 'REJECTED', now);
       return;
     }
 
@@ -296,17 +369,20 @@ async function applySubmissionDecision({
     });
     if (locked.count === 0) throw new InvalidSubmissionStateError();
 
-    await tx.user.update({
-      where: { id: sub.userId },
-      data: {
-        identityReviewStatus: 'REJECTED_RESUBMISSION',
-        identityApprovedAt: null,
-      },
-    });
+    await syncOwnerAfterIdentityDecision(tx, sub, 'RESUBMISSION_REQUIRED', now);
   });
 
   const full = await getSubmissionDetailInternal(sid);
-  return { submission: full, decision: resolution };
+  const applicationStatus =
+    full && full.accountApplicationId
+      ? mapResolutionToApplicationStatus(resolution)
+      : undefined;
+
+  return {
+    submission: full,
+    decision: resolution,
+    ...(applicationStatus ? { applicationStatus } : {}),
+  };
 }
 
 /**
@@ -354,6 +430,16 @@ async function queueSubmissionForManualReview({
       decisionActorId: opRef,
     },
   });
+
+  if (moved.count > 0 && isProposalSubmission(sub)) {
+    await prisma.accountApplication.updateMany({
+      where: {
+        id: sub.accountApplicationId,
+        status: { in: ['DOCUMENTS_PENDING', 'DATA_RECEIVED', 'DRAFT'] },
+      },
+      data: { status: 'DOCUMENTS_PENDING' },
+    });
+  }
 
   const full = await getSubmissionDetailInternal(sid);
   return { applied: moved.count > 0, submission: full, reason: moved.count > 0 ? 'QUEUED' : 'RACE_OR_STATE' };
@@ -413,6 +499,8 @@ module.exports = {
   InvalidSubmissionStateError,
   ValidationError,
   sanitizeUserFacingMessage,
+  isProposalSubmission,
+  mapResolutionToApplicationStatus,
   LISTABLE_STATUSES,
   DECIDABLE_STATUSES,
   listSubmissionsByStatus,

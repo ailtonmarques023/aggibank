@@ -14,11 +14,13 @@ const {
 } = require('../utils/onboardingCookie');
 const logger = require('../utils/logger');
 const onboardingKycRoutes = require('./onboardingKyc');
+const onboardingFinalizeRoutes = require('./onboardingFinalize');
 
 const router = express.Router();
 
 router.use(requireOnboardingApplicationEnabled);
 router.use('/kyc', onboardingKycRoutes);
+router.use('/', onboardingFinalizeRoutes);
 
 function sendError(req, res, err) {
   if (err && err.statusCode && err.code) {

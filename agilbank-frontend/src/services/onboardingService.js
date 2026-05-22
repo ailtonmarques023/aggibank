@@ -89,3 +89,16 @@ export async function submitOnboardingKycForReview() {
   });
   return parseJson(res);
 }
+
+/**
+ * Finaliza proposta (cria User/conta). Não retorna JWT — próximo passo é login normal.
+ */
+export async function finalizeOnboarding(body) {
+  const res = await fetch(`${API_BASE}/api/onboarding/finalize`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return parseJson(res);
+}

@@ -164,6 +164,13 @@ async function getOnboardingKycStatus(applicationRow) {
     allArtifactsConfirmed: allConfirmed,
   });
 
+  const resubmissionMessage =
+    focal &&
+    (focal.status === 'RESUBMISSION_REQUIRED' || focal.status === 'REJECTED') &&
+    focal.userFacingMessageSanitized
+      ? focal.userFacingMessageSanitized
+      : null;
+
   return {
     applicationId: appId,
     applicationStatus: applicationRow.status,
@@ -171,8 +178,12 @@ async function getOnboardingKycStatus(applicationRow) {
     requiredArtifacts: [...requiredTypes],
     submittedArtifacts: submittedArtifactsOrdered,
     canSubmitForReview,
-    documentsComplete: allConfirmed,
-    message,
+    documentsComplete:
+      applicationRow.status === 'DOCUMENTS_APPROVED' ||
+      applicationRow.status === 'READY_TO_FINALIZE' ||
+      allConfirmed,
+    message: resubmissionMessage || message,
+    ...(resubmissionMessage ? { resubmissionMessage } : {}),
   };
 }
 
