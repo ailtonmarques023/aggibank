@@ -671,6 +671,8 @@ enum IdentityArtifactType {
   DOCUMENT_FRONT
   DOCUMENT_BACK
   SELFIE_PORTRAIT
+  /// Gravação facial (vídeo) — ADR-KYC-001 Fatia 1; obrigatoriedade via FEATURE_KYC_REQUIRE_FACE_VIDEO (fatias posteriores).
+  FACE_VIDEO
 }
 
 enum IdentityArtifactUploadStatus {
