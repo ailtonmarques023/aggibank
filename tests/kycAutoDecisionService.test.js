@@ -10,6 +10,7 @@ jest.mock('../src/utils/auditLog', () => ({
 const { prisma } = require('../src/config/database');
 const { recordAudit } = require('../src/utils/auditLog');
 const kycAutoDecision = require('../src/services/kycAutoDecisionService');
+const { KYC_PUBLIC_MESSAGES } = require('../src/constants/kycPublicMessages');
 const internalIdentity = require('../src/services/internalIdentityService');
 
 const VALID_CPF = '52998224725';
@@ -234,5 +235,149 @@ describe('kycAutoDecisionService', () => {
     expect(out.applied).toBe(true);
 
     queueSpy.mockRestore();
+  });
+
+  describe('Fatia 3 — apply controlado e mensagens públicas', () => {
+    it('flags default (env) não aplicam decisão', async () => {
+      prisma.identitySubmission.findUnique.mockResolvedValue(baseSubmission());
+      prisma.user.findUnique.mockResolvedValue(baseUser());
+
+      const applySpy = jest.spyOn(internalIdentity, 'applySubmissionDecision');
+      const queueSpy = jest.spyOn(internalIdentity, 'queueSubmissionForManualReview');
+
+      const out = await kycAutoDecision.evaluateSubmission('sub-1');
+
+      expect(out.applied).toBe(false);
+      expect(out.shadow).toBe(true);
+      expect(out.enabled).toBe(false);
+      expect(applySpy).not.toHaveBeenCalled();
+      expect(queueSpy).not.toHaveBeenCalled();
+
+      applySpy.mockRestore();
+      queueSpy.mockRestore();
+    });
+
+    it('ENABLED=true e SHADOW=false aplica APPROVED em caso limpo', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'false';
+
+      prisma.identitySubmission.findUnique.mockResolvedValue(baseSubmission());
+      prisma.user.findUnique.mockResolvedValue(baseUser());
+
+      const applySpy = jest
+        .spyOn(internalIdentity, 'applySubmissionDecision')
+        .mockResolvedValue({
+          submission: { id: 'sub-1', status: 'APPROVED' },
+          decision: 'APPROVED',
+        });
+
+      const out = await kycAutoDecision.evaluateSubmission('sub-1');
+
+      expect(out.recommendation).toBe('APPROVED');
+      expect(out.applied).toBe(true);
+      expect(out.shadow).toBe(false);
+      expect(applySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resolution: 'APPROVED',
+          decisionActorType: kycAutoDecision.AUTO_ACTOR_TYPE,
+        })
+      );
+
+      applySpy.mockRestore();
+    });
+
+    it('ENABLED=true SHADOW=false aplica RESUBMISSION com mensagem pública apenas', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'false';
+
+      prisma.identitySubmission.findUnique.mockResolvedValue(
+        baseSubmission({
+          artifacts: baseSubmission().artifacts.map((a) =>
+            a.type === 'SELFIE_PORTRAIT' ? { ...a, byteSize: 0 } : a
+          ),
+        })
+      );
+      prisma.user.findUnique.mockResolvedValue(baseUser());
+
+      const applySpy = jest
+        .spyOn(internalIdentity, 'applySubmissionDecision')
+        .mockResolvedValue({
+          submission: { id: 'sub-1', status: 'RESUBMISSION_REQUIRED' },
+          decision: 'RESUBMISSION_REQUIRED',
+        });
+
+      const out = await kycAutoDecision.evaluateSubmission('sub-1');
+
+      expect(out.recommendation).toBe('RESUBMISSION_REQUIRED');
+      expect(out.ruleHits).toContain('ARTIFACT_INVALID_SIZE');
+      expect(out.applied).toBe(true);
+      expect(applySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resolution: 'RESUBMISSION_REQUIRED',
+          userFacingMessage: KYC_PUBLIC_MESSAGES.RESUBMISSION_REQUIRED,
+        })
+      );
+      const msg = applySpy.mock.calls[0][0].userFacingMessage;
+      expect(msg).not.toMatch(/antifraude|duplicad|score|renda|negativa|cpf/i);
+
+      applySpy.mockRestore();
+    });
+
+    it('anomalia QUARANTINED vai para UNDER_MANUAL_REVIEW, não reenvio automático', async () => {
+      prisma.identitySubmission.findUnique.mockResolvedValue(
+        baseSubmission({
+          artifacts: baseSubmission().artifacts.map((a) =>
+            a.type === 'DOCUMENT_FRONT' ? { ...a, uploadStatus: 'QUARANTINED' } : a
+          ),
+        })
+      );
+      prisma.user.findUnique.mockResolvedValue(baseUser());
+
+      const out = await kycAutoDecision.evaluateSubmission('sub-1', { shadow: true, apply: false });
+
+      expect(out.recommendation).toBe('UNDER_MANUAL_REVIEW');
+      expect(out.ruleHits).toContain('ARTIFACT_QUARANTINED');
+    });
+
+    it('ENABLED=true SHADOW=true não aplica mesmo com recomendação APPROVED', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'true';
+
+      prisma.identitySubmission.findUnique.mockResolvedValue(baseSubmission());
+      prisma.user.findUnique.mockResolvedValue(baseUser());
+
+      const applySpy = jest.spyOn(internalIdentity, 'applySubmissionDecision');
+
+      const out = await kycAutoDecision.evaluateSubmission('sub-1');
+
+      expect(out.recommendation).toBe('APPROVED');
+      expect(out.applied).toBe(false);
+      expect(applySpy).not.toHaveBeenCalled();
+
+      applySpy.mockRestore();
+    });
+
+    it('audit registra outcome, applied, shadow, ruleHits e trigger', async () => {
+      prisma.identitySubmission.findUnique.mockResolvedValue(baseSubmission());
+      prisma.user.findUnique.mockResolvedValue(baseUser());
+
+      await kycAutoDecision.evaluateSubmission('sub-1', {
+        shadow: true,
+        trigger: 'post_submit',
+      });
+
+      expect(recordAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            outcome: 'APPROVED',
+            applied: false,
+            shadow: true,
+            enabled: false,
+            trigger: 'post_submit',
+            ruleHits: expect.any(Array),
+          }),
+        })
+      );
+    });
   });
 });

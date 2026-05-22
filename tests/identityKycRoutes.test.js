@@ -29,6 +29,7 @@ jest.mock('../src/services/kycAutoDecisionService', () => ({
 
 const AUTH_HEADER = { Authorization: 'Bearer mock-jwt-token' };
 const kycAutoDecision = require('../src/services/kycAutoDecisionService');
+const { KYC_PUBLIC_MESSAGES } = require('../src/constants/kycPublicMessages');
 
 async function flushPostSubmitAutoDecision() {
   await new Promise((resolve) => setImmediate(resolve));
@@ -555,6 +556,44 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
         expect(prisma.$transaction).not.toHaveBeenCalled();
       }
     );
+  });
+
+  describe('Fatia 3 — mensagens públicas em GET /api/me/kyc-status', () => {
+    function mockFocalStatus(status) {
+      const row = {
+        id: 'sub-msg',
+        userId: 'test-user-id',
+        status,
+        artifacts: [],
+      };
+      prisma.identitySubmission.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(
+          status === 'READY_FOR_REVIEW' || status === 'UNDER_MANUAL_REVIEW' ? row : null
+        )
+        .mockResolvedValueOnce(
+          status === 'APPROVED' || status === 'REJECTED' || status === 'RESUBMISSION_REQUIRED'
+            ? row
+            : null
+        );
+    }
+
+    it.each([
+      ['READY_FOR_REVIEW', KYC_PUBLIC_MESSAGES.READY_FOR_REVIEW],
+      ['UNDER_MANUAL_REVIEW', KYC_PUBLIC_MESSAGES.UNDER_MANUAL_REVIEW],
+      ['APPROVED', KYC_PUBLIC_MESSAGES.APPROVED],
+      ['RESUBMISSION_REQUIRED', KYC_PUBLIC_MESSAGES.RESUBMISSION_REQUIRED],
+      ['REJECTED', KYC_PUBLIC_MESSAGES.REJECTED],
+    ])('identityStatus %s retorna mensagem pública canônica', async (status, expectedMsg) => {
+      mockFocalStatus(status);
+
+      const res = await request(app).get('/api/me/kyc-status').set(AUTH_HEADER);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.identityStatus).toBe(status);
+      expect(res.body.data.message).toBe(expectedMsg);
+      expect(res.body.data.message).not.toMatch(/cpf|duplicad|score|renda|negativa|objectKey/i);
+    });
   });
 
   describe('Fatia 2 — AutoDecision shadow pós-submit', () => {

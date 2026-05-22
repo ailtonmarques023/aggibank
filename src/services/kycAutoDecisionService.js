@@ -14,6 +14,7 @@ const { isValidCpf } = require('../utils/cpfValidation');
 const identityService = require('./identityService');
 const identityStorage = require('./identityStorageService');
 const internalIdentity = require('./internalIdentityService');
+const { KYC_PUBLIC_MESSAGES } = require('../constants/kycPublicMessages');
 
 const AUTO_ACTOR_TYPE = 'KYC_AUTO_DECISION';
 const AUTO_ACTOR_ID = 'auto:v1';
@@ -27,6 +28,19 @@ const ALLOWED_RECOMMENDATIONS = Object.freeze([
   'RESUBMISSION_REQUIRED',
   'SKIPPED',
 ]);
+
+/** Falhas objetivas de completude/validação de arquivo → reenvio (Fatia 3). */
+const OBJECTIVE_RESUBMIT_RULES = Object.freeze(
+  new Set([
+    'ARTIFACTS_INCOMPLETE',
+    'ARTIFACTS_NOT_CONFIRMED',
+    'FACE_VIDEO_REQUIRED_MISSING',
+    'ARTIFACT_MISSING_MIME',
+    'ARTIFACT_MIME_NOT_ALLOWED',
+    'ARTIFACT_INVALID_SIZE',
+    'ARTIFACT_SIZE_OUT_OF_RANGE',
+  ])
+);
 
 function isAutoDecisionEnabled() {
   return String(process.env.FEATURE_KYC_AUTO_DECISION_ENABLED || '').toLowerCase().trim() === 'true';
@@ -129,11 +143,9 @@ function computeRuleEvaluation(ctx) {
   let recommendation = 'APPROVED';
   if (ruleHits.includes('STATUS_NOT_READY_FOR_REVIEW')) {
     recommendation = 'SKIPPED';
-  } else if (
-    ruleHits.includes('ARTIFACTS_INCOMPLETE') ||
-    ruleHits.includes('ARTIFACTS_NOT_CONFIRMED') ||
-    ruleHits.includes('FACE_VIDEO_REQUIRED_MISSING')
-  ) {
+  } else if (ruleHits.includes('ARTIFACT_QUARANTINED')) {
+    recommendation = 'UNDER_MANUAL_REVIEW';
+  } else if (ruleHits.some((r) => OBJECTIVE_RESUBMIT_RULES.has(r))) {
     recommendation = 'RESUBMISSION_REQUIRED';
   } else if (ruleHits.length > 0) {
     recommendation = 'UNDER_MANUAL_REVIEW';
@@ -328,8 +340,7 @@ async function evaluateSubmission(submissionId, options = {}) {
         operatorReference: actorId,
         decisionActorType: AUTO_ACTOR_TYPE,
         internalReasonCode: 'MISSING_OR_UNCONFIRMED_ARTIFACTS',
-        userFacingMessage:
-          'Não foi possível concluir a análise automática. Reenvie todos os documentos obrigatórios e confirme cada upload.',
+        userFacingMessage: KYC_PUBLIC_MESSAGES.RESUBMISSION_REQUIRED,
       });
       applied = true;
       submissionStatus = 'RESUBMISSION_REQUIRED';
@@ -357,6 +368,8 @@ module.exports = {
   AUTO_ACTOR_TYPE,
   AUTO_ACTOR_ID,
   ALLOWED_RECOMMENDATIONS,
+  OBJECTIVE_RESUBMIT_RULES,
+  KYC_PUBLIC_MESSAGES,
   isAutoDecisionEnabled,
   isAutoDecisionShadow,
   computeRuleEvaluation,

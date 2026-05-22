@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { prisma } = require('../config/database');
 const identityStorage = require('./identityStorageService');
 const logger = require('../utils/logger');
+const { getPublicMessageForIdentityStatus } = require('../constants/kycPublicMessages');
 
 /** Tríade legada (sempre obrigatória). Vídeo entra via `getRequiredArtifactTypes()` quando flag on. */
 const REQUIRED_ARTIFACT_TYPES = Object.freeze(['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT']);
@@ -117,23 +118,9 @@ async function getKycStatus(userId) {
     canSubmitForReview = false;
   }
 
-  /** @type {string} */
-  let messagePt = '';
-
-  if (identityStatus === 'NOT_STARTED') {
-    messagePt = 'Você ainda não iniciou o envio de documentos.';
-  } else if (identityStatus === 'DRAFT' || identityStatus === 'PENDING_UPLOADS') {
-    messagePt = 'Continue o envio dos documentos obrigatórios e confirme cada arquivo após upload.';
-    if (allConfirmed) {
-      messagePt = 'Todos os documentos foram confirmados. Você já pode enviar para análise.';
-    }
-  } else if (identityStatus === 'READY_FOR_REVIEW' || identityStatus === 'UNDER_MANUAL_REVIEW') {
-    messagePt = 'Seus documentos foram recebidos e estão na fila de análise.';
-  } else if (identityStatus === 'APPROVED') {
-    messagePt = 'Sua identidade foi aprovada.';
-  } else if (identityStatus === 'REJECTED' || identityStatus === 'RESUBMISSION_REQUIRED') {
-    messagePt = 'É necessário reenviar documentos conforme comunicação anterior.';
-  }
+  const messagePt = getPublicMessageForIdentityStatus(identityStatus, {
+    allArtifactsConfirmed: allConfirmed,
+  });
 
   return {
     emailVerified: user.isVerificado,
