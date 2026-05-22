@@ -449,6 +449,34 @@ async function confirmUpload(userId, input) {
   };
 }
 
+/**
+ * Motor AutoDecision após submit (Fatia 2). Assíncrono: não atrasa resposta HTTP; falha não propaga.
+ * Lazy require evita dependência circular com `kycAutoDecisionService`.
+ * @param {string} submissionId
+ */
+function schedulePostSubmitAutoDecision(submissionId) {
+  const sid = String(submissionId || '').trim();
+  if (!sid) return;
+
+  void Promise.resolve()
+    .then(async () => {
+      const kycAutoDecision = require('./kycAutoDecisionService');
+      await kycAutoDecision.evaluateSubmission(sid, { trigger: 'post_submit' });
+    })
+    .catch((err) => {
+      logger.error(
+        {
+          category: 'operational_audit',
+          component: 'identity_service',
+          op: 'kyc_auto_decision_post_submit_failed',
+          submissionIdLen: sid.length,
+          message: err && err.message ? String(err.message).slice(0, 200) : 'unknown',
+        },
+        'kyc_auto_decision_post_submit_failed'
+      );
+    });
+}
+
 async function submitForReview(userId) {
   /** @type {import('@prisma/client').IdentitySubmission & {artifacts: import('@prisma/client').IdentitySubmissionArtifact[]}|null} */
   const awaiting = await prisma.identitySubmission.findFirst({
@@ -469,7 +497,7 @@ async function submitForReview(userId) {
     };
   }
 
-  return prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
     const sub = await tx.identitySubmission.findFirst({
       where: { userId, status: { in: ['DRAFT', 'PENDING_UPLOADS'] } },
       orderBy: { updatedAt: 'desc' },
@@ -513,6 +541,12 @@ async function submitForReview(userId) {
       idempotent: false,
     };
   });
+
+  if (txResult.status === 'READY_FOR_REVIEW' && !txResult.idempotent) {
+    schedulePostSubmitAutoDecision(txResult.submissionId);
+  }
+
+  return txResult;
 }
 
 module.exports = {
@@ -523,4 +557,5 @@ module.exports = {
   presignUpload,
   confirmUpload,
   submitForReview,
+  schedulePostSubmitAutoDecision,
 };

@@ -16,7 +16,24 @@ jest.mock('../src/services/identityStorageService', () => {
   };
 });
 
+jest.mock('../src/services/kycAutoDecisionService', () => ({
+  evaluateSubmission: jest.fn(() =>
+    Promise.resolve({
+      recommendation: 'APPROVED',
+      applied: false,
+      shadow: true,
+      enabled: false,
+    })
+  ),
+}));
+
 const AUTH_HEADER = { Authorization: 'Bearer mock-jwt-token' };
+const kycAutoDecision = require('../src/services/kycAutoDecisionService');
+
+async function flushPostSubmitAutoDecision() {
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+}
 
 function wirePresignTransactionHappyPath(submissionId = 'sub_new') {
   prisma.identitySubmission.findFirst
@@ -70,10 +87,13 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
 
   beforeEach(() => {
     delete process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO;
+    process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'false';
+    process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'true';
     prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
     prisma.identitySubmission.findFirst.mockReset();
     prisma.identitySubmission.create.mockReset();
     prisma.identitySubmission.update.mockReset();
+    prisma.identitySubmission.updateMany.mockReset();
     prisma.identitySubmission.count.mockReset();
     prisma.identitySubmissionArtifact.findFirst.mockReset();
     prisma.identitySubmissionArtifact.create.mockReset();
@@ -93,6 +113,14 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
       expiresAt: '2099-01-01T00:00:00.000Z',
       ttlSeconds: 900,
     });
+    kycAutoDecision.evaluateSubmission.mockClear();
+    kycAutoDecision.evaluateSubmission.mockResolvedValue({
+      recommendation: 'APPROVED',
+      applied: false,
+      shadow: true,
+      enabled: false,
+    });
+    logger.error.mockClear();
   });
 
   it('GET /api/me/kyc-status sem submissions retorna NOT_STARTED e NONE', async () => {
@@ -527,5 +555,105 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
         expect(prisma.$transaction).not.toHaveBeenCalled();
       }
     );
+  });
+
+  describe('Fatia 2 — AutoDecision shadow pós-submit', () => {
+    function wireSubmitHappyPath(submissionId = 's_full') {
+      prisma.identitySubmission.findFirst.mockImplementation((args = {}) => {
+        const st = args.where && args.where.status;
+        if (st === 'READY_FOR_REVIEW') return Promise.resolve(null);
+        if (st && typeof st === 'object' && st.in && st.in.includes('DRAFT')) {
+          return Promise.resolve({
+            id: submissionId,
+            userId: 'test-user-id',
+            status: 'PENDING_UPLOADS',
+            versionOrAttempt: 1,
+            decidedAt: null,
+            artifacts: [
+              { type: 'DOCUMENT_FRONT', uploadStatus: 'UPLOAD_CONFIRMED', mimeType: 'image/jpeg', byteSize: 1000 },
+              { type: 'DOCUMENT_BACK', uploadStatus: 'UPLOAD_CONFIRMED', mimeType: 'image/jpeg', byteSize: 1000 },
+              { type: 'SELFIE_PORTRAIT', uploadStatus: 'UPLOAD_CONFIRMED', mimeType: 'image/jpeg', byteSize: 1000 },
+            ],
+            updatedAt: new Date(),
+          });
+        }
+        return Promise.resolve(null);
+      });
+      prisma.identitySubmission.update.mockResolvedValue({
+        id: submissionId,
+        status: 'READY_FOR_REVIEW',
+        submittedForReviewAt: new Date(),
+      });
+      prisma.user.update.mockResolvedValue({});
+    }
+
+    it('submit dispara evaluateSubmission em shadow após READY_FOR_REVIEW', async () => {
+      wireSubmitHappyPath('s_shadow');
+
+      const res = await request(app).post('/api/me/kyc/submit').set(AUTH_HEADER).send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('READY_FOR_REVIEW');
+      await flushPostSubmitAutoDecision();
+      expect(kycAutoDecision.evaluateSubmission).toHaveBeenCalledWith('s_shadow', {
+        trigger: 'post_submit',
+      });
+    });
+
+    it('erro do AutoDecision não quebra submit', async () => {
+      wireSubmitHappyPath('s_err_motor');
+      kycAutoDecision.evaluateSubmission.mockRejectedValueOnce(new Error('motor indisponível'));
+
+      const res = await request(app).post('/api/me/kyc/submit').set(AUTH_HEADER).send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('READY_FOR_REVIEW');
+      await flushPostSubmitAutoDecision();
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          op: 'kyc_auto_decision_post_submit_failed',
+          submissionIdLen: 's_err_motor'.length,
+        }),
+        'kyc_auto_decision_post_submit_failed'
+      );
+    });
+
+    it('flags default: motor retorna shadow sem applied e status permanece READY_FOR_REVIEW', async () => {
+      wireSubmitHappyPath('s_no_apply');
+      kycAutoDecision.evaluateSubmission.mockResolvedValueOnce({
+        recommendation: 'UNDER_MANUAL_REVIEW',
+        applied: false,
+        shadow: true,
+        enabled: false,
+      });
+
+      const res = await request(app).post('/api/me/kyc/submit').set(AUTH_HEADER).send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('READY_FOR_REVIEW');
+      await flushPostSubmitAutoDecision();
+      const motorResult = await kycAutoDecision.evaluateSubmission.mock.results[0].value;
+      expect(motorResult.applied).toBe(false);
+      expect(motorResult.shadow).toBe(true);
+      expect(prisma.identitySubmission.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('submit idempotente não dispara AutoDecision novamente', async () => {
+      prisma.identitySubmission.findFirst.mockResolvedValue({
+        id: 's_idem',
+        userId: 'test-user-id',
+        status: 'READY_FOR_REVIEW',
+        artifacts: [],
+        submittedForReviewAt: new Date(),
+      });
+      prisma.user.update.mockResolvedValue({});
+
+      const res = await request(app).post('/api/me/kyc/submit').set(AUTH_HEADER).send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.idempotent).toBe(true);
+      await flushPostSubmitAutoDecision();
+      expect(kycAutoDecision.evaluateSubmission).not.toHaveBeenCalled();
+    });
   });
 });

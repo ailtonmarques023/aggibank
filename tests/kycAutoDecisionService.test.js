@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../src/utils/auditLog', () => ({
   recordAudit: jest.fn(() => Promise.resolve()),
 }));
@@ -190,6 +193,16 @@ describe('kycAutoDecisionService', () => {
 
   it('REJECTED automático não existe nas recomendações', () => {
     expect(kycAutoDecision.ALLOWED_RECOMMENDATIONS).not.toContain('REJECTED');
+  });
+
+  it('regras de abertura de conta não usam score, renda, negativação ou nome sujo', () => {
+    const motorSrc = fs.readFileSync(
+      path.join(__dirname, '../src/services/kycAutoDecisionService.js'),
+      'utf8'
+    );
+    expect(motorSrc).not.toMatch(/scoreCredito|score.?credito|negativa|renda|nome.?sujo|serasa|spc/i);
+    const ruleSrc = fs.readFileSync(path.join(__dirname, '../src/utils/cpfValidation.js'), 'utf8');
+    expect(ruleSrc).not.toMatch(/scoreCredito|negativa|renda/i);
   });
 
   it('com apply habilitado move para UNDER_MANUAL_REVIEW quando CPF inválido', async () => {

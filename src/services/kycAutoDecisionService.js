@@ -1,8 +1,11 @@
 'use strict';
 
 /**
- * Motor conservador de decisão automática KYC (Fatia 1).
+ * Motor conservador de decisão automática KYC (Fatia 1+2).
  * Default: flag desligada + shadow — não altera produção até habilitação explícita.
+ *
+ * Política de conta transacional inclusiva (ADR Fatia 0): avalia identidade e fraude documental,
+ * não capacidade de crédito — ver docs/relatorios/fatia-0-kyc-autodecision-plano.md.
  */
 
 const { prisma } = require('../config/database');
@@ -173,6 +176,7 @@ function buildAuditMetadata(evalResult, meta) {
     shadow: meta.shadow,
     enabled: meta.enabled,
     applied: meta.applied,
+    ...(meta.trigger ? { trigger: meta.trigger } : {}),
   };
 }
 
@@ -189,6 +193,10 @@ async function evaluateSubmission(submissionId, options = {}) {
   const shadow = options.shadow !== undefined ? Boolean(options.shadow) : isAutoDecisionShadow();
   const enabled = options.enabled !== undefined ? Boolean(options.enabled) : isAutoDecisionEnabled();
   const shouldApply = options.apply !== undefined ? Boolean(options.apply) : enabled && !shadow;
+  const auditTrigger =
+    options.trigger != null && String(options.trigger).trim() !== ''
+      ? String(options.trigger).trim().slice(0, 64)
+      : 'evaluate';
 
   const submission = await prisma.identitySubmission.findUnique({
     where: { id: sid },
@@ -209,7 +217,7 @@ async function evaluateSubmission(submissionId, options = {}) {
       action: 'KYC_AUTO_DECISION',
       entity: 'IdentitySubmission',
       entityId: sid,
-      metadata: buildAuditMetadata(skipped, { shadow, enabled, applied: false }),
+      metadata: buildAuditMetadata(skipped, { shadow, enabled, applied: false, trigger: auditTrigger }),
     });
     return { ...skipped, applied: false, shadow, enabled };
   }
@@ -229,7 +237,7 @@ async function evaluateSubmission(submissionId, options = {}) {
       action: 'KYC_AUTO_DECISION',
       entity: 'IdentitySubmission',
       entityId: sid,
-      metadata: buildAuditMetadata(skipped, { shadow, enabled, applied: false }),
+      metadata: buildAuditMetadata(skipped, { shadow, enabled, applied: false, trigger: auditTrigger }),
     });
     return { ...skipped, applied: false, shadow, enabled, submissionStatus: submission.status };
   }
@@ -257,7 +265,7 @@ async function evaluateSubmission(submissionId, options = {}) {
       action: 'KYC_AUTO_DECISION',
       entity: 'IdentitySubmission',
       entityId: sid,
-      metadata: buildAuditMetadata(skipped, { shadow, enabled, applied: false }),
+      metadata: buildAuditMetadata(skipped, { shadow, enabled, applied: false, trigger: auditTrigger }),
     });
     return { ...skipped, applied: false, shadow, enabled, submissionStatus: submission.status };
   }
@@ -333,7 +341,7 @@ async function evaluateSubmission(submissionId, options = {}) {
     action: 'KYC_AUTO_DECISION',
     entity: 'IdentitySubmission',
     entityId: sid,
-    metadata: buildAuditMetadata(evalResult, { shadow, enabled, applied }),
+    metadata: buildAuditMetadata(evalResult, { shadow, enabled, applied, trigger: auditTrigger }),
   });
 
   return {
