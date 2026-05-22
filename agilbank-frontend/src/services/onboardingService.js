@@ -3,7 +3,11 @@
  * Usa cookie HTTP-only (credentials) — não persiste obt_* nem JWT em storage.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+/** Mesma base que `api.js`: termina em `/api` (Railway) ou `/api` relativo (Vercel rewrite). */
+const RAILWAY_API_DEFAULT = 'https://aggibank-production.up.railway.app/api';
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '/api' : RAILWAY_API_DEFAULT);
 
 async function parseJson(res) {
   const body = await res.json().catch(() => ({}));
@@ -25,7 +29,7 @@ export function isOnboardingRegisterEnabled() {
 }
 
 export async function createApplication() {
-  const res = await fetch(`${API_BASE}/api/onboarding/applications`, {
+  const res = await fetch(`${API_BASE}/onboarding/applications`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -41,7 +45,7 @@ export async function createApplication() {
  * Persiste dados pessoais/endereço/senha na proposta (cookie).
  */
 export async function updateCurrentApplication(body) {
-  const res = await fetch(`${API_BASE}/api/onboarding/applications/current`, {
+  const res = await fetch(`${API_BASE}/onboarding/applications/current`, {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -51,7 +55,7 @@ export async function updateCurrentApplication(body) {
 }
 
 export async function getCurrentApplicationStatus() {
-  const res = await fetch(`${API_BASE}/api/onboarding/applications/current/status`, {
+  const res = await fetch(`${API_BASE}/onboarding/applications/current/status`, {
     method: 'GET',
     credentials: 'include',
   });
@@ -62,7 +66,7 @@ export async function getCurrentApplicationStatus() {
  * Encerra sessão de onboarding e limpa cookie.
  */
 export async function logoutOnboarding() {
-  const res = await fetch(`${API_BASE}/api/onboarding/logout`, {
+  const res = await fetch(`${API_BASE}/onboarding/logout`, {
     method: 'POST',
     credentials: 'include',
   });
@@ -71,7 +75,7 @@ export async function logoutOnboarding() {
 
 /** Status KYC da proposta (cookie HTTP-only). */
 export async function getOnboardingKycStatus() {
-  const res = await fetch(`${API_BASE}/api/onboarding/kyc/status`, {
+  const res = await fetch(`${API_BASE}/onboarding/kyc/status`, {
     method: 'GET',
     credentials: 'include',
   });
@@ -79,7 +83,7 @@ export async function getOnboardingKycStatus() {
 }
 
 export async function presignOnboardingKycArtifact(body) {
-  const res = await fetch(`${API_BASE}/api/onboarding/kyc/presign`, {
+  const res = await fetch(`${API_BASE}/onboarding/kyc/presign`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -89,7 +93,7 @@ export async function presignOnboardingKycArtifact(body) {
 }
 
 export async function confirmOnboardingKycUpload(body) {
-  const res = await fetch(`${API_BASE}/api/onboarding/kyc/confirm-upload`, {
+  const res = await fetch(`${API_BASE}/onboarding/kyc/confirm-upload`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -99,7 +103,7 @@ export async function confirmOnboardingKycUpload(body) {
 }
 
 export async function submitOnboardingKycForReview() {
-  const res = await fetch(`${API_BASE}/api/onboarding/kyc/submit`, {
+  const res = await fetch(`${API_BASE}/onboarding/kyc/submit`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -112,7 +116,7 @@ export async function submitOnboardingKycForReview() {
  * Finaliza proposta (cria User/conta). Não retorna JWT — próximo passo é login normal.
  */
 export async function finalizeOnboarding(body) {
-  const res = await fetch(`${API_BASE}/api/onboarding/finalize`, {
+  const res = await fetch(`${API_BASE}/onboarding/finalize`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
