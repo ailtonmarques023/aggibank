@@ -1215,12 +1215,18 @@
             
         }
         .dashboard-offer-copy {
-            margin: 4px 15px 12px;
+            margin: 4px 15px 12px 35px;
             color: #0f172a;
-            font-size: 0.98rem;
-            font-weight: 800;
+            font-size: 0.82rem;
+            font-weight: 600;
             line-height: 1.25;
             letter-spacing: 0;
+        }
+        .dashboard-offer-copy span {
+            color: #0066b3;
+            font-weight: 800;
+            text-decoration: underline;
+            text-underline-offset: 2px;
         }
         /* Serviços e Produtos */
         .services-header {
