@@ -215,6 +215,20 @@ async function evaluateSubmission(submissionId, options = {}) {
     include: { artifacts: true },
   });
 
+  if (submission && submission.accountApplicationId && !submission.userId) {
+    return {
+      recommendation: 'SKIPPED',
+      ruleHits: ['ONBOARDING_PROPOSAL_SUBMISSION'],
+      artifactCounts: { required: 0, confirmed: 0, byType: {} },
+      cpfValid: false,
+      emailVerified: false,
+      applied: false,
+      shadow,
+      enabled,
+      skipped: true,
+    };
+  }
+
   if (!submission) {
     const skipped = {
       recommendation: 'SKIPPED',

@@ -50,3 +50,42 @@ export async function logoutOnboarding() {
   });
   return parseJson(res);
 }
+
+/** Status KYC da proposta (cookie HTTP-only). */
+export async function getOnboardingKycStatus() {
+  const res = await fetch(`${API_BASE}/api/onboarding/kyc/status`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+  return parseJson(res);
+}
+
+export async function presignOnboardingKycArtifact(body) {
+  const res = await fetch(`${API_BASE}/api/onboarding/kyc/presign`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return parseJson(res);
+}
+
+export async function confirmOnboardingKycUpload(body) {
+  const res = await fetch(`${API_BASE}/api/onboarding/kyc/confirm-upload`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return parseJson(res);
+}
+
+export async function submitOnboardingKycForReview() {
+  const res = await fetch(`${API_BASE}/api/onboarding/kyc/submit`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  return parseJson(res);
+}

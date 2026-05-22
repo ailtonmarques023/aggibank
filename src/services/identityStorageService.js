@@ -181,7 +181,8 @@ function extensionSegmentForMime(artifactType, mimeType) {
 function buildIdentityObjectKey(params) {
   if (!params || typeof params !== 'object') throw new Error('Parâmetros inválidos');
 
-  sanitizeOpaqueSegment(params.userId, 'userId'); // garante invariante chamada; omitido da key
+  const ownerScopeId = params.ownerScopeId ?? params.userId;
+  sanitizeOpaqueSegment(ownerScopeId, 'ownerScopeId'); // garante invariante chamada; omitido da key
   const submissionId = sanitizeOpaqueSegment(params.submissionId, 'submissionId');
   const artifactId = sanitizeOpaqueSegment(params.artifactId, 'artifactId');
   const artifactEnum = normalizeArtifactType(params.artifactType);

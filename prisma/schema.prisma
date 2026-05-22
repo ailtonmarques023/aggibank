@@ -684,7 +684,10 @@ enum IdentityArtifactUploadStatus {
 
 model IdentitySubmission {
   id                         String                     @id @default(cuid())
-  userId                     String
+  /// Proprietário User (KYC pós-login). Mutuamente exclusivo com accountApplicationId.
+  userId                     String?
+  /// Proprietário proposta temporária (onboarding). Mutuamente exclusivo com userId.
+  accountApplicationId       String?
   status                     IdentitySubmissionStatus   @default(DRAFT)
   versionOrAttempt           Int                        @default(1)
   createdAt                  DateTime                   @default(now())
@@ -696,12 +699,15 @@ model IdentitySubmission {
   rejectReasonCode           String?
   userFacingMessageSanitized String?
 
-  user                        User                             @relation("UserIdentitySubmissions", fields: [userId], references: [id], onDelete: Cascade)
+  user                        User?                            @relation("UserIdentitySubmissions", fields: [userId], references: [id], onDelete: Cascade)
   userPointingLastSubmission  User?                            @relation("UserLastIdentitySubmission")
+  accountApplication          AccountApplication?              @relation(fields: [accountApplicationId], references: [id], onDelete: Cascade)
   artifacts                   IdentitySubmissionArtifact[]
 
   @@index([userId, createdAt])
   @@index([userId, status, createdAt])
+  @@index([accountApplicationId, createdAt])
+  @@index([accountApplicationId, status, createdAt])
   @@index([status, submittedForReviewAt])
   @@map("identity_submissions")
 }
@@ -769,6 +775,7 @@ model AccountApplication {
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   onboardingSessions    OnboardingSession[]
+  identitySubmissions   IdentitySubmission[]
 
   @@index([status, createdAt])
   @@index([tokenHash])

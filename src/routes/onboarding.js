@@ -13,10 +13,12 @@ const {
   clearOnboardingSessionCookie,
 } = require('../utils/onboardingCookie');
 const logger = require('../utils/logger');
+const onboardingKycRoutes = require('./onboardingKyc');
 
 const router = express.Router();
 
 router.use(requireOnboardingApplicationEnabled);
+router.use('/kyc', onboardingKycRoutes);
 
 function sendError(req, res, err) {
   if (err && err.statusCode && err.code) {

@@ -92,13 +92,17 @@ function deriveProgress(row) {
   const addressComplete = hasAddressComplete(row.enderecoJson);
   const professionalDataComplete = hasProfessionalComplete(row.dadosProfissionaisJson);
   const termsAccepted = row.aceitaTermos === true;
+  const documentsComplete =
+    row.status === 'DOCUMENTS_PENDING' ||
+    row.status === 'READY_TO_FINALIZE' ||
+    row.status === 'FINALIZED';
 
   return {
     personalDataComplete,
     addressComplete,
     professionalDataComplete,
     termsAccepted,
-    documentsComplete: false,
+    documentsComplete,
     readyToFinalize: false,
   };
 }
