@@ -1337,11 +1337,11 @@ const Register = () => {
   const renderTermsStep = () => (
     <>
       <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
-        {ONBOARDING_REGISTER ? 'Verificação de segurança' : 'Antes de finalizar'}
+        {ONBOARDING_REGISTER ? 'Antes da verificação de segurança' : 'Antes de finalizar'}
       </h1>
       <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
         {ONBOARDING_REGISTER
-          ? 'Revise seus dados e autorize a coleta de documento, selfie e vídeo facial quando necessário. Isso confirma que é você — não é análise de crédito nem score.'
+          ? 'Revise seus dados. Nos próximos passos, vamos confirmar que é você com documento, selfie e, se necessário, vídeo facial. Sua conta só será criada depois da verificação e do aceite final.'
           : 'Revise e aceite. Assim criamos sua conta agora — documento e selfie vêm nos passos seguintes, na mesma tela.'}
       </p>
       <div className="mb-8 rounded-2xl border border-gray-200 bg-gray-50/90 p-4 text-sm leading-relaxed text-gray-700">
@@ -1367,12 +1367,12 @@ const Register = () => {
               type="checkbox"
               className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
               {...register('aceitaConsentimentoBiometrico', {
-                required: 'Autorize a verificação de segurança para continuar'
+                required: 'Para continuar, autorize a verificação de segurança.'
               })}
             />
             <span className="text-[0.9rem] text-gray-700">
-              Autorizo o uso de documento, selfie e vídeo facial apenas para confirmar que sou eu e proteger minha
-              conta.
+              Autorizo o uso dos meus dados, documento, selfie e vídeo facial para verificação de segurança da abertura
+              da conta.
             </span>
           </label>
         ) : (
@@ -1751,7 +1751,7 @@ const Register = () => {
           loading={loading}
           disabled={loading || (!ONBOARDING_REGISTER && needsSilentLoginRetry)}
         >
-          {ONBOARDING_REGISTER ? 'Salvar e continuar verificação' : 'Criar conta'}
+          {ONBOARDING_REGISTER ? 'Continuar para verificação' : 'Criar conta'}
         </Button>
       );
     }
