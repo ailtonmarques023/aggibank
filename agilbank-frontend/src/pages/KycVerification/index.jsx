@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -83,6 +83,28 @@ function parseApiError(err, fallback) {
   return out;
 }
 
+function sanitizeReturnPath(next) {
+  if (!next || typeof next !== 'string') return '/banco/index.html';
+  const trimmed = next.trim();
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return '/banco/index.html';
+  return trimmed;
+}
+
+function ReturnNav({ to, className, children }) {
+  if (to.startsWith('/banco')) {
+    return (
+      <a href={to} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link to={to} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 function mimeAllowed(file) {
   const m = (file.type || '').trim().toLowerCase();
   if (m && KYC_ALLOWED_MIME_TYPES.includes(m)) return { ok: true, mime: m };
@@ -101,9 +123,17 @@ function mimeAllowed(file) {
 }
 
 export default function KycVerification() {
+  const [searchParams] = useSearchParams();
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const previewRegistry = useRef([]);
+
+  const returnTo = useMemo(
+    () => sanitizeReturnPath(searchParams.get('next')),
+    [searchParams]
+  );
+  const entryReason = searchParams.get('reason') || '';
+  const autoStart = searchParams.get('start') === '1';
 
   const [bootLoading, setBootLoading] = useState(true);
   const [bootError, setBootError] = useState('');
@@ -198,6 +228,29 @@ export default function KycVerification() {
     }
   }, []);
 
+  const applyEntryIntent = useCallback(
+    (data) => {
+      if (!autoStart || !data || data.identityStatus === 'APPROVED') {
+        return;
+      }
+      setForceFlow(true);
+      const st = data.identityStatus;
+      const submitted = data.submittedArtifacts || [];
+      if (st === 'NOT_STARTED' || submitted.length === 0) {
+        setStep(STEP.DOC_FRONT);
+        return;
+      }
+      if (st === 'DRAFT' || st === 'PENDING_UPLOADS') {
+        syncStepFromStatus(data);
+        return;
+      }
+      if (st === 'RESUBMISSION_REQUIRED' || st === 'REJECTED') {
+        setStep(STEP.WELCOME);
+      }
+    },
+    [autoStart, syncStepFromStatus]
+  );
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -207,6 +260,7 @@ export default function KycVerification() {
         const data = await refreshStatus();
         if (cancelled || !data) return;
         syncStepFromStatus(data);
+        applyEntryIntent(data);
       } catch (err) {
         if (!cancelled) setBootError(parseApiError(err, 'Não foi possível carregar o status.').message);
       } finally {
@@ -216,7 +270,7 @@ export default function KycVerification() {
     return () => {
       cancelled = true;
     };
-  }, [refreshStatus, syncStepFromStatus]);
+  }, [refreshStatus, syncStepFromStatus, applyEntryIntent]);
 
   const terminalKind = useMemo(() => {
     if (!kycStatus || bootLoading) return null;
@@ -334,6 +388,16 @@ export default function KycVerification() {
       <p className="mb-6 text-[0.975rem] leading-relaxed text-gray-600 text-balance">
         Para sua segurança e conformidade regulatória, precisamos conferir seus documentos. Use fotos claras e recentes.
       </p>
+      {entryReason === 'card' ? (
+        <p className="mb-4 text-[0.9rem] leading-relaxed text-gray-700">
+          Você veio do pedido de <strong>cartão</strong>. Conclua documento (frente e verso) e selfie para liberar essa etapa.
+        </p>
+      ) : null}
+      {entryReason === 'loan' ? (
+        <p className="mb-4 text-[0.9rem] leading-relaxed text-gray-700">
+          Você veio da solicitação de <strong>empréstimo</strong>. Conclua documento (frente e verso) e selfie para continuar.
+        </p>
+      ) : null}
       <div className="rounded-2xl border border-amber-100 bg-amber-50/90 px-4 py-3 text-[0.82rem] leading-snug text-amber-950">
         <strong className="font-semibold">Dica:</strong> você pode concluir as fotos quando achar melhor. Cartão e crédito podem depender dessa conferência estar concluída.
       </div>
@@ -472,12 +536,12 @@ export default function KycVerification() {
       </div>
       <h1 className="mb-3 text-2xl font-bold text-gray-900">Identidade verificada</h1>
       <p className="max-w-xs text-[0.95rem] leading-relaxed text-gray-600">{kycStatus?.message}</p>
-      <Link
-        to="/transactions"
+      <ReturnNav
+        to={returnTo}
         className="mt-10 text-sm font-semibold text-agilbank-primary underline-offset-2 hover:underline"
       >
         Voltar ao app
-      </Link>
+      </ReturnNav>
     </div>
   );
 
@@ -491,9 +555,9 @@ export default function KycVerification() {
       <p className="mt-6 max-w-xs text-[0.82rem] leading-snug text-gray-500">
         A validação da identidade segue quando houver atualização disponível para sua conta neste aplicativo — não garantimos tempo de retorno específico.
       </p>
-      <Link to="/transactions" className="mt-10 text-sm font-semibold text-agilbank-primary hover:underline">
+      <ReturnNav to={returnTo} className="mt-10 text-sm font-semibold text-agilbank-primary hover:underline">
         Voltar ao app
-      </Link>
+      </ReturnNav>
     </div>
   );
 
@@ -520,9 +584,9 @@ export default function KycVerification() {
       >
         Reenviar documentos
       </Button>
-      <Link to="/transactions" className="mt-6 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+      <ReturnNav to={returnTo} className="mt-6 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
         Voltar ao app
-      </Link>
+      </ReturnNav>
     </div>
   );
 
@@ -547,9 +611,9 @@ export default function KycVerification() {
       >
         Tentar novo envio
       </Button>
-      <Link to="/transactions" className="mt-6 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+      <ReturnNav to={returnTo} className="mt-6 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
         Voltar ao app
-      </Link>
+      </ReturnNav>
     </div>
   );
 
@@ -591,9 +655,9 @@ export default function KycVerification() {
           >
             Tentar novamente
           </Button>
-          <Link to="/transactions" className="block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+          <ReturnNav to={returnTo} className="block text-center text-sm font-semibold text-agilbank-primary hover:underline">
             Voltar ao app
-          </Link>
+          </ReturnNav>
         </div>
       </div>
     );
@@ -604,9 +668,9 @@ export default function KycVerification() {
       <div className="flex min-h-[100dvh] justify-center bg-zinc-200/80 px-3 py-10">
         <div className="w-full max-w-[430px] rounded-3xl bg-white p-8 shadow-2xl sm:rounded-[2rem]">
           <p className="text-center text-gray-800">{featureDisabledHint}</p>
-          <Link to="/transactions" className="mt-8 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
+          <ReturnNav to={returnTo} className="mt-8 block text-center text-sm font-semibold text-agilbank-primary hover:underline">
             Voltar
-          </Link>
+          </ReturnNav>
         </div>
       </div>
     );
@@ -678,12 +742,12 @@ export default function KycVerification() {
                 height={36}
                 decoding="async"
               />
-              <Link
-                to="/transactions"
+              <ReturnNav
+                to={returnTo}
                 className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
               >
                 Fechar
-              </Link>
+              </ReturnNav>
             </div>
             <div className="space-y-2">
               <div
@@ -738,12 +802,12 @@ export default function KycVerification() {
                 >
                   Começar
                 </Button>
-                <Link
-                  to="/transactions"
+                <ReturnNav
+                  to={returnTo}
                   className="w-full pb-3 text-center text-[0.95rem] font-medium text-agilbank-primary underline-offset-2 hover:underline"
                 >
                   Agora não
-                </Link>
+                </ReturnNav>
               </>
             ) : null}
 

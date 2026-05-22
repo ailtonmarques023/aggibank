@@ -6,6 +6,7 @@
     'use strict';
 
     var VERIFY_HREF = '/verificacao-identidade';
+    var DEFAULT_RETURN_PATH = '/banco/index.html';
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -34,6 +35,68 @@
     }
 
     var SECONDARY_LABEL = 'Agora não';
+
+    /**
+     * Garante chaves que o app React (ProtectedRoute + axios) lê ao abrir /verificacao-identidade.
+     */
+    function syncLegacySessionForReactApp() {
+        var token = getBearerToken();
+        if (!token) {
+            return false;
+        }
+        var userRaw =
+            sessionStorage.getItem('agilbank_user') ||
+            sessionStorage.getItem('govbr_user') ||
+            localStorage.getItem('agilbank_user') ||
+            localStorage.getItem('govbr_user') ||
+            '';
+        try {
+            sessionStorage.setItem('agilbank_token', token);
+            sessionStorage.setItem('govbr_token', token);
+            sessionStorage.setItem('token', token);
+            localStorage.setItem('agilbank_token', token);
+            localStorage.setItem('govbr_token', token);
+            localStorage.setItem('token', token);
+            if (userRaw) {
+                sessionStorage.setItem('agilbank_user', userRaw);
+                sessionStorage.setItem('govbr_user', userRaw);
+                localStorage.setItem('agilbank_user', userRaw);
+                localStorage.setItem('govbr_user', userRaw);
+            }
+        } catch (e) {
+            console.warn('syncLegacySessionForReactApp:', e);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param {'loan'|'card'} product
+     */
+    function buildVerifyHref(product) {
+        var reason = product === 'loan' ? 'loan' : 'card';
+        var qs =
+            'next=' +
+            encodeURIComponent(DEFAULT_RETURN_PATH) +
+            '&reason=' +
+            encodeURIComponent(reason) +
+            '&start=1';
+        return VERIFY_HREF + '?' + qs;
+    }
+
+    function navigateToKycJourney(product) {
+        if (!syncLegacySessionForReactApp()) {
+            window.alert('Faça login para continuar.');
+            window.location.replace('/login?next=' + encodeURIComponent(buildVerifyHref(product)));
+            return;
+        }
+        removeOverlay();
+        window.location.assign(buildVerifyHref(product));
+    }
+
+    function shouldOfferKycNavigation(mode) {
+        return mode === 'verify' || mode === 'continue' || mode === 'resubmit' || mode === 'rejected' || mode === 'unknown';
+    }
 
     /** Blocos solicitados quando o usuário tenta fluxo sensível sem APPROVED. */
     var UX_CARD_TITLE = 'Confirme sua identidade para pedir seu cartão';
@@ -162,8 +225,7 @@
         var card = document.createElement('div');
         card.className = 'agilbank-kyc-gate-card';
 
-        var primaryIsLink = copy.mode !== 'wait';
-        var primaryHref = primaryIsLink ? VERIFY_HREF : '#';
+        var primaryNavigates = shouldOfferKycNavigation(copy.mode);
 
         var titleEl = document.createElement('h2');
         titleEl.id = 'agilbank-kyc-gate-title';
@@ -189,14 +251,12 @@
         var actions = document.createElement('div');
         actions.className = 'agilbank-kyc-gate-actions';
 
-        var primaryBtn = primaryIsLink ? document.createElement('a') : document.createElement('button');
+        var primaryBtn = document.createElement('button');
+        primaryBtn.type = 'button';
         primaryBtn.id = 'agilbank-kyc-gate-primary';
         primaryBtn.className = 'agilbank-kyc-gate-btn agilbank-kyc-gate-btn--primary';
         primaryBtn.textContent = copy.primaryLabel;
-        if (primaryIsLink) {
-            primaryBtn.setAttribute('href', primaryHref);
-        } else {
-            primaryBtn.type = 'button';
+        if (!primaryNavigates) {
             primaryBtn.classList.add('is-disabled-wait');
             primaryBtn.setAttribute('aria-disabled', 'true');
         }
@@ -213,7 +273,12 @@
         overlay.appendChild(card);
         document.body.appendChild(overlay);
 
-        if (copy.mode === 'wait' && primaryBtn) {
+        if (primaryNavigates && primaryBtn) {
+            primaryBtn.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                navigateToKycJourney(product);
+            });
+        } else if (primaryBtn) {
             primaryBtn.addEventListener('click', function (ev) {
                 ev.preventDefault();
             });
@@ -297,6 +362,8 @@
     }
 
     window.agilbankKycVerifyHref = VERIFY_HREF;
+    window.agilbankKycBuildVerifyHref = buildVerifyHref;
+    window.agilbankKycNavigateToJourney = navigateToKycJourney;
     window.agilbankKycShowBlockedModal = showBlockedModal;
     window.agilbankKycEnsureApproved = ensureApproved;
     window.agilbankKycSyncDashboardShortcut = syncDashboardShortcut;
