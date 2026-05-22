@@ -1214,6 +1214,14 @@
             line-height: 1.2;
             
         }
+        .dashboard-offer-copy {
+            margin: 4px 15px 12px;
+            color: #0f172a;
+            font-size: 0.98rem;
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: 0;
+        }
         /* Serviços e Produtos */
         .services-header {
             padding: 20px 15px 5px;
