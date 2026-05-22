@@ -69,8 +69,54 @@
     <link rel="stylesheet" href="css/emprestimo_refatorado.css">
     <link rel="stylesheet" href="css/style.login.css">
     <style>
+        /* Login legado oculto por padrão (fluxo oficial: /login React). Sem !important — JS pode exibir gate se necessário. */
         #loginContainer {
-            display: none !important;
+            display: none;
+        }
+
+        /* H0.6 — aviso de e-mail dentro do mainApp; não bloqueia o shell bancário */
+        .agilbank-email-verify-banner {
+            display: none;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 14px 16px;
+            background: #fff8e6;
+            color: #5c4a00;
+            border-bottom: 1px solid #f0d78c;
+            font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .agilbank-email-verify-banner__title {
+            margin: 0 0 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .agilbank-email-verify-banner__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .agilbank-email-verify-banner__btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .agilbank-email-verify-banner__btn--primary {
+            background: #0066b3;
+            color: #fff;
+        }
+
+        .agilbank-email-verify-banner__btn--secondary {
+            background: #6c757d;
+            color: #fff;
         }
 
         /* Splash / loader: ver css/agilbank-brand.css */
@@ -7198,14 +7244,21 @@
 
         function agilbankEsconderBootLoaderLegadoSePreso() {
             try {
-                var el = document.querySelector('.loading-animation-container');
-                if (el && (el.style.display === 'flex' || el.style.display === 'block')) {
-                    el.style.display = 'none';
+                var loader = document.querySelector('.loading-animation-container');
+                if (loader) {
+                    loader.style.display = 'none';
+                }
+                var splash = document.querySelector('.agilbank-animation-container');
+                if (splash) {
+                    splash.style.display = 'none';
                 }
             } catch (e) {
                 /* ignore */
             }
         }
+
+        window.agilbankGarantirShellLegadoVisivel = agilbankGarantirShellLegadoVisivel;
+        window.agilbankEsconderBootLoaderLegadoSePreso = agilbankEsconderBootLoaderLegadoSePreso;
 
         /** Um único aviso não bloqueante; não refaz loop com forceUpdateHeaderData. */
         function agilbankMostrarAvisoAtualizacaoPerfilFalhou() {

@@ -199,11 +199,36 @@ class LoginSystem {
         window.location.replace('/login');
     }
 
+    hideStuckLegacyLoaders() {
+        if (typeof window.agilbankEsconderBootLoaderLegadoSePreso === 'function') {
+            window.agilbankEsconderBootLoaderLegadoSePreso();
+            return;
+        }
+        try {
+            var loader = document.querySelector('.loading-animation-container');
+            if (loader) {
+                loader.style.display = 'none';
+            }
+            var splash = document.querySelector('.agilbank-animation-container');
+            if (splash) {
+                splash.style.display = 'none';
+            }
+        } catch (e) {
+            console.warn('hideStuckLegacyLoaders:', e);
+        }
+    }
+
     hideVerificationGate() {
         var gate = document.getElementById('agilbankVerificationGate');
         if (gate) {
             gate.style.display = 'none';
             gate.innerHTML = '';
+        }
+        var banner = document.getElementById('agilbankEmailVerifyBanner');
+        if (banner) {
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+            banner.setAttribute('hidden', 'hidden');
         }
         var form = document.getElementById('loginForm');
         if (form) {
@@ -220,43 +245,40 @@ class LoginSystem {
         }
     }
 
+    ensureEmailVerifyBannerHost() {
+        var mainApp = document.getElementById('mainApp');
+        if (!mainApp) {
+            return null;
+        }
+        var banner = document.getElementById('agilbankEmailVerifyBanner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'agilbankEmailVerifyBanner';
+            banner.className = 'agilbank-email-verify-banner';
+            banner.setAttribute('role', 'status');
+            banner.setAttribute('hidden', 'hidden');
+            mainApp.insertBefore(banner, mainApp.firstChild);
+        }
+        return banner;
+    }
+
     showVerificationRequiredGate(user) {
         this.hideLoading();
+        this.hideStuckLegacyLoaders();
         var ud = user || this.userData || {};
-        var mainApp = document.getElementById('mainApp');
-        if (mainApp) {
-            mainApp.style.display = 'none';
-        }
+        var self = this;
+
+        this.showMainApp();
+
         var loginContainer = document.getElementById('loginContainer');
         if (loginContainer) {
-            loginContainer.style.display = 'flex';
+            loginContainer.style.display = 'none';
         }
 
-        var form = document.getElementById('loginForm');
-        if (form) {
-            form.style.display = 'none';
-        }
-        document.querySelectorAll('.login-divider, .login-social').forEach(function (el) {
-            if (el) {
-                el.style.display = 'none';
-            }
-        });
-        var footer = document.querySelector('.login-footer');
-        if (footer) {
-            footer.style.display = 'none';
-        }
-
-        var card = document.querySelector('#loginContainer .login-card');
-        if (!card) {
+        var banner = this.ensureEmailVerifyBannerHost();
+        if (!banner) {
+            console.warn('showVerificationRequiredGate: #mainApp ausente');
             return;
-        }
-
-        var gate = document.getElementById('agilbankVerificationGate');
-        if (!gate) {
-            gate = document.createElement('div');
-            gate.id = 'agilbankVerificationGate';
-            gate.setAttribute('role', 'status');
-            card.appendChild(gate);
         }
 
         var email =
@@ -265,33 +287,29 @@ class LoginSystem {
             '';
 
         var confirmarHref = 'confirmar-email.html';
-        var self = this;
+        var emailLabel = email || 'seu e-mail cadastrado';
 
-        gate.style.display = 'block';
-        gate.innerHTML =
-            '<div class="login-header"><div class="logo-container"><img src="/brand/logo-agil-bank-escura.png" alt="AgilBank" class="agilbank-brand-logo agilbank-brand-logo--login agilbank-brand-logo--light" width="216" height="36" decoding="async" /></div>' +
-            '<p class="login-subtitle">Verificação de e-mail necessária</p></div>' +
-            '<div class="login-error-message" id="agilVerifyGateErr" style="display:none;margin-bottom:12px;"></div>' +
-            '<p class="login-footer-text" style="text-align:left;line-height:1.5;margin:0 0 16px;">' +
-            'Esta conta ainda <strong>não está verificada</strong>. Confira o link enviado para ' +
-            '<strong id="agilVerifyEmailDisp"></strong> ou use o botão abaixo para reenviar o e-mail de verificação.' +
-            '</p>' +
-            '<p class="login-footer-text" style="text-align:left;font-size:13px;margin:0 0 16px;">' +
-            'Se você já clicou no link, abra <a href="' +
+        banner.removeAttribute('hidden');
+        banner.style.display = 'block';
+        banner.innerHTML =
+            '<p class="agilbank-email-verify-banner__title">Verificação de e-mail necessária</p>' +
+            '<div class="login-error-message" id="agilVerifyGateErr" style="display:none;margin-bottom:8px;"></div>' +
+            '<p style="margin:0 0 8px;line-height:1.5;">Esta conta ainda <strong>não está verificada</strong>. Confira o link enviado para <strong id="agilVerifyEmailDisp"></strong> ou reenvie o e-mail.</p>' +
+            '<p style="margin:0;font-size:13px;">Se você já clicou no link, abra <a href="' +
             confirmarHref +
-            '" class="login-footer-link">confirmar e-mail</a> ou aguarde alguns instantes e tente entrar de novo.' +
-            '</p>' +
-            '<button type="button" class="login-btn" id="agilVerifyResendBtn">Reenviar e-mail de verificação</button>' +
-            '<button type="button" class="login-btn" id="agilVerifyLogoutBtn" ' +
-            'style="margin-top:12px;background:#6c757d;">Sair</button>';
+            '">confirmar e-mail</a> ou aguarde alguns instantes.</p>' +
+            '<div class="agilbank-email-verify-banner__actions">' +
+            '<button type="button" class="agilbank-email-verify-banner__btn agilbank-email-verify-banner__btn--primary" id="agilVerifyResendBtn">Reenviar e-mail de verificação</button>' +
+            '<button type="button" class="agilbank-email-verify-banner__btn agilbank-email-verify-banner__btn--secondary" id="agilVerifyLogoutBtn">Sair</button>' +
+            '</div>';
 
-        var disp = gate.querySelector('#agilVerifyEmailDisp');
+        var disp = banner.querySelector('#agilVerifyEmailDisp');
         if (disp) {
-            disp.textContent = email || 'seu e-mail cadastrado';
+            disp.textContent = emailLabel;
         }
 
-        var errEl = gate.querySelector('#agilVerifyGateErr');
-        var resendBtn = gate.querySelector('#agilVerifyResendBtn');
+        var errEl = banner.querySelector('#agilVerifyGateErr');
+        var resendBtn = banner.querySelector('#agilVerifyResendBtn');
         if (resendBtn) {
             resendBtn.onclick = function () {
                 if (errEl) {
@@ -335,7 +353,7 @@ class LoginSystem {
             };
         }
 
-        var outBtn = gate.querySelector('#agilVerifyLogoutBtn');
+        var outBtn = banner.querySelector('#agilVerifyLogoutBtn');
         if (outBtn) {
             outBtn.onclick = function () {
                 self.logout();
@@ -345,6 +363,7 @@ class LoginSystem {
 
     showMainApp() {
         this.hideVerificationGate();
+        this.hideStuckLegacyLoaders();
         console.log('🔄 Mostrando aplicação principal...');
 
         const loginContainer = document.getElementById('loginContainer');
