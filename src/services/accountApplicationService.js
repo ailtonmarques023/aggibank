@@ -137,14 +137,14 @@ async function expireApplicationIfNeeded(row) {
 }
 
 /**
- * Cria proposta DRAFT com token de onboarding (retornado uma única vez ao cliente).
+ * Cria proposta DRAFT (sem User/conta). Token legado F1 fica só no banco; não é exposto na fatia cookie.
  */
 async function createApplication() {
   const now = Date.now();
   const tokenExpiresAt = new Date(now + onboardingTokenTtlMs());
   const expiresAt = new Date(now + applicationLifetimeMs());
-  const onboardingToken = generateOnboardingToken();
-  const tokenHash = hashOnboardingToken(onboardingToken);
+  const legacyToken = generateOnboardingToken();
+  const tokenHash = hashOnboardingToken(legacyToken);
 
   const row = await prisma.accountApplication.create({
     data: {
@@ -157,9 +157,16 @@ async function createApplication() {
   });
 
   return {
-    onboardingToken,
-    application: toPublicStatus(row, { includeTokenExpiresAt: true }),
+    application: toPublicStatus(row, { includeTokenExpiresAt: false }),
   };
+}
+
+/**
+ * Status público da proposta vinculada à sessão cookie (sem PII).
+ */
+async function getApplicationStatusForSession(applicationRow) {
+  const current = await expireApplicationIfNeeded(applicationRow);
+  return toPublicStatus(current, { includeTokenExpiresAt: false });
 }
 
 /**
@@ -222,6 +229,8 @@ module.exports = {
   hashOnboardingToken,
   createApplication,
   getApplicationStatus,
+  getApplicationStatusForSession,
+  expireApplicationIfNeeded,
   noteDuplicateIdentifiers,
   toPublicStatus,
   TERMINAL_STATUSES,

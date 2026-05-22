@@ -2,10 +2,16 @@
 
 const express = require('express');
 const accountApplicationService = require('../services/accountApplicationService');
+const onboardingSessionService = require('../services/onboardingSessionService');
 const {
   requireOnboardingApplicationEnabled,
   requireOnboardingProposalToken,
 } = require('../middleware/onboardingAuth');
+const { requireOnboardingSession } = require('../middleware/requireOnboardingSession');
+const {
+  setOnboardingSessionCookie,
+  clearOnboardingSessionCookie,
+} = require('../utils/onboardingCookie');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -38,17 +44,30 @@ function sendError(req, res, err) {
 
 /**
  * POST /api/onboarding/applications
- * Cria proposta DRAFT + token temporário (corpo vazio na F1).
+ * Cria proposta DRAFT + sessão HTTP-only (sem token no JSON).
  */
 router.post('/applications', async (req, res) => {
   try {
-    const created = await accountApplicationService.createApplication();
+    const { application } = await accountApplicationService.createApplication();
+    const { cookieValue } = await onboardingSessionService.createOnboardingSession(
+      application.applicationId,
+      {
+        userAgent: req.get('User-Agent'),
+        ip: req.ip,
+      }
+    );
+
+    setOnboardingSessionCookie(res, cookieValue);
 
     return res.status(201).json({
       success: true,
       data: {
-        ...created.application,
-        onboardingToken: created.onboardingToken,
+        applicationId: application.applicationId,
+        protocolNumber: application.protocolNumber,
+        status: application.status,
+        nextStep: onboardingSessionService.deriveNextStep(application.status),
+        progress: application.progress,
+        applicationExpiresAt: application.applicationExpiresAt,
       },
     });
   } catch (err) {
@@ -57,8 +76,48 @@ router.post('/applications', async (req, res) => {
 });
 
 /**
+ * GET /api/onboarding/applications/current/status
+ * Requer cookie agilbank_onboarding_session (não JWT).
+ */
+router.get('/applications/current/status', requireOnboardingSession, async (req, res) => {
+  try {
+    const statusPayload = await accountApplicationService.getApplicationStatusForSession(
+      req.onboardingApplication
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        ...statusPayload,
+        nextStep: onboardingSessionService.deriveNextStep(statusPayload.status),
+      },
+    });
+  } catch (err) {
+    return sendError(req, res, err);
+  }
+});
+
+/**
+ * POST /api/onboarding/logout
+ * Revoga sessão e limpa cookie.
+ */
+router.post('/logout', requireOnboardingSession, async (req, res) => {
+  try {
+    await onboardingSessionService.revokeOnboardingSession(req.onboardingSession.id);
+    clearOnboardingSessionCookie(res);
+
+    return res.json({
+      success: true,
+      data: { loggedOut: true },
+    });
+  } catch (err) {
+    return sendError(req, res, err);
+  }
+});
+
+/**
  * GET /api/onboarding/applications/:id/status
- * Requer X-Onboarding-Token ou Bearer obt_* (não é sessão de usuário).
+ * Legado F1 — X-Onboarding-Token (migração gradual).
  */
 router.get('/applications/:id/status', requireOnboardingProposalToken, async (req, res) => {
   try {

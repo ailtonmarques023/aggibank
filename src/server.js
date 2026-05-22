@@ -36,6 +36,7 @@ const onboardingRoutes = require('./routes/onboarding');
 const { requireInternalApiKey } = require('./middleware/auth');
 const { connectRedis, disconnectRedis, isRedisAvailable, getRedis, getRedisHealthSummary } = require('./utils/redis');
 const { sanitizeUrlForAccessLog } = require('./utils/logSanitizer');
+const { parseCookieHeader } = require('./utils/parseCookieHeader');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -44,48 +45,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const hasRedisUrl = !!(process.env.REDIS_URL && String(process.env.REDIS_URL).trim());
 const isProduction = process.env.NODE_ENV === 'production';
 
-/** Origens de browser permitidas sempre em produção (Railway pode subir sem CORS_ORIGIN). */
-const DEFAULT_BROWSER_ORIGINS_PRODUCTION = ['https://aggibank.vercel.app'];
-
-function normalizeBrowserOrigin(raw) {
-  const t = String(raw || '').trim();
-  if (!t) return '';
-  const noTrail = t.replace(/\/+$/, '');
-  try {
-    const url = noTrail.includes('://') ? noTrail : `https://${noTrail}`;
-    return new URL(url).origin;
-  } catch (_) {
-    return noTrail;
-  }
-}
-
-function parseAllowedCorsOrigins() {
-  const list = [];
-  const corsRaw = String(process.env.CORS_ORIGIN || '').trim();
-  if (corsRaw) {
-    corsRaw.split(',').forEach((piece) => {
-      const o = normalizeBrowserOrigin(piece);
-      if (o && !list.includes(o)) list.push(o);
-    });
-  }
-  const fe = String(process.env.FRONTEND_URL || '').trim();
-  if (fe) {
-    const o = normalizeBrowserOrigin(fe);
-    if (o && !list.includes(o)) list.push(o);
-  }
-  if (isProduction) {
-    DEFAULT_BROWSER_ORIGINS_PRODUCTION.forEach((o) => {
-      if (o && !list.includes(o)) list.push(o);
-    });
-  }
-  return list;
-}
-
-function isCorsAllowedOrigin(origin, allowedOrigins) {
-  if (!origin) return true; // chamadas server-to-server / curl sem Origin
-  /** Nunca refletir "*": credentials:true exige origin explícito. */
-  return allowedOrigins.includes(origin);
-}
+const { parseAllowedCorsOrigins, isCorsAllowedOrigin } = require('./utils/corsOrigins');
 
 // CORS antes de helmet e antes de rate limit nas rotas /api/*
 // Origens recalculadas por requisição para refletir env após deploy/alteração de variáveis.
@@ -103,7 +63,18 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-request-id', 'x-internal-key', 'Idempotency-Key'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Cookie',
+    'x-request-id',
+    'x-internal-key',
+    'x-onboarding-token',
+    'Idempotency-Key',
+  ],
   optionsSuccessStatus: 204,
 }));
 
@@ -154,6 +125,10 @@ app.use('/api/auth/refresh', authLimiter);
 // Middleware de parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use((req, _res, next) => {
+  req.cookies = parseCookieHeader(req.headers.cookie);
+  next();
+});
 
 // Compressão
 app.use(compression());

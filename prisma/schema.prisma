@@ -738,12 +738,19 @@ enum AccountApplicationStatus {
   CANCELLED
 }
 
+enum OnboardingSessionStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  COMPLETED
+}
+
 model AccountApplication {
   id                    String                   @id @default(cuid())
   status                AccountApplicationStatus @default(DRAFT)
   /// Protocolo opaco exibível ao cliente (sem PII).
   protocolNumber        String                   @unique
-  /// HMAC-SHA256 do token de onboarding; nunca persistir token em claro.
+  /// HMAC-SHA256 do token legado F1; não expor ao cliente na fatia cookie.
   tokenHash             String
   tokenExpiresAt        DateTime
   expiresAt             DateTime
@@ -761,11 +768,30 @@ model AccountApplication {
   cancelledAt           DateTime?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
+  onboardingSessions    OnboardingSession[]
 
   @@index([status, createdAt])
   @@index([tokenHash])
   @@index([cpf, status])
   @@index([email, status])
   @@map("account_applications")
+}
+
+model OnboardingSession {
+  id            String                  @id @default(cuid())
+  applicationId String
+  /// HMAC-SHA256 do valor da cookie; nunca persistir segredo em claro.
+  sessionHash   String                  @unique
+  status        OnboardingSessionStatus @default(ACTIVE)
+  expiresAt     DateTime
+  lastUsedAt    DateTime?
+  userAgentHash String?
+  ipHash        String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  application   AccountApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, status])
+  @@map("onboarding_sessions")
 }
 
