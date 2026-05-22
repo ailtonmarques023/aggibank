@@ -5,27 +5,29 @@ const { prisma } = require('../config/database');
 const identityStorage = require('./identityStorageService');
 const logger = require('../utils/logger');
 
+/** Tríade legada (sempre obrigatória). Vídeo entra via `getRequiredArtifactTypes()` quando flag on. */
 const REQUIRED_ARTIFACT_TYPES = Object.freeze(['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT']);
+
+function isFaceVideoRequired() {
+  return String(process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO || '').toLowerCase().trim() === 'true';
+}
+
+/**
+ * Lista efetiva de artefatos obrigatórios (ADR-KYC-001 Fatia 3).
+ * @returns {readonly string[]}
+ */
+function getRequiredArtifactTypes() {
+  if (isFaceVideoRequired()) {
+    return Object.freeze([...REQUIRED_ARTIFACT_TYPES, 'FACE_VIDEO']);
+  }
+  return REQUIRED_ARTIFACT_TYPES;
+}
 
 function httpError(statusCode, code, message) {
   const e = new Error(message);
   e.statusCode = statusCode;
   e.code = code;
   return e;
-}
-
-/** @returns {string} */
-function mimeToShortExt(normalizedMime) {
-  switch (normalizedMime) {
-    case 'image/jpeg':
-      return 'jpeg';
-    case 'image/png':
-      return 'png';
-    case 'image/webp':
-      return 'webp';
-    default:
-      return '';
-  }
 }
 
 /** @returns {string} opaque id válido para objectKey segment */
@@ -97,11 +99,12 @@ async function getKycStatus(userId) {
       : [];
 
   const uploadedSet = new Set(confirmedTypes);
+  const requiredTypes = getRequiredArtifactTypes();
 
   /** @type {string[]} */
-  const submittedArtifactsOrdered = REQUIRED_ARTIFACT_TYPES.filter((t) => uploadedSet.has(t));
+  const submittedArtifactsOrdered = requiredTypes.filter((t) => uploadedSet.has(t));
 
-  const allConfirmed = REQUIRED_ARTIFACT_TYPES.every((t) => uploadedSet.has(t));
+  const allConfirmed = requiredTypes.every((t) => uploadedSet.has(t));
 
   /** @type {boolean} */
   let canSubmitForReview = Boolean(
@@ -136,7 +139,7 @@ async function getKycStatus(userId) {
     emailVerified: user.isVerificado,
     identityStatus,
     identityReviewStatus: user.identityReviewStatus,
-    requiredArtifacts: [...REQUIRED_ARTIFACT_TYPES],
+    requiredArtifacts: [...requiredTypes],
     submittedArtifacts: submittedArtifactsOrdered,
     canSubmitForReview,
     activeSubmissionId: focal ? focal.id : null,
@@ -210,21 +213,27 @@ async function presignUpload(userId, input) {
     throw httpError(400, 'VALIDATION_ERROR', e && e.message ? e.message : 'artifactType inválido');
   }
 
-  const okMime = identityStorage.validateAllowedMimeType(input.mimeType);
+  const okMime = identityStorage.validateAllowedMimeType(artifactEnum, input.mimeType);
   if (!okMime.valid) {
     throw httpError(400, okMime.code, okMime.message);
   }
 
-  const okSize = identityStorage.validateMaxFileSize(input.byteSize);
+  const okSize = identityStorage.validateMaxFileSize(artifactEnum, input.byteSize);
   if (!okSize.valid) {
     throw httpError(400, okSize.code, okSize.message);
   }
 
   const bucket = bucketFromEnv();
 
-  const shortExt = mimeToShortExt(okMime.mimeType);
-  if (!shortExt) {
-    throw httpError(400, 'MIME_NOT_MAPPED', 'Não foi possível mapear extensão para o MIME informado');
+  let shortExt;
+  try {
+    shortExt = identityStorage.extensionSegmentForMime(artifactEnum, okMime.mimeType);
+  } catch (mapErr) {
+    throw httpError(
+      400,
+      'MIME_NOT_MAPPED',
+      mapErr && mapErr.message ? mapErr.message : 'Não foi possível mapear extensão para o MIME informado'
+    );
   }
 
   /** @type {{ id: string, submissionId: string } | null} */
@@ -309,8 +318,9 @@ async function presignUpload(userId, input) {
         artifactType: artifactEnum,
         extension: shortExt,
       }),
-      mimeType: input.mimeType,
+      mimeType: okMime.mimeType,
       byteSize: input.byteSize,
+      artifactType: artifactEnum,
     });
   } catch (presignErr) {
     if (isNewArtifactRow) {
@@ -471,16 +481,16 @@ async function submitForReview(userId) {
     }
 
     const confirmed = sub.artifacts.filter((a) => a.uploadStatus === 'UPLOAD_CONFIRMED');
+    const requiredTypes = getRequiredArtifactTypes();
 
     /** @type {Set<string>} */
     const ts = new Set(confirmed.map((a) => a.type));
-    for (const reqT of REQUIRED_ARTIFACT_TYPES) {
+    for (const reqT of requiredTypes) {
       if (!ts.has(reqT)) {
-        throw httpError(
-          400,
-          'IDENTITY_MISSING_ARTIFACTS',
-          'Envie e confira frente, verso do documento e selfie; confirme cada upload antes de enviar.'
-        );
+        const hint = isFaceVideoRequired()
+          ? 'Envie e confira frente, verso do documento, selfie e vídeo facial; confirme cada upload antes de enviar.'
+          : 'Envie e confira frente, verso do documento e selfie; confirme cada upload antes de enviar.';
+        throw httpError(400, 'IDENTITY_MISSING_ARTIFACTS', hint);
       }
     }
 
@@ -507,6 +517,8 @@ async function submitForReview(userId) {
 
 module.exports = {
   REQUIRED_ARTIFACT_TYPES,
+  getRequiredArtifactTypes,
+  isFaceVideoRequired,
   getKycStatus,
   presignUpload,
   confirmUpload,

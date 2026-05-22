@@ -18,6 +18,33 @@ jest.mock('../src/services/identityStorageService', () => {
 
 const AUTH_HEADER = { Authorization: 'Bearer mock-jwt-token' };
 
+function wirePresignTransactionHappyPath(submissionId = 'sub_new') {
+  prisma.identitySubmission.findFirst
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce(null);
+  prisma.identitySubmission.count.mockResolvedValue(0);
+  prisma.identitySubmission.create.mockResolvedValue({
+    id: submissionId,
+    userId: 'test-user-id',
+    status: 'DRAFT',
+    artifacts: [],
+    updatedAt: new Date(),
+    createdAt: new Date(),
+  });
+  prisma.user.update.mockResolvedValue({});
+  prisma.identitySubmissionArtifact.findFirst.mockResolvedValue(null);
+  prisma.identitySubmissionArtifact.create.mockImplementation(({ data }) =>
+    Promise.resolve({
+      ...data,
+    })
+  );
+  prisma.identitySubmission.update.mockResolvedValue({
+    id: submissionId,
+    status: 'PENDING_UPLOADS',
+  });
+}
+
 function wireKycUserFindUniqueBaseline() {
   prisma.user.findUnique.mockImplementation((args) => {
     const sel = args && args.select;
@@ -42,6 +69,7 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
   });
 
   beforeEach(() => {
+    delete process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO;
     prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
     prisma.identitySubmission.findFirst.mockReset();
     prisma.identitySubmission.create.mockReset();
@@ -78,35 +106,15 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
     expect(res.body.data.identityStatus).toBe('NOT_STARTED');
     expect(res.body.data.identityReviewStatus).toBe('NONE');
     expect(res.body.data.canSubmitForReview).toBe(false);
-    expect(Array.isArray(res.body.data.requiredArtifacts)).toBe(true);
+    expect(res.body.data.requiredArtifacts).toEqual([
+      'DOCUMENT_FRONT',
+      'DOCUMENT_BACK',
+      'SELFIE_PORTRAIT',
+    ]);
   });
 
   it('POST presign cria submission/artifact e retorna dados sem logar signed URL', async () => {
-    prisma.identitySubmission.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
-
-    prisma.identitySubmission.count.mockResolvedValue(0);
-    prisma.identitySubmission.create.mockResolvedValue({
-      id: 'sub_new',
-      userId: 'test-user-id',
-      status: 'DRAFT',
-      artifacts: [],
-      updatedAt: new Date(),
-      createdAt: new Date(),
-    });
-    prisma.user.update.mockResolvedValue({});
-    prisma.identitySubmissionArtifact.findFirst.mockResolvedValue(null);
-    prisma.identitySubmissionArtifact.create.mockImplementation(({ data }) =>
-      Promise.resolve({
-        ...data,
-      })
-    );
-    prisma.identitySubmission.update.mockResolvedValue({
-      id: 'sub_new',
-      status: 'PENDING_UPLOADS',
-    });
+    wirePresignTransactionHappyPath();
 
     const res = await request(app).post('/api/me/kyc/presign').set(AUTH_HEADER).send({
       artifactType: 'DOCUMENT_FRONT',
@@ -393,5 +401,131 @@ describe('Identity KYC /api/me (Fatia 6 — com confirmação HEAD Fatia 6.1)', 
     expect(res.status).toBe(503);
     expect(res.body.success).toBe(false);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  describe('Fatia 3 — FEATURE_KYC_REQUIRE_FACE_VIDEO', () => {
+    beforeEach(() => {
+      process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO = 'true';
+    });
+
+    it('GET /api/me/kyc-status retorna 4 requiredArtifacts incluindo FACE_VIDEO', async () => {
+      prisma.identitySubmission.findFirst.mockResolvedValue(null);
+
+      const res = await request(app).get('/api/me/kyc-status').set(AUTH_HEADER);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.requiredArtifacts).toEqual([
+        'DOCUMENT_FRONT',
+        'DOCUMENT_BACK',
+        'SELFIE_PORTRAIT',
+        'FACE_VIDEO',
+      ]);
+    });
+
+    it('submit com 3/3 confirmados retorna IDENTITY_MISSING_ARTIFACTS', async () => {
+      prisma.identitySubmission.findFirst.mockImplementation((args = {}) => {
+        const st = args.where && args.where.status;
+        if (st === 'READY_FOR_REVIEW') return Promise.resolve(null);
+        return Promise.resolve({
+          id: 's_three_only',
+          userId: 'test-user-id',
+          status: 'PENDING_UPLOADS',
+          artifacts: [
+            { type: 'DOCUMENT_FRONT', uploadStatus: 'UPLOAD_CONFIRMED' },
+            { type: 'DOCUMENT_BACK', uploadStatus: 'UPLOAD_CONFIRMED' },
+            { type: 'SELFIE_PORTRAIT', uploadStatus: 'UPLOAD_CONFIRMED' },
+          ],
+          updatedAt: new Date(),
+        });
+      });
+
+      const res = await request(app).post('/api/me/kyc/submit').set(AUTH_HEADER).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('IDENTITY_MISSING_ARTIFACTS');
+    });
+
+    it('submit com 4/4 confirmados retorna READY_FOR_REVIEW', async () => {
+      prisma.identitySubmission.findFirst.mockImplementation((args = {}) => {
+        const st = args.where && args.where.status;
+        if (st === 'READY_FOR_REVIEW') return Promise.resolve(null);
+        if (st && typeof st === 'object' && st.in && st.in.includes('DRAFT')) {
+          return Promise.resolve({
+            id: 's_four',
+            userId: 'test-user-id',
+            status: 'PENDING_UPLOADS',
+            artifacts: [
+              { type: 'DOCUMENT_FRONT', uploadStatus: 'UPLOAD_CONFIRMED' },
+              { type: 'DOCUMENT_BACK', uploadStatus: 'UPLOAD_CONFIRMED' },
+              { type: 'SELFIE_PORTRAIT', uploadStatus: 'UPLOAD_CONFIRMED' },
+              { type: 'FACE_VIDEO', uploadStatus: 'UPLOAD_CONFIRMED' },
+            ],
+            updatedAt: new Date(),
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      prisma.identitySubmission.update.mockResolvedValue({
+        id: 's_four',
+        status: 'READY_FOR_REVIEW',
+        submittedForReviewAt: new Date(),
+      });
+      prisma.user.update.mockResolvedValue({});
+
+      const res = await request(app).post('/api/me/kyc/submit').set(AUTH_HEADER).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('READY_FOR_REVIEW');
+    });
+
+    it.each([
+      ['video/webm', 'webm'],
+      ['video/mp4', 'mp4'],
+    ])('presign FACE_VIDEO aceita %s', async (mimeType, ext) => {
+      wirePresignTransactionHappyPath('sub_video');
+
+      const res = await request(app).post('/api/me/kyc/presign').set(AUTH_HEADER).send({
+        artifactType: 'FACE_VIDEO',
+        mimeType,
+        byteSize: 2048,
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(identityStorage.createPresignedUploadUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          artifactType: 'FACE_VIDEO',
+          mimeType,
+        })
+      );
+      const createCall = prisma.identitySubmissionArtifact.create.mock.calls[0][0];
+      expect(createCall.data.objectKey).toMatch(new RegExp(`\\.${ext}$`));
+    });
+
+    it('presign FACE_VIDEO rejeita image/jpeg', async () => {
+      const res = await request(app).post('/api/me/kyc/presign').set(AUTH_HEADER).send({
+        artifactType: 'FACE_VIDEO',
+        mimeType: 'image/jpeg',
+        byteSize: 1024,
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MIME_NOT_ALLOWED');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it.each(['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'])(
+      'presign %s rejeita video/mp4',
+      async (artifactType) => {
+        const res = await request(app).post('/api/me/kyc/presign').set(AUTH_HEADER).send({
+          artifactType,
+          mimeType: 'video/mp4',
+          byteSize: 1024,
+        });
+
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('MIME_NOT_ALLOWED');
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      }
+    );
   });
 });
