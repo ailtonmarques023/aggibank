@@ -24,6 +24,8 @@ const LISTABLE_STATUSES = Object.freeze([
 
 const LISTABLE_SET = new Set(LISTABLE_STATUSES);
 
+const TERMINAL_STATUSES = Object.freeze(['APPROVED', 'REJECTED', 'RESUBMISSION_REQUIRED']);
+
 /** @extends Error */
 class InvalidSubmissionStateError extends Error {
   constructor(message = 'Submission não está em estado elegível para esta decisão') {
@@ -188,12 +190,15 @@ async function applySubmissionDecision({
   operatorReference,
   internalReasonCode,
   userFacingMessage,
+  decisionActorType,
 }) {
   const sid = String(submissionId || '').trim();
   if (!sid) throw new ValidationError('VALIDATION_ERROR', 'submissionId obrigatório');
 
   const opRef = String(operatorReference || '').trim().slice(0, 200);
   if (!opRef) throw new ValidationError('VALIDATION_ERROR', 'operatorReference obrigatório');
+
+  const actorType = String(decisionActorType || 'INTERNAL_KYC_OPERATOR').trim().slice(0, 64);
 
   const allowedRes = ['APPROVED', 'REJECTED', 'RESUBMISSION_REQUIRED'];
   if (!allowedRes.includes(resolution)) {
@@ -219,22 +224,29 @@ async function applySubmissionDecision({
     const sub = await tx.identitySubmission.findUnique({ where: { id: sid } });
     if (!sub) throw new ValidationError('NOT_FOUND', 'Submissão não encontrada');
 
-    if (!DECIDABLE_STATUSES.includes(sub.status)) {
+    if (!DECIDABLE_STATUSES.includes(sub.status) || sub.decidedAt != null) {
       throw new InvalidSubmissionStateError();
     }
 
+    const lockWhere = {
+      id: sid,
+      status: { in: [...DECIDABLE_STATUSES] },
+      decidedAt: null,
+    };
+
     if (resolution === 'APPROVED') {
-      await tx.identitySubmission.update({
-        where: { id: sid },
+      const locked = await tx.identitySubmission.updateMany({
+        where: lockWhere,
         data: {
           status: 'APPROVED',
           decidedAt: now,
-          decisionActorType: 'INTERNAL_KYC_OPERATOR',
+          decisionActorType: actorType,
           decisionActorId: opRef,
           rejectReasonCode: null,
           userFacingMessageSanitized: null,
         },
       });
+      if (locked.count === 0) throw new InvalidSubmissionStateError();
 
       await tx.user.update({
         where: { id: sub.userId },
@@ -248,17 +260,18 @@ async function applySubmissionDecision({
     }
 
     if (resolution === 'REJECTED') {
-      await tx.identitySubmission.update({
-        where: { id: sid },
+      const locked = await tx.identitySubmission.updateMany({
+        where: lockWhere,
         data: {
           status: 'REJECTED',
           decidedAt: now,
-          decisionActorType: 'INTERNAL_KYC_OPERATOR',
+          decisionActorType: actorType,
           decisionActorId: opRef,
           rejectReasonCode: reason,
           userFacingMessageSanitized: sanitizedMsg,
         },
       });
+      if (locked.count === 0) throw new InvalidSubmissionStateError();
 
       await tx.user.update({
         where: { id: sub.userId },
@@ -270,17 +283,18 @@ async function applySubmissionDecision({
       return;
     }
 
-    await tx.identitySubmission.update({
-      where: { id: sid },
+    const locked = await tx.identitySubmission.updateMany({
+      where: lockWhere,
       data: {
         status: 'RESUBMISSION_REQUIRED',
         decidedAt: now,
-        decisionActorType: 'INTERNAL_KYC_OPERATOR',
+        decisionActorType: actorType,
         decisionActorId: opRef,
         rejectReasonCode: reason,
         userFacingMessageSanitized: sanitizedMsg,
       },
     });
+    if (locked.count === 0) throw new InvalidSubmissionStateError();
 
     await tx.user.update({
       where: { id: sub.userId },
@@ -293,6 +307,56 @@ async function applySubmissionDecision({
 
   const full = await getSubmissionDetailInternal(sid);
   return { submission: full, decision: resolution };
+}
+
+/**
+ * Fila manual: READY_FOR_REVIEW → UNDER_MANUAL_REVIEW (sem decidedAt).
+ * Idempotente se já estiver em UNDER_MANUAL_REVIEW.
+ * @param {{
+ *  submissionId: string,
+ *  actorReference: string,
+ *  decisionActorType?: string,
+ * }}
+ */
+async function queueSubmissionForManualReview({
+  submissionId,
+  actorReference,
+  decisionActorType,
+}) {
+  const sid = String(submissionId || '').trim();
+  if (!sid) throw new ValidationError('VALIDATION_ERROR', 'submissionId obrigatório');
+
+  const opRef = String(actorReference || '').trim().slice(0, 200);
+  if (!opRef) throw new ValidationError('VALIDATION_ERROR', 'actorReference obrigatório');
+
+  const actorType = String(decisionActorType || 'KYC_AUTO_DECISION').trim().slice(0, 64);
+
+  const sub = await prisma.identitySubmission.findUnique({ where: { id: sid } });
+  if (!sub) throw new ValidationError('NOT_FOUND', 'Submissão não encontrada');
+
+  if (TERMINAL_STATUSES.includes(sub.status) || sub.decidedAt != null) {
+    return { applied: false, submission: await getSubmissionDetailInternal(sid), reason: 'ALREADY_DECIDED' };
+  }
+
+  if (sub.status === 'UNDER_MANUAL_REVIEW') {
+    return { applied: false, submission: await getSubmissionDetailInternal(sid), reason: 'ALREADY_QUEUED' };
+  }
+
+  if (sub.status !== 'READY_FOR_REVIEW') {
+    throw new InvalidSubmissionStateError('Submission não está em READY_FOR_REVIEW');
+  }
+
+  const moved = await prisma.identitySubmission.updateMany({
+    where: { id: sid, status: 'READY_FOR_REVIEW', decidedAt: null },
+    data: {
+      status: 'UNDER_MANUAL_REVIEW',
+      decisionActorType: actorType,
+      decisionActorId: opRef,
+    },
+  });
+
+  const full = await getSubmissionDetailInternal(sid);
+  return { applied: moved.count > 0, submission: full, reason: moved.count > 0 ? 'QUEUED' : 'RACE_OR_STATE' };
 }
 
 /**
@@ -354,5 +418,6 @@ module.exports = {
   listSubmissionsByStatus,
   getSubmissionDetailInternal,
   applySubmissionDecision,
+  queueSubmissionForManualReview,
   createArtifactPresignedReadForInternal,
 };

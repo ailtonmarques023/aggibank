@@ -29,6 +29,7 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
     prisma.identitySubmission.findMany.mockReset();
     prisma.identitySubmission.findUnique.mockReset();
     prisma.identitySubmission.update.mockReset();
+    prisma.identitySubmission.updateMany.mockReset();
     prisma.user.update.mockReset();
     prisma.identitySubmissionArtifact.findUnique.mockReset();
     identityStorage.createPresignedReadUrl.mockReset();
@@ -125,9 +126,9 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
       return Promise.resolve(subRow);
     });
 
-    prisma.identitySubmission.update.mockImplementation(({ data }) => {
+    prisma.identitySubmission.updateMany.mockImplementation(({ data }) => {
       subRow = { ...subRow, ...data };
-      return Promise.resolve(subRow);
+      return Promise.resolve({ count: 1 });
     });
     prisma.user.update.mockResolvedValue({});
 
@@ -142,7 +143,7 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.submission.status).toBe('APPROVED');
-    expect(prisma.identitySubmission.update).toHaveBeenCalled();
+    expect(prisma.identitySubmission.updateMany).toHaveBeenCalled();
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'user-approve' },
       data: expect.objectContaining({
@@ -175,9 +176,9 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
       }
       return Promise.resolve(subRow);
     });
-    prisma.identitySubmission.update.mockImplementation(({ data }) => {
+    prisma.identitySubmission.updateMany.mockImplementation(({ data }) => {
       subRow = { ...subRow, ...data };
-      return Promise.resolve(subRow);
+      return Promise.resolve({ count: 1 });
     });
     prisma.user.update.mockResolvedValue({});
 
@@ -225,9 +226,9 @@ describe('Internal KYC /api/internal/kyc (Fatia 7)', () => {
       if (hasArtifacts) return Promise.resolve({ ...subRow, artifacts: [] });
       return Promise.resolve(subRow);
     });
-    prisma.identitySubmission.update.mockImplementation(({ data }) => {
+    prisma.identitySubmission.updateMany.mockImplementation(({ data }) => {
       subRow = { ...subRow, ...data };
-      return Promise.resolve(subRow);
+      return Promise.resolve({ count: 1 });
     });
     prisma.user.update.mockResolvedValue({});
 
