@@ -13,14 +13,23 @@ const { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } = requ
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const logger = require('../utils/logger');
 
-/** Tipos válidos segundo ADR (validação antes de persistir objeto). */
+/** Tipos válidos no Prisma / ADR-KYC-001 (inclui FACE_VIDEO desde Fatia 1). */
 const ALLOWED_ARTIFACT_TYPES = Object.freeze([
   'DOCUMENT_FRONT',
   'DOCUMENT_BACK',
   'SELFIE_PORTRAIT',
+  'FACE_VIDEO',
 ]);
 
-const MIME_ALLOWLIST = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const IMAGE_ARTIFACT_TYPES = Object.freeze(['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT']);
+
+const IMAGE_MIME_ALLOWLIST = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
+
+const VIDEO_MIME_ALLOWLIST = Object.freeze(['video/webm', 'video/mp4']);
+
+const IMAGE_EXTENSIONS = Object.freeze(['jpg', 'jpeg', 'png', 'webp']);
+
+const VIDEO_EXTENSIONS = Object.freeze(['webm', 'mp4']);
 
 /**
  * Extrai apenas o tipo MIME (sem charset) para comparação com metadados do HEAD.
@@ -59,6 +68,12 @@ function getAllowedUploadMaxBytes() {
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 
+function getAllowedVideoUploadMaxBytes() {
+  const raw = parseInt(process.env.KYC_VIDEO_UPLOAD_MAX_BYTES, 10);
+  const fallback = 30 * 1024 * 1024;
+  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+}
+
 function getPresignTtlSeconds() {
   const raw = parseInt(process.env.KYC_PRESIGN_TTL_SECONDS, 10);
   const fallback = 900;
@@ -92,6 +107,10 @@ function normalizeArtifactType(artifactType) {
   return t;
 }
 
+function isFaceVideoArtifact(artifactType) {
+  return normalizeArtifactType(artifactType) === 'FACE_VIDEO';
+}
+
 /**
  * Prefixo opcional de tenant/piloto (SEM PII). Ex.: staging/ ou ab-prod/
  * @returns {string} termina com / ou vazio
@@ -106,21 +125,48 @@ function getNormalizedTenantPrefix() {
 }
 
 /**
- * Extension permitida apenas alfanumérica curta (.jpg não passa só "jpg").
+ * Extensão de arquivo para objectKey, conforme tipo de artefato.
  * @param {string} [extension]
+ * @param {string} [artifactType]
  * @returns {string} exemplo ".jpeg" ou ""
  */
-function normalizeExtension(extension) {
+function normalizeExtension(extension, artifactType) {
   if (extension == null || String(extension).trim() === '') return '';
   let ext = String(extension).trim().toLowerCase().replace(/^\.+/, '');
   ext = ext.replace(/[^a-z0-9]/g, '');
   if (ext === '') return '';
   if (ext.length > 8) throw new Error('Extensão muito longa');
-  const allowedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp']);
-  if (!allowedExtensions.has(ext)) {
+
+  const isVideo = artifactType != null && String(artifactType).trim() !== '';
+  const allowed = isVideo && isFaceVideoArtifact(artifactType) ? VIDEO_EXTENSIONS : IMAGE_EXTENSIONS;
+  const allowedSet = new Set(allowed);
+  if (!allowedSet.has(ext)) {
     throw new Error(`Extensão não permitida: ${ext}`);
   }
   return `.${ext}`;
+}
+
+/**
+ * Mapeia MIME validado → segmento de extensão (sem ponto) para objectKey.
+ * @param {string} artifactType
+ * @param {string} mimeType
+ * @returns {string}
+ */
+function extensionSegmentForMime(artifactType, mimeType) {
+  const t = normalizeArtifactType(artifactType);
+  const ok = validateAllowedMimeType(t, mimeType);
+  if (!ok.valid) {
+    throw new Error(ok.message);
+  }
+  const m = ok.mimeType;
+  if (t === 'FACE_VIDEO') {
+    if (m === 'video/webm') return 'webm';
+    if (m === 'video/mp4') return 'mp4';
+  }
+  if (m === 'image/jpeg') return 'jpeg';
+  if (m === 'image/png') return 'png';
+  if (m === 'image/webp') return 'webp';
+  throw new Error('MIME_NOT_MAPPED');
 }
 
 /**
@@ -138,9 +184,9 @@ function buildIdentityObjectKey(params) {
   sanitizeOpaqueSegment(params.userId, 'userId'); // garante invariante chamada; omitido da key
   const submissionId = sanitizeOpaqueSegment(params.submissionId, 'submissionId');
   const artifactId = sanitizeOpaqueSegment(params.artifactId, 'artifactId');
-  normalizeArtifactType(params.artifactType);
+  const artifactEnum = normalizeArtifactType(params.artifactType);
 
-  const ext = normalizeExtension(params.extension);
+  const ext = normalizeExtension(params.extension, artifactEnum);
 
   const base = `${getNormalizedTenantPrefix()}identity/${submissionId}/${artifactId}${ext}`;
   if (base.length > 920) throw new Error('objectKey gerado excede limite pragmático');
@@ -148,28 +194,85 @@ function buildIdentityObjectKey(params) {
 }
 
 /**
- * @param {string} mimeType
+ * Valida MIME conforme tipo de artefato.
+ *
+ * Compatibilidade Fatia 2: um único argumento string trata-se como MIME de imagem (legado identityService).
+ *
+ * @param {string} artifactTypeOrMime
+ * @param {string} [mimeType]
  * @returns {{ valid: true, mimeType: string } | { valid: false, code: string, message: string }}
  */
-function validateAllowedMimeType(mimeType) {
-  const m = String(mimeType || '').trim().toLowerCase();
+function validateAllowedMimeType(artifactTypeOrMime, mimeType) {
+  const legacyImageOnly = mimeType === undefined;
+  const artifactType = legacyImageOnly ? null : normalizeArtifactType(artifactTypeOrMime);
+  const m = String(legacyImageOnly ? artifactTypeOrMime : mimeType || '')
+    .trim()
+    .toLowerCase();
+
   if (!m) return { valid: false, code: 'MIME_REQUIRED', message: 'Tipo MIME é obrigatório' };
-  if (!MIME_ALLOWLIST.has(m)) {
-    return { valid: false, code: 'MIME_NOT_ALLOWED', message: `Tipo MIME não permitido: ${mimeType}` };
+
+  if (legacyImageOnly) {
+    if (!IMAGE_MIME_ALLOWLIST.includes(m)) {
+      return { valid: false, code: 'MIME_NOT_ALLOWED', message: `Tipo MIME não permitido: ${artifactTypeOrMime}` };
+    }
+    return { valid: true, mimeType: m };
   }
+
+  if (artifactType === 'FACE_VIDEO') {
+    if (!VIDEO_MIME_ALLOWLIST.includes(m)) {
+      return {
+        valid: false,
+        code: 'MIME_NOT_ALLOWED',
+        message: `Tipo MIME não permitido para FACE_VIDEO: ${mimeType}`,
+      };
+    }
+    return { valid: true, mimeType: m };
+  }
+
+  if (!IMAGE_ARTIFACT_TYPES.includes(artifactType)) {
+    return { valid: false, code: 'ARTIFACT_TYPE_INVALID', message: 'artifactType inválido' };
+  }
+
+  if (!IMAGE_MIME_ALLOWLIST.includes(m)) {
+    return {
+      valid: false,
+      code: 'MIME_NOT_ALLOWED',
+      message: `Tipo MIME não permitido para ${artifactType}: ${mimeType}`,
+    };
+  }
+
   return { valid: true, mimeType: m };
 }
 
 /**
- * @param {number} byteLength
+ * Valida tamanho conforme tipo de artefato (ou limite de imagem no modo legado).
+ *
+ * @param {string | number} artifactTypeOrByteLength
+ * @param {number} [byteLength]
  * @returns {{ valid: true } | { valid: false, code: string, message: string }}
  */
-function validateMaxFileSize(byteLength) {
-  const n = typeof byteLength === 'number' ? byteLength : parseInt(byteLength, 10);
+function validateMaxFileSize(artifactTypeOrByteLength, byteLength) {
+  const legacyImageOnly = byteLength === undefined;
+  const n = legacyImageOnly
+    ? typeof artifactTypeOrByteLength === 'number'
+      ? artifactTypeOrByteLength
+      : parseInt(artifactTypeOrByteLength, 10)
+    : typeof byteLength === 'number'
+      ? byteLength
+      : parseInt(byteLength, 10);
+
   if (!Number.isFinite(n) || n <= 0) {
     return { valid: false, code: 'SIZE_INVALID', message: 'Tamanho do arquivo inválido' };
   }
-  const max = getAllowedUploadMaxBytes();
+
+  let max;
+  if (legacyImageOnly) {
+    max = getAllowedUploadMaxBytes();
+  } else {
+    const artifactType = normalizeArtifactType(artifactTypeOrByteLength);
+    max = artifactType === 'FACE_VIDEO' ? getAllowedVideoUploadMaxBytes() : getAllowedUploadMaxBytes();
+  }
+
   if (n > max) {
     return { valid: false, code: 'SIZE_TOO_LARGE', message: `Arquivo excede o máximo permitido (${max} bytes)` };
   }
@@ -250,15 +353,23 @@ function getLazyS3() {
  *   objectKey: string,
  *   mimeType: string,
  *   byteSize?: number,
+ *   artifactType?: string,
  * }} args
  * @returns {Promise<{ url: string, expiresAt: string, ttlSeconds: number }>}
  */
 async function createPresignedUploadUrl(args) {
-  const okMime = validateAllowedMimeType(args.mimeType);
+  const artifactType = args.artifactType != null ? normalizeArtifactType(args.artifactType) : null;
+  const okMime =
+    artifactType != null
+      ? validateAllowedMimeType(artifactType, args.mimeType)
+      : validateAllowedMimeType(args.mimeType);
   if (!okMime.valid) throw new Error(okMime.message);
 
   if (args.byteSize != null) {
-    const sz = validateMaxFileSize(args.byteSize);
+    const sz =
+      artifactType != null
+        ? validateMaxFileSize(artifactType, args.byteSize)
+        : validateMaxFileSize(args.byteSize);
     if (!sz.valid) throw new Error(sz.message);
   }
 
@@ -426,10 +537,12 @@ function resetLazyClientForTests() {
 module.exports = {
   IdentityStorageDisabledError,
   ALLOWED_ARTIFACT_TYPES,
+  IMAGE_ARTIFACT_TYPES,
   isIdentityStorageFeatureFlagOn,
   normalizeArtifactType,
   buildIdentityObjectKey,
   normalizeExtension,
+  extensionSegmentForMime,
   validateAllowedMimeType,
   validateMaxFileSize,
   createPresignedUploadUrl,
@@ -441,5 +554,6 @@ module.exports = {
   sanitizeOpaqueSegment,
   getNormalizedTenantPrefix,
   getAllowedUploadMaxBytes,
+  getAllowedVideoUploadMaxBytes,
   getPresignTtlSeconds,
 };

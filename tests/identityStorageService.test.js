@@ -2,11 +2,13 @@ const {
   IdentityStorageDisabledError,
   buildIdentityObjectKey,
   normalizeExtension,
+  extensionSegmentForMime,
   validateAllowedMimeType,
   validateMaxFileSize,
   createPresignedUploadUrl,
   headIdentityObjectMetadata,
   getAllowedUploadMaxBytes,
+  getAllowedVideoUploadMaxBytes,
   getPresignTtlSeconds,
   resetLazyClientForTests,
   sanitizeOpaqueSegment,
@@ -21,6 +23,8 @@ describe('identityStorageService (infra KYC isolada)', () => {
     process.env = { ...prev };
     process.env.FEATURE_KYC_ENABLED = 'false';
     delete process.env.KYC_STORAGE_OBJECT_KEY_PREFIX;
+    delete process.env.KYC_VIDEO_UPLOAD_MAX_BYTES;
+    delete process.env.KYC_UPLOAD_MAX_BYTES;
   });
 
   afterAll(() => {
@@ -36,6 +40,7 @@ describe('identityStorageService (infra KYC isolada)', () => {
       extension: 'jpg',
     });
     expect(key).toMatch(/^identity\/clsubxxxxxxxxxxxxxxxxxxxxxxxx\/clartifactxxxxxxxxxxxxxxxxxxxx\.jpg$/);
+    expect(key).not.toMatch(/@|\.com|cpf/i);
   });
 
   it('buildIdentityObjectKey inclui tenant prefix opcional quando env definido', () => {
@@ -49,6 +54,17 @@ describe('identityStorageService (infra KYC isolada)', () => {
     expect(key).toBe('staging/identity/sub1/art1');
   });
 
+  it('buildIdentityObjectKey aceita extensão de vídeo para FACE_VIDEO', () => {
+    const key = buildIdentityObjectKey({
+      userId: 'u1',
+      submissionId: 'sub1',
+      artifactId: 'art1',
+      artifactType: 'FACE_VIDEO',
+      extension: 'webm',
+    });
+    expect(key).toBe('identity/sub1/art1.webm');
+  });
+
   it('buildIdentityObjectKey rejeita segmentos não opacos', () => {
     expect(() =>
       buildIdentityObjectKey({
@@ -60,21 +76,94 @@ describe('identityStorageService (infra KYC isolada)', () => {
     ).toThrow();
   });
 
-  it('validateAllowedMimeType aceita apenas allowlist ADR típico', () => {
-    expect(validateAllowedMimeType('image/jpeg').valid).toBe(true);
-    expect(validateAllowedMimeType('application/pdf').valid).toBe(false);
+  describe('validateAllowedMimeType por artifactType (Fatia 2)', () => {
+    it('FACE_VIDEO aceita video/webm e video/mp4', () => {
+      expect(validateAllowedMimeType('FACE_VIDEO', 'video/webm').valid).toBe(true);
+      expect(validateAllowedMimeType('FACE_VIDEO', 'video/mp4').valid).toBe(true);
+    });
+
+    it('FACE_VIDEO rejeita image/jpeg', () => {
+      expect(validateAllowedMimeType('FACE_VIDEO', 'image/jpeg').valid).toBe(false);
+    });
+
+    it.each(['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'])(
+      '%s rejeita video/mp4 e video/webm',
+      (artifactType) => {
+        expect(validateAllowedMimeType(artifactType, 'video/mp4').valid).toBe(false);
+        expect(validateAllowedMimeType(artifactType, 'video/webm').valid).toBe(false);
+      }
+    );
+
+    it.each(['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'])(
+      '%s aceita image/jpeg como antes',
+      (artifactType) => {
+        expect(validateAllowedMimeType(artifactType, 'image/jpeg').valid).toBe(true);
+        expect(validateAllowedMimeType(artifactType, 'image/png').valid).toBe(true);
+      }
+    );
+
+    it('modo legado (apenas MIME) aceita imagens e rejeita vídeo', () => {
+      expect(validateAllowedMimeType('image/jpeg').valid).toBe(true);
+      expect(validateAllowedMimeType('video/mp4').valid).toBe(false);
+      expect(validateAllowedMimeType('application/pdf').valid).toBe(false);
+    });
   });
 
-  it('validateMaxFileSize respeita defaults e limites absurdos futuros podem aumentar por env', () => {
-    const max = getAllowedUploadMaxBytes();
-    expect(max).toBeGreaterThan(1024 * 1024);
-    expect(validateMaxFileSize(max + 10).valid).toBe(false);
-    expect(validateMaxFileSize(max).valid).toBe(true);
+  describe('validateMaxFileSize por artifactType (Fatia 2)', () => {
+    it('limite de imagem usa KYC_UPLOAD_MAX_BYTES', () => {
+      process.env.KYC_UPLOAD_MAX_BYTES = String(10 * 1024 * 1024);
+      const max = getAllowedUploadMaxBytes();
+      expect(max).toBe(10 * 1024 * 1024);
+      expect(validateMaxFileSize('DOCUMENT_FRONT', max).valid).toBe(true);
+      expect(validateMaxFileSize('DOCUMENT_FRONT', max + 1).valid).toBe(false);
+    });
+
+    it('limite de vídeo usa KYC_VIDEO_UPLOAD_MAX_BYTES', () => {
+      process.env.KYC_VIDEO_UPLOAD_MAX_BYTES = String(30 * 1024 * 1024);
+      const max = getAllowedVideoUploadMaxBytes();
+      expect(max).toBe(30 * 1024 * 1024);
+      expect(validateMaxFileSize('FACE_VIDEO', max).valid).toBe(true);
+      expect(validateMaxFileSize('FACE_VIDEO', max + 1).valid).toBe(false);
+    });
+
+    it('modo legado (apenas byteLength) usa limite de imagem', () => {
+      const max = getAllowedUploadMaxBytes();
+      expect(validateMaxFileSize(max).valid).toBe(true);
+      expect(validateMaxFileSize(max + 10).valid).toBe(false);
+    });
+
+    it('default de vídeo é 30 MiB quando env ausente', () => {
+      expect(getAllowedVideoUploadMaxBytes()).toBe(30 * 1024 * 1024);
+    });
   });
 
-  it('normalizeExtension normaliza entrada', () => {
-    expect(normalizeExtension('.JPEG')).toBe('.jpeg');
-    expect(() => normalizeExtension('.exe')).toThrow();
+  describe('extensões (Fatia 2)', () => {
+    it('extensionSegmentForMime: video/webm → webm e .webm no objectKey', () => {
+      expect(extensionSegmentForMime('FACE_VIDEO', 'video/webm')).toBe('webm');
+      expect(normalizeExtension('webm', 'FACE_VIDEO')).toBe('.webm');
+      const key = buildIdentityObjectKey({
+        userId: 'u1',
+        submissionId: 'sub1',
+        artifactId: 'art1',
+        artifactType: 'FACE_VIDEO',
+        extension: extensionSegmentForMime('FACE_VIDEO', 'video/webm'),
+      });
+      expect(key).toMatch(/\.webm$/);
+    });
+
+    it('extensionSegmentForMime: video/mp4 → mp4 e .mp4 no objectKey', () => {
+      expect(extensionSegmentForMime('FACE_VIDEO', 'video/mp4')).toBe('mp4');
+      expect(normalizeExtension('mp4', 'FACE_VIDEO')).toBe('.mp4');
+    });
+
+    it('normalizeExtension rejeita webm em DOCUMENT_FRONT', () => {
+      expect(() => normalizeExtension('webm', 'DOCUMENT_FRONT')).toThrow();
+    });
+
+    it('normalizeExtension normaliza entrada de imagem', () => {
+      expect(normalizeExtension('.JPEG', 'SELFIE_PORTRAIT')).toBe('.jpeg');
+      expect(() => normalizeExtension('.exe', 'DOCUMENT_FRONT')).toThrow();
+    });
   });
 
   it('getPresignTtlSeconds tem piso/teto sanitizados', () => {
