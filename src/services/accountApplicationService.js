@@ -1,9 +1,11 @@
 'use strict';
 
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { prisma } = require('../config/database');
 
 const TERMINAL_STATUSES = new Set(['FINALIZED', 'EXPIRED', 'CANCELLED']);
+const PATCHABLE_APPLICATION_STATUSES = new Set(['DRAFT', 'DATA_RECEIVED', 'RESUBMISSION_REQUIRED']);
 
 function isOnboardingApplicationEnabled() {
   return String(process.env.ONBOARDING_APPLICATION_ENABLED || '').toLowerCase().trim() === 'true';
@@ -201,6 +203,114 @@ async function getApplicationStatus(applicationId, tokenHash) {
 /**
  * F1: validação leve de duplicidade — não bloqueia abertura definitiva (finalize em fatia futura).
  */
+/**
+ * Persiste dados da proposta (sem User/conta). Senha é hasheada no servidor.
+ * @param {import('@prisma/client').AccountApplication} applicationRow
+ * @param {object} payload
+ */
+async function updateApplicationFromSession(applicationRow, payload) {
+  if (!applicationRow) {
+    throw httpError(404, 'APPLICATION_NOT_FOUND', 'Proposta de abertura não encontrada.');
+  }
+
+  if (TERMINAL_STATUSES.has(applicationRow.status)) {
+    throw httpError(409, 'APPLICATION_TERMINAL', 'Esta proposta não pode mais ser alterada.');
+  }
+
+  if (!PATCHABLE_APPLICATION_STATUSES.has(applicationRow.status)) {
+    throw httpError(
+      409,
+      'APPLICATION_LOCKED',
+      'Dados da proposta já foram enviados para verificação. Aguarde a análise ou use o login quando liberado.'
+    );
+  }
+
+  const nomeCompleto = payload.nomeCompleto != null ? String(payload.nomeCompleto).trim() : null;
+  const email = normalizeEmail(payload.email);
+  const cpf = normalizeCpfDigits(payload.cpf);
+  const telefone = payload.telefone != null ? String(payload.telefone).replace(/\D/g, '') : null;
+
+  let dataNascimento = null;
+  if (payload.dataNascimento) {
+    const d = new Date(payload.dataNascimento);
+    if (Number.isNaN(d.getTime())) {
+      throw httpError(400, 'VALIDATION_ERROR', 'Data de nascimento inválida.');
+    }
+    dataNascimento = d;
+  }
+
+  let senhaHash = applicationRow.senhaHash;
+  if (payload.senha != null && String(payload.senha).trim() !== '') {
+    const senhaPlain = String(payload.senha);
+    if (!/^\d{6}$/.test(senhaPlain)) {
+      throw httpError(400, 'VALIDATION_ERROR', 'Senha deve ter 6 dígitos numéricos.');
+    }
+    const saltRounds = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
+    senhaHash = await bcrypt.hash(senhaPlain, saltRounds);
+  }
+
+  const enderecoJson = payload.endereco && typeof payload.endereco === 'object' ? payload.endereco : null;
+  const dadosProfissionaisJson =
+    payload.dadosProfissionais && typeof payload.dadosProfissionais === 'object'
+      ? payload.dadosProfissionais
+      : null;
+
+  const draftRow = {
+    ...applicationRow,
+    nomeCompleto: nomeCompleto || applicationRow.nomeCompleto,
+    email: email || applicationRow.email,
+    cpf: cpf || applicationRow.cpf,
+    telefone: telefone || applicationRow.telefone,
+    dataNascimento: dataNascimento || applicationRow.dataNascimento,
+    senhaHash,
+    enderecoJson: enderecoJson || applicationRow.enderecoJson,
+    dadosProfissionaisJson: dadosProfissionaisJson || applicationRow.dadosProfissionaisJson,
+    aceitaComunicacoes:
+      payload.aceitaComunicacoes === true || applicationRow.aceitaComunicacoes === true,
+  };
+
+  if (!hasPersonalDataComplete(draftRow)) {
+    throw httpError(422, 'APPLICATION_DATA_INCOMPLETE', 'Complete os dados pessoais e a senha.');
+  }
+  if (!hasAddressComplete(draftRow.enderecoJson)) {
+    throw httpError(422, 'APPLICATION_ADDRESS_INCOMPLETE', 'Informe o endereço completo.');
+  }
+  if (!hasProfessionalComplete(draftRow.dadosProfissionaisJson)) {
+    throw httpError(422, 'APPLICATION_PROFESSIONAL_INCOMPLETE', 'Informe seus dados profissionais.');
+  }
+
+  if (payload.aceitaConsentimentoBiometrico !== true) {
+    throw httpError(
+      400,
+      'BIOMETRIC_CONSENT_REQUIRED',
+      'É necessário autorizar a verificação de segurança com documento, selfie e vídeo quando aplicável.'
+    );
+  }
+
+  await noteDuplicateIdentifiers({ cpf: draftRow.cpf, email: draftRow.email });
+
+  const nextStatus = applicationRow.status === 'DRAFT' ? 'DATA_RECEIVED' : applicationRow.status;
+
+  const updated = await prisma.accountApplication.update({
+    where: { id: applicationRow.id },
+    data: {
+      nomeCompleto: draftRow.nomeCompleto,
+      email: draftRow.email,
+      cpf: draftRow.cpf,
+      telefone: draftRow.telefone,
+      dataNascimento: draftRow.dataNascimento,
+      senhaHash: draftRow.senhaHash,
+      enderecoJson: draftRow.enderecoJson,
+      dadosProfissionaisJson: draftRow.dadosProfissionaisJson,
+      aceitaComunicacoes: draftRow.aceitaComunicacoes,
+      aceitaTermos: false,
+      status: nextStatus,
+    },
+  });
+
+  return toPublicStatus(updated, { includeTokenExpiresAt: false });
+}
+
 async function noteDuplicateIdentifiers({ cpf, email }) {
   const normalizedCpf = normalizeCpfDigits(cpf);
   const normalizedEmail = normalizeEmail(email);
@@ -212,7 +322,7 @@ async function noteDuplicateIdentifiers({ cpf, email }) {
       select: { id: true },
     });
     if (userByCpf) {
-      hints.push({ field: 'cpf', code: 'CPF_MAY_EXIST' });
+      throw httpError(409, 'CPF_ALREADY_EXISTS', 'CPF já cadastrado. Faça login ou use outro CPF.');
     }
   }
 
@@ -222,11 +332,11 @@ async function noteDuplicateIdentifiers({ cpf, email }) {
       select: { id: true },
     });
     if (userByEmail) {
-      hints.push({ field: 'email', code: 'EMAIL_MAY_EXIST' });
+      throw httpError(409, 'EMAIL_ALREADY_EXISTS', 'E-mail já cadastrado. Faça login ou use outro e-mail.');
     }
   }
 
-  return hints;
+  return [];
 }
 
 module.exports = {
@@ -237,8 +347,10 @@ module.exports = {
   getApplicationStatusForSession,
   expireApplicationIfNeeded,
   noteDuplicateIdentifiers,
+  updateApplicationFromSession,
   toPublicStatus,
   TERMINAL_STATUSES,
+  PATCHABLE_APPLICATION_STATUSES,
   normalizeCpfDigits,
   normalizeEmail,
   hasPersonalDataComplete,

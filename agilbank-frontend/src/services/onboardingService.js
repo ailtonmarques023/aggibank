@@ -19,6 +19,11 @@ async function parseJson(res) {
 /**
  * Inicia proposta DRAFT; cookie agilbank_onboarding_session é definida pelo servidor.
  */
+/** Flag de build: fluxo novo de abertura (cookie HTTP-only). */
+export function isOnboardingRegisterEnabled() {
+  return String(import.meta.env.VITE_ONBOARDING_APPLICATION_ENABLED || '').toLowerCase().trim() === 'true';
+}
+
 export async function createApplication() {
   const res = await fetch(`${API_BASE}/api/onboarding/applications`, {
     method: 'POST',
@@ -32,6 +37,19 @@ export async function createApplication() {
 /**
  * Status da proposta vinculada à cookie de sessão.
  */
+/**
+ * Persiste dados pessoais/endereço/senha na proposta (cookie).
+ */
+export async function updateCurrentApplication(body) {
+  const res = await fetch(`${API_BASE}/api/onboarding/applications/current`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return parseJson(res);
+}
+
 export async function getCurrentApplicationStatus() {
   const res = await fetch(`${API_BASE}/api/onboarding/applications/current/status`, {
     method: 'GET',

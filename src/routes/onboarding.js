@@ -80,6 +80,29 @@ router.post('/applications', async (req, res) => {
 });
 
 /**
+ * PATCH /api/onboarding/applications/current
+ * Salva dados da proposta (sem User/conta).
+ */
+router.patch('/applications/current', requireOnboardingSession, async (req, res) => {
+  try {
+    const statusPayload = await accountApplicationService.updateApplicationFromSession(
+      req.onboardingApplication,
+      req.body || {}
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        ...statusPayload,
+        nextStep: onboardingSessionService.deriveNextStep(statusPayload.status),
+      },
+    });
+  } catch (err) {
+    return sendError(req, res, err);
+  }
+});
+
+/**
  * GET /api/onboarding/applications/current/status
  * Requer cookie agilbank_onboarding_session (não JWT).
  */

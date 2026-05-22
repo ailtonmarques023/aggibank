@@ -1,6 +1,7 @@
 'use strict';
 
 const request = require('supertest');
+const bcrypt = require('bcryptjs');
 const app = require('../src/server');
 const { prisma } = require('../src/config/database');
 const { hashOnboardingToken } = require('../src/services/accountApplicationService');
@@ -65,6 +66,8 @@ describe('Onboarding AccountApplication — cookie HTTP-only', () => {
     });
 
     beforeEach(() => {
+      bcrypt.hash.mockImplementation((password) => Promise.resolve(`hashed_${password}`));
+      bcrypt.compare.mockImplementation((password, hash) => Promise.resolve(hash === `hashed_${password}`));
       prisma.accountApplication.create.mockReset();
       prisma.accountApplication.findUnique.mockReset();
       prisma.accountApplication.update.mockReset();
@@ -224,6 +227,148 @@ describe('Onboarding AccountApplication — cookie HTTP-only', () => {
         .set('Cookie', 'agilbank_onboarding_session=not_a_jwt');
 
       expect(res.status).toBe(401);
+    });
+
+    function validPatchBody() {
+      return {
+      nomeCompleto: 'Maria Silva',
+      email: 'maria.patch@example.com',
+      cpf: '52998224725',
+      telefone: '11999999999',
+      dataNascimento: '1990-01-15',
+      senha: '123456',
+      aceitaConsentimentoBiometrico: true,
+      endereco: {
+        cep: '01310100',
+        logradouro: 'Av Paulista',
+        numero: '100',
+        bairro: 'Bela Vista',
+        cidade: 'Sao Paulo',
+        estado: 'SP',
+      },
+      dadosProfissionais: { profissao: 'Engenheira' },
+      };
+    }
+
+    function draftRowForPatch(overrides = {}) {
+      return applicationRow({
+        telefone: '11988887777',
+        dataNascimento: new Date('1990-01-15'),
+        senhaHash: 'hashed_existing',
+        enderecoJson: {
+          cep: '01310100',
+          logradouro: 'Rua Teste',
+          numero: '10',
+          bairro: 'Centro',
+          cidade: 'Sao Paulo',
+          estado: 'SP',
+        },
+        dadosProfissionaisJson: { profissao: 'Analista' },
+        ...overrides,
+      });
+    }
+
+    function mockActiveSession(secret, applicationOverrides = {}) {
+      const row = draftRowForPatch(applicationOverrides);
+      prisma.onboardingSession.findUnique.mockResolvedValue({
+        id: 'sess_patch',
+        applicationId: row.id,
+        sessionHash: hashSessionSecret(secret),
+        status: 'ACTIVE',
+        expiresAt: new Date(Date.now() + 3600000),
+        application: row,
+      });
+      prisma.onboardingSession.update.mockResolvedValue({});
+      return row;
+    }
+
+    it('PATCH /applications/current sem cookie retorna 401', async () => {
+      const res = await request(app)
+        .patch('/api/onboarding/applications/current')
+        .send(validPatchBody());
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('ONBOARDING_SESSION_REQUIRED');
+    });
+
+    it('PATCH /applications/current persiste dados e DATA_RECEIVED sem criar User', async () => {
+      const secret = 'patch_session_secret_test';
+      const row = mockActiveSession(secret, { status: 'DRAFT' });
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.accountApplication.update.mockImplementation(async ({ data }) =>
+        applicationRow({
+          ...row,
+          ...data,
+          status: data.status || row.status,
+          senhaHash: data.senhaHash || 'hashed',
+        })
+      );
+
+      const res = await request(app)
+        .patch('/api/onboarding/applications/current')
+        .set('Cookie', `agilbank_onboarding_session=${secret}`)
+        .send(validPatchBody());
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('DATA_RECEIVED');
+      expect(res.body.data).not.toHaveProperty('email');
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(prisma.accountApplication.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: row.id },
+          data: expect.objectContaining({
+            status: 'DATA_RECEIVED',
+            nomeCompleto: 'Maria Silva',
+          }),
+        })
+      );
+      const updateArg = prisma.accountApplication.update.mock.calls[0][0];
+      expect(updateArg.data.senhaHash).toBeTruthy();
+      expect(updateArg.data.senhaHash).not.toBe('123456');
+    });
+
+    it('PATCH /applications/current sem consentimento biométrico retorna 400', async () => {
+      const secret = 'patch_no_consent_secret';
+      mockActiveSession(secret, { status: 'DRAFT' });
+      const body = validPatchBody();
+      delete body.aceitaConsentimentoBiometrico;
+
+      const res = await request(app)
+        .patch('/api/onboarding/applications/current')
+        .set('Cookie', `agilbank_onboarding_session=${secret}`)
+        .send(body);
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('BIOMETRIC_CONSENT_REQUIRED');
+    });
+
+    it('PATCH /applications/current com CPF já cadastrado retorna 409', async () => {
+      const secret = 'patch_dup_cpf_secret';
+      mockActiveSession(secret, { status: 'DRAFT' });
+      prisma.user.findUnique.mockImplementation(async ({ where }) => {
+        if (where.cpf) return { id: 'user_existing' };
+        return null;
+      });
+
+      const res = await request(app)
+        .patch('/api/onboarding/applications/current')
+        .set('Cookie', `agilbank_onboarding_session=${secret}`)
+        .send(validPatchBody());
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('CPF_ALREADY_EXISTS');
+    });
+
+    it('PATCH /applications/current em DOCUMENTS_PENDING retorna 409 locked', async () => {
+      const secret = 'patch_locked_secret';
+      mockActiveSession(secret, { status: 'DOCUMENTS_PENDING' });
+
+      const res = await request(app)
+        .patch('/api/onboarding/applications/current')
+        .set('Cookie', `agilbank_onboarding_session=${secret}`)
+        .send(validPatchBody());
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('APPLICATION_LOCKED');
     });
 
     it('legado GET :id/status com X-Onboarding-Token ainda funciona', async () => {
