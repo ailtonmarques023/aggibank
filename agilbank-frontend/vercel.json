@@ -10,12 +10,7 @@
     },
     {
       "source": "/banco/:path*",
-      "destination": "/banco/index.html",
-      "missing": [
-        {
-          "type": "filesystem"
-        }
-      ]
+      "destination": "/banco/index.html"
     },
     {
       "source": "/(.*)",
