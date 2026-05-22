@@ -1,10 +1,41 @@
 import api from './api';
 
-/** Tipos MIME aceitos pelo backend KYC (ADR). */
+/** Tipos MIME aceitos pelo backend KYC — imagens (ADR). */
 export const KYC_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Tipos MIME para artefato FACE_VIDEO (ADR-KYC-001). */
+export const KYC_ALLOWED_VIDEO_MIME_TYPES = ['video/webm', 'video/mp4'];
 
 /** Limite alinhado ao default do backend quando `KYC_UPLOAD_MAX_BYTES` não está definido. */
 export const KYC_MAX_FILE_BYTES = 15 * 1024 * 1024;
+
+/** Limite de vídeo facial (default backend 30 MiB). */
+export const KYC_VIDEO_MAX_FILE_BYTES = 30 * 1024 * 1024;
+
+export const KYC_FACE_VIDEO_RECORD_MIN_MS = 5000;
+export const KYC_FACE_VIDEO_RECORD_MAX_MS = 8000;
+
+/**
+ * Escolhe MIME suportado pelo MediaRecorder (preferência webm, fallback mp4).
+ * @returns {{ mime: string, recorderMime: string, extension: string } | null}
+ */
+export function pickKycVideoRecorderMimeType() {
+  if (typeof MediaRecorder === 'undefined') {
+    return null;
+  }
+  const candidates = [
+    { recorderMime: 'video/webm;codecs=vp9', mime: 'video/webm', extension: 'webm' },
+    { recorderMime: 'video/webm;codecs=vp8', mime: 'video/webm', extension: 'webm' },
+    { recorderMime: 'video/webm', mime: 'video/webm', extension: 'webm' },
+    { recorderMime: 'video/mp4', mime: 'video/mp4', extension: 'mp4' },
+  ];
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported(c.recorderMime)) {
+      return c;
+    }
+  }
+  return null;
+}
 
 function unwrap(apiPayload, fallbackMessage) {
   if (!apiPayload || typeof apiPayload !== 'object') {

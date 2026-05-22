@@ -12,7 +12,9 @@ import Button from '../../components/Button';
 import '../Register/Register.css';
 import {
   KYC_ALLOWED_MIME_TYPES,
+  KYC_ALLOWED_VIDEO_MIME_TYPES,
   KYC_MAX_FILE_BYTES,
+  KYC_VIDEO_MAX_FILE_BYTES,
   fetchKycStatus,
   presignKycUpload,
   confirmKycUpload,
@@ -21,6 +23,7 @@ import {
   sha256HexFromFile,
 } from '../../services/kycService';
 import { BRAND_MEDIA } from '../../constants/brandMedia';
+import FaceVideoCapture from './FaceVideoCapture';
 
 /** Etapas numéricas após boas-vindas (barra de progresso). */
 const STEP = {
@@ -28,10 +31,48 @@ const STEP = {
   DOC_FRONT: 1,
   DOC_BACK: 2,
   SELFIE: 3,
-  REVIEW: 4,
+  FACE_VIDEO: 4,
+  REVIEW: 5,
 };
 
-const PROGRESS_TOTAL = 4;
+const DEFAULT_REQUIRED_ARTIFACTS = ['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'];
+
+const ARTIFACT_LABELS = {
+  DOCUMENT_FRONT: 'Frente do documento',
+  DOCUMENT_BACK: 'Verso do documento',
+  SELFIE_PORTRAIT: 'Selfie',
+  FACE_VIDEO: 'Vídeo facial',
+};
+
+function artifactTypeToStep(artifactType) {
+  switch (artifactType) {
+    case 'DOCUMENT_FRONT':
+      return STEP.DOC_FRONT;
+    case 'DOCUMENT_BACK':
+      return STEP.DOC_BACK;
+    case 'SELFIE_PORTRAIT':
+      return STEP.SELFIE;
+    case 'FACE_VIDEO':
+      return STEP.FACE_VIDEO;
+    default:
+      return STEP.WELCOME;
+  }
+}
+
+function stepToArtifactType(step) {
+  switch (step) {
+    case STEP.DOC_FRONT:
+      return 'DOCUMENT_FRONT';
+    case STEP.DOC_BACK:
+      return 'DOCUMENT_BACK';
+    case STEP.SELFIE:
+      return 'SELFIE_PORTRAIT';
+    case STEP.FACE_VIDEO:
+      return 'FACE_VIDEO';
+    default:
+      return null;
+  }
+}
 
 const FLOW_CONFIG = [
   null,
@@ -150,6 +191,19 @@ export default function KycVerification() {
   /** pré-visualização local por tipo de artefato */
   const [localPreviewUrlByType, setLocalPreviewUrlByType] = useState({});
 
+  const requiredArtifacts = useMemo(() => {
+    const fromApi = kycStatus?.requiredArtifacts;
+    if (Array.isArray(fromApi) && fromApi.length > 0) return fromApi;
+    return DEFAULT_REQUIRED_ARTIFACTS;
+  }, [kycStatus]);
+
+  const hasFaceVideo = useMemo(
+    () => requiredArtifacts.includes('FACE_VIDEO'),
+    [requiredArtifacts]
+  );
+
+  const progressTotal = useMemo(() => requiredArtifacts.length, [requiredArtifacts]);
+
   const registerObjectUrl = useCallback((url) => {
     previewRegistry.current.push(url);
     return url;
@@ -207,6 +261,10 @@ export default function KycVerification() {
   const syncStepFromStatus = useCallback((data) => {
     if (!data) return;
     const { identityStatus, submittedArtifacts, canSubmitForReview } = data;
+    const order =
+      Array.isArray(data.requiredArtifacts) && data.requiredArtifacts.length > 0
+        ? data.requiredArtifacts
+        : DEFAULT_REQUIRED_ARTIFACTS;
 
     if (
       identityStatus === 'NOT_STARTED' ||
@@ -218,11 +276,8 @@ export default function KycVerification() {
     }
 
     if (identityStatus === 'DRAFT' || identityStatus === 'PENDING_UPLOADS') {
-      const order = ['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'];
       const nextMissing = order.find((t) => !submittedArtifacts.includes(t));
-      if (nextMissing === 'DOCUMENT_FRONT') setStep(STEP.DOC_FRONT);
-      else if (nextMissing === 'DOCUMENT_BACK') setStep(STEP.DOC_BACK);
-      else if (nextMissing === 'SELFIE_PORTRAIT') setStep(STEP.SELFIE);
+      if (nextMissing) setStep(artifactTypeToStep(nextMissing));
       else if (canSubmitForReview) setStep(STEP.REVIEW);
       else setStep(STEP.WELCOME);
     }
@@ -286,16 +341,64 @@ export default function KycVerification() {
 
   const showBlockingTerminal = terminalKind && terminalKind !== 'approved' && !forceFlow;
 
-  const progressIndex = Math.min(Math.max(step, 1), PROGRESS_TOTAL);
+  const progressIndex = useMemo(() => {
+    if (step === STEP.WELCOME) return 0;
+    if (step === STEP.REVIEW) return progressTotal;
+    const artifactType = stepToArtifactType(step);
+    if (!artifactType) return 1;
+    const idx = requiredArtifacts.indexOf(artifactType);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [step, progressTotal, requiredArtifacts]);
 
   const scrollPaddingBottom =
     step === STEP.WELCOME
       ? 'calc(9.75rem + env(safe-area-inset-bottom, 0px))'
-      : step === STEP.REVIEW && reviewError
-        ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
-        : step >= STEP.DOC_FRONT && step <= STEP.SELFIE
-          ? 'calc(11rem + env(safe-area-inset-bottom, 0px))'
-          : 'calc(10.5rem + env(safe-area-inset-bottom, 0px))';
+      : step === STEP.FACE_VIDEO
+        ? 'calc(2rem + env(safe-area-inset-bottom, 0px))'
+        : step === STEP.REVIEW && reviewError
+          ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
+          : step >= STEP.DOC_FRONT && step <= STEP.SELFIE
+            ? 'calc(11rem + env(safe-area-inset-bottom, 0px))'
+            : 'calc(10.5rem + env(safe-area-inset-bottom, 0px))';
+
+  const advanceAfterArtifact = useCallback((artifactType, statusSnapshot) => {
+    const order =
+      Array.isArray(statusSnapshot?.requiredArtifacts) && statusSnapshot.requiredArtifacts.length > 0
+        ? statusSnapshot.requiredArtifacts
+        : DEFAULT_REQUIRED_ARTIFACTS;
+    const idx = order.indexOf(artifactType);
+    if (idx >= 0 && idx < order.length - 1) {
+      setStep(artifactTypeToStep(order[idx + 1]));
+    } else {
+      setStep(STEP.REVIEW);
+    }
+  }, []);
+
+  const uploadArtifactFile = useCallback(
+    async (file, artifactType, mime) => {
+      revokePreviewForType(artifactType);
+      const previewUrl = registerObjectUrl(URL.createObjectURL(file));
+      setLocalPreviewUrlByType((prev) => ({ ...prev, [artifactType]: previewUrl }));
+
+      const checksum = await sha256HexFromFile(file);
+      const presignPayload = await presignKycUpload({
+        artifactType,
+        mimeType: mime,
+        byteSize: file.size,
+      });
+
+      await putFileToPresignedUrl(presignPayload.uploadUrl, file, presignPayload.headers);
+
+      await confirmKycUpload({
+        artifactId: presignPayload.artifactId,
+        checksumSHA256: checksum,
+      });
+
+      const freshStatus = await refreshStatus();
+      advanceAfterArtifact(artifactType, freshStatus);
+    },
+    [advanceAfterArtifact, refreshStatus, registerObjectUrl, revokePreviewForType]
+  );
 
   const openPicker = () => fileInputRef.current?.click();
 
@@ -325,22 +428,7 @@ export default function KycVerification() {
 
     setUploadBusy(true);
     try {
-      const checksum = await sha256HexFromFile(file);
-      const presignPayload = await presignKycUpload({
-        artifactType: cfg.artifactType,
-        mimeType: mime,
-        byteSize: file.size,
-      });
-
-      await putFileToPresignedUrl(presignPayload.uploadUrl, file, presignPayload.headers);
-
-      await confirmKycUpload({
-        artifactId: presignPayload.artifactId,
-        checksumSHA256: checksum,
-      });
-
-      await refreshStatus();
-      setStep((s) => Math.min(s + 1, STEP.REVIEW));
+      await uploadArtifactFile(file, cfg.artifactType, mime);
     } catch (err) {
       const e = parseApiError(err, 'Falha ao enviar o arquivo.');
       setStepError(e.message || 'Falha ao enviar o arquivo.');
@@ -350,6 +438,38 @@ export default function KycVerification() {
           'O envio de documentos está temporariamente indisponível. Tente mais tarde.'
         );
       }
+    } finally {
+      setUploadBusy(false);
+    }
+  };
+
+  const handleUploadFaceVideo = async (file) => {
+    setStepError('');
+    const mime = (file.type || '').trim().toLowerCase();
+    if (!mime || !KYC_ALLOWED_VIDEO_MIME_TYPES.includes(mime)) {
+      const msg = 'Use um vídeo WebM ou MP4 gravado nesta tela.';
+      setStepError(msg);
+      throw new Error(msg);
+    }
+    if (file.size <= 0 || file.size > KYC_VIDEO_MAX_FILE_BYTES) {
+      const msg = `O vídeo deve ter até ${Math.round(KYC_VIDEO_MAX_FILE_BYTES / (1024 * 1024))} MB.`;
+      setStepError(msg);
+      throw new Error(msg);
+    }
+
+    setUploadBusy(true);
+    try {
+      await uploadArtifactFile(file, 'FACE_VIDEO', mime);
+    } catch (err) {
+      const e = parseApiError(err, 'Falha ao enviar o vídeo.');
+      setStepError(e.message || 'Falha ao enviar o vídeo.');
+      revokePreviewForType('FACE_VIDEO');
+      if (e.code === 'FEATURE_KYC_DISABLED' || e.httpStatus === 503) {
+        setFeatureDisabledHint(
+          'O envio de documentos está temporariamente indisponível. Tente mais tarde.'
+        );
+      }
+      throw e;
     } finally {
       setUploadBusy(false);
     }
@@ -463,18 +583,14 @@ export default function KycVerification() {
 
   const renderReview = () => {
     const submitted = kycStatus?.submittedArtifacts || [];
-    const req = ['DOCUMENT_FRONT', 'DOCUMENT_BACK', 'SELFIE_PORTRAIT'];
-    const labels = {
-      DOCUMENT_FRONT: 'Frente do documento',
-      DOCUMENT_BACK: 'Verso do documento',
-      SELFIE_PORTRAIT: 'Selfie',
-    };
+    const req = requiredArtifacts;
 
     return (
       <>
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Revise suas fotos</h1>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Revise seu envio</h1>
         <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-          Confira se suas fotos estão legíveis. Em seguida, enviamos suas imagens pelo fluxo seguro já usado pelo app.
+          Confira se documentos{hasFaceVideo ? ', selfie e vídeo facial' : ' e selfie'} estão corretos. O envio segue pelo
+          fluxo seguro já usado pelo app.
         </p>
 
         <ul className="mb-8 space-y-3">
@@ -493,7 +609,7 @@ export default function KycVerification() {
                   <ExclamationTriangleIcon className="h-7 w-7 shrink-0 text-amber-500" aria-hidden />
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{labels[key]}</p>
+                  <p className="text-sm font-semibold text-gray-900">{ARTIFACT_LABELS[key] || key}</p>
                   <p className="text-xs text-gray-600">{ok ? 'Confirmado no servidor' : 'Ainda pendente'}</p>
                 </div>
               </li>
@@ -501,15 +617,25 @@ export default function KycVerification() {
           })}
         </ul>
 
-        {localPreviewUrlByType.DOCUMENT_FRONT || localPreviewUrlByType.DOCUMENT_BACK || localPreviewUrlByType.SELFIE_PORTRAIT ? (
+        {req.some((key) => localPreviewUrlByType[key]) ? (
           <p className="mb-4 text-[0.8rem] text-gray-500">Pré-visualizações locais abaixo (não substituem a confirmação no servidor).</p>
         ) : null}
 
-        <div className="mb-8 grid grid-cols-3 gap-2">
+        <div className={`mb-8 grid gap-2 ${req.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}>
           {req.map((key) =>
             localPreviewUrlByType[key] ? (
               <div key={key} className="overflow-hidden rounded-lg border border-gray-200">
-                <img src={localPreviewUrlByType[key]} alt="" className="h-24 w-full object-cover" />
+                {key === 'FACE_VIDEO' ? (
+                  <video
+                    src={localPreviewUrlByType[key]}
+                    className="h-24 w-full object-cover"
+                    muted
+                    playsInline
+                    aria-label="Pré-visualização vídeo facial"
+                  />
+                ) : (
+                  <img src={localPreviewUrlByType[key]} alt="" className="h-24 w-full object-cover" />
+                )}
               </div>
             ) : null
           )}
@@ -755,17 +881,17 @@ export default function KycVerification() {
                 role="progressbar"
                 aria-valuenow={progressIndex}
                 aria-valuemin={1}
-                aria-valuemax={PROGRESS_TOTAL}
+                aria-valuemax={progressTotal}
               >
                 <div
                   className="h-full rounded-full bg-agilbank-primary transition-all duration-500 ease-out"
-                  style={{ width: `${(progressIndex / PROGRESS_TOTAL) * 100}%` }}
+                  style={{ width: `${(progressIndex / progressTotal) * 100}%` }}
                 />
               </div>
               <div className="flex justify-between text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 <span>Verificação</span>
                 <span aria-live="polite">
-                  {progressIndex} / {PROGRESS_TOTAL}
+                  {progressIndex} / {progressTotal}
                 </span>
               </div>
             </div>
@@ -785,6 +911,14 @@ export default function KycVerification() {
 
           {step === STEP.WELCOME ? renderWelcome() : null}
           {step >= STEP.DOC_FRONT && step <= STEP.SELFIE ? renderUploadStep() : null}
+          {step === STEP.FACE_VIDEO ? (
+            <FaceVideoCapture
+              onUploadFile={handleUploadFaceVideo}
+              uploadBusy={uploadBusy}
+              errorMessage={stepError}
+              onClearError={() => setStepError('')}
+            />
+          ) : null}
           {step === STEP.REVIEW ? renderReview() : null}
         </div>
 
@@ -824,6 +958,12 @@ export default function KycVerification() {
               </Button>
             ) : null}
 
+            {step === STEP.FACE_VIDEO ? (
+              <p className="pb-1 text-center text-[0.78rem] text-gray-500">
+                Use os botões acima para gravar e enviar o vídeo facial.
+              </p>
+            ) : null}
+
             {step === STEP.REVIEW ? (
               <>
                 <Button
@@ -837,7 +977,9 @@ export default function KycVerification() {
                   {submitBusy ? 'Enviando…' : 'Enviar fotos'}
                 </Button>
                 {!kycStatus?.canSubmitForReview ? (
-                  <p className="text-center text-[0.78rem] text-gray-500">Confirme os três arquivos antes de enviar.</p>
+                  <p className="text-center text-[0.78rem] text-gray-500">
+                    Confirme todos os arquivos obrigatórios antes de enviar.
+                  </p>
                 ) : null}
               </>
             ) : null}
@@ -852,7 +994,11 @@ export default function KycVerification() {
           >
             <div className="mx-auto mb-10 h-12 w-12 animate-spin rounded-full border-[3px] border-white/35 border-t-white" />
             <p className="text-center text-lg font-semibold tracking-tight">
-              {submitBusy ? 'Enviando suas fotos…' : 'Processando seu arquivo…'}
+              {submitBusy
+                ? 'Enviando…'
+                : step === STEP.FACE_VIDEO
+                  ? 'Enviando seu vídeo…'
+                  : 'Processando seu arquivo…'}
             </p>
             <p className="mt-4 text-center text-sm text-blue-100/90">Não feche esta tela.</p>
           </div>

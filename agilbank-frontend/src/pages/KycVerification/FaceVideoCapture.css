@@ -1,0 +1,32 @@
+.face-video-stage {
+  aspect-ratio: 3 / 4;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.face-video-live {
+  transform: scaleX(-1);
+}
+
+.face-video-playback {
+  transform: none;
+}
+
+.face-video-mask {
+  background: rgba(0, 20, 40, 0.52);
+  -webkit-mask-image: radial-gradient(ellipse 36% 46% at 50% 42%, transparent 96%, black 100%);
+  mask-image: radial-gradient(ellipse 36% 46% at 50% 42%, transparent 96%, black 100%);
+}
+
+.face-video-oval-ring {
+  width: min(72%, 220px);
+  aspect-ratio: 3 / 4;
+  border-radius: 50%;
+  padding: 3px;
+  box-sizing: border-box;
+  mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
+  -webkit-mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
+}
