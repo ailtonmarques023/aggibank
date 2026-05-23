@@ -304,8 +304,14 @@ export default function FaceVideoCapture({
   const rootClass = isRegister ? 'face-video-root face-video-root--register' : 'face-video-root';
 
   const registerTitle = 'Verificação facial';
-  const registerLead =
-    'Procure um local bem iluminado. Mantenha o rosto dentro da moldura e siga os movimentos na tela.';
+  const registerLead = (
+    <>
+      Procure um local bem iluminado.
+      <br />
+      Mantenha o rosto na moldura e siga as instruções.
+    </>
+  );
+  const registerBtnClass = 'face-video-btn';
 
   if (phase === 'unsupported' || phase === 'denied') {
     return (
@@ -337,7 +343,13 @@ export default function FaceVideoCapture({
           {displayError}
         </p>
         {phase === 'denied' ? (
-          <Button type="button" variant="primary" size="lg" className="w-full rounded-xl py-4 font-semibold" onClick={startCamera}>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className={isRegister ? registerBtnClass : 'w-full rounded-xl py-4 font-semibold'}
+            onClick={startCamera}
+          >
             Tentar novamente
           </Button>
         ) : null}
@@ -417,15 +429,34 @@ export default function FaceVideoCapture({
               autoPlay
               aria-label="Pré-visualização da câmera"
             />
-            <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
-            <div className="face-video-oval pointer-events-none absolute inset-0" aria-hidden>
-              <div
-                className="face-video-oval-ring"
-                style={{
-                  background: `conic-gradient(#0066b3 ${ringProgress * 360}deg, rgba(255,255,255,0.35) 0deg)`,
-                }}
-              />
-            </div>
+            {isRegister ? (
+              <>
+                <div className="face-video-mask face-video-mask--blur pointer-events-none absolute inset-0" aria-hidden />
+                <div className="face-video-mask face-video-mask--dim pointer-events-none absolute inset-0" aria-hidden />
+                <div className="face-video-oval-frame" aria-hidden />
+                {phase === 'recording' ? (
+                  <div
+                    className="face-video-oval-progress"
+                    aria-hidden
+                    style={{
+                      background: `conic-gradient(#0066b3 ${ringProgress * 360}deg, rgba(255,255,255,0.35) 0deg)`,
+                    }}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <>
+                <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
+                <div className="face-video-oval pointer-events-none absolute inset-0" aria-hidden>
+                  <div
+                    className="face-video-oval-ring"
+                    style={{
+                      background: `conic-gradient(#0066b3 ${ringProgress * 360}deg, rgba(255,255,255,0.35) 0deg)`,
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -450,7 +481,9 @@ export default function FaceVideoCapture({
             type="button"
             variant="primary"
             size="lg"
-            className="w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20"
+            className={
+              isRegister ? registerBtnClass : 'w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20'
+            }
             onClick={startRecording}
             disabled={uploadBusy}
           >
@@ -472,7 +505,7 @@ export default function FaceVideoCapture({
         ) : null}
 
         {phase === 'recording' && isRegister ? (
-          <Button type="button" variant="primary" size="lg" className="w-full rounded-xl py-4 font-semibold" disabled>
+          <Button type="button" variant="primary" size="lg" className={registerBtnClass} disabled>
             Gravando…
           </Button>
         ) : null}
@@ -483,7 +516,11 @@ export default function FaceVideoCapture({
               type="button"
               variant="primary"
               size="lg"
-              className="w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20"
+              className={
+                isRegister
+                  ? registerBtnClass
+                  : 'w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20'
+              }
               onClick={handleUseVideo}
               disabled={uploadBusy}
             >
@@ -493,7 +530,7 @@ export default function FaceVideoCapture({
               type="button"
               variant="secondary"
               size="lg"
-              className="w-full rounded-xl py-4 font-semibold"
+              className={isRegister ? registerBtnClass : 'w-full rounded-xl py-4 font-semibold'}
               onClick={resetRecording}
               disabled={uploadBusy}
             >

@@ -46,3 +46,34 @@
   width: 100%;
   background: #fff;
 }
+
+.register-review-lines > div + div {
+  border-top: 1px solid #f3f4f6;
+}
+
+.register-footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.register-footer-btn--primary {
+  background-color: #0066b3;
+  color: #fff;
+}
+
+.register-footer-btn--primary:disabled {
+  opacity: 0.6;
+}
+
+.register-footer-btn--secondary {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+}

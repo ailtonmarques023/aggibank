@@ -296,6 +296,7 @@ const Register = () => {
     aceitaConsentimentoBiometrico: false,
     aceitaPoliticaPrivacidade: false,
     aceitaTermosFinais: false,
+    useSelfieAsProfilePhoto: false,
   };
 
   const { register: registerUser, login } = useAuth();
@@ -708,6 +709,9 @@ const Register = () => {
     fd.append('acceptedTerms', 'true');
     fd.append('acceptedPrivacyPolicy', 'true');
     fd.append('aceitaComunicacoes', data.aceitaComunicacoes ? 'true' : 'false');
+    if (data.useSelfieAsProfilePhoto) {
+      fd.append('useSelfieAsProfilePhoto', 'true');
+    }
     const files = linearLocalFilesRef.current;
     fd.append('documentFront', files.documentFront, files.documentFront.name || 'document-front.jpg');
     fd.append('documentBack', files.documentBack, files.documentBack.name || 'document-back.jpg');
@@ -1401,9 +1405,10 @@ const Register = () => {
     currentStep >= STEP.DOC_FRONT &&
     currentStep <= STEP.KYC_REVIEW;
 
-  const primaryFooterBtnClass = `h-13 w-full rounded-xl py-4 text-[1rem] font-semibold${
-    isOnboardingFlatShell ? '' : ' shadow-lg shadow-agilbank-primary/20'
-  }`;
+  const primaryFooterBtnClass = isOnboardingFlatShell
+    ? 'register-footer-btn register-footer-btn--primary w-full'
+    : 'h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20';
+  const secondaryFooterBtnClass = 'register-footer-btn register-footer-btn--secondary w-full';
 
   const headerExitLabel = ONBOARDING_FLAT ? 'Tenho conta' : accountCreated ? 'Ir ao app' : 'Tenho conta';
   const headerExitTo = ONBOARDING_FLAT ? '/login' : accountCreated ? '/transactions' : '/login';
@@ -1821,70 +1826,67 @@ const Register = () => {
 
   const renderTermsStep = () => (
     <>
-      <div className="mb-6">
-        <h1 className="text-[1.45rem] font-bold leading-tight text-gray-950 sm:text-2xl">
+      <div className={ONBOARDING_LINEAR ? 'mb-4' : 'mb-6'}>
+        <h1
+          className={
+            ONBOARDING_LINEAR
+              ? 'text-[1.35rem] font-semibold leading-tight text-gray-950'
+              : 'text-[1.45rem] font-bold leading-tight text-gray-950 sm:text-2xl'
+          }
+        >
           {ONBOARDING_FLAT ? 'Revise seus dados' : 'Revise e aceite os termos'}
         </h1>
-        <p className="mt-3 text-[0.95rem] leading-relaxed text-gray-600">
+        <p className={`${ONBOARDING_LINEAR ? 'mt-1.5' : 'mt-3'} text-[0.875rem] leading-snug text-gray-600`}>
           {ONBOARDING_LINEAR
-            ? 'Confirme suas informações e autorize a verificação. Os documentos serão enviados somente no final, em uma única proposta.'
+            ? 'Revise seus dados antes de continuar.'
             : ONBOARDING_REGISTER
               ? 'Confirme as informações abaixo e autorize a verificação para avançar com documento, selfie e vídeo facial.'
               : 'Assim criamos sua conta agora. Documento e selfie vêm nos próximos passos, na mesma tela.'}
         </p>
       </div>
 
-      <section className="mb-6 border-y border-gray-100 py-2" aria-label="Resumo dos dados">
-        <div className="flex items-center justify-between py-2">
-          <h2 className="text-[0.78rem] font-semibold uppercase tracking-wide text-gray-500">Dados informados</h2>
-          <span className="text-[0.78rem] font-semibold text-agilbank-primary">Conferir</span>
+      <dl
+        className={`mb-5 text-[0.9rem] leading-snug ${
+          ONBOARDING_LINEAR ? 'register-review-lines' : 'divide-y divide-gray-100 border-y border-gray-100 py-2'
+        }`}
+        aria-label="Resumo dos dados"
+      >
+        <div className={`flex items-start justify-between gap-4 ${ONBOARDING_LINEAR ? 'py-2.5' : 'py-3'}`}>
+          <dt className="shrink-0 text-gray-500">Nome</dt>
+          <dd className="min-w-0 max-w-[68%] break-words text-right font-medium text-gray-950">
+            {watchedValues.nomeCompleto || '—'}
+          </dd>
         </div>
-        <dl className="divide-y divide-gray-100 text-[0.92rem] leading-snug">
-          <div className="flex items-start justify-between gap-4 py-3">
-            <dt className="shrink-0 text-gray-500">Nome</dt>
-            <dd className="min-w-0 max-w-[68%] break-words text-right font-semibold text-gray-950">
-              {watchedValues.nomeCompleto || '—'}
-            </dd>
-          </div>
-          <div className="flex items-start justify-between gap-4 py-3">
-            <dt className="shrink-0 text-gray-500">E-mail</dt>
-            <dd className="min-w-0 max-w-[68%] break-all text-right font-semibold text-gray-950">
-              {watchedValues.email || '—'}
-            </dd>
-          </div>
-          <div className="flex items-start justify-between gap-4 py-3">
-            <dt className="shrink-0 text-gray-500">CPF</dt>
-            <dd className="font-semibold text-gray-950">{watchedValues.cpf || '—'}</dd>
-          </div>
-        </dl>
-      </section>
+        <div className={`flex items-start justify-between gap-4 ${ONBOARDING_LINEAR ? 'py-2.5' : 'py-3'}`}>
+          <dt className="shrink-0 text-gray-500">E-mail</dt>
+          <dd className="min-w-0 max-w-[68%] break-all text-right font-medium text-gray-950">
+            {watchedValues.email || '—'}
+          </dd>
+        </div>
+        <div className={`flex items-start justify-between gap-4 ${ONBOARDING_LINEAR ? 'py-2.5' : 'py-3'}`}>
+          <dt className="shrink-0 text-gray-500">CPF</dt>
+          <dd className="font-medium text-gray-950">{watchedValues.cpf || '—'}</dd>
+        </div>
+      </dl>
 
-      <div className="space-y-2.5">
+      <div className={ONBOARDING_LINEAR ? 'space-y-1' : 'space-y-2.5'}>
         {ONBOARDING_FLAT ? (
           <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 transition-colors ${
-              errors.aceitaConsentimentoBiometrico
-                ? 'border-red-200 bg-red-50/60'
-                : 'border-agilbank-primary/25 bg-white active:bg-blue-50/40'
+            className={`register-consent-row flex cursor-pointer items-start gap-2.5 py-2.5 ${
+              errors.aceitaConsentimentoBiometrico ? 'text-red-800' : ''
             }`}
           >
             <input
               type="checkbox"
-              className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
               {...register('aceitaConsentimentoBiometrico', {
                 required: 'Para continuar, autorize a verificação de segurança.'
               })}
             />
-            <span className="min-w-0">
-              <span className="block text-[0.94rem] font-semibold leading-snug text-gray-950">
-                Autorizar verificação de segurança
-              </span>
-              <span className="mt-1 block text-[0.84rem] leading-relaxed text-gray-600">
-                Permito o uso de dados, documento, selfie e vídeo facial para validar minha proposta.
-              </span>
+            <span className="min-w-0 text-[0.875rem] leading-snug text-gray-800">
+              Autorizo o uso dos meus dados, documento, selfie e vídeo facial para verificação de segurança.
               {errors.aceitaConsentimentoBiometrico?.message ? (
-                <span className="mt-2 flex gap-2 text-[0.82rem] font-medium leading-snug text-red-700" role="alert">
-                  <ExclamationTriangleIcon className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="mt-1.5 block text-[0.8125rem] font-medium text-red-700" role="alert">
                   {errors.aceitaConsentimentoBiometrico.message}
                 </span>
               ) : null}
@@ -1912,22 +1914,17 @@ const Register = () => {
           <p className="text-sm text-red-600">{errors.aceitaTermos.message}</p>
         ) : null}
         <label
-          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 transition-colors ${
-            isOnboardingFlatShell ? 'border-gray-200 bg-gray-50/70 active:bg-gray-100' : 'border-gray-100 bg-gray-50'
+          className={`register-comms-row flex cursor-pointer items-start gap-2.5 py-2 ${
+            ONBOARDING_LINEAR ? '' : isOnboardingFlatShell ? 'rounded-xl border border-gray-200 bg-gray-50/70 px-3.5' : 'rounded-xl border border-gray-100 bg-gray-50 px-3.5'
           }`}
         >
           <input
             type="checkbox"
-            className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
             {...register('aceitaComunicacoes')}
           />
-          <span className="min-w-0">
-            <span className="block text-[0.9rem] font-semibold leading-snug text-gray-800">
-              Receber novidades
-            </span>
-            <span className="mt-1 block text-[0.82rem] leading-relaxed text-gray-500">
-              Produtos, serviços e avisos comerciais do AgilBank.
-            </span>
+          <span className="min-w-0 text-[0.8125rem] leading-snug text-gray-500">
+            {ONBOARDING_LINEAR ? 'Receber novidades do AgilBank' : 'Receber novidades — produtos, serviços e avisos comerciais.'}
           </span>
         </label>
       </div>
@@ -1943,8 +1940,12 @@ const Register = () => {
 
   const renderKycImagePreview = (previewUrl, emptyLabel) =>
     previewUrl ? (
-      <div className="overflow-hidden rounded-xl bg-white">
+      <div className="overflow-hidden rounded-lg border border-gray-100 bg-gray-50/50">
         <img src={previewUrl} alt="Pré-visualização do arquivo" className="mx-auto max-h-60 w-full object-contain" />
+      </div>
+    ) : ONBOARDING_LINEAR ? (
+      <div className="register-capture-placeholder flex min-h-[180px] items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50/80 px-4 py-10 text-center">
+        <p className="text-sm text-gray-500">{emptyLabel}</p>
       </div>
     ) : (
       <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl bg-white px-6 py-12 text-center">
@@ -1960,23 +1961,35 @@ const Register = () => {
 
     return (
       <>
-        <div className="mb-5 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
-            <DocumentTextIcon className="h-8 w-8" aria-hidden />
+        {!ONBOARDING_LINEAR ? (
+          <div className="mb-5 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
+              <DocumentTextIcon className="h-8 w-8" aria-hidden />
+            </div>
           </div>
-        </div>
+        ) : null}
         {!ONBOARDING_LINEAR ? (
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-agilbank-primary">
             {isFront ? 'Frente' : 'Verso'}
           </p>
         ) : null}
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
-          {ONBOARDING_LINEAR ? (isFront ? 'Envie a frente do documento' : 'Envie o verso do documento') : 'Envie seu documento'}
-        </h1>
-        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+        <h1
+          className={
+            ONBOARDING_LINEAR
+              ? 'mb-1.5 text-[1.35rem] font-semibold leading-tight text-gray-900'
+              : 'mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl'
+          }
+        >
           {ONBOARDING_LINEAR
             ? isFront
-              ? 'Use uma foto nítida, sem cortes e sem reflexos.'
+              ? 'Frente do documento'
+              : 'Verso do documento'
+            : 'Envie seu documento'}
+        </h1>
+        <p className={`${ONBOARDING_LINEAR ? 'mb-4' : 'mb-6'} text-[0.875rem] leading-snug text-gray-600`}>
+          {ONBOARDING_LINEAR
+            ? isFront
+              ? 'Tire uma foto nítida, sem cortes e sem reflexos.'
               : 'Confira se todos os dados estão legíveis.'
             : 'Precisamos de uma foto nítida da frente e do verso do documento na verificação de segurança — para confirmar que é você.'}
         </p>
@@ -2004,21 +2017,41 @@ const Register = () => {
     const previewUrl = localPreviewUrlByType.SELFIE_PORTRAIT;
     return (
       <>
-        <div className="mb-5 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
-            <PhotoIcon className="h-8 w-8" aria-hidden />
+        {!ONBOARDING_LINEAR ? (
+          <div className="mb-5 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
+              <PhotoIcon className="h-8 w-8" aria-hidden />
+            </div>
           </div>
-        </div>
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
-          {ONBOARDING_LINEAR ? 'Tire uma selfie nítida' : 'Selfie de segurança'}
+        ) : null}
+        <h1
+          className={
+            ONBOARDING_LINEAR
+              ? 'mb-1.5 text-[1.35rem] font-semibold leading-tight text-gray-900'
+              : 'mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl'
+          }
+        >
+          {ONBOARDING_LINEAR ? 'Selfie de verificação' : 'Selfie de segurança'}
         </h1>
-        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+        <p className={`${ONBOARDING_LINEAR ? 'mb-4' : 'mb-6'} text-[0.875rem] leading-snug text-gray-600`}>
           {ONBOARDING_LINEAR
             ? 'Olhe para a câmera em um ambiente bem iluminado.'
             : 'Tire uma selfie em local iluminado. Usamos apenas para confirmar que é você — não é aprovação de crédito.'}
         </p>
         <div className="space-y-4">
           {renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda')}
+          {ONBOARDING_LINEAR ? (
+            <label className="register-profile-opt flex cursor-pointer items-start gap-2.5 py-1">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
+                {...register('useSelfieAsProfilePhoto')}
+              />
+              <span className="text-[0.8125rem] leading-snug text-gray-600">
+                Usar esta selfie como foto de perfil do app AgilBank
+              </span>
+            </label>
+          ) : null}
           {(ONBOARDING_LINEAR || !isOnboardingKycUi) && kycStepError ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
               <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
@@ -2387,7 +2420,7 @@ const Register = () => {
               type="button"
               variant="secondary"
               size="lg"
-              className="h-12 w-full rounded-xl border-gray-300 py-3 text-[0.95rem] font-semibold"
+              className={secondaryFooterBtnClass}
               onClick={clearLinearPreviewForCurrentStep}
             >
               Trocar imagem
@@ -2410,7 +2443,7 @@ const Register = () => {
             type="button"
             variant="secondary"
             size="lg"
-            className="h-12 w-full rounded-xl border-gray-300 py-3 text-[0.95rem] font-semibold"
+            className={secondaryFooterBtnClass}
             onClick={openLinearGallery}
           >
             Enviar imagem
@@ -2614,7 +2647,6 @@ const Register = () => {
                   ref={fileInputCameraRef}
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/*"
-                  capture="environment"
                   className="hidden"
                   aria-hidden
                   tabIndex={-1}
