@@ -289,18 +289,10 @@ export default function FaceVideoCapture({
     }
   };
 
-  useEffect(() => {
-    if (!isRegister || phase !== 'preview' || !recordedFile || uploadBusy) return;
-    void handleUseVideo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRegister, phase, recordedFile, uploadBusy]);
-
   const elapsedSec = Math.min(Math.ceil(elapsedMs / 1000), Math.ceil(recordMaxMs / 1000));
   const targetSec = Math.ceil(recordMaxMs / 1000);
   const minSec = recordMinMs / 1000;
   const maxSec = recordMaxMs / 1000;
-  const ringProgress = Math.min(1, elapsedMs / recordMaxMs);
-
   const guidedText = useMemo(() => {
     if (!guidedPhases || phase !== 'recording') return '';
     return instructionForElapsed(elapsedMs, guidedPhases);
@@ -383,23 +375,14 @@ export default function FaceVideoCapture({
         {isRegister ? registerTitle : 'Gravação facial'}
       </h1>
 
-      {isRegister && phase !== 'recording' ? (
-        <p className="face-video-register-lead mb-2 text-[0.875rem] leading-snug text-gray-600">{registerLead}</p>
+      {isRegister && (phase === 'live' || phase === 'init') ? (
+        <p className="face-video-register-lead mb-1 text-[0.875rem] leading-snug text-gray-600">{registerLead}</p>
       ) : null}
 
       {!isRegister ? (
         <p className="mb-4 text-[0.95rem] leading-relaxed text-gray-600">
           Centralize seu rosto e grave alguns segundos. Mantenha boa iluminação e olhe para a câmera.
         </p>
-      ) : null}
-
-      {isRegister && phase === 'recording' ? (
-        <div className="face-video-instruction face-video-instruction--register mb-2 text-center" aria-live="polite">
-          <p className="text-[1rem] font-semibold leading-snug text-agilbank-primary">{guidedText}</p>
-          <p className="mt-1 text-[0.8125rem] font-medium text-gray-600">
-            Gravando... {elapsedSec}s de {targetSec}s
-          </p>
-        </div>
       ) : null}
 
       {!isRegister ? (
@@ -412,48 +395,61 @@ export default function FaceVideoCapture({
         </p>
       ) : null}
 
-      <div className={`face-video-stage relative mx-auto mb-4 w-full ${isRegister ? 'face-video-stage--register' : 'max-w-[320px]'} ${isRegister && phase === 'preview' ? 'face-video-stage--preview' : ''}`}>
+      <div
+        className={
+          isRegister
+            ? 'face-video-oval-stage'
+            : `face-video-stage relative mx-auto mb-4 w-full max-w-[320px] ${phase === 'preview' ? 'face-video-stage--preview' : ''}`
+        }
+      >
         {phase === 'preview' ? (
           <video
             ref={videoPlaybackRef}
             src={previewUrl}
-            className="face-video-live face-video-playback h-full w-full"
+            className={`face-video-live face-video-playback ${isRegister ? '' : 'h-full w-full'}`}
             playsInline
-            controls
+            controls={!isRegister}
+            muted={isRegister}
+            loop={isRegister}
+            autoPlay={isRegister}
             aria-label="Pré-visualização do vídeo gravado"
           />
         ) : (
           <>
             <video
               ref={videoLiveRef}
-              className="face-video-live h-full w-full"
+              className={`face-video-live ${isRegister ? '' : 'h-full w-full'}`}
               playsInline
               muted
               autoPlay
               aria-label="Pré-visualização da câmera"
             />
-            {isRegister ? (
-              <>
-                <div className="face-video-mask" aria-hidden />
-                <div className="face-video-oval" aria-hidden />
-              </>
-            ) : (
+            {!isRegister ? (
               <>
                 <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
                 <div className="face-video-oval pointer-events-none absolute inset-0" aria-hidden>
                   <div className="face-video-oval-ring" />
                 </div>
               </>
-            )}
+            ) : null}
           </>
         )}
       </div>
 
       {isRegister && phase === 'recording' ? (
+        <div className="face-video-instruction face-video-instruction--register text-center" aria-live="polite">
+          <p className="text-[1rem] font-semibold leading-snug text-agilbank-primary">{guidedText}</p>
+          <p className="mt-1 text-[0.8125rem] font-medium text-gray-600">
+            Gravando... {elapsedSec}s de {targetSec}s
+          </p>
+        </div>
+      ) : null}
+
+      {!isRegister && phase === 'recording' ? (
         <div className="face-video-progress mx-auto mb-4 max-w-full" aria-hidden>
           <div
             className="face-video-progress-bar"
-            style={{ width: `${Math.round(ringProgress * 100)}%` }}
+            style={{ width: `${Math.round(Math.min(1, elapsedMs / recordMaxMs) * 100)}%` }}
           />
         </div>
       ) : null}
@@ -472,7 +468,7 @@ export default function FaceVideoCapture({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-3">
+      <div className={`flex flex-col gap-3 ${isRegister ? 'face-video-actions' : ''}`}>
         {phase === 'live' ? (
           <Button
             type="button"
@@ -501,13 +497,7 @@ export default function FaceVideoCapture({
           </Button>
         ) : null}
 
-        {phase === 'recording' && isRegister ? (
-          <Button type="button" variant="primary" size="lg" className={registerBtnClass} disabled>
-            Gravando…
-          </Button>
-        ) : null}
-
-        {phase === 'preview' && !isRegister ? (
+        {phase === 'preview' ? (
           <>
             <Button
               type="button"
