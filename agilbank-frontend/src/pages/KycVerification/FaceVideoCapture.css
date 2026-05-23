@@ -34,12 +34,10 @@
 .face-video-root--register .face-video-stage {
   max-height: min(62vh, 460px);
   margin-top: 0.125rem;
-  margin-bottom: 0;
+  margin-bottom: 0.875rem;
   border-radius: 18px;
-  background: #000;
-  box-shadow:
-    0 4px 24px rgba(0, 51, 102, 0.12),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: #fff;
+  box-shadow: none;
 }
 
 .face-video-stage video,
@@ -62,7 +60,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.96);
   -webkit-mask-image: radial-gradient(
     ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
     transparent 0%,
@@ -88,8 +86,8 @@
   border-radius: 999px;
   pointer-events: none;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.08),
-    0 0 20px rgba(0, 0, 0, 0.12);
+    0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 0 18px rgba(0, 0, 0, 0.1);
 }
 
 /* Legado KYC autenticado */
