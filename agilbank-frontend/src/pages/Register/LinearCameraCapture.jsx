@@ -164,6 +164,7 @@ export default function LinearCameraCapture({
   if (!open) return null;
 
   const isSelfie = facingMode === 'user';
+  const isDocument = !isSelfie;
 
   return (
     <div className="linear-camera-overlay" role="dialog" aria-modal="true" aria-labelledby="linear-camera-title">
@@ -183,7 +184,11 @@ export default function LinearCameraCapture({
           </p>
         ) : null}
 
-        <div className={`linear-camera-stage ${isSelfie ? 'linear-camera-stage--selfie' : ''}`}>
+        <div
+          className={`linear-camera-stage ${
+            isSelfie ? 'linear-camera-stage--selfie' : 'linear-camera-stage--document'
+          }`}
+        >
           <video
             ref={videoRef}
             className="linear-camera-video"
@@ -192,6 +197,17 @@ export default function LinearCameraCapture({
             autoPlay
             aria-label="Pré-visualização da câmera"
           />
+          {isDocument ? (
+            <div className="linear-camera-document-guide" aria-hidden>
+              <div className="linear-camera-document-frame">
+                <span className="linear-camera-corner linear-camera-corner--tl" />
+                <span className="linear-camera-corner linear-camera-corner--tr" />
+                <span className="linear-camera-corner linear-camera-corner--bl" />
+                <span className="linear-camera-corner linear-camera-corner--br" />
+              </div>
+              <p className="linear-camera-guide-label">Encaixe o documento dentro da moldura</p>
+            </div>
+          ) : null}
         </div>
 
         <canvas ref={canvasRef} className="hidden" aria-hidden />

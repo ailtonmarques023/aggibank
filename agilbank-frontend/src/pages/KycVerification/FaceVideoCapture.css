@@ -16,6 +16,7 @@
 
 .face-video-stage {
   position: relative;
+  width: 100%;
   aspect-ratio: 3 / 4;
   max-height: 420px;
   overflow: hidden;
@@ -25,12 +26,10 @@
 }
 
 .face-video-root--register .face-video-stage {
-  width: 100%;
-  aspect-ratio: 3 / 4;
   max-height: min(62vh, 460px);
   margin-top: 0.125rem;
-  margin-bottom: 0.75rem;
-  border-radius: 16px;
+  margin-bottom: 0;
+  border-radius: 18px;
   background: #000;
   box-shadow:
     0 4px 24px rgba(0, 51, 102, 0.12),
@@ -43,10 +42,6 @@
   height: 100%;
   transform: scaleX(-1);
   object-fit: cover;
-  object-position: center 42%;
-}
-
-.face-video-root--register .face-video-live {
   object-position: center center;
 }
 
@@ -56,24 +51,50 @@
   object-position: center center;
 }
 
-/* Máscara + oval — centro vertical ~56% (rosto) */
+/* Cadastro linear: máscara limpa fora do oval */
+.face-video-root--register .face-video-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  -webkit-mask-image: radial-gradient(
+    ellipse 36% 43% at 50% 55%,
+    transparent 0%,
+    transparent 96%,
+    black 98%,
+    black 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 36% 43% at 50% 55%,
+    transparent 0%,
+    transparent 96%,
+    black 98%,
+    black 100%
+  );
+}
+
+.face-video-root--register .face-video-oval {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 72%;
+  height: 86%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 0 24px rgba(0, 0, 0, 0.16);
+}
+
+/* Legado KYC autenticado */
 .face-video-mask {
   background: rgba(0, 20, 40, 0.48);
   -webkit-mask-image: radial-gradient(ellipse 62% 76% at 50% 44%, transparent 96%, black 100%);
   mask-image: radial-gradient(ellipse 62% 76% at 50% 44%, transparent 96%, black 100%);
-}
-
-.face-video-root--register .face-video-mask {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  pointer-events: none;
-  -webkit-mask:
-    radial-gradient(ellipse 36% 43% at 50% 56%, transparent 0 96%, #000 98%);
-  mask:
-    radial-gradient(ellipse 36% 43% at 50% 56%, transparent 0 96%, #000 98%);
 }
 
 .face-video-oval {
@@ -82,44 +103,12 @@
   justify-content: center;
 }
 
-.face-video-root--register .face-video-oval {
-  position: absolute;
-  left: 50%;
-  top: 56%;
-  width: 72%;
-  height: 86%;
-  transform: translate(-50%, -50%);
-  border: 2px solid rgba(255, 255, 255, 0.78);
-  border-radius: 999px;
-  pointer-events: none;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.25),
-    0 0 28px rgba(0, 0, 0, 0.18);
-}
-
 .face-video-oval-ring {
   width: min(64%, 240px);
   aspect-ratio: 3 / 4;
   border-radius: 50%;
-  padding: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
   box-sizing: border-box;
-  mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
-  -webkit-mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
-}
-
-.face-video-root--register .face-video-oval-progress {
-  position: absolute;
-  left: 50%;
-  top: 56%;
-  width: 72%;
-  height: 86%;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  padding: 2px;
-  box-sizing: border-box;
-  pointer-events: none;
-  mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
-  -webkit-mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
 }
 
 .face-video-instruction {
@@ -127,21 +116,23 @@
 }
 
 .face-video-instruction--register {
-  min-height: 3.25rem;
+  min-height: 2.5rem;
 }
 
-.face-video-progress-track {
-  height: 0.35rem;
-  border-radius: 9999px;
-  background: rgba(0, 51, 102, 0.12);
+.face-video-progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
   overflow: hidden;
+  margin-top: 12px;
 }
 
-.face-video-progress-fill {
+.face-video-progress-bar {
   height: 100%;
-  border-radius: 9999px;
-  background: linear-gradient(90deg, #0066b3, #003366);
-  transition: width 0.15s linear;
+  border-radius: inherit;
+  background: #0072bc;
+  transition: width 0.2s ease;
 }
 
 .face-video-root--register .face-video-btn {

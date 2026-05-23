@@ -393,9 +393,6 @@ export default function FaceVideoCapture({
           <p className="mt-1 text-[0.8125rem] font-medium text-gray-600">
             Gravando... {elapsedSec}s de {targetSec}s
           </p>
-          <div className="face-video-progress-track mx-auto mt-2 max-w-[240px]">
-            <div className="face-video-progress-fill" style={{ width: `${ringProgress * 100}%` }} />
-          </div>
         </div>
       ) : null}
 
@@ -431,34 +428,29 @@ export default function FaceVideoCapture({
             />
             {isRegister ? (
               <>
-                <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
+                <div className="face-video-mask" aria-hidden />
                 <div className="face-video-oval" aria-hidden />
-                {phase === 'recording' ? (
-                  <div
-                    className="face-video-oval-progress"
-                    aria-hidden
-                    style={{
-                      background: `conic-gradient(#0066b3 ${ringProgress * 360}deg, rgba(255,255,255,0.35) 0deg)`,
-                    }}
-                  />
-                ) : null}
               </>
             ) : (
               <>
                 <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
                 <div className="face-video-oval pointer-events-none absolute inset-0" aria-hidden>
-                  <div
-                    className="face-video-oval-ring"
-                    style={{
-                      background: `conic-gradient(#0066b3 ${ringProgress * 360}deg, rgba(255,255,255,0.35) 0deg)`,
-                    }}
-                  />
+                  <div className="face-video-oval-ring" />
                 </div>
               </>
             )}
           </>
         )}
       </div>
+
+      {isRegister && phase === 'recording' ? (
+        <div className="face-video-progress mx-auto mb-4 max-w-full" aria-hidden>
+          <div
+            className="face-video-progress-bar"
+            style={{ width: `${Math.round(ringProgress * 100)}%` }}
+          />
+        </div>
+      ) : null}
 
       {displayError ? (
         <div className="mb-4 flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
