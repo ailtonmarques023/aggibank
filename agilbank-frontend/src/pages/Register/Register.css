@@ -24,6 +24,17 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.register-scroll-area--onboarding-flat {
+  scroll-padding-bottom: calc(13rem + env(safe-area-inset-bottom, 0px));
+}
+
 .register-scroll-area--onboarding-kyc {
   scroll-padding-bottom: calc(16rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Shell onboarding: tela branca contínua (sem card/modal) */
+.register-shell--onboarding {
+  min-height: 100dvh;
+  width: 100%;
+  background: #fff;
 }

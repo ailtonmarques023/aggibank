@@ -941,11 +941,17 @@ const Register = () => {
 
   const progressIndex = pgNum;
 
+  const isOnboardingFlatShell = ONBOARDING_REGISTER;
+
   const isOnboardingKycUi =
-    ONBOARDING_REGISTER &&
+    isOnboardingFlatShell &&
     accountCreated &&
     currentStep >= STEP.DOC_FRONT &&
     currentStep <= STEP.KYC_REVIEW;
+
+  const primaryFooterBtnClass = `h-13 w-full rounded-xl py-4 text-[1rem] font-semibold${
+    isOnboardingFlatShell ? '' : ' shadow-lg shadow-agilbank-primary/20'
+  }`;
 
   const headerExitLabel = ONBOARDING_REGISTER ? 'Tenho conta' : accountCreated ? 'Ir ao app' : 'Tenho conta';
   const headerExitTo = ONBOARDING_REGISTER ? '/login' : accountCreated ? '/transactions' : '/login';
@@ -969,6 +975,8 @@ const Register = () => {
                 ? kycStepError
                   ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
                   : 'calc(12rem + env(safe-area-inset-bottom, 0px))'
+              : isOnboardingFlatShell
+                ? 'calc(12.5rem + env(safe-area-inset-bottom, 0px))'
               : currentStep === STEP.EMAIL_NOTICE || currentStep === STEP.ALL_DONE
                 ? 'calc(12rem + env(safe-area-inset-bottom, 0px))'
                 : 'calc(10rem + env(safe-area-inset-bottom, 0px))';
@@ -1369,7 +1377,7 @@ const Register = () => {
           ? 'Revise seus dados. Nos próximos passos, vamos confirmar que é você com documento, selfie e, se necessário, vídeo facial. Sua conta só será criada depois da verificação e do aceite final.'
           : 'Revise e aceite. Assim criamos sua conta agora — documento e selfie vêm nos passos seguintes, na mesma tela.'}
       </p>
-      <div className="mb-8 rounded-2xl border border-gray-200 bg-gray-50/90 p-4 text-sm leading-relaxed text-gray-700">
+      <div className={`mb-8 text-sm leading-relaxed text-gray-700 ${isOnboardingFlatShell ? 'border-y border-gray-100 py-4' : 'rounded-2xl border border-gray-200 bg-gray-50/90 p-4'}`}>
         <dl className="space-y-2">
           <div className="flex justify-between gap-2">
             <dt className="text-gray-500">Nome</dt>
@@ -1387,7 +1395,7 @@ const Register = () => {
       </div>
       <div className="space-y-5 pt-2">
         {ONBOARDING_REGISTER ? (
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="flex cursor-pointer items-start gap-3 border-b border-gray-100 py-4">
             <input
               type="checkbox"
               className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
@@ -1423,7 +1431,7 @@ const Register = () => {
             {errors.aceitaConsentimentoBiometrico?.message || errors.aceitaTermos?.message}
           </p>
         ) : null}
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+        <label className={`flex cursor-pointer items-start gap-3 py-4 ${isOnboardingFlatShell ? '' : 'rounded-xl border border-gray-100 bg-gray-50 p-4'}`}>
           <input
             type="checkbox"
             className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
@@ -1572,7 +1580,7 @@ const Register = () => {
       <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
         Enviamos um link para validar seu e-mail (comunicações oficiais). Confira também a pasta de spam ou promoções.
       </p>
-      <div className="rounded-2xl border border-gray-200 bg-gray-50/90 px-4 py-3 text-sm text-gray-800">
+      <div className={`text-sm text-gray-800 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-2xl border border-gray-200 bg-gray-50/90 px-4 py-3'}`}>
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Enviado para</p>
         <p className="break-all font-medium text-gray-900">{watchedValues.email || '—'}</p>
       </div>
@@ -1587,7 +1595,9 @@ const Register = () => {
         para concluir os termos finais e criar sua conta.
       </p>
       {kycStatus?.message ? (
-        <p className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">{kycStatus.message}</p>
+        <p className={`text-sm text-gray-700 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}>
+          {kycStatus.message}
+        </p>
       ) : null}
     </>
   );
@@ -1598,8 +1608,8 @@ const Register = () => {
       <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
         Sua verificação de segurança foi concluída. Aceite os termos para criar sua conta AgilBank.
       </p>
-      <div className="space-y-4">
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
+      <div className="space-y-0 divide-y divide-gray-100">
+        <label className={`flex cursor-pointer items-start gap-3 py-4 ${isOnboardingFlatShell ? '' : 'rounded-xl border border-gray-200 bg-white p-4'}`}>
           <input
             type="checkbox"
             className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary"
@@ -1613,7 +1623,7 @@ const Register = () => {
             .
           </span>
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
+        <label className={`flex cursor-pointer items-start gap-3 py-4 ${isOnboardingFlatShell ? '' : 'rounded-xl border border-gray-200 bg-white p-4'}`}>
           <input
             type="checkbox"
             className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary"
@@ -1724,7 +1734,7 @@ const Register = () => {
           type="button"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           onClick={nextStep}
           disabled={loading}
         >
@@ -1743,7 +1753,7 @@ const Register = () => {
               type="button"
               variant="primary"
               size="lg"
-              className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+              className={primaryFooterBtnClass}
               loading={loading}
               disabled={loading}
               onClick={retrySilentLoginOnly}
@@ -1766,7 +1776,7 @@ const Register = () => {
           form="register-flow-form"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           loading={loading}
           disabled={loading || (!ONBOARDING_REGISTER && needsSilentLoginRetry)}
         >
@@ -1780,7 +1790,7 @@ const Register = () => {
           type="button"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           loading={finalizeBusy}
           disabled={finalizeBusy || applicationStatus !== 'DOCUMENTS_APPROVED'}
           onClick={handleFinalizeRegister}
@@ -1793,7 +1803,7 @@ const Register = () => {
       return (
         <Link
           to="/login"
-          className="flex h-13 w-full items-center justify-center rounded-xl bg-agilbank-primary px-4 text-[1rem] font-semibold text-white shadow-lg"
+          className={`flex h-13 w-full items-center justify-center rounded-xl bg-agilbank-primary px-4 text-[1rem] font-semibold text-white${isOnboardingFlatShell ? '' : ' shadow-lg'}`}
         >
           Ir para login
         </Link>
@@ -1805,7 +1815,7 @@ const Register = () => {
           type="button"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           onClick={openPicker}
           disabled={uploadBusy || !!featureDisabledHint}
           loading={uploadBusy}
@@ -1820,7 +1830,7 @@ const Register = () => {
           type="button"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           disabled={!kycStatus?.canSubmitForReview || submitBusy || !!featureDisabledHint}
           loading={submitBusy}
           onClick={handleSubmitReviewRegister}
@@ -1835,7 +1845,7 @@ const Register = () => {
           type="button"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           onClick={() => setCurrentStep(STEP.ALL_DONE)}
         >
           Continuar
@@ -1851,7 +1861,7 @@ const Register = () => {
           type="button"
           variant="primary"
           size="lg"
-          className="h-13 w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/20"
+          className={primaryFooterBtnClass}
           onClick={() => navigate(`/login${loginQs}`)}
         >
           Fazer login
@@ -1864,20 +1874,24 @@ const Register = () => {
   /* --- Layout shell (mobile-first, max 430px no desktop) --- */
   const shellOuter = (
     <div
-      className={`flex min-h-[100dvh] justify-center px-3 py-0 sm:py-10 ${
-        currentStep === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : isOnboardingKycUi ? 'bg-white' : 'bg-zinc-200/75'
+      className={`${isOnboardingFlatShell ? 'register-shell--onboarding ' : ''}flex min-h-[100dvh] w-full ${
+        isOnboardingFlatShell
+          ? 'bg-white'
+          : `justify-center px-3 py-0 sm:py-10 ${currentStep === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : 'bg-zinc-200/75'}`
       }`}
     >
       <div
-        className={`relative flex w-full max-w-[430px] flex-col min-h-[100dvh] sm:min-h-0 overflow-hidden bg-white ${
-          currentStep === STEP.WELCOME ? 'register-hero-bg' : ''
-        } ${isOnboardingKycUi ? '' : 'shadow-2xl sm:rounded-[2rem] sm:border border-white/40'}`}
+        className={`relative flex w-full flex-col min-h-[100dvh] overflow-hidden bg-white ${
+          isOnboardingFlatShell
+            ? 'mx-auto max-w-[430px]'
+            : 'max-w-[430px] sm:min-h-0 shadow-2xl sm:rounded-[2rem] sm:border border-white/40'
+        } ${!isOnboardingFlatShell && currentStep === STEP.WELCOME ? 'register-hero-bg' : ''}`}
       >
         {/* Header + progress */}
         {currentStep !== STEP.WELCOME ? (
           <header
             className={`sticky top-0 z-20 bg-white px-4 pb-4 pt-[calc(env(safe-area-inset-top,0)+0.875rem)] ${
-              isOnboardingKycUi ? '' : 'border-b border-gray-100/90 backdrop-blur bg-white/95'
+              isOnboardingFlatShell ? '' : 'border-b border-gray-100/90 backdrop-blur bg-white/95'
             }`}
           >
             <div className="relative mb-5 flex items-center justify-center gap-4">
@@ -1936,7 +1950,9 @@ const Register = () => {
           ref={scrollAreaRef}
           role="region"
           aria-label="Formulário de cadastro"
-          className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${isOnboardingKycUi ? 'register-scroll-area--onboarding-kyc' : ''} ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+          className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${
+            isOnboardingFlatShell && currentStep !== STEP.WELCOME ? 'register-scroll-area--onboarding-flat' : ''
+          } ${isOnboardingKycUi ? 'register-scroll-area--onboarding-kyc' : ''} ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
           style={{ paddingBottom: scrollPaddingBottom }}
         >
           <form
@@ -1980,7 +1996,7 @@ const Register = () => {
         <footer className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 flex justify-center">
           <div
             className={
-              isOnboardingKycUi
+              isOnboardingFlatShell
                 ? 'pointer-events-auto flex w-full max-w-[430px] flex-col gap-2.5 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3'
                 : 'pointer-events-auto flex w-full max-w-[430px] flex-col gap-3 rounded-t-[1.25rem] border-t border-gray-100 bg-white/95 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_40px_rgba(0,36,71,0.08)] backdrop-blur-md'
             }
@@ -1991,7 +2007,7 @@ const Register = () => {
                   type="button"
                   variant="primary"
                   size="lg"
-                  className="w-full rounded-xl py-4 text-[1rem] font-semibold shadow-lg shadow-agilbank-primary/25"
+                  className={`w-full rounded-xl py-4 text-[1rem] font-semibold${isOnboardingFlatShell ? '' : ' shadow-lg shadow-agilbank-primary/25'}`}
                   onClick={() => {
                     setCurrentStep(STEP.CPF);
                     setError('');
@@ -2010,6 +2026,12 @@ const Register = () => {
             ) : (
               <>
                 {currentStep === STEP.TERMS && error ? (
+                  isOnboardingFlatShell ? (
+                    <div className="flex gap-2 text-[0.875rem] text-red-700" role="alert" aria-live="assertive">
+                      <ExclamationTriangleIcon className="h-5 w-5 shrink-0" aria-hidden />
+                      <p className="min-w-0 break-words">{sanitizeUserFacingError(error)}</p>
+                    </div>
+                  ) : (
                   <div
                     className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]"
                     role="alert"
@@ -2021,6 +2043,7 @@ const Register = () => {
                       <p className="break-words text-red-800/95">{sanitizeUserFacingError(error)}</p>
                     </div>
                   </div>
+                  )
                 ) : null}
                 {featureDisabledHint && isOnboardingKycUi ? (
                   <p className="text-[0.85rem] leading-snug text-amber-800" role="status">
