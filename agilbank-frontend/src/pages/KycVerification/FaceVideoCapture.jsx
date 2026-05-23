@@ -13,11 +13,11 @@ import {
 import './FaceVideoCapture.css';
 
 const REGISTER_GUIDED_PHASES = [
-  { fromMs: 0, toMs: 2000, text: 'Olhe para a câmera' },
-  { fromMs: 2000, toMs: 4000, text: 'Vire levemente o rosto para a esquerda' },
-  { fromMs: 4000, toMs: 6000, text: 'Vire levemente o rosto para a direita' },
-  { fromMs: 6000, toMs: 8000, text: 'Aproxime um pouco o rosto da câmera' },
-  { fromMs: 8000, toMs: 10000, text: 'Volte ao centro e mantenha o rosto parado' },
+  { fromMs: 0, toMs: 3000, text: 'Olhe para a câmera' },
+  { fromMs: 3000, toMs: 6000, text: 'Vire levemente para a esquerda' },
+  { fromMs: 6000, toMs: 9000, text: 'Vire levemente para a direita' },
+  { fromMs: 9000, toMs: 12000, text: 'Aproxime um pouco o rosto' },
+  { fromMs: 12000, toMs: 15000, text: 'Volte ao centro' },
 ];
 
 function instructionForElapsed(elapsedMs, phases) {
@@ -102,8 +102,11 @@ export default function FaceVideoCapture({
     }
   }, []);
 
+  const registerRecordFailMessage =
+    'Não conseguimos gravar seu vídeo. Tente novamente em um local bem iluminado.';
+
   const permissionDeniedMessage = isRegister
-    ? 'Permita o acesso à câmera para continuar a verificação facial.'
+    ? 'Permita o acesso à câmera para continuar.'
     : 'Permissão da câmera negada. Autorize o acesso nas configurações do navegador e tente novamente.';
 
   const startCamera = useCallback(async () => {
@@ -146,11 +149,7 @@ export default function FaceVideoCapture({
       } else if (name === 'NotFoundError') {
         setCameraError('Nenhuma câmera foi encontrada neste dispositivo.');
       } else {
-        setCameraError(
-          isRegister
-            ? 'Não conseguimos gravar seu vídeo. Verifique a permissão da câmera e tente novamente.'
-            : 'Não foi possível acessar a câmera. Tente novamente.'
-        );
+        setCameraError(isRegister ? registerRecordFailMessage : 'Não foi possível acessar a câmera. Tente novamente.');
       }
       setPhase('denied');
     }
@@ -219,11 +218,7 @@ export default function FaceVideoCapture({
         chunksRef.current = [];
 
         if (blob.size <= 0) {
-          setCameraError(
-            isRegister
-              ? 'Não conseguimos gravar seu vídeo. Verifique a permissão da câmera e tente novamente.'
-              : 'Nenhum dado foi gravado. Tente novamente.'
-          );
+          setCameraError(isRegister ? registerRecordFailMessage : 'Nenhum dado foi gravado. Tente novamente.');
           setPhase('live');
           return;
         }
@@ -269,9 +264,7 @@ export default function FaceVideoCapture({
       }, recordMaxMs);
     } catch (_) {
       setCameraError(
-        isRegister
-          ? 'Não conseguimos gravar seu vídeo. Verifique a permissão da câmera e tente novamente.'
-          : 'Não foi possível iniciar a gravação neste dispositivo.'
+        isRegister ? registerRecordFailMessage : 'Não foi possível iniciar a gravação neste dispositivo.'
       );
       setPhase(isRegister ? 'denied' : 'unsupported');
     }
@@ -310,16 +303,37 @@ export default function FaceVideoCapture({
   const displayError = errorMessage || cameraError;
   const rootClass = isRegister ? 'face-video-root face-video-root--register' : 'face-video-root';
 
+  const registerTitle = 'Verificação facial';
+  const registerLead =
+    'Procure um local bem iluminado. Mantenha o rosto dentro da moldura e siga os movimentos na tela.';
+
   if (phase === 'unsupported' || phase === 'denied') {
     return (
       <div className={rootClass}>
-        <div className="mb-4 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
-            <ExclamationTriangleIcon className="h-8 w-8" aria-hidden />
+        {!isRegister ? (
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
+              <ExclamationTriangleIcon className="h-8 w-8" aria-hidden />
+            </div>
           </div>
-        </div>
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Gravação facial</h1>
-        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600" role="alert">
+        ) : null}
+        <h1
+          className={
+            isRegister
+              ? 'face-video-register-title mb-2 text-[1.25rem] font-semibold leading-tight text-gray-900'
+              : 'mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl'
+          }
+        >
+          {isRegister ? registerTitle : 'Gravação facial'}
+        </h1>
+        <p
+          className={
+            isRegister
+              ? 'mb-5 text-[0.875rem] leading-snug text-red-800'
+              : 'mb-6 text-[0.95rem] leading-relaxed text-gray-600'
+          }
+          role="alert"
+        >
           {displayError}
         </p>
         {phase === 'denied' ? (
@@ -341,39 +355,36 @@ export default function FaceVideoCapture({
         </div>
       ) : null}
 
-      <h1 className={`${isRegister ? 'mb-2' : 'mb-2'} text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl`}>
-        Gravação facial
+      <h1
+        className={
+          isRegister
+            ? 'face-video-register-title mb-1.5 text-[1.25rem] font-semibold leading-tight text-gray-900'
+            : 'mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl'
+        }
+      >
+        {isRegister ? registerTitle : 'Gravação facial'}
       </h1>
 
-      {isRegister ? (
-        <>
-          <p className="mb-2 text-[0.95rem] leading-relaxed text-gray-600">
-            Vamos gravar um vídeo curto para confirmar que é você.
-          </p>
-          <p className="mb-4 text-[0.88rem] leading-relaxed text-gray-500">
-            Mantenha o rosto dentro da moldura e siga as instruções na tela.
-          </p>
-        </>
-      ) : (
+      {isRegister && phase !== 'recording' ? (
+        <p className="face-video-register-lead mb-2 text-[0.875rem] leading-snug text-gray-600">{registerLead}</p>
+      ) : null}
+
+      {!isRegister ? (
         <p className="mb-4 text-[0.95rem] leading-relaxed text-gray-600">
           Centralize seu rosto e grave alguns segundos. Mantenha boa iluminação e olhe para a câmera.
         </p>
-      )}
+      ) : null}
 
       {isRegister && phase === 'recording' ? (
-        <div className="face-video-instruction mb-3 text-center" aria-live="polite">
-          <p className="text-[1.05rem] font-semibold leading-snug text-agilbank-primary">{guidedText}</p>
-          <p className="mt-2 text-[0.85rem] font-medium text-gray-600">
-            Gravando… {elapsedSec}s de {targetSec}s
+        <div className="face-video-instruction face-video-instruction--register mb-2 text-center" aria-live="polite">
+          <p className="text-[1rem] font-semibold leading-snug text-agilbank-primary">{guidedText}</p>
+          <p className="mt-1 text-[0.8125rem] font-medium text-gray-600">
+            Gravando... {elapsedSec}s de {targetSec}s
           </p>
-          <div className="face-video-progress-track mx-auto mt-3 max-w-[280px]">
+          <div className="face-video-progress-track mx-auto mt-2 max-w-[240px]">
             <div className="face-video-progress-fill" style={{ width: `${ringProgress * 100}%` }} />
           </div>
         </div>
-      ) : null}
-
-      {isRegister && phase === 'preview' ? (
-        <p className="mb-4 text-center text-[0.88rem] font-medium text-gray-600">Revise o vídeo antes de continuar</p>
       ) : null}
 
       {!isRegister ? (
@@ -431,11 +442,7 @@ export default function FaceVideoCapture({
           Vídeo curto ({minSec}–{maxSec}s) · até {Math.round(KYC_VIDEO_MAX_FILE_BYTES / (1024 * 1024))} MB · envio direto ao ambiente
           seguro (sem salvar no navegador).
         </p>
-      ) : (
-        <p className="mb-5 text-center text-[0.75rem] leading-snug text-gray-500">
-          Vídeo de {minSec} a {maxSec} segundos · até {Math.round(KYC_VIDEO_MAX_FILE_BYTES / (1024 * 1024))} MB
-        </p>
-      )}
+      ) : null}
 
       <div className="flex flex-col gap-3">
         {phase === 'live' ? (

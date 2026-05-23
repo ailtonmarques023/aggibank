@@ -33,7 +33,11 @@
 }
 
 .register-scroll-area--face-video {
-  scroll-padding-bottom: calc(14rem + env(safe-area-inset-bottom, 0px));
+  scroll-padding-bottom: calc(13rem + env(safe-area-inset-bottom, 0px));
+}
+
+.register-scroll-area--face-video.register-scroll-area--onboarding-flat {
+  padding-top: 0.75rem;
 }
 
 /* Shell onboarding: tela branca contínua (sem card/modal) */

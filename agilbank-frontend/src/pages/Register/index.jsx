@@ -1930,7 +1930,7 @@ const Register = () => {
     DOCUMENT_FRONT: 'Frente do documento',
     DOCUMENT_BACK: 'Verso do documento',
     SELFIE_PORTRAIT: 'Selfie',
-    FACE_VIDEO: 'Vídeo facial',
+    FACE_VIDEO: ONBOARDING_LINEAR ? 'Verificação facial' : 'Vídeo facial',
   };
 
   const renderKycImagePreview = (previewUrl, emptyLabel) =>

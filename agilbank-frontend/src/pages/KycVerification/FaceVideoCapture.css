@@ -3,7 +3,15 @@
 }
 
 .face-video-root--register {
-  margin-top: -0.25rem;
+  margin-top: -0.5rem;
+}
+
+.face-video-register-title {
+  letter-spacing: -0.01em;
+}
+
+.face-video-register-lead {
+  max-width: 22rem;
 }
 
 .face-video-stage {
@@ -17,9 +25,11 @@
 
 .face-video-root--register .face-video-stage {
   aspect-ratio: 4 / 5;
-  max-height: min(58vh, 440px);
+  max-height: min(62vh, 460px);
   width: 100%;
   max-width: 100%;
+  margin-top: 0.125rem;
+  margin-bottom: 0.75rem;
   border-radius: 1.125rem;
   box-shadow:
     0 4px 24px rgba(0, 51, 102, 0.12),
@@ -33,7 +43,7 @@
 }
 
 .face-video-root--register .face-video-live {
-  object-position: center center;
+  object-position: center 38%;
 }
 
 .face-video-playback {
@@ -49,8 +59,8 @@
 }
 
 .face-video-root--register .face-video-mask {
-  -webkit-mask-image: radial-gradient(ellipse 64% 78% at 50% 44%, transparent 96%, black 100%);
-  mask-image: radial-gradient(ellipse 64% 78% at 50% 44%, transparent 96%, black 100%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 74% at 50% 40%, transparent 96%, black 100%);
+  mask-image: radial-gradient(ellipse 62% 74% at 50% 40%, transparent 96%, black 100%);
 }
 
 .face-video-oval {
@@ -69,8 +79,21 @@
   -webkit-mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
 }
 
+.face-video-root--register .face-video-oval {
+  align-items: flex-start;
+  padding-top: 8%;
+}
+
+.face-video-root--register .face-video-oval-ring {
+  width: min(58%, 220px);
+}
+
 .face-video-instruction {
   min-height: 2.75rem;
+}
+
+.face-video-instruction--register {
+  min-height: 3.25rem;
 }
 
 .face-video-progress-track {
