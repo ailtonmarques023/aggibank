@@ -1347,6 +1347,14 @@ const Register = () => {
       setOnboardingSessionLost(true);
       return;
     }
+
+    setKycStepError('');
+    const { ok, mime } = mimeAllowedForArtifact(file, 'FACE_VIDEO');
+    if (!ok) {
+      setKycStepError('Use vídeo WebM ou MP4.');
+      return;
+    }
+
     revokePreviewForType('FACE_VIDEO');
     const previewUrl = registerObjectUrl(URL.createObjectURL(file));
     setLocalPreviewUrlByType((prev) => ({ ...prev, FACE_VIDEO: previewUrl }));
