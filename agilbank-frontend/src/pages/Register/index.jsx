@@ -45,6 +45,7 @@ import {
 import { resolveRegisterFailure } from '../../services/registerMessage';
 import FaceVideoCapture from '../KycVerification/FaceVideoCapture';
 import LinearCameraCapture from './LinearCameraCapture';
+import InlineDocumentCamera from './InlineDocumentCamera';
 
 const ONBOARDING_LINEAR = isOnboardingLinearSubmitEnabled();
 const ONBOARDING_REGISTER = isOnboardingRegisterEnabled() && !ONBOARDING_LINEAR;
@@ -322,6 +323,7 @@ const Register = () => {
   const [linearSubmitMessage, setLinearSubmitMessage] = useState('');
   /** Sessão de captura por getUserMedia (documento/selfie linear). */
   const [linearCameraSession, setLinearCameraSession] = useState(null);
+  const [inlineDocumentCameraActive, setInlineDocumentCameraActive] = useState(false);
 
   const watchedValues = watch();
   const requiresFaceVideo = ONBOARDING_LINEAR
@@ -331,6 +333,10 @@ const Register = () => {
   const cpfForErrorClear = watch('cpf');
   const emailForErrorClear = watch('email');
   const senhaForErrorClear = watch('senha');
+
+  useEffect(() => {
+    setInlineDocumentCameraActive(false);
+  }, [currentStep]);
 
   useEffect(() => {
     setError('');
@@ -654,6 +660,8 @@ const Register = () => {
     };
     setLinearProtocolNumber('');
     setLinearSubmitMessage('');
+    setInlineDocumentCameraActive(false);
+    setLinearCameraSession(null);
     resetRegisterForm(REGISTER_FORM_DEFAULTS);
     setCurrentStep(STEP.CPF);
     window.setTimeout(() => {
@@ -1105,24 +1113,23 @@ const Register = () => {
     if (!at || at === 'FACE_VIDEO') return;
 
     if (ONBOARDING_LINEAR) {
-      const isSelfie = currentStep === STEP.SELFIE;
-      const isFront = currentStep === STEP.DOC_FRONT;
-      setLinearCameraSession({
-        artifactType: at,
-        variant: isSelfie ? 'selfie' : 'document',
-        facingMode: isSelfie ? 'user' : 'environment',
-        fileName: isSelfie ? 'selfie.jpg' : isFront ? 'document-front.jpg' : 'document-back.jpg',
-        title: isSelfie ? 'Selfie de verificação' : isFront ? 'Frente do documento' : 'Verso do documento',
-        captureLabel: isSelfie ? 'Capturar selfie' : 'Capturar foto',
-        guideLabel: isSelfie
-          ? undefined
-          : isFront
-            ? 'Encaixe a frente do documento na moldura'
-            : 'Encaixe o verso do documento na moldura',
-        permissionErrorMessage: isSelfie
-          ? 'Permita o acesso à câmera para tirar sua selfie.'
-          : 'Permita o acesso à câmera para fotografar o documento.',
-      });
+      if (currentStep === STEP.SELFIE) {
+        setLinearCameraSession({
+          artifactType: at,
+          variant: 'selfie',
+          facingMode: 'user',
+          fileName: 'selfie.jpg',
+          title: 'Selfie de verificação',
+          captureLabel: 'Capturar selfie',
+          permissionErrorMessage: 'Permita o acesso à câmera para tirar sua selfie.',
+        });
+        return;
+      }
+      if (currentStep === STEP.DOC_FRONT || currentStep === STEP.DOC_BACK) {
+        setInlineDocumentCameraActive(true);
+        setKycStepError('');
+        return;
+      }
       return;
     }
 
@@ -2022,9 +2029,22 @@ const Register = () => {
         </p>
 
         <div className="space-y-4">
-          {renderKycImagePreview(
-            previewUrl,
-            ONBOARDING_LINEAR ? 'Nenhuma foto selecionada ainda' : 'Nenhuma imagem selecionada ainda'
+          {ONBOARDING_LINEAR && inlineDocumentCameraActive && !previewUrl ? (
+            <InlineDocumentCamera
+              active
+              fileName={isFront ? 'document-front.jpg' : 'document-back.jpg'}
+              permissionErrorMessage="Permita o acesso à câmera para fotografar o documento."
+              onCancel={() => setInlineDocumentCameraActive(false)}
+              onCapture={(file) => {
+                if (at) storeLinearArtifactFile(file, at);
+                setInlineDocumentCameraActive(false);
+              }}
+            />
+          ) : (
+            renderKycImagePreview(
+              previewUrl,
+              ONBOARDING_LINEAR ? 'Nenhuma foto selecionada ainda' : 'Nenhuma imagem selecionada ainda'
+            )
           )}
           {(ONBOARDING_LINEAR || !isOnboardingKycUi) && kycStepError ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
@@ -2426,6 +2446,9 @@ const Register = () => {
           Ir para login
         </Link>
       );
+    }
+    if (ONBOARDING_LINEAR && inlineDocumentCameraActive && (currentStep === STEP.DOC_FRONT || currentStep === STEP.DOC_BACK)) {
+      return null;
     }
     if (ONBOARDING_LINEAR && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE) {
       const at = artifactForUiStep(currentStep);
