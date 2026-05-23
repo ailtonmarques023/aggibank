@@ -140,8 +140,14 @@ function sanitizeUserFacingError(message) {
   if (/prisma|p2002|postgresql|unique constraint|stack trace|internal server error/i.test(t)) {
     return 'Não foi possível concluir o cadastro. Tente novamente em instantes.';
   }
+  if (/objectkey|signedurl|x-amz|presigned|r2\.cloudflarestorage|amazonaws\.com/i.test(t)) {
+    return '';
+  }
   return t;
 }
+
+const KYC_UPLOAD_ERROR_DEFAULT =
+  'Não conseguimos enviar sua foto. Verifique sua conexão e tente novamente.';
 
 /** Mensagem amigável por falha HTTP no pipeline KYC sem alterar a API */
 function pipelineErrorMessage(err, fallback) {
@@ -829,13 +835,19 @@ const Register = () => {
         setCurrentStep(needVideo ? STEP.FACE_VIDEO : STEP.KYC_REVIEW);
       } else if (currentStep === STEP.FACE_VIDEO) setCurrentStep(STEP.KYC_REVIEW);
     } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('[Register KYC upload]', err?.code || err?.status, err?.message);
+      }
       const parsed = parseKycFacingError(err, '');
-      const msg = pipelineErrorMessage(err, parsed.message || 'Não foi possível enviar. Toque em Tentar novamente.');
+      const msg = ONBOARDING_REGISTER
+        ? sanitizeUserFacingError(parsed.message) || KYC_UPLOAD_ERROR_DEFAULT
+        : pipelineErrorMessage(err, parsed.message || 'Não foi possível enviar. Toque em Tentar novamente.');
       setKycStepError(msg);
-      revokePreviewForType(at);
       if (parsed.code === 'FEATURE_KYC_DISABLED' || parsed.httpStatus === 503) {
         setFeatureDisabledHint(
-          'O envio de documentos está temporariamente indisponível. Use “Continuar mais tarde” e finalize quando quiser na área Verificação de identidade.'
+          ONBOARDING_REGISTER
+            ? 'O envio de documentos está temporariamente indisponível. Tente novamente em instantes.'
+            : 'O envio de documentos está temporariamente indisponível. Use “Continuar mais tarde” e finalize quando quiser na área Verificação de identidade.'
         );
       }
     } finally {
@@ -929,6 +941,15 @@ const Register = () => {
 
   const progressIndex = pgNum;
 
+  const isOnboardingKycUi =
+    ONBOARDING_REGISTER &&
+    accountCreated &&
+    currentStep >= STEP.DOC_FRONT &&
+    currentStep <= STEP.KYC_REVIEW;
+
+  const headerExitLabel = ONBOARDING_REGISTER ? 'Tenho conta' : accountCreated ? 'Ir ao app' : 'Tenho conta';
+  const headerExitTo = ONBOARDING_REGISTER ? '/login' : accountCreated ? '/transactions' : '/login';
+
   const scrollPaddingBottom =
     currentStep === STEP.WELCOME
       ? 'calc(9.75rem + env(safe-area-inset-bottom, 0px))'
@@ -940,10 +961,14 @@ const Register = () => {
             ? reviewError
               ? 'calc(15rem + env(safe-area-inset-bottom, 0px))'
               : 'calc(12.5rem + env(safe-area-inset-bottom, 0px))'
-            : currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE
-              ? kycStepError
-                ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
-                : 'calc(12rem + env(safe-area-inset-bottom, 0px))'
+            : isOnboardingKycUi
+              ? kycStepError || reviewError
+                ? 'calc(18.5rem + env(safe-area-inset-bottom, 0px))'
+                : 'calc(15rem + env(safe-area-inset-bottom, 0px))'
+              : currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE
+                ? kycStepError
+                  ? 'calc(14rem + env(safe-area-inset-bottom, 0px))'
+                  : 'calc(12rem + env(safe-area-inset-bottom, 0px))'
               : currentStep === STEP.EMAIL_NOTICE || currentStep === STEP.ALL_DONE
                 ? 'calc(12rem + env(safe-area-inset-bottom, 0px))'
                 : 'calc(10rem + env(safe-area-inset-bottom, 0px))';
@@ -1419,6 +1444,18 @@ const Register = () => {
     FACE_VIDEO: 'Vídeo facial',
   };
 
+  const renderKycImagePreview = (previewUrl, emptyLabel) =>
+    previewUrl ? (
+      <div className="overflow-hidden rounded-xl bg-white">
+        <img src={previewUrl} alt="Pré-visualização do arquivo" className="mx-auto max-h-60 w-full object-contain" />
+      </div>
+    ) : (
+      <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl bg-white px-6 py-12 text-center">
+        <PhotoIcon className="mb-3 h-10 w-10 text-gray-300" aria-hidden />
+        <p className="text-sm text-gray-500">{emptyLabel}</p>
+      </div>
+    );
+
   const renderDocumentCaptureStep = () => {
     const at = artifactForUiStep(currentStep);
     const previewUrl = at ? localPreviewUrlByType[at] : null;
@@ -1431,7 +1468,7 @@ const Register = () => {
             <DocumentTextIcon className="h-8 w-8" aria-hidden />
           </div>
         </div>
-        <p className="mb-3 inline-block rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-agilbank-primary">
           {isFront ? 'Frente' : 'Verso'}
         </p>
         <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Envie seu documento</h1>
@@ -1440,24 +1477,13 @@ const Register = () => {
         </p>
 
         <div className="space-y-4">
-          {previewUrl ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-inner">
-              <img src={previewUrl} alt="" className="mx-auto max-h-56 w-full object-contain" />
-            </div>
-          ) : (
-            <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center">
-              <PhotoIcon className="mb-3 h-10 w-10 text-gray-400" aria-hidden />
-              <p className="text-sm text-gray-600">Nenhuma imagem enviada ainda</p>
-            </div>
-          )}
-
-          {kycStepError ? (
+          {renderKycImagePreview(previewUrl, 'Nenhuma imagem selecionada ainda')}
+          {!isOnboardingKycUi && kycStepError ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
               <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
               <p className="break-words text-red-900">{kycStepError}</p>
             </div>
           ) : null}
-
           <p className="text-center text-[0.75rem] leading-snug text-gray-500">
             JPG, PNG ou WebP · até {Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB
           </p>
@@ -1480,17 +1506,8 @@ const Register = () => {
           Tire uma selfie em local iluminado. Usamos apenas para confirmar que é você — não é aprovação de crédito.
         </p>
         <div className="space-y-4">
-          {previewUrl ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-inner">
-              <img src={previewUrl} alt="" className="mx-auto max-h-56 w-full object-contain" />
-            </div>
-          ) : (
-            <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center">
-              <PhotoIcon className="mb-3 h-10 w-10 text-gray-400" aria-hidden />
-              <p className="text-sm text-gray-600">Nenhuma selfie enviada ainda</p>
-            </div>
-          )}
-          {kycStepError ? (
+          {renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda')}
+          {!isOnboardingKycUi && kycStepError ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
               <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
               <p className="break-words text-red-900">{kycStepError}</p>
@@ -1513,14 +1530,16 @@ const Register = () => {
         <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
           Confira se os arquivos estão legíveis. Ao enviar, iniciamos a verificação de segurança da sua proposta.
         </p>
-        <ul className="mb-8 space-y-3">
+        <ul className={`mb-8 space-y-3 ${isOnboardingKycUi ? 'divide-y divide-gray-100' : ''}`}>
           {req.map((key) => {
             const ok = submitted.includes(key);
             return (
               <li
                 key={key}
-                className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${
-                  ok ? 'border-emerald-200 bg-emerald-50/70' : 'border-gray-200 bg-white'
+                className={`flex items-center gap-3 py-3 ${
+                  isOnboardingKycUi
+                    ? ''
+                    : `rounded-xl border px-4 ${ok ? 'border-emerald-200 bg-emerald-50/70' : 'border-gray-200 bg-white'}`
                 }`}
               >
                 {ok ? (
@@ -1537,7 +1556,7 @@ const Register = () => {
           })}
         </ul>
 
-        {reviewError ? (
+        {reviewError && !isOnboardingKycUi ? (
           <div className="mb-6 flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
             <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
             <p className="break-words text-red-900">{reviewError}</p>
@@ -1844,11 +1863,23 @@ const Register = () => {
 
   /* --- Layout shell (mobile-first, max 430px no desktop) --- */
   const shellOuter = (
-    <div className={`flex min-h-[100dvh] justify-center ${currentStep === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : 'bg-zinc-200/75'} px-3 py-0 sm:py-10`}>
-      <div className={`relative flex w-full max-w-[430px] flex-col min-h-[100dvh] sm:min-h-0 shadow-2xl sm:rounded-[2rem] sm:border border-white/40 overflow-hidden bg-white ${currentStep === STEP.WELCOME ? 'register-hero-bg' : ''}`}>
+    <div
+      className={`flex min-h-[100dvh] justify-center px-3 py-0 sm:py-10 ${
+        currentStep === STEP.WELCOME ? 'bg-agilbank-primary/[0.04]' : isOnboardingKycUi ? 'bg-white' : 'bg-zinc-200/75'
+      }`}
+    >
+      <div
+        className={`relative flex w-full max-w-[430px] flex-col min-h-[100dvh] sm:min-h-0 overflow-hidden bg-white ${
+          currentStep === STEP.WELCOME ? 'register-hero-bg' : ''
+        } ${isOnboardingKycUi ? '' : 'shadow-2xl sm:rounded-[2rem] sm:border border-white/40'}`}
+      >
         {/* Header + progress */}
         {currentStep !== STEP.WELCOME ? (
-          <header className="sticky top-0 z-20 border-b border-gray-100/90 bg-white/95 px-4 pb-4 pt-[calc(env(safe-area-inset-top,0)+0.875rem)] backdrop-blur">
+          <header
+            className={`sticky top-0 z-20 bg-white px-4 pb-4 pt-[calc(env(safe-area-inset-top,0)+0.875rem)] ${
+              isOnboardingKycUi ? '' : 'border-b border-gray-100/90 backdrop-blur bg-white/95'
+            }`}
+          >
             <div className="relative mb-5 flex items-center justify-center gap-4">
               <button
                 type="button"
@@ -1867,11 +1898,11 @@ const Register = () => {
                 decoding="async"
               />
               <Link
-                to={ONBOARDING_REGISTER && accountCreated ? '/login' : accountCreated ? '/transactions' : '/login'}
+                to={headerExitTo}
                 className="absolute right-0 text-xs font-medium text-agilbank-primary hover:underline sm:text-[0.8rem]"
-                aria-label={accountCreated ? 'Ir para o app' : 'Tenho conta: ir para o login'}
+                aria-label={`${headerExitLabel}: ir para o login`}
               >
-                {accountCreated ? 'Ir ao app' : 'Tenho conta'}
+                {headerExitLabel}
               </Link>
             </div>
             {showProgress ? (
@@ -1905,7 +1936,7 @@ const Register = () => {
           ref={scrollAreaRef}
           role="region"
           aria-label="Formulário de cadastro"
-          className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+          className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${isOnboardingKycUi ? 'register-scroll-area--onboarding-kyc' : ''} ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
           style={{ paddingBottom: scrollPaddingBottom }}
         >
           <form
@@ -1947,7 +1978,13 @@ const Register = () => {
 
         {/* Barra inferior fixa */}
         <footer className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 flex justify-center">
-          <div className="pointer-events-auto flex w-full max-w-[430px] flex-col gap-3 rounded-t-[1.25rem] border-t border-gray-100 bg-white/95 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_40px_rgba(0,36,71,0.08)] backdrop-blur-md">
+          <div
+            className={
+              isOnboardingKycUi
+                ? 'pointer-events-auto flex w-full max-w-[430px] flex-col gap-2.5 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3'
+                : 'pointer-events-auto flex w-full max-w-[430px] flex-col gap-3 rounded-t-[1.25rem] border-t border-gray-100 bg-white/95 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_40px_rgba(0,36,71,0.08)] backdrop-blur-md'
+            }
+          >
             {currentStep === STEP.WELCOME ? (
               <>
                 <Button
@@ -1985,17 +2022,63 @@ const Register = () => {
                     </div>
                   </div>
                 ) : null}
-                {featureDisabledHint && accountCreated && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.KYC_REVIEW ? (
+                {featureDisabledHint && isOnboardingKycUi ? (
+                  <p className="text-[0.85rem] leading-snug text-amber-800" role="status">
+                    {featureDisabledHint}
+                  </p>
+                ) : featureDisabledHint && accountCreated && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.KYC_REVIEW ? (
                   <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[0.85rem]" role="status">
                     <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-amber-600" aria-hidden />
                     <p className="min-w-0 text-amber-950">{featureDisabledHint}</p>
                   </div>
                 ) : null}
+                {isOnboardingKycUi &&
+                ((currentStep >= STEP.DOC_FRONT && currentStep <= STEP.FACE_VIDEO && kycStepError) ||
+                  (currentStep === STEP.KYC_REVIEW && reviewError)) ? (
+                  <div className="flex gap-2 text-[0.875rem] text-red-700" role="alert" aria-live="assertive">
+                    <ExclamationTriangleIcon className="h-5 w-5 shrink-0" aria-hidden />
+                    <p className="min-w-0 break-words">
+                      {currentStep === STEP.KYC_REVIEW ? reviewError : kycStepError}
+                    </p>
+                  </div>
+                ) : null}
                 {currentStep === STEP.KYC_REVIEW && !kycStatus?.canSubmitForReview ? (
-                  <p className="text-center text-[0.78rem] text-gray-500">Envie os três arquivos antes de seguir.</p>
+                  <p className="text-center text-[0.78rem] text-gray-500">Envie os arquivos indicados antes de seguir.</p>
                 ) : null}
                 {renderCompactFooterPrimary()}
-                {accountCreated && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.KYC_REVIEW && !uploadBusy && !submitBusy ? (
+                {isOnboardingKycUi && !uploadBusy && !submitBusy ? (
+                  <>
+                    {!featureDisabledHint &&
+                    ((currentStep >= STEP.DOC_FRONT && currentStep <= STEP.FACE_VIDEO && kycStepError) ||
+                      (currentStep === STEP.KYC_REVIEW && reviewError)) ? (
+                      <button
+                        type="button"
+                        className="w-full py-1 text-center text-[0.9rem] font-semibold text-agilbank-primary hover:underline"
+                        disabled={uploadBusy || submitBusy || !!featureDisabledHint}
+                        onClick={currentStep === STEP.KYC_REVIEW ? handleSubmitReviewRegister : openPicker}
+                      >
+                        Tentar novamente
+                      </button>
+                    ) : null}
+                    <Link
+                      to="/login"
+                      className="block w-full py-1 text-center text-[0.85rem] font-medium text-gray-600 hover:text-agilbank-primary"
+                      aria-label="Voltar depois: ir para login sem entrar no app"
+                    >
+                      Voltar depois
+                    </Link>
+                    <p className="text-center text-[0.72rem] leading-snug text-gray-500">
+                      Você pode continuar a verificação neste aparelho enquanto sua sessão estiver ativa. Sua proposta
+                      permanece salva neste dispositivo.
+                    </p>
+                  </>
+                ) : null}
+                {!ONBOARDING_REGISTER &&
+                accountCreated &&
+                currentStep >= STEP.DOC_FRONT &&
+                currentStep <= STEP.KYC_REVIEW &&
+                !uploadBusy &&
+                !submitBusy ? (
                   <>
                     {!featureDisabledHint &&
                     ((currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE && kycStepError) ||

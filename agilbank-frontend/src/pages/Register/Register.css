@@ -23,3 +23,7 @@
   scroll-padding-bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
 }
+
+.register-scroll-area--onboarding-kyc {
+  scroll-padding-bottom: calc(16rem + env(safe-area-inset-bottom, 0px));
+}
