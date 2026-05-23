@@ -3,11 +3,43 @@
  * Usa cookie HTTP-only (credentials) — não persiste obt_* nem JWT em storage.
  */
 
-/** Mesma base que `api.js`: termina em `/api` (Railway) ou `/api` relativo (Vercel rewrite). */
-const RAILWAY_API_DEFAULT = 'https://aggibank-production.up.railway.app/api';
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? '/api' : RAILWAY_API_DEFAULT);
+/** Mesma base que `api.js`: termina em `/api` (same-origin ou Railway). */
+
+/**
+ * Cookie `agilbank_onboarding_session` só funciona como first-party.
+ * No Vercel, `/api` passa pelo rewrite (vercel.json) → Railway com mesmo host do front.
+ * URL Railway direta cross-origin é bloqueada por navegadores modernos (3rd-party cookie).
+ */
+function resolveOnboardingApiBase() {
+  const configured = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+
+  if (typeof window === 'undefined') {
+    return configured || '/api';
+  }
+
+  if (!configured) {
+    return '/api';
+  }
+
+  if (configured.startsWith('/')) {
+    return configured;
+  }
+
+  try {
+    const apiOrigin = new URL(
+      configured.includes('://') ? configured : `https://${configured}`
+    ).origin;
+    if (import.meta.env.PROD && apiOrigin !== window.location.origin) {
+      return '/api';
+    }
+  } catch (_) {
+    return configured;
+  }
+
+  return configured;
+}
+
+const API_BASE = resolveOnboardingApiBase();
 
 async function parseJson(res) {
   const body = await res.json().catch(() => ({}));

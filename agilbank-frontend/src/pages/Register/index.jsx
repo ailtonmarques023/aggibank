@@ -44,6 +44,20 @@ import FaceVideoCapture from '../KycVerification/FaceVideoCapture';
 
 const ONBOARDING_REGISTER = isOnboardingRegisterEnabled();
 
+const ONBOARDING_SESSION_ERROR_CODES = new Set([
+  'ONBOARDING_SESSION_REQUIRED',
+  'ONBOARDING_SESSION_INVALID',
+  'ONBOARDING_SESSION_EXPIRED',
+  'ONBOARDING_SESSION_INACTIVE',
+]);
+
+const ONBOARDING_SESSION_LOST_MESSAGE =
+  'Sua sessão de proposta expirou. Reinicie o cadastro para continuar com segurança.';
+
+function isOnboardingSessionLostError(err) {
+  return Boolean(err?.code && ONBOARDING_SESSION_ERROR_CODES.has(err.code));
+}
+
 const STEP = {
   WELCOME: 0,
   CPF: 1,
@@ -272,6 +286,7 @@ const Register = () => {
   });
 
   const [applicationStatus, setApplicationStatus] = useState(null);
+  const [onboardingSessionLost, setOnboardingSessionLost] = useState(false);
   const [finalizeBusy, setFinalizeBusy] = useState(false);
   const [finalizeMessage, setFinalizeMessage] = useState('');
 
@@ -311,8 +326,12 @@ const Register = () => {
             } else {
               setCurrentStep(STEP.DOC_FRONT);
             }
-          } catch {
-            setCurrentStep(STEP.DOC_FRONT);
+          } catch (err) {
+            if (isOnboardingSessionLostError(err)) {
+              setOnboardingSessionLost(true);
+            } else {
+              setCurrentStep(STEP.DOC_FRONT);
+            }
           }
         } else if (st === 'RESUBMISSION_REQUIRED') {
           setCurrentStep(STEP.RESUBMISSION);
@@ -329,6 +348,25 @@ const Register = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!ONBOARDING_REGISTER || !accountCreated || onboardingSessionLost) return undefined;
+    if (currentStep < STEP.DOC_FRONT || currentStep > STEP.KYC_REVIEW) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await getCurrentApplicationStatus();
+      } catch (err) {
+        if (!cancelled && isOnboardingSessionLostError(err)) {
+          setOnboardingSessionLost(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep, accountCreated, onboardingSessionLost]);
 
   /* Nova etapa: topo rolável ajuda navegação; reduz campo “atrás” do rodapé no mobile */
   useEffect(() => {
@@ -512,6 +550,27 @@ const Register = () => {
     setError(s || 'Erro ao criar conta. Tente novamente.');
   };
 
+  const resetOnboardingProposalFlow = useCallback(() => {
+    previewRegistry.current.forEach((u) => {
+      try {
+        URL.revokeObjectURL(u);
+      } catch (_) {
+        /* ignore */
+      }
+    });
+    previewRegistry.current = [];
+    setOnboardingSessionLost(false);
+    setAccountCreated(false);
+    setApplicationStatus(null);
+    setKycStatus(null);
+    setKycStepError('');
+    setReviewError('');
+    setFeatureDisabledHint('');
+    setLocalPreviewUrlByType({});
+    setError('');
+    setCurrentStep(STEP.WELCOME);
+  }, []);
+
   const nextStep = async () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
     const isValid = await trigger(fieldsToValidate);
@@ -632,6 +691,11 @@ const Register = () => {
       await refreshKycStatus().catch(() => {});
       setCurrentStep(STEP.DOC_FRONT);
     } catch (err) {
+      if (isOnboardingSessionLostError(err)) {
+        setOnboardingSessionLost(true);
+        applyErrorMessage(ONBOARDING_SESSION_LOST_MESSAGE);
+        return;
+      }
       const msg =
         typeof err?.message === 'string' && err.message.trim()
           ? sanitizeUserFacingError(err.message)
@@ -839,6 +903,11 @@ const Register = () => {
         console.error('[Register KYC upload]', err?.code || err?.status, err?.message);
       }
       const parsed = parseKycFacingError(err, '');
+      if (ONBOARDING_REGISTER && isOnboardingSessionLostError(err)) {
+        setOnboardingSessionLost(true);
+        setKycStepError('');
+        return;
+      }
       const msg = ONBOARDING_REGISTER
         ? sanitizeUserFacingError(parsed.message) || KYC_UPLOAD_ERROR_DEFAULT
         : pipelineErrorMessage(err, parsed.message || 'Não foi possível enviar. Toque em Tentar novamente.');
@@ -874,6 +943,11 @@ const Register = () => {
         setCurrentStep(STEP.EMAIL_NOTICE);
       }
     } catch (err) {
+      if (ONBOARDING_REGISTER && isOnboardingSessionLostError(err)) {
+        setOnboardingSessionLost(true);
+        setReviewError('');
+        return;
+      }
       const parsed = parseKycFacingError(err, 'Não foi possível registrar o envio das fotos neste momento.');
       setReviewError(pipelineErrorMessage(err, parsed.message));
       if (parsed.code === 'FEATURE_KYC_DISABLED' || parsed.httpStatus === 503) {
@@ -1369,33 +1443,50 @@ const Register = () => {
 
   const renderTermsStep = () => (
     <>
-      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
-        {ONBOARDING_REGISTER ? 'Antes da verificação de segurança' : 'Antes de finalizar'}
-      </h1>
-      <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-        {ONBOARDING_REGISTER
-          ? 'Revise seus dados. Nos próximos passos, vamos confirmar que é você com documento, selfie e, se necessário, vídeo facial. Sua conta só será criada depois da verificação e do aceite final.'
-          : 'Revise e aceite. Assim criamos sua conta agora — documento e selfie vêm nos passos seguintes, na mesma tela.'}
-      </p>
-      <div className={`mb-8 text-sm leading-relaxed text-gray-700 ${isOnboardingFlatShell ? 'border-y border-gray-100 py-4' : 'rounded-2xl border border-gray-200 bg-gray-50/90 p-4'}`}>
-        <dl className="space-y-2">
-          <div className="flex justify-between gap-2">
-            <dt className="text-gray-500">Nome</dt>
-            <dd className="max-w-[60%] text-right font-medium text-gray-900">{watchedValues.nomeCompleto || '—'}</dd>
+      <div className="mb-7">
+        <p className="mb-2 text-[0.78rem] font-semibold uppercase tracking-wide text-agilbank-primary">
+          {ONBOARDING_REGISTER ? 'Verificação de segurança' : 'Finalização'}
+        </p>
+        <h1 className="text-[1.45rem] font-bold leading-tight text-gray-950 sm:text-2xl">
+          {ONBOARDING_REGISTER ? 'Confirme seus dados para continuar' : 'Revise e aceite os termos'}
+        </h1>
+        <p className="mt-3 text-[0.95rem] leading-relaxed text-gray-600">
+          {ONBOARDING_REGISTER
+            ? 'Depois desta etapa, vamos pedir documento, selfie e, se necessário, vídeo facial. A conta só será criada após a aprovação.'
+            : 'Assim criamos sua conta agora. Documento e selfie vêm nos próximos passos, na mesma tela.'}
+        </p>
+      </div>
+
+      <section className="mb-7 rounded-xl bg-gray-50 px-4 py-3.5" aria-label="Resumo dos dados">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-[0.82rem] font-semibold uppercase tracking-wide text-gray-500">Dados informados</h2>
+          <CheckCircleIcon className="h-5 w-5 shrink-0 text-agilbank-primary" aria-hidden />
+        </div>
+        <dl className="space-y-3 text-[0.92rem] leading-snug">
+          <div>
+            <dt className="text-[0.75rem] font-medium uppercase tracking-wide text-gray-400">Nome</dt>
+            <dd className="mt-1 break-words font-semibold text-gray-950">{watchedValues.nomeCompleto || '—'}</dd>
           </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-gray-500">E-mail</dt>
-            <dd className="max-w-[60%] break-all text-right font-medium text-gray-900">{watchedValues.email || '—'}</dd>
+          <div>
+            <dt className="text-[0.75rem] font-medium uppercase tracking-wide text-gray-400">E-mail</dt>
+            <dd className="mt-1 break-all font-semibold text-gray-950">{watchedValues.email || '—'}</dd>
           </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-gray-500">CPF</dt>
-            <dd className="font-medium text-gray-900">{watchedValues.cpf || '—'}</dd>
+          <div>
+            <dt className="text-[0.75rem] font-medium uppercase tracking-wide text-gray-400">CPF</dt>
+            <dd className="mt-1 font-semibold text-gray-950">{watchedValues.cpf || '—'}</dd>
           </div>
         </dl>
-      </div>
-      <div className="space-y-5 pt-2">
+      </section>
+
+      <div className="space-y-3">
         {ONBOARDING_REGISTER ? (
-          <label className="flex cursor-pointer items-start gap-3 border-b border-gray-100 py-4">
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+              errors.aceitaConsentimentoBiometrico
+                ? 'border-red-200 bg-red-50/60'
+                : 'border-gray-200 bg-white active:bg-gray-50'
+            }`}
+          >
             <input
               type="checkbox"
               className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
@@ -1403,9 +1494,19 @@ const Register = () => {
                 required: 'Para continuar, autorize a verificação de segurança.'
               })}
             />
-            <span className="text-[0.9rem] text-gray-700">
-              Autorizo o uso dos meus dados, documento, selfie e vídeo facial para verificação de segurança da abertura
-              da conta.
+            <span className="min-w-0">
+              <span className="block text-[0.95rem] font-semibold leading-snug text-gray-950">
+                Autorizo a verificação de segurança
+              </span>
+              <span className="mt-1.5 block text-[0.86rem] leading-relaxed text-gray-600">
+                Uso dos meus dados, documento, selfie e vídeo facial para validar a abertura da conta.
+              </span>
+              {errors.aceitaConsentimentoBiometrico?.message ? (
+                <span className="mt-2 flex gap-2 text-[0.82rem] font-medium leading-snug text-red-700" role="alert">
+                  <ExclamationTriangleIcon className="h-4 w-4 shrink-0" aria-hidden />
+                  {errors.aceitaConsentimentoBiometrico.message}
+                </span>
+              ) : null}
             </span>
           </label>
         ) : (
@@ -1426,19 +1527,26 @@ const Register = () => {
             </span>
           </label>
         )}
-        {errors.aceitaTermos?.message || errors.aceitaConsentimentoBiometrico?.message ? (
-          <p className="-mt-3 text-sm text-red-600">
-            {errors.aceitaConsentimentoBiometrico?.message || errors.aceitaTermos?.message}
-          </p>
+        {errors.aceitaTermos?.message ? (
+          <p className="text-sm text-red-600">{errors.aceitaTermos.message}</p>
         ) : null}
-        <label className={`flex cursor-pointer items-start gap-3 py-4 ${isOnboardingFlatShell ? '' : 'rounded-xl border border-gray-100 bg-gray-50 p-4'}`}>
+        <label
+          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+            isOnboardingFlatShell ? 'border-gray-200 bg-white active:bg-gray-50' : 'border-gray-100 bg-gray-50'
+          }`}
+        >
           <input
             type="checkbox"
             className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
             {...register('aceitaComunicacoes')}
           />
-          <span className="text-[0.9rem] text-gray-600">
-            Aceito receber comunicações sobre produtos e serviços AgilBank.
+          <span className="min-w-0">
+            <span className="block text-[0.95rem] font-semibold leading-snug text-gray-950">
+              Quero receber novidades
+            </span>
+            <span className="mt-1.5 block text-[0.86rem] leading-relaxed text-gray-600">
+              Comunicações sobre produtos e serviços AgilBank.
+            </span>
           </span>
         </label>
       </div>
@@ -1675,7 +1783,28 @@ const Register = () => {
 
   const renderAllDoneStep = () => renderFinalizeSuccessStep();
 
+  const renderOnboardingSessionLostStep = () => (
+    <>
+      <div className="mb-6 flex justify-center">
+        <ExclamationTriangleIcon className="h-12 w-12 text-amber-500" aria-hidden />
+      </div>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Sessão encerrada</h1>
+      <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">{ONBOARDING_SESSION_LOST_MESSAGE}</p>
+      <Button type="button" variant="primary" size="lg" className={primaryFooterBtnClass} onClick={resetOnboardingProposalFlow}>
+        Reiniciar cadastro
+      </Button>
+    </>
+  );
+
   const renderStepBody = () => {
+    if (
+      ONBOARDING_REGISTER &&
+      onboardingSessionLost &&
+      currentStep >= STEP.DOC_FRONT &&
+      currentStep <= STEP.KYC_REVIEW
+    ) {
+      return renderOnboardingSessionLostStep();
+    }
     switch (currentStep) {
       case STEP.WELCOME:
         return renderWelcome();
@@ -1727,6 +1856,14 @@ const Register = () => {
   };
 
   const renderCompactFooterPrimary = () => {
+    if (
+      ONBOARDING_REGISTER &&
+      onboardingSessionLost &&
+      currentStep >= STEP.DOC_FRONT &&
+      currentStep <= STEP.KYC_REVIEW
+    ) {
+      return null;
+    }
     if (currentStep <= STEP.WELCOME) return null;
     if (currentStep < STEP.TERMS) {
       return (
