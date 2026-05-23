@@ -16,7 +16,7 @@ const Input = forwardRef(({
   ...props
 }, ref) => {
   const inputClasses = classNames(
-    'input w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-agilbank-primary focus:border-transparent transition-colors',
+    'input w-full px-3 py-2 text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-agilbank-primary focus:border-transparent transition-colors',
     error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300',
     disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white',
     className

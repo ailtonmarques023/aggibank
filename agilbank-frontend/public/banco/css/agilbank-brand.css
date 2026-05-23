@@ -2,6 +2,19 @@
  * AgilBank — marca (PNG oficiais)
  * Assets de referência em agilbank-frontend/imagens/agilbank/ — deploy espelho em /brand/*.png na raiz do site.
  */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: max(16px, 1rem) !important;
+  }
+}
+
 .agilbank-brand-logo {
   display: block;
   width: auto;
