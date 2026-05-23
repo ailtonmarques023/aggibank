@@ -1109,10 +1109,16 @@ const Register = () => {
       const isFront = currentStep === STEP.DOC_FRONT;
       setLinearCameraSession({
         artifactType: at,
+        variant: isSelfie ? 'selfie' : 'document',
         facingMode: isSelfie ? 'user' : 'environment',
         fileName: isSelfie ? 'selfie.jpg' : isFront ? 'document-front.jpg' : 'document-back.jpg',
         title: isSelfie ? 'Selfie de verificação' : isFront ? 'Frente do documento' : 'Verso do documento',
         captureLabel: isSelfie ? 'Capturar selfie' : 'Capturar foto',
+        guideLabel: isSelfie
+          ? undefined
+          : isFront
+            ? 'Encaixe a frente do documento na moldura'
+            : 'Encaixe o verso do documento na moldura',
         permissionErrorMessage: isSelfie
           ? 'Permita o acesso à câmera para tirar sua selfie.'
           : 'Permita o acesso à câmera para fotografar o documento.',
@@ -1509,8 +1515,7 @@ const Register = () => {
         Seu AgilBank começa agora.
       </h1>
       <p className="mb-12 text-[0.975rem] leading-relaxed text-gray-600 text-balance">
-        Em poucas telas você informa seus dados e cria a conta. Fotos do documento e uma selfie ficam só para segurança — sem
-        burocracia desnecessária.
+        Informe seus dados e envie a verificação de segurança em poucos passos.
       </p>
     </div>
   );
@@ -1521,7 +1526,7 @@ const Register = () => {
         Boas-vindas! Digite seu CPF
       </h1>
       <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">
-        Usamos seu CPF para criar seu cadastro com segurança.
+        Usamos seu CPF para iniciar seu cadastro.
       </p>
 
       <div className="space-y-5">
@@ -2011,8 +2016,8 @@ const Register = () => {
         <p className={`${ONBOARDING_LINEAR ? 'mb-4' : 'mb-6'} text-[0.875rem] leading-snug text-gray-600`}>
           {ONBOARDING_LINEAR
             ? isFront
-              ? 'Tire uma foto nítida, sem cortes e sem reflexos.'
-              : 'Confira se todos os dados estão legíveis.'
+              ? 'Posicione a frente do RG ou CNH dentro da moldura.'
+              : 'Posicione o verso do documento dentro da moldura.'
             : 'Precisamos de uma foto nítida da frente e do verso do documento na verificação de segurança — para confirmar que é você.'}
         </p>
 
@@ -2870,18 +2875,17 @@ const Register = () => {
         {ONBOARDING_LINEAR && linearCameraSession ? (
           <LinearCameraCapture
             open
+            variant={linearCameraSession.variant}
             facingMode={linearCameraSession.facingMode}
             fileName={linearCameraSession.fileName}
             title={linearCameraSession.title}
             captureLabel={linearCameraSession.captureLabel}
+            guideLabel={linearCameraSession.guideLabel}
             permissionErrorMessage={linearCameraSession.permissionErrorMessage}
             onClose={() => setLinearCameraSession(null)}
             onCapture={(file) => {
-              const stored = storeLinearArtifactFile(file, linearCameraSession.artifactType);
+              storeLinearArtifactFile(file, linearCameraSession.artifactType);
               setLinearCameraSession(null);
-              if (stored) {
-                advanceLinearCaptureStep();
-              }
             }}
           />
         ) : null}

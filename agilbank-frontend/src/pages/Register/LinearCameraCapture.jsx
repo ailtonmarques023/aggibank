@@ -7,10 +7,12 @@ import './LinearCameraCapture.css';
  * Captura de foto via getUserMedia (cadastro linear).
  * @param {{
  *   open: boolean;
+ *   variant?: 'selfie' | 'document';
  *   facingMode: 'user' | 'environment';
  *   fileName?: string;
  *   title: string;
  *   captureLabel: string;
+ *   guideLabel?: string;
  *   permissionErrorMessage: string;
  *   onClose: () => void;
  *   onCapture: (file: File) => void;
@@ -18,10 +20,12 @@ import './LinearCameraCapture.css';
  */
 export default function LinearCameraCapture({
   open,
+  variant = 'selfie',
   facingMode,
   fileName = 'capture.jpg',
   title,
   captureLabel,
+  guideLabel = 'Encaixe o documento dentro da moldura',
   permissionErrorMessage,
   onClose,
   onCapture,
@@ -137,7 +141,7 @@ export default function LinearCameraCapture({
       return;
     }
     ctx.save();
-    if (facingMode === 'user') {
+    if (variant === 'selfie') {
       ctx.translate(w, 0);
       ctx.scale(-1, 1);
     }
@@ -163,8 +167,8 @@ export default function LinearCameraCapture({
 
   if (!open) return null;
 
-  const isSelfie = facingMode === 'user';
-  const isDocument = !isSelfie;
+  const isSelfie = variant === 'selfie';
+  const isDocument = variant === 'document';
 
   return (
     <div className="linear-camera-overlay" role="dialog" aria-modal="true" aria-labelledby="linear-camera-title">
@@ -199,13 +203,8 @@ export default function LinearCameraCapture({
           />
           {isDocument ? (
             <div className="linear-camera-document-guide" aria-hidden>
-              <div className="linear-camera-document-frame">
-                <span className="linear-camera-corner linear-camera-corner--tl" />
-                <span className="linear-camera-corner linear-camera-corner--tr" />
-                <span className="linear-camera-corner linear-camera-corner--bl" />
-                <span className="linear-camera-corner linear-camera-corner--br" />
-              </div>
-              <p className="linear-camera-guide-label">Encaixe o documento dentro da moldura</p>
+              <div className="linear-camera-document-frame" />
+              <p className="linear-camera-guide-label">{guideLabel}</p>
             </div>
           ) : null}
         </div>
