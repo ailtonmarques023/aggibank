@@ -32,6 +32,10 @@
   scroll-padding-bottom: calc(16rem + env(safe-area-inset-bottom, 0px));
 }
 
+.register-scroll-area--face-video {
+  scroll-padding-bottom: calc(14rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Shell onboarding: tela branca contínua (sem card/modal) */
 .register-shell--onboarding {
   min-height: 100dvh;

@@ -12,8 +12,13 @@ export const KYC_MAX_FILE_BYTES = 15 * 1024 * 1024;
 /** Limite de vídeo facial (default backend 30 MiB). */
 export const KYC_VIDEO_MAX_FILE_BYTES = 30 * 1024 * 1024;
 
+/** Padrão legado (KYC autenticado). Register linear usa props próprias (8–10s). */
 export const KYC_FACE_VIDEO_RECORD_MIN_MS = 5000;
 export const KYC_FACE_VIDEO_RECORD_MAX_MS = 8000;
+
+/** Gravação guiada no cadastro linear. */
+export const KYC_FACE_VIDEO_REGISTER_MIN_MS = 8000;
+export const KYC_FACE_VIDEO_REGISTER_MAX_MS = 10000;
 
 /**
  * Escolhe MIME suportado pelo MediaRecorder (preferência webm, fallback mp4).

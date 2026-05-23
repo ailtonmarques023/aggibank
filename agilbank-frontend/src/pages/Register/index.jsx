@@ -261,6 +261,8 @@ const Register = () => {
   const onboardingSessionReadyRef = useRef(false);
   const scrollAreaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const fileInputCameraRef = useRef(null);
+  const fileInputGalleryRef = useRef(null);
   const previewRegistry = useRef([]);
   /** Arquivos KYC mantidos no dispositivo até o envio final (fluxo linear). */
   const linearLocalFilesRef = useRef({
@@ -721,13 +723,23 @@ const Register = () => {
     if (!termsOk) return;
 
     const files = linearLocalFilesRef.current;
-    if (!files.documentFront || !files.documentBack || !files.selfiePortrait) {
-      applyErrorMessage('Envie a frente, o verso do documento e a selfie antes de enviar a proposta.');
+    if (!files.documentFront) {
+      setKycStepError('Envie a frente do documento antes de continuar.');
       setCurrentStep(STEP.DOC_FRONT);
       return;
     }
+    if (!files.documentBack) {
+      setKycStepError('Envie o verso do documento antes de continuar.');
+      setCurrentStep(STEP.DOC_BACK);
+      return;
+    }
+    if (!files.selfiePortrait) {
+      setKycStepError('Envie a selfie antes de continuar.');
+      setCurrentStep(STEP.SELFIE);
+      return;
+    }
     if (requiresFaceVideo && !files.faceVideo) {
-      applyErrorMessage('Envie o vídeo facial antes de enviar a proposta.');
+      setKycStepError('Grave o vídeo facial antes de enviar a proposta.');
       setCurrentStep(STEP.FACE_VIDEO);
       return;
     }
@@ -1031,6 +1043,71 @@ const Register = () => {
     return null;
   };
 
+  const linearFileKeyForArtifact = (artifactType) => {
+    if (artifactType === 'DOCUMENT_FRONT') return 'documentFront';
+    if (artifactType === 'DOCUMENT_BACK') return 'documentBack';
+    if (artifactType === 'SELFIE_PORTRAIT') return 'selfiePortrait';
+    if (artifactType === 'FACE_VIDEO') return 'faceVideo';
+    return null;
+  };
+
+  const validateLinearArtifactFile = (file, artifactType) => {
+    const { ok } = mimeAllowedForArtifact(file, artifactType);
+    if (!ok) {
+      if (artifactType === 'FACE_VIDEO') {
+        return 'Formato não aceito. Use vídeo WebM ou MP4.';
+      }
+      return 'Formato não aceito. Use JPG, PNG ou WebP.';
+    }
+    const maxBytes = artifactType === 'FACE_VIDEO' ? KYC_VIDEO_MAX_FILE_BYTES : KYC_MAX_FILE_BYTES;
+    if (file.size <= 0 || file.size > maxBytes) {
+      if (artifactType === 'FACE_VIDEO') {
+        return 'Vídeo muito grande. Grave um vídeo mais curto.';
+      }
+      return 'Arquivo muito grande. Envie uma imagem de até 15 MB.';
+    }
+    return '';
+  };
+
+  const storeLinearArtifactFile = (file, artifactType) => {
+    const err = validateLinearArtifactFile(file, artifactType);
+    if (err) {
+      setKycStepError(err);
+      return false;
+    }
+    setKycStepError('');
+    revokePreviewForType(artifactType);
+    const previewUrl = registerObjectUrl(URL.createObjectURL(file));
+    setLocalPreviewUrlByType((prev) => ({ ...prev, [artifactType]: previewUrl }));
+    const fieldKey = linearFileKeyForArtifact(artifactType);
+    if (fieldKey) linearLocalFilesRef.current[fieldKey] = file;
+    return true;
+  };
+
+  const clearLinearPreviewForCurrentStep = () => {
+    const at = artifactForUiStep(currentStep);
+    if (!at) return;
+    revokePreviewForType(at);
+    const fieldKey = linearFileKeyForArtifact(at);
+    if (fieldKey) linearLocalFilesRef.current[fieldKey] = null;
+    setKycStepError('');
+  };
+
+  const openLinearCamera = () => {
+    const input = fileInputCameraRef.current;
+    if (!input) return;
+    if (currentStep === STEP.SELFIE) {
+      input.setAttribute('capture', 'user');
+    } else {
+      input.setAttribute('capture', 'environment');
+    }
+    input.click();
+  };
+
+  const openLinearGallery = () => {
+    fileInputGalleryRef.current?.click();
+  };
+
   const mimeAllowedForArtifact = (file, artifactType) => {
     if (artifactType === 'FACE_VIDEO') {
       const m = (file.type || '').trim().toLowerCase();
@@ -1072,29 +1149,8 @@ const Register = () => {
 
     if (ONBOARDING_LINEAR) {
       const atLinear = artifactForUiStep(currentStep);
-      if (!atLinear) return;
-      setKycStepError('');
-      const { ok, mime } = mimeAllowedForArtifact(file, atLinear);
-      if (!ok) {
-        setKycStepError(atLinear === 'FACE_VIDEO' ? 'Use vídeo WebM ou MP4.' : 'Use JPG, PNG ou WebP.');
-        return;
-      }
-      const maxBytes = atLinear === 'FACE_VIDEO' ? KYC_VIDEO_MAX_FILE_BYTES : KYC_MAX_FILE_BYTES;
-      if (file.size <= 0 || file.size > maxBytes) {
-        setKycStepError(`O arquivo deve ter até ${Math.round(maxBytes / (1024 * 1024))} MB.`);
-        return;
-      }
-      revokePreviewForType(atLinear);
-      const previewUrl = registerObjectUrl(URL.createObjectURL(file));
-      setLocalPreviewUrlByType((prev) => ({ ...prev, [atLinear]: previewUrl }));
-      const fieldKey =
-        atLinear === 'DOCUMENT_FRONT'
-          ? 'documentFront'
-          : atLinear === 'DOCUMENT_BACK'
-            ? 'documentBack'
-            : 'selfiePortrait';
-      linearLocalFilesRef.current[fieldKey] = file;
-      advanceLinearCaptureStep();
+      if (!atLinear || atLinear === 'FACE_VIDEO') return;
+      storeLinearArtifactFile(file, atLinear);
       return;
     }
 
@@ -1279,13 +1335,9 @@ const Register = () => {
     }
   };
 
-  const handleFaceVideoFile = async (file, mime) => {
+  const handleFaceVideoFile = async (file) => {
     if (ONBOARDING_LINEAR) {
-      revokePreviewForType('FACE_VIDEO');
-      const previewUrl = registerObjectUrl(URL.createObjectURL(file));
-      setLocalPreviewUrlByType((prev) => ({ ...prev, FACE_VIDEO: previewUrl }));
-      linearLocalFilesRef.current.faceVideo = file;
-      setKycStepError('');
+      if (!storeLinearArtifactFile(file, 'FACE_VIDEO')) return;
       setCurrentStep(STEP.FINAL_TERMS);
       return;
     }
@@ -1900,22 +1952,33 @@ const Register = () => {
 
     return (
       <>
-        <div className="mb-6 flex justify-center">
+        <div className="mb-5 flex justify-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
             <DocumentTextIcon className="h-8 w-8" aria-hidden />
           </div>
         </div>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-agilbank-primary">
-          {isFront ? 'Frente' : 'Verso'}
-        </p>
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Envie seu documento</h1>
+        {!ONBOARDING_LINEAR ? (
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-agilbank-primary">
+            {isFront ? 'Frente' : 'Verso'}
+          </p>
+        ) : null}
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+          {ONBOARDING_LINEAR ? (isFront ? 'Envie a frente do documento' : 'Envie o verso do documento') : 'Envie seu documento'}
+        </h1>
         <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-          Precisamos de uma foto nítida da frente e do verso do documento na verificação de segurança — para confirmar que é você.
+          {ONBOARDING_LINEAR
+            ? isFront
+              ? 'Use uma foto nítida, sem cortes e sem reflexos.'
+              : 'Confira se todos os dados estão legíveis.'
+            : 'Precisamos de uma foto nítida da frente e do verso do documento na verificação de segurança — para confirmar que é você.'}
         </p>
 
         <div className="space-y-4">
-          {renderKycImagePreview(previewUrl, 'Nenhuma imagem selecionada ainda')}
-          {!isOnboardingKycUi && kycStepError ? (
+          {renderKycImagePreview(
+            previewUrl,
+            ONBOARDING_LINEAR ? 'Nenhuma foto selecionada ainda' : 'Nenhuma imagem selecionada ainda'
+          )}
+          {(ONBOARDING_LINEAR || !isOnboardingKycUi) && kycStepError ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
               <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
               <p className="break-words text-red-900">{kycStepError}</p>
@@ -1933,18 +1996,22 @@ const Register = () => {
     const previewUrl = localPreviewUrlByType.SELFIE_PORTRAIT;
     return (
       <>
-        <div className="mb-6 flex justify-center">
+        <div className="mb-5 flex justify-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
             <PhotoIcon className="h-8 w-8" aria-hidden />
           </div>
         </div>
-        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Selfie de segurança</h1>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+          {ONBOARDING_LINEAR ? 'Tire uma selfie nítida' : 'Selfie de segurança'}
+        </h1>
         <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-          Tire uma selfie em local iluminado. Usamos apenas para confirmar que é você — não é aprovação de crédito.
+          {ONBOARDING_LINEAR
+            ? 'Olhe para a câmera em um ambiente bem iluminado.'
+            : 'Tire uma selfie em local iluminado. Usamos apenas para confirmar que é você — não é aprovação de crédito.'}
         </p>
         <div className="space-y-4">
           {renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda')}
-          {!isOnboardingKycUi && kycStepError ? (
+          {(ONBOARDING_LINEAR || !isOnboardingKycUi) && kycStepError ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
               <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
               <p className="break-words text-red-900">{kycStepError}</p>
@@ -2159,7 +2226,8 @@ const Register = () => {
       case STEP.FACE_VIDEO:
         return (
           <FaceVideoCapture
-            onUploadFile={async (file) => handleFaceVideoFile(file, file.type || 'video/webm')}
+            variant={ONBOARDING_LINEAR ? 'register' : 'default'}
+            onUploadFile={async (file) => handleFaceVideoFile(file)}
             uploadBusy={uploadBusy}
             errorMessage={kycStepError}
             onClearError={() => setKycStepError('')}
@@ -2291,6 +2359,60 @@ const Register = () => {
         </Link>
       );
     }
+    if (ONBOARDING_LINEAR && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE) {
+      const at = artifactForUiStep(currentStep);
+      const hasPreview = at ? Boolean(localPreviewUrlByType[at]) : false;
+      const isSelfie = currentStep === STEP.SELFIE;
+      if (hasPreview) {
+        return (
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              className={primaryFooterBtnClass}
+              onClick={advanceLinearCaptureStep}
+            >
+              Continuar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="h-12 w-full rounded-xl border-gray-300 py-3 text-[0.95rem] font-semibold"
+              onClick={clearLinearPreviewForCurrentStep}
+            >
+              Trocar imagem
+            </Button>
+          </>
+        );
+      }
+      return (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className={primaryFooterBtnClass}
+            onClick={openLinearCamera}
+          >
+            {isSelfie ? 'Tirar selfie' : 'Tirar foto'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            className="h-12 w-full rounded-xl border-gray-300 py-3 text-[0.95rem] font-semibold"
+            onClick={openLinearGallery}
+          >
+            Enviar imagem
+          </Button>
+        </>
+      );
+    }
+    if (currentStep === STEP.FACE_VIDEO && ONBOARDING_LINEAR) {
+      return null;
+    }
     if (currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE) {
       const hasPreview = localPreviewUrlByType[artifactForUiStep(currentStep)];
       return (
@@ -2299,23 +2421,11 @@ const Register = () => {
           variant="primary"
           size="lg"
           className={primaryFooterBtnClass}
-          onClick={
-            ONBOARDING_LINEAR && hasPreview
-              ? advanceLinearCaptureStep
-              : openPicker
-          }
+          onClick={openPicker}
           disabled={uploadBusy || !!featureDisabledHint}
           loading={uploadBusy}
         >
-          {uploadBusy
-            ? 'Enviando…'
-            : ONBOARDING_LINEAR
-              ? hasPreview
-                ? 'Continuar'
-                : 'Selecionar foto'
-              : hasPreview
-                ? 'Trocar foto e enviar'
-                : 'Selecionar foto e enviar'}
+          {uploadBusy ? 'Enviando…' : hasPreview ? 'Trocar foto e enviar' : 'Selecionar foto e enviar'}
         </Button>
       );
     }
@@ -2447,7 +2557,13 @@ const Register = () => {
           aria-label="Formulário de cadastro"
           className={`register-scroll-area flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${
             isOnboardingFlatShell && currentStep !== STEP.WELCOME ? 'register-scroll-area--onboarding-flat' : ''
-          } ${isOnboardingKycUi ? 'register-scroll-area--onboarding-kyc' : ''} ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
+          } ${
+            currentStep === STEP.FACE_VIDEO && ONBOARDING_LINEAR
+              ? 'register-scroll-area--face-video'
+              : isOnboardingKycUi
+                ? 'register-scroll-area--onboarding-kyc'
+                : ''
+          } ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
           style={{ paddingBottom: scrollPaddingBottom }}
         >
           <form
@@ -2479,11 +2595,34 @@ const Register = () => {
               className="hidden"
               aria-hidden
               tabIndex={-1}
-              {...(currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE
+              {...(currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE && !ONBOARDING_LINEAR
                 ? { capture: currentStep === STEP.SELFIE ? 'user' : 'environment' }
                 : {})}
               onChange={handlePickFile}
             />
+            {ONBOARDING_LINEAR ? (
+              <>
+                <input
+                  ref={fileInputCameraRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/*"
+                  capture="environment"
+                  className="hidden"
+                  aria-hidden
+                  tabIndex={-1}
+                  onChange={handlePickFile}
+                />
+                <input
+                  ref={fileInputGalleryRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/*"
+                  className="hidden"
+                  aria-hidden
+                  tabIndex={-1}
+                  onChange={handlePickFile}
+                />
+              </>
+            ) : null}
           </form>
         </div>
 
