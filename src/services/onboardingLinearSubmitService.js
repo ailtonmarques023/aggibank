@@ -16,12 +16,64 @@ const {
   hasPersonalDataComplete,
   hasAddressComplete,
   hasProfessionalComplete,
-  noteDuplicateIdentifiers,
+  noteActiveApplicationDuplicate,
   httpError,
 } = require('./accountApplicationService');
 const { isValidCpf } = require('../utils/cpfValidation');
 const { KYC_PUBLIC_MESSAGES } = require('../constants/kycPublicMessages');
 const logger = require('../utils/logger');
+
+const WAIT_REVIEW_PUBLIC_MESSAGE =
+  'Recebemos sua proposta de abertura. Você receberá uma atualização por e-mail.';
+
+function resolveAutoDecisionFlags() {
+  const autoEnabled = kycAutoDecision.isAutoDecisionEnabled();
+  const autoShadow = kycAutoDecision.isAutoDecisionShadow();
+  return {
+    autoEnabled,
+    autoShadow,
+    shouldApply: autoEnabled && !autoShadow,
+  };
+}
+
+function buildWaitReviewResponse(applicationRow, message = WAIT_REVIEW_PUBLIC_MESSAGE) {
+  return buildPublicResponse({
+    protocolNumber: applicationRow.protocolNumber,
+    applicationStatus: applicationRow.status,
+    message,
+    nextStep: 'WAIT_REVIEW',
+  });
+}
+
+async function runProposalAutoDecision(submissionId) {
+  const { autoEnabled, autoShadow, shouldApply } = resolveAutoDecisionFlags();
+
+  if (!autoEnabled) {
+    return { autoResult: null, autoDecisionFailed: false };
+  }
+
+  try {
+    const autoResult = await kycAutoDecision.evaluateOnboardingProposalSubmission(submissionId, {
+      enabled: autoEnabled,
+      shadow: autoShadow,
+      apply: shouldApply,
+      trigger: 'onboarding_linear_submit',
+    });
+    return { autoResult, autoDecisionFailed: false, autoDecisionCanFinalize: shouldApply };
+  } catch (err) {
+    logger.error(
+      {
+        category: 'operational_error',
+        component: 'onboarding_linear_submit',
+        op: 'autodecision_failed',
+        submissionIdLen: String(submissionId || '').length,
+        message: err && err.message ? String(err.message).slice(0, 200) : 'unknown',
+      },
+      'onboarding_linear_autodecision_error'
+    );
+    return { autoResult: null, autoDecisionFailed: true, autoDecisionCanFinalize: false };
+  }
+}
 
 function isOnboardingLinearSubmitEnabled() {
   return String(process.env.ONBOARDING_LINEAR_SUBMIT_ENABLED || '').toLowerCase().trim() === 'true';
@@ -265,7 +317,7 @@ async function submitFullOnboardingApplication(input) {
   const fields = parseFields(input.body || {});
   const artifactsByType = validateFiles(input.files || {});
 
-  await noteDuplicateIdentifiers({ cpf: fields.cpf, email: fields.email });
+  await noteActiveApplicationDuplicate({ cpf: fields.cpf, email: fields.email });
 
   const saltRounds = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
   const senhaHash = await bcrypt.hash(fields.senhaPlain, saltRounds);
@@ -366,34 +418,46 @@ async function submitFullOnboardingApplication(input) {
     'onboarding_linear_submit_received'
   );
 
-  const autoEnabled = kycAutoDecision.isAutoDecisionEnabled();
-  const autoResult = await kycAutoDecision.evaluateOnboardingProposalSubmission(submission.id, {
-    apply: autoEnabled,
-    enabled: autoEnabled,
-    shadow: false,
-    trigger: 'onboarding_linear_submit',
-  });
+  const { autoResult, autoDecisionFailed, autoDecisionCanFinalize } = await runProposalAutoDecision(submission.id);
 
   let applicationRow = await prisma.accountApplication.findUnique({ where: { id: application.id } });
 
-  if (autoResult.recommendation === 'APPROVED' && autoResult.applied) {
-    const finalizeResult = await onboardingFinalize.finalizeOnboardingApplication(
-      applicationRow,
-      {
-        acceptedTerms: true,
-        acceptedPrivacyPolicy: true,
-      },
-      { sessionId: null }
-    );
+  if (autoDecisionFailed || !autoResult) {
+    return buildWaitReviewResponse(applicationRow);
+  }
 
-    applicationRow = await prisma.accountApplication.findUnique({ where: { id: application.id } });
+  if (autoResult.recommendation === 'APPROVED' && autoResult.applied && autoDecisionCanFinalize) {
+    try {
+      const finalizeResult = await onboardingFinalize.finalizeOnboardingApplication(
+        applicationRow,
+        {
+          acceptedTerms: true,
+          acceptedPrivacyPolicy: true,
+        },
+        { sessionId: null }
+      );
 
-    return buildPublicResponse({
-      protocolNumber: applicationRow.protocolNumber,
-      applicationStatus: 'FINALIZED',
-      message: finalizeResult.message || onboardingFinalize.FINALIZE_PUBLIC_SUCCESS_MESSAGE,
-      nextStep: 'LOGIN',
-    });
+      applicationRow = await prisma.accountApplication.findUnique({ where: { id: application.id } });
+
+      return buildPublicResponse({
+        protocolNumber: applicationRow.protocolNumber,
+        applicationStatus: 'FINALIZED',
+        message: finalizeResult.message || onboardingFinalize.FINALIZE_PUBLIC_SUCCESS_MESSAGE,
+        nextStep: 'LOGIN',
+      });
+    } catch (err) {
+      logger.error(
+        {
+          category: 'operational_error',
+          component: 'onboarding_linear_submit',
+          op: 'finalize_after_approved_failed',
+          applicationIdLen: application.id.length,
+          message: err && err.message ? String(err.message).slice(0, 200) : 'unknown',
+        },
+        'onboarding_linear_finalize_error'
+      );
+      return buildWaitReviewResponse(applicationRow);
+    }
   }
 
   if (autoResult.recommendation === 'RESUBMISSION_REQUIRED' && autoResult.applied) {
@@ -405,12 +469,7 @@ async function submitFullOnboardingApplication(input) {
     });
   }
 
-  return buildPublicResponse({
-    protocolNumber: applicationRow.protocolNumber,
-    applicationStatus: applicationRow.status,
-    message: 'Recebemos sua proposta de abertura. Você receberá uma atualização por e-mail.',
-    nextStep: 'WAIT_REVIEW',
-  });
+  return buildWaitReviewResponse(applicationRow);
 }
 
 module.exports = {

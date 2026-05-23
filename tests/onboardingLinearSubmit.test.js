@@ -13,6 +13,7 @@ const { prisma } = require('../src/config/database');
 
 jest.mock('../src/services/kycAutoDecisionService', () => ({
   isAutoDecisionEnabled: jest.fn(() => false),
+  isAutoDecisionShadow: jest.fn(() => true),
   evaluateOnboardingProposalSubmission: jest.fn(() =>
     Promise.resolve({
       recommendation: 'UNDER_MANUAL_REVIEW',
@@ -20,6 +21,11 @@ jest.mock('../src/services/kycAutoDecisionService', () => ({
       ruleHits: [],
     })
   ),
+}));
+
+jest.mock('../src/services/onboardingFinalizeService', () => ({
+  FINALIZE_PUBLIC_SUCCESS_MESSAGE: 'Conta criada com sucesso. Enviamos um e-mail para confirmar seu cadastro.',
+  finalizeOnboardingApplication: jest.fn(),
 }));
 
 jest.mock('../src/services/identityStorageService', () => {
@@ -39,6 +45,7 @@ jest.mock('../src/utils/email', () => ({
 
 const identityStorage = require('../src/services/identityStorageService');
 const kycAutoDecision = require('../src/services/kycAutoDecisionService');
+const onboardingFinalize = require('../src/services/onboardingFinalizeService');
 
 const tinyImage = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -77,10 +84,41 @@ function attachRequired(req) {
     .attach('selfiePortrait', tinyImage, { filename: 'selfie.jpg', contentType: 'image/jpeg' });
 }
 
+function wireSuccessfulSubmitMocks({ appId = 'app_linear_1', subId = 'sub_linear_1' } = {}) {
+  prisma.user.findUnique.mockResolvedValue(null);
+  prisma.accountApplication.findFirst.mockResolvedValue(null);
+  prisma.accountApplication.create.mockResolvedValue({
+    id: appId,
+    status: 'DATA_RECEIVED',
+    protocolNumber: 'APP-LIN001',
+    cpf: '52998224725',
+    email: 'maria.linear@example.com',
+  });
+  prisma.identitySubmission.create.mockResolvedValue({
+    id: subId,
+    accountApplicationId: appId,
+    status: 'PENDING_UPLOADS',
+    versionOrAttempt: 1,
+  });
+  prisma.identitySubmissionArtifact.create.mockResolvedValue({});
+  prisma.identitySubmission.update.mockResolvedValue({ id: subId, status: 'READY_FOR_REVIEW' });
+  prisma.accountApplication.update.mockResolvedValue({
+    id: appId,
+    status: 'DOCUMENTS_PENDING',
+    protocolNumber: 'APP-LIN001',
+  });
+  prisma.accountApplication.findUnique.mockResolvedValue({
+    id: appId,
+    status: 'DOCUMENTS_PENDING',
+    protocolNumber: 'APP-LIN001',
+  });
+}
+
 describe('Onboarding linear submit-full', () => {
   const originalLinear = process.env.ONBOARDING_LINEAR_SUBMIT_ENABLED;
   const originalKyc = process.env.FEATURE_KYC_ENABLED;
   const originalAuto = process.env.FEATURE_KYC_AUTO_DECISION_ENABLED;
+  const originalShadow = process.env.FEATURE_KYC_AUTO_DECISION_SHADOW;
   const originalVideo = process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO;
 
   beforeAll(() => {
@@ -97,6 +135,7 @@ describe('Onboarding linear submit-full', () => {
     process.env.ONBOARDING_LINEAR_SUBMIT_ENABLED = originalLinear;
     process.env.FEATURE_KYC_ENABLED = originalKyc;
     process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = originalAuto;
+    process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = originalShadow;
     process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO = originalVideo;
   });
 
@@ -104,6 +143,7 @@ describe('Onboarding linear submit-full', () => {
     process.env.ONBOARDING_LINEAR_SUBMIT_ENABLED = 'true';
     delete process.env.FEATURE_KYC_REQUIRE_FACE_VIDEO;
     process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'false';
+    process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'true';
     bcrypt.hash.mockImplementation((password) => Promise.resolve(`hashed_${password}`));
     bcrypt.compare.mockImplementation((password, hash) => Promise.resolve(hash === `hashed_${password}`));
     identityStorage.isIdentityStorageFeatureFlagOn.mockReturnValue(true);
@@ -114,15 +154,18 @@ describe('Onboarding linear submit-full', () => {
     });
     identityStorage.putObjectBuffer.mockClear();
     kycAutoDecision.isAutoDecisionEnabled.mockReturnValue(false);
+    kycAutoDecision.isAutoDecisionShadow.mockReturnValue(true);
     kycAutoDecision.evaluateOnboardingProposalSubmission.mockResolvedValue({
       recommendation: 'UNDER_MANUAL_REVIEW',
       applied: false,
       ruleHits: [],
     });
+    onboardingFinalize.finalizeOnboardingApplication.mockReset();
     prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
     prisma.accountApplication.create.mockReset();
     prisma.accountApplication.update.mockReset();
     prisma.accountApplication.findUnique.mockReset();
+    prisma.accountApplication.findFirst.mockReset();
     prisma.identitySubmission.create.mockReset();
     prisma.identitySubmission.update.mockReset();
     prisma.identitySubmissionArtifact.create.mockReset();
@@ -188,71 +231,8 @@ describe('Onboarding linear submit-full', () => {
     expect(res.body.code).toBe('ARTIFACT_REQUIRED');
   });
 
-  it('service submit-full com mocks mínimos retorna WAIT_REVIEW', async () => {
-    const { submitFullOnboardingApplication } = require('../src/services/onboardingLinearSubmitService');
-    prisma.user.findUnique.mockResolvedValue(null);
-    prisma.accountApplication.create.mockResolvedValue({
-      id: 'app_linear_1',
-      protocolNumber: 'APP-LIN001',
-      status: 'DATA_RECEIVED',
-    });
-    prisma.identitySubmission.create.mockResolvedValue({ id: 'sub_linear_1' });
-    prisma.identitySubmissionArtifact.create.mockResolvedValue({});
-    prisma.identitySubmission.update.mockResolvedValue({});
-    prisma.accountApplication.update.mockResolvedValue({});
-    prisma.accountApplication.findUnique.mockResolvedValue({
-      id: 'app_linear_1',
-      status: 'DOCUMENTS_PENDING',
-      protocolNumber: 'APP-LIN001',
-    });
-
-    const body = Object.fromEntries(
-      Object.entries(baseFields()).map(([k, v]) => [k, v])
-    );
-    const files = {
-      documentFront: { buffer: tinyImage, mimetype: 'image/jpeg' },
-      documentBack: { buffer: tinyImage, mimetype: 'image/jpeg' },
-      selfiePortrait: { buffer: tinyImage, mimetype: 'image/jpeg' },
-    };
-
-    const result = await submitFullOnboardingApplication({ body, files });
-    expect(result.status).toBe('WAIT_REVIEW');
-    expect(result.protocolNumber).toBe('APP-LIN001');
-  });
-
   it('submit-full com dados válidos cria AccountApplication e não retorna JWT', async () => {
-    const appId = 'app_linear_1';
-    const subId = 'sub_linear_1';
-
-    prisma.user.findUnique.mockResolvedValue(null);
-    prisma.accountApplication.create.mockResolvedValue({
-      id: appId,
-      status: 'DATA_RECEIVED',
-      protocolNumber: 'APP-LIN001',
-      cpf: '52998224725',
-      email: 'maria.linear@example.com',
-    });
-    prisma.identitySubmission.create.mockResolvedValue({
-      id: subId,
-      accountApplicationId: appId,
-      status: 'PENDING_UPLOADS',
-      versionOrAttempt: 1,
-    });
-    prisma.identitySubmissionArtifact.create.mockResolvedValue({});
-    prisma.identitySubmission.update.mockResolvedValue({
-      id: subId,
-      status: 'READY_FOR_REVIEW',
-    });
-    prisma.accountApplication.update.mockResolvedValue({
-      id: appId,
-      status: 'DOCUMENTS_PENDING',
-      protocolNumber: 'APP-LIN001',
-    });
-    prisma.accountApplication.findUnique.mockResolvedValue({
-      id: appId,
-      status: 'DOCUMENTS_PENDING',
-      protocolNumber: 'APP-LIN001',
-    });
+    wireSuccessfulSubmitMocks();
 
     let req = request(app).post('/api/onboarding/applications/submit-full');
     Object.entries(baseFields()).forEach(([k, v]) => {
@@ -284,5 +264,155 @@ describe('Onboarding linear submit-full', () => {
     const res = await attachRequired(req);
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('CPF_ALREADY_EXISTS');
+  });
+
+  it('CPF em proposta ativa recente retorna 409', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.accountApplication.findFirst.mockImplementation(({ where }) => {
+      if (where.cpf) {
+        return Promise.resolve({ id: 'app_active' });
+      }
+      return Promise.resolve(null);
+    });
+
+    let req = request(app).post('/api/onboarding/applications/submit-full');
+    Object.entries(baseFields()).forEach(([k, v]) => {
+      req = req.field(k, v);
+    });
+    const res = await attachRequired(req);
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('APPLICATION_CPF_ACTIVE');
+    expect(prisma.accountApplication.create).not.toHaveBeenCalled();
+  });
+
+  describe('AutoDecision hardened', () => {
+    beforeEach(() => {
+      wireSuccessfulSubmitMocks();
+    });
+
+    it('shadow=true: avalia sem apply, não cria User, retorna WAIT_REVIEW', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'true';
+      kycAutoDecision.isAutoDecisionEnabled.mockReturnValue(true);
+      kycAutoDecision.isAutoDecisionShadow.mockReturnValue(true);
+      kycAutoDecision.evaluateOnboardingProposalSubmission.mockResolvedValue({
+        recommendation: 'APPROVED',
+        applied: false,
+        shadow: true,
+        enabled: true,
+      });
+
+      let req = request(app).post('/api/onboarding/applications/submit-full');
+      Object.entries(baseFields()).forEach(([k, v]) => {
+        req = req.field(k, v);
+      });
+      const res = await attachRequired(req);
+
+      expect(res.status).toBe(202);
+      expect(res.body.status).toBe('WAIT_REVIEW');
+      expect(kycAutoDecision.evaluateOnboardingProposalSubmission).toHaveBeenCalledWith(
+        'sub_linear_1',
+        expect.objectContaining({
+          enabled: true,
+          shadow: true,
+          apply: false,
+        })
+      );
+      expect(onboardingFinalize.finalizeOnboardingApplication).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('APPROVED com apply=true: finaliza conta e retorna FINALIZED/LOGIN sem JWT', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      process.env.FEATURE_KYC_AUTO_DECISION_SHADOW = 'false';
+      kycAutoDecision.isAutoDecisionEnabled.mockReturnValue(true);
+      kycAutoDecision.isAutoDecisionShadow.mockReturnValue(false);
+      kycAutoDecision.evaluateOnboardingProposalSubmission.mockResolvedValue({
+        recommendation: 'APPROVED',
+        applied: true,
+        shadow: false,
+        enabled: true,
+      });
+      onboardingFinalize.finalizeOnboardingApplication.mockResolvedValue({
+        nextStep: 'LOGIN',
+        message: 'Conta criada com sucesso. Enviamos um e-mail para confirmar seu cadastro.',
+      });
+      prisma.accountApplication.findUnique
+        .mockResolvedValueOnce({
+          id: 'app_linear_1',
+          status: 'DOCUMENTS_PENDING',
+          protocolNumber: 'APP-LIN001',
+        })
+        .mockResolvedValueOnce({
+          id: 'app_linear_1',
+          status: 'FINALIZED',
+          protocolNumber: 'APP-LIN001',
+          userId: 'user_new_1',
+        });
+
+      let req = request(app).post('/api/onboarding/applications/submit-full');
+      Object.entries(baseFields()).forEach(([k, v]) => {
+        req = req.field(k, v);
+      });
+      const res = await attachRequired(req);
+
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('FINALIZED');
+      expect(res.body.nextStep).toBe('LOGIN');
+      expect(res.body).not.toHaveProperty('jwt');
+      expect(kycAutoDecision.evaluateOnboardingProposalSubmission).toHaveBeenCalledWith(
+        'sub_linear_1',
+        expect.objectContaining({
+          enabled: true,
+          shadow: false,
+          apply: true,
+        })
+      );
+      expect(onboardingFinalize.finalizeOnboardingApplication).toHaveBeenCalled();
+    });
+
+    it('UNDER_MANUAL_REVIEW: não cria User e retorna WAIT_REVIEW', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      kycAutoDecision.isAutoDecisionEnabled.mockReturnValue(true);
+      kycAutoDecision.evaluateOnboardingProposalSubmission.mockResolvedValue({
+        recommendation: 'UNDER_MANUAL_REVIEW',
+        applied: true,
+        shadow: false,
+        enabled: true,
+      });
+
+      let req = request(app).post('/api/onboarding/applications/submit-full');
+      Object.entries(baseFields()).forEach(([k, v]) => {
+        req = req.field(k, v);
+      });
+      const res = await attachRequired(req);
+
+      expect(res.status).toBe(202);
+      expect(res.body.status).toBe('WAIT_REVIEW');
+      expect(onboardingFinalize.finalizeOnboardingApplication).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('erro do AutoDecision: não retorna 500, retorna WAIT_REVIEW com proposta criada', async () => {
+      process.env.FEATURE_KYC_AUTO_DECISION_ENABLED = 'true';
+      kycAutoDecision.isAutoDecisionEnabled.mockReturnValue(true);
+      kycAutoDecision.evaluateOnboardingProposalSubmission.mockRejectedValue(
+        new Error('motor indisponível')
+      );
+
+      let req = request(app).post('/api/onboarding/applications/submit-full');
+      Object.entries(baseFields()).forEach(([k, v]) => {
+        req = req.field(k, v);
+      });
+      const res = await attachRequired(req);
+
+      expect(res.status).toBe(202);
+      expect(res.body.success).toBe(true);
+      expect(res.body.status).toBe('WAIT_REVIEW');
+      expect(res.body.protocolNumber).toBe('APP-LIN001');
+      expect(prisma.accountApplication.create).toHaveBeenCalled();
+      expect(prisma.identitySubmission.create).toHaveBeenCalled();
+      expect(onboardingFinalize.finalizeOnboardingApplication).not.toHaveBeenCalled();
+    });
   });
 });

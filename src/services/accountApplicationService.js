@@ -336,6 +336,66 @@ async function noteDuplicateIdentifiers({ cpf, email }) {
     }
   }
 
+  return hints;
+}
+
+const APPLICATION_TERMINAL_STATUSES = ['FINALIZED', 'EXPIRED', 'CANCELLED', 'REJECTED'];
+
+function activeApplicationDedupSince() {
+  const hours = parseInt(process.env.ONBOARDING_ACTIVE_APPLICATION_DEDUP_HOURS, 10);
+  const windowHours = Number.isFinite(hours) && hours > 0 ? hours : 48;
+  return new Date(Date.now() - windowHours * 60 * 60 * 1000);
+}
+
+/**
+ * Bloqueia nova proposta quando CPF/e-mail já possuem User ou proposta ativa recente.
+ */
+async function noteActiveApplicationDuplicate({ cpf, email }) {
+  await noteDuplicateIdentifiers({ cpf, email });
+
+  const since = activeApplicationDedupSince();
+  const normalizedCpf = normalizeCpfDigits(cpf);
+  const normalizedEmail = normalizeEmail(email);
+  const statusFilter = { notIn: APPLICATION_TERMINAL_STATUSES };
+
+  if (normalizedCpf) {
+    const activeByCpf = await prisma.accountApplication.findFirst({
+      where: {
+        cpf: normalizedCpf,
+        status: statusFilter,
+        createdAt: { gte: since },
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeByCpf) {
+      throw httpError(
+        409,
+        'APPLICATION_CPF_ACTIVE',
+        'Já existe uma proposta de abertura em andamento para este CPF. Aguarde a análise ou faça login.'
+      );
+    }
+  }
+
+  if (normalizedEmail) {
+    const activeByEmail = await prisma.accountApplication.findFirst({
+      where: {
+        email: normalizedEmail,
+        status: statusFilter,
+        createdAt: { gte: since },
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeByEmail) {
+      throw httpError(
+        409,
+        'APPLICATION_EMAIL_ACTIVE',
+        'Já existe uma proposta de abertura em andamento para este e-mail. Aguarde a análise ou faça login.'
+      );
+    }
+  }
+
   return [];
 }
 
@@ -349,6 +409,7 @@ module.exports = {
   getApplicationStatusForSession,
   expireApplicationIfNeeded,
   noteDuplicateIdentifiers,
+  noteActiveApplicationDuplicate,
   updateApplicationFromSession,
   toPublicStatus,
   TERMINAL_STATUSES,
