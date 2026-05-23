@@ -2123,8 +2123,11 @@ const Register = () => {
               fileName="selfie.jpg"
               onCancel={() => setInlineSelfieCameraActive(false)}
               onCapture={(file) => {
-                storeLinearArtifactFile(file, 'SELFIE_PORTRAIT');
-                setInlineSelfieCameraActive(false);
+                const stored = storeLinearArtifactFile(file, 'SELFIE_PORTRAIT');
+                if (stored) {
+                  setInlineSelfieCameraActive(false);
+                  advanceLinearCaptureStep();
+                }
               }}
             />
           ) : (

@@ -41,6 +41,7 @@
   background: transparent;
   box-shadow: none;
   outline: none;
+  clip-path: inset(0 2px 0 2px);
 }
 
 .face-video-root--register .face-video-stage--preview,
@@ -69,7 +70,7 @@
 /* Cadastro linear: máscara limpa fora do oval */
 .face-video-root--register .face-video-mask {
   position: absolute;
-  inset: 0;
+  inset: -2px;
   pointer-events: none;
   background: #fff;
   -webkit-mask-image: radial-gradient(
@@ -96,6 +97,12 @@
   border: 2px solid #fff;
   border-radius: 999px;
   pointer-events: none;
+  box-shadow: none;
+}
+
+.face-video-root--register .face-video-live {
+  border: 0;
+  outline: none;
   box-shadow: none;
 }
 
