@@ -55,6 +55,9 @@ const ONBOARDING_SESSION_ERROR_CODES = new Set([
 const ONBOARDING_SESSION_LOST_MESSAGE =
   'Sua sessão de proposta expirou. Reinicie o cadastro para continuar com segurança.';
 
+const ONBOARDING_KYC_START_FAILED_MESSAGE =
+  'Não conseguimos iniciar sua verificação. Tente novamente.';
+
 function isOnboardingSessionLostError(err) {
   return Boolean(err?.code && ONBOARDING_SESSION_ERROR_CODES.has(err.code));
 }
@@ -247,6 +250,8 @@ const Register = () => {
   const registrationPostSucceededRef = useRef(false);
   /** Bloqueia GET status/KYC após reinício ou enquanto estado local ainda não reflete proposta ativa. */
   const skipOnboardingApiProbeRef = useRef(false);
+  /** true somente após GET /applications/current/status 200 nesta sessão de cadastro. */
+  const onboardingSessionReadyRef = useRef(false);
   const scrollAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const previewRegistry = useRef([]);
@@ -320,6 +325,7 @@ const Register = () => {
         setApplicationStatus(st || null);
         setAccountCreated(true);
         setOnboardingSessionLost(false);
+        onboardingSessionReadyRef.current = true;
         if (st === 'DOCUMENTS_APPROVED') {
           setCurrentStep(STEP.FINAL_TERMS);
         } else if (st === 'DOCUMENTS_PENDING' || st === 'DATA_RECEIVED') {
@@ -367,6 +373,7 @@ const Register = () => {
 
   useEffect(() => {
     if (!ONBOARDING_REGISTER || skipOnboardingApiProbeRef.current) return undefined;
+    if (!onboardingSessionReadyRef.current) return undefined;
     if (!accountCreated || onboardingSessionLost) return undefined;
     if (currentStep < STEP.DOC_FRONT || currentStep > STEP.KYC_REVIEW) return undefined;
 
@@ -377,6 +384,7 @@ const Register = () => {
       } catch (err) {
         if (!cancelled && !skipOnboardingApiProbeRef.current && isOnboardingSessionLostError(err)) {
           setAccountCreated(false);
+          onboardingSessionReadyRef.current = false;
           setOnboardingSessionLost(true);
         }
       }
@@ -427,6 +435,7 @@ const Register = () => {
   const hasActiveOnboardingProposal = useCallback(
     () =>
       ONBOARDING_REGISTER &&
+      onboardingSessionReadyRef.current &&
       accountCreated &&
       !onboardingSessionLost &&
       !skipOnboardingApiProbeRef.current,
@@ -459,6 +468,7 @@ const Register = () => {
       }
       if (ONBOARDING_REGISTER && isOnboardingSessionLostError(err)) {
         setAccountCreated(false);
+        onboardingSessionReadyRef.current = false;
         setOnboardingSessionLost(true);
       }
       throw e;
@@ -594,6 +604,7 @@ const Register = () => {
       }
     });
     previewRegistry.current = [];
+    onboardingSessionReadyRef.current = false;
     setAccountCreated(false);
     setOnboardingSessionLost(false);
     setApplicationStatus(null);
@@ -741,23 +752,49 @@ const Register = () => {
 
   const onSubmitOnboardingTerms = async (data) => {
     setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
+    onboardingSessionReadyRef.current = false;
     try {
       if (!accountCreated) {
         await createApplication();
       }
       await updateCurrentApplication(buildOnboardingPatchBody(data));
-      setAccountCreated(true);
-      setApplicationStatus('DATA_RECEIVED');
-      setOnboardingSessionLost(false);
-      if (hasActiveOnboardingProposal()) {
-        await refreshKycStatus().catch(() => {});
+
+      const statusRes = await getCurrentApplicationStatus();
+      const st = statusRes?.data?.status;
+      if (!st) {
+        throw Object.assign(new Error(ONBOARDING_KYC_START_FAILED_MESSAGE), {
+          code: 'ONBOARDING_SESSION_REQUIRED',
+          status: 401,
+        });
       }
+
+      setApplicationStatus(st);
+      setAccountCreated(true);
+      setOnboardingSessionLost(false);
+      onboardingSessionReadyRef.current = true;
+
+      try {
+        const kyc = await getOnboardingKycStatus().then((r) => r.data);
+        setKycStatus(kyc);
+      } catch (kycErr) {
+        if (isOnboardingSessionLostError(kycErr)) {
+          setAccountCreated(false);
+          onboardingSessionReadyRef.current = false;
+          applyErrorMessage(ONBOARDING_KYC_START_FAILED_MESSAGE);
+          return;
+        }
+        if (import.meta.env.DEV) {
+          console.warn('[Register] KYC status prefetch skipped', kycErr?.code || kycErr?.message);
+        }
+      }
+
       setCurrentStep(STEP.DOC_FRONT);
     } catch (err) {
+      setAccountCreated(false);
+      onboardingSessionReadyRef.current = false;
       if (isOnboardingSessionLostError(err)) {
-        setAccountCreated(false);
-        setOnboardingSessionLost(true);
-        applyErrorMessage(ONBOARDING_SESSION_LOST_MESSAGE);
+        setOnboardingSessionLost(false);
+        applyErrorMessage(ONBOARDING_KYC_START_FAILED_MESSAGE);
         return;
       }
       const msg =
@@ -1543,63 +1580,64 @@ const Register = () => {
 
   const renderTermsStep = () => (
     <>
-      <div className="mb-7">
-        <p className="mb-2 text-[0.78rem] font-semibold uppercase tracking-wide text-agilbank-primary">
-          {ONBOARDING_REGISTER ? 'Verificação de segurança' : 'Finalização'}
-        </p>
+      <div className="mb-6">
         <h1 className="text-[1.45rem] font-bold leading-tight text-gray-950 sm:text-2xl">
-          {ONBOARDING_REGISTER ? 'Confirme seus dados para continuar' : 'Revise e aceite os termos'}
+          {ONBOARDING_REGISTER ? 'Revise seus dados' : 'Revise e aceite os termos'}
         </h1>
         <p className="mt-3 text-[0.95rem] leading-relaxed text-gray-600">
           {ONBOARDING_REGISTER
-            ? 'Depois desta etapa, vamos pedir documento, selfie e, se necessário, vídeo facial. A conta só será criada após a aprovação.'
+            ? 'Confirme as informações abaixo e autorize a verificação para avançar com documento, selfie e vídeo facial.'
             : 'Assim criamos sua conta agora. Documento e selfie vêm nos próximos passos, na mesma tela.'}
         </p>
       </div>
 
-      <section className="mb-7 rounded-xl bg-gray-50 px-4 py-3.5" aria-label="Resumo dos dados">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-[0.82rem] font-semibold uppercase tracking-wide text-gray-500">Dados informados</h2>
-          <CheckCircleIcon className="h-5 w-5 shrink-0 text-agilbank-primary" aria-hidden />
+      <section className="mb-6 border-y border-gray-100 py-2" aria-label="Resumo dos dados">
+        <div className="flex items-center justify-between py-2">
+          <h2 className="text-[0.78rem] font-semibold uppercase tracking-wide text-gray-500">Dados informados</h2>
+          <span className="text-[0.78rem] font-semibold text-agilbank-primary">Conferir</span>
         </div>
-        <dl className="space-y-3 text-[0.92rem] leading-snug">
-          <div>
-            <dt className="text-[0.75rem] font-medium uppercase tracking-wide text-gray-400">Nome</dt>
-            <dd className="mt-1 break-words font-semibold text-gray-950">{watchedValues.nomeCompleto || '—'}</dd>
+        <dl className="divide-y divide-gray-100 text-[0.92rem] leading-snug">
+          <div className="flex items-start justify-between gap-4 py-3">
+            <dt className="shrink-0 text-gray-500">Nome</dt>
+            <dd className="min-w-0 max-w-[68%] break-words text-right font-semibold text-gray-950">
+              {watchedValues.nomeCompleto || '—'}
+            </dd>
           </div>
-          <div>
-            <dt className="text-[0.75rem] font-medium uppercase tracking-wide text-gray-400">E-mail</dt>
-            <dd className="mt-1 break-all font-semibold text-gray-950">{watchedValues.email || '—'}</dd>
+          <div className="flex items-start justify-between gap-4 py-3">
+            <dt className="shrink-0 text-gray-500">E-mail</dt>
+            <dd className="min-w-0 max-w-[68%] break-all text-right font-semibold text-gray-950">
+              {watchedValues.email || '—'}
+            </dd>
           </div>
-          <div>
-            <dt className="text-[0.75rem] font-medium uppercase tracking-wide text-gray-400">CPF</dt>
-            <dd className="mt-1 font-semibold text-gray-950">{watchedValues.cpf || '—'}</dd>
+          <div className="flex items-start justify-between gap-4 py-3">
+            <dt className="shrink-0 text-gray-500">CPF</dt>
+            <dd className="font-semibold text-gray-950">{watchedValues.cpf || '—'}</dd>
           </div>
         </dl>
       </section>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {ONBOARDING_REGISTER ? (
           <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 transition-colors ${
               errors.aceitaConsentimentoBiometrico
                 ? 'border-red-200 bg-red-50/60'
-                : 'border-gray-200 bg-white active:bg-gray-50'
+                : 'border-agilbank-primary/25 bg-white active:bg-blue-50/40'
             }`}
           >
             <input
               type="checkbox"
-              className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
+              className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
               {...register('aceitaConsentimentoBiometrico', {
                 required: 'Para continuar, autorize a verificação de segurança.'
               })}
             />
             <span className="min-w-0">
-              <span className="block text-[0.95rem] font-semibold leading-snug text-gray-950">
-                Autorizo a verificação de segurança
+              <span className="block text-[0.94rem] font-semibold leading-snug text-gray-950">
+                Autorizar verificação de segurança
               </span>
-              <span className="mt-1.5 block text-[0.86rem] leading-relaxed text-gray-600">
-                Uso dos meus dados, documento, selfie e vídeo facial para validar a abertura da conta.
+              <span className="mt-1 block text-[0.84rem] leading-relaxed text-gray-600">
+                Permito o uso de dados, documento, selfie e vídeo facial para validar minha proposta.
               </span>
               {errors.aceitaConsentimentoBiometrico?.message ? (
                 <span className="mt-2 flex gap-2 text-[0.82rem] font-medium leading-snug text-red-700" role="alert">
@@ -1631,21 +1669,21 @@ const Register = () => {
           <p className="text-sm text-red-600">{errors.aceitaTermos.message}</p>
         ) : null}
         <label
-          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-            isOnboardingFlatShell ? 'border-gray-200 bg-white active:bg-gray-50' : 'border-gray-100 bg-gray-50'
+          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 transition-colors ${
+            isOnboardingFlatShell ? 'border-gray-200 bg-gray-50/70 active:bg-gray-100' : 'border-gray-100 bg-gray-50'
           }`}
         >
           <input
             type="checkbox"
-            className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
+            className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-agilbank-primary focus:ring-agilbank-primary"
             {...register('aceitaComunicacoes')}
           />
           <span className="min-w-0">
-            <span className="block text-[0.95rem] font-semibold leading-snug text-gray-950">
-              Quero receber novidades
+            <span className="block text-[0.9rem] font-semibold leading-snug text-gray-800">
+              Receber novidades
             </span>
-            <span className="mt-1.5 block text-[0.86rem] leading-relaxed text-gray-600">
-              Comunicações sobre produtos e serviços AgilBank.
+            <span className="mt-1 block text-[0.82rem] leading-relaxed text-gray-500">
+              Produtos, serviços e avisos comerciais do AgilBank.
             </span>
           </span>
         </label>
