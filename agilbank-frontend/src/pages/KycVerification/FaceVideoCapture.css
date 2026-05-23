@@ -41,7 +41,7 @@
   background: transparent;
   box-shadow: none;
   outline: none;
-  clip-path: inset(0 2px 0 2px);
+  clip-path: inset(0 0 0 0);
 }
 
 .face-video-root--register .face-video-stage--preview,
@@ -70,9 +70,10 @@
 /* Cadastro linear: máscara limpa fora do oval */
 .face-video-root--register .face-video-mask {
   position: absolute;
-  inset: -2px;
+  inset: -8px;
   pointer-events: none;
   background: #fff;
+  z-index: 2;
   -webkit-mask-image: radial-gradient(
     ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
     transparent 0%,
@@ -98,12 +99,24 @@
   border-radius: 999px;
   pointer-events: none;
   box-shadow: none;
+  z-index: 3;
 }
 
 .face-video-root--register .face-video-live {
   border: 0;
   outline: none;
   box-shadow: none;
+}
+
+.face-video-root--register .face-video-stage:not(.face-video-stage--preview)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 10px 0 0 #fff,
+    inset -10px 0 0 #fff;
+  z-index: 4;
 }
 
 /* Legado KYC autenticado */
