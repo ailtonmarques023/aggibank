@@ -44,6 +44,7 @@ import {
 } from '../../services/onboardingService';
 import { resolveRegisterFailure } from '../../services/registerMessage';
 import FaceVideoCapture from '../KycVerification/FaceVideoCapture';
+import LinearCameraCapture from './LinearCameraCapture';
 
 const ONBOARDING_LINEAR = isOnboardingLinearSubmitEnabled();
 const ONBOARDING_REGISTER = isOnboardingRegisterEnabled() && !ONBOARDING_LINEAR;
@@ -319,6 +320,8 @@ const Register = () => {
   const [finalizeMessage, setFinalizeMessage] = useState('');
   const [linearProtocolNumber, setLinearProtocolNumber] = useState('');
   const [linearSubmitMessage, setLinearSubmitMessage] = useState('');
+  /** Sessão de captura por getUserMedia (documento/selfie linear). */
+  const [linearCameraSession, setLinearCameraSession] = useState(null);
 
   const watchedValues = watch();
   const requiresFaceVideo = ONBOARDING_LINEAR
@@ -1098,6 +1101,25 @@ const Register = () => {
   };
 
   const openLinearCamera = () => {
+    const at = artifactForUiStep(currentStep);
+    if (!at || at === 'FACE_VIDEO') return;
+
+    if (ONBOARDING_LINEAR) {
+      const isSelfie = currentStep === STEP.SELFIE;
+      const isFront = currentStep === STEP.DOC_FRONT;
+      setLinearCameraSession({
+        artifactType: at,
+        facingMode: isSelfie ? 'user' : 'environment',
+        fileName: isSelfie ? 'selfie.jpg' : isFront ? 'document-front.jpg' : 'document-back.jpg',
+        title: isSelfie ? 'Selfie de verificação' : isFront ? 'Frente do documento' : 'Verso do documento',
+        captureLabel: isSelfie ? 'Capturar selfie' : 'Capturar foto',
+        permissionErrorMessage: isSelfie
+          ? 'Permita o acesso à câmera para tirar sua selfie.'
+          : 'Permita o acesso à câmera para fotografar o documento.',
+      });
+      return;
+    }
+
     const input = fileInputCameraRef.current;
     if (!input) return;
     if (currentStep === STEP.SELFIE) {
@@ -2843,6 +2865,22 @@ const Register = () => {
                 : uploadPhaseCopy?.detail ?? 'Não feche o app até a barra sumir.'}
             </p>
           </div>
+        ) : null}
+
+        {ONBOARDING_LINEAR && linearCameraSession ? (
+          <LinearCameraCapture
+            open
+            facingMode={linearCameraSession.facingMode}
+            fileName={linearCameraSession.fileName}
+            title={linearCameraSession.title}
+            captureLabel={linearCameraSession.captureLabel}
+            permissionErrorMessage={linearCameraSession.permissionErrorMessage}
+            onClose={() => setLinearCameraSession(null)}
+            onCapture={(file) => {
+              storeLinearArtifactFile(file, linearCameraSession.artifactType);
+              setLinearCameraSession(null);
+            }}
+          />
         ) : null}
       </div>
     </div>

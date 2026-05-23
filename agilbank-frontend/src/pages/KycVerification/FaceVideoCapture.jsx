@@ -431,9 +431,8 @@ export default function FaceVideoCapture({
             />
             {isRegister ? (
               <>
-                <div className="face-video-mask face-video-mask--blur pointer-events-none absolute inset-0" aria-hidden />
-                <div className="face-video-mask face-video-mask--dim pointer-events-none absolute inset-0" aria-hidden />
-                <div className="face-video-oval-frame" aria-hidden />
+                <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
+                <div className="face-video-oval" aria-hidden />
                 {phase === 'recording' ? (
                   <div
                     className="face-video-oval-progress"

@@ -25,18 +25,19 @@
 }
 
 .face-video-root--register .face-video-stage {
-  aspect-ratio: 4 / 5;
-  max-height: min(62vh, 460px);
   width: 100%;
-  max-width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: min(62vh, 460px);
   margin-top: 0.125rem;
   margin-bottom: 0.75rem;
-  border-radius: 1.125rem;
+  border-radius: 16px;
+  background: #000;
   box-shadow:
     0 4px 24px rgba(0, 51, 102, 0.12),
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
+.face-video-stage video,
 .face-video-live {
   width: 100%;
   height: 100%;
@@ -55,54 +56,45 @@
   object-position: center center;
 }
 
-/* Oval: ~65% × ~77%, levemente acima do centro vertical */
-.face-video-root--register {
-  --face-oval-x: 50%;
-  --face-oval-y: 42%;
-  --face-oval-w: 65%;
-  --face-oval-h: 77%;
-}
-
+/* Máscara + oval — centro vertical ~56% (rosto) */
 .face-video-mask {
   background: rgba(0, 20, 40, 0.48);
   -webkit-mask-image: radial-gradient(ellipse 62% 76% at 50% 44%, transparent 96%, black 100%);
   mask-image: radial-gradient(ellipse 62% 76% at 50% 44%, transparent 96%, black 100%);
 }
 
-.face-video-root--register .face-video-mask--blur {
-  background: rgba(255, 255, 255, 0.2);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  -webkit-mask-image: radial-gradient(
-    ellipse var(--face-oval-w) var(--face-oval-h) at var(--face-oval-x) var(--face-oval-y),
-    transparent 98%,
-    black 100%
-  );
-  mask-image: radial-gradient(
-    ellipse var(--face-oval-w) var(--face-oval-h) at var(--face-oval-x) var(--face-oval-y),
-    transparent 98%,
-    black 100%
-  );
-}
-
-.face-video-root--register .face-video-mask--dim {
-  background: rgba(0, 35, 70, 0.38);
-  -webkit-mask-image: radial-gradient(
-    ellipse var(--face-oval-w) var(--face-oval-h) at var(--face-oval-x) var(--face-oval-y),
-    transparent 98%,
-    black 100%
-  );
-  mask-image: radial-gradient(
-    ellipse var(--face-oval-w) var(--face-oval-h) at var(--face-oval-x) var(--face-oval-y),
-    transparent 98%,
-    black 100%
-  );
+.face-video-root--register .face-video-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  pointer-events: none;
+  -webkit-mask:
+    radial-gradient(ellipse 36% 43% at 50% 56%, transparent 0 96%, #000 98%);
+  mask:
+    radial-gradient(ellipse 36% 43% at 50% 56%, transparent 0 96%, #000 98%);
 }
 
 .face-video-oval {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.face-video-root--register .face-video-oval {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 72%;
+  height: 86%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 0 28px rgba(0, 0, 0, 0.18);
 }
 
 .face-video-oval-ring {
@@ -115,28 +107,14 @@
   -webkit-mask: radial-gradient(ellipse 48% 48% at 50% 50%, transparent 98%, black 100%);
 }
 
-.face-video-root--register .face-video-oval-frame {
-  position: absolute;
-  left: var(--face-oval-x);
-  top: var(--face-oval-y);
-  width: var(--face-oval-w);
-  height: var(--face-oval-h);
-  transform: translate(-50%, -50%);
-  border: 2px solid rgba(255, 255, 255, 0.75);
-  border-radius: 50%;
-  box-sizing: border-box;
-  pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
 .face-video-root--register .face-video-oval-progress {
   position: absolute;
-  left: var(--face-oval-x);
-  top: var(--face-oval-y);
-  width: var(--face-oval-w);
-  height: var(--face-oval-h);
+  left: 50%;
+  top: 56%;
+  width: 72%;
+  height: 86%;
   transform: translate(-50%, -50%);
-  border-radius: 50%;
+  border-radius: 999px;
   padding: 2px;
   box-sizing: border-box;
   pointer-events: none;
