@@ -44,7 +44,6 @@ import {
 } from '../../services/onboardingService';
 import { resolveRegisterFailure } from '../../services/registerMessage';
 import FaceVideoCapture from '../KycVerification/FaceVideoCapture';
-import LinearCameraCapture from './LinearCameraCapture';
 import InlineDocumentCamera from './InlineDocumentCamera';
 
 const ONBOARDING_LINEAR = isOnboardingLinearSubmitEnabled();
@@ -322,8 +321,8 @@ const Register = () => {
   const [linearProtocolNumber, setLinearProtocolNumber] = useState('');
   const [linearSubmitMessage, setLinearSubmitMessage] = useState('');
   /** Sessão de captura por getUserMedia (documento/selfie linear). */
-  const [linearCameraSession, setLinearCameraSession] = useState(null);
   const [inlineDocumentCameraActive, setInlineDocumentCameraActive] = useState(false);
+  const [inlineSelfieCameraActive, setInlineSelfieCameraActive] = useState(false);
 
   const watchedValues = watch();
   const requiresFaceVideo = ONBOARDING_LINEAR
@@ -336,6 +335,7 @@ const Register = () => {
 
   useEffect(() => {
     setInlineDocumentCameraActive(false);
+    setInlineSelfieCameraActive(false);
   }, [currentStep]);
 
   useEffect(() => {
@@ -661,7 +661,7 @@ const Register = () => {
     setLinearProtocolNumber('');
     setLinearSubmitMessage('');
     setInlineDocumentCameraActive(false);
-    setLinearCameraSession(null);
+    setInlineSelfieCameraActive(false);
     resetRegisterForm(REGISTER_FORM_DEFAULTS);
     setCurrentStep(STEP.CPF);
     window.setTimeout(() => {
@@ -1114,15 +1114,8 @@ const Register = () => {
 
     if (ONBOARDING_LINEAR) {
       if (currentStep === STEP.SELFIE) {
-        setLinearCameraSession({
-          artifactType: at,
-          variant: 'selfie',
-          facingMode: 'user',
-          fileName: 'selfie.jpg',
-          title: 'Selfie de verificação',
-          captureLabel: 'Capturar selfie',
-          permissionErrorMessage: 'Permita o acesso à câmera para tirar sua selfie.',
-        });
+        setInlineSelfieCameraActive(true);
+        setKycStepError('');
         return;
       }
       if (currentStep === STEP.DOC_FRONT || currentStep === STEP.DOC_BACK) {
@@ -2065,6 +2058,7 @@ const Register = () => {
           {ONBOARDING_LINEAR && inlineDocumentCameraActive && !previewUrl ? (
             <InlineDocumentCamera
               active
+              variant="document"
               fileName={isFront ? 'document-front.jpg' : 'document-back.jpg'}
               permissionErrorMessage="Permita o acesso à câmera para fotografar o documento."
               onCancel={() => setInlineDocumentCameraActive(false)}
@@ -2122,8 +2116,21 @@ const Register = () => {
             : 'Tire uma selfie em local iluminado. Usamos apenas para confirmar que é você — não é aprovação de crédito.'}
         </p>
         <div className="space-y-4">
-          {renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda', ONBOARDING_LINEAR ? 'portrait' : 'document')}
-          {ONBOARDING_LINEAR ? (
+          {ONBOARDING_LINEAR && inlineSelfieCameraActive && !previewUrl ? (
+            <InlineDocumentCamera
+              active
+              variant="selfie"
+              fileName="selfie.jpg"
+              onCancel={() => setInlineSelfieCameraActive(false)}
+              onCapture={(file) => {
+                storeLinearArtifactFile(file, 'SELFIE_PORTRAIT');
+                setInlineSelfieCameraActive(false);
+              }}
+            />
+          ) : (
+            renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda', ONBOARDING_LINEAR ? 'portrait' : 'document')
+          )}
+          {ONBOARDING_LINEAR && !inlineSelfieCameraActive ? (
             <label className="register-profile-opt flex cursor-pointer items-start gap-2.5 py-1">
               <input
                 type="checkbox"
@@ -2135,15 +2142,17 @@ const Register = () => {
               </span>
             </label>
           ) : null}
-          {(ONBOARDING_LINEAR || !isOnboardingKycUi) && kycStepError ? (
+          {(ONBOARDING_LINEAR || !isOnboardingKycUi) && kycStepError && (!ONBOARDING_LINEAR || !inlineSelfieCameraActive) ? (
             <div className="flex gap-3 rounded-xl border border-red-200/90 bg-red-50 p-4 text-[0.875rem]" role="alert">
               <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-red-500" aria-hidden />
               <p className="break-words text-red-900">{kycStepError}</p>
             </div>
           ) : null}
-          <p className="text-center text-[0.75rem] leading-snug text-gray-500">
-            JPG, PNG ou WebP · até {Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB
-          </p>
+          {!inlineSelfieCameraActive || !ONBOARDING_LINEAR ? (
+            <p className="text-center text-[0.75rem] leading-snug text-gray-500">
+              JPG, PNG ou WebP · até {Math.round(KYC_MAX_FILE_BYTES / (1024 * 1024))} MB
+            </p>
+          ) : null}
         </div>
       </>
     );
@@ -2484,6 +2493,9 @@ const Register = () => {
       );
     }
     if (ONBOARDING_LINEAR && inlineDocumentCameraActive && (currentStep === STEP.DOC_FRONT || currentStep === STEP.DOC_BACK)) {
+      return null;
+    }
+    if (ONBOARDING_LINEAR && inlineSelfieCameraActive && currentStep === STEP.SELFIE) {
       return null;
     }
     if (ONBOARDING_LINEAR && currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE) {
@@ -2929,27 +2941,6 @@ const Register = () => {
                 : uploadPhaseCopy?.detail ?? 'Não feche o app até a barra sumir.'}
             </p>
           </div>
-        ) : null}
-
-        {ONBOARDING_LINEAR && linearCameraSession ? (
-          <LinearCameraCapture
-            open
-            variant={linearCameraSession.variant}
-            facingMode={linearCameraSession.facingMode}
-            fileName={linearCameraSession.fileName}
-            title={linearCameraSession.title}
-            captureLabel={linearCameraSession.captureLabel}
-            guideLabel={linearCameraSession.guideLabel}
-            permissionErrorMessage={linearCameraSession.permissionErrorMessage}
-            onClose={() => setLinearCameraSession(null)}
-            onCapture={(file) => {
-              const stored = storeLinearArtifactFile(file, linearCameraSession.artifactType);
-              if (stored) {
-                setLinearCameraSession(null);
-                advanceLinearCaptureStep();
-              }
-            }}
-          />
         ) : null}
       </div>
     </div>

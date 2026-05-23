@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Button from '../../components/Button';
 
 /**
- * Câmera inline para captura de documento (cadastro linear).
+ * Câmera inline para captura de documento ou selfie (cadastro linear).
  * @param {{
  *   active: boolean;
+ *   variant?: 'document' | 'selfie';
  *   fileName?: string;
+ *   captureLabel?: string;
  *   permissionErrorMessage?: string;
  *   onCapture: (file: File) => void;
  *   onCancel: () => void;
@@ -13,11 +15,21 @@ import Button from '../../components/Button';
  */
 export default function InlineDocumentCamera({
   active,
+  variant = 'document',
   fileName = 'document.jpg',
-  permissionErrorMessage = 'Permita o acesso à câmera para fotografar o documento.',
+  captureLabel,
+  permissionErrorMessage,
   onCapture,
   onCancel,
 }) {
+  const isSelfie = variant === 'selfie';
+  const resolvedCaptureLabel = captureLabel || (isSelfie ? 'Capturar selfie' : 'Capturar foto');
+  const resolvedPermissionMessage =
+    permissionErrorMessage ||
+    (isSelfie
+      ? 'Permita o acesso à câmera para tirar sua selfie.'
+      : 'Permita o acesso à câmera para fotografar o documento.');
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -45,7 +57,7 @@ export default function InlineDocumentCamera({
   const startCamera = useCallback(async () => {
     setError('');
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError(permissionErrorMessage);
+      setError(resolvedPermissionMessage);
       setPhase('error');
       return;
     }
@@ -59,11 +71,13 @@ export default function InlineDocumentCamera({
       });
     };
 
+    const idealFacing = isSelfie ? 'user' : 'environment';
+
     try {
       let stream;
       try {
         stream = await tryConstraints({
-          facingMode: { ideal: 'environment' },
+          facingMode: { ideal: idealFacing },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         });
@@ -79,15 +93,15 @@ export default function InlineDocumentCamera({
     } catch (err) {
       const name = err && err.name ? String(err.name) : '';
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        setError(permissionErrorMessage);
+        setError(resolvedPermissionMessage);
       } else if (name === 'NotFoundError') {
         setError('Nenhuma câmera foi encontrada neste dispositivo.');
       } else {
-        setError(permissionErrorMessage);
+        setError(resolvedPermissionMessage);
       }
       setPhase('error');
     }
-  }, [permissionErrorMessage, stopStream]);
+  }, [isSelfie, resolvedPermissionMessage, stopStream]);
 
   useEffect(() => {
     if (!active) {
@@ -128,7 +142,13 @@ export default function InlineDocumentCamera({
       setCapturing(false);
       return;
     }
+    ctx.save();
+    if (isSelfie) {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0, w, h);
+    ctx.restore();
 
     canvas.toBlob(
       (blob) => {
@@ -151,16 +171,16 @@ export default function InlineDocumentCamera({
 
   return (
     <div className="document-camera-inline">
-      <div className="document-camera-stage">
+      <div className={`document-camera-stage ${isSelfie ? 'document-camera-stage--selfie' : ''}`}>
         <video
           ref={videoRef}
           className="document-camera-video"
           playsInline
           muted
           autoPlay
-          aria-label="Pré-visualização da câmera para documento"
+          aria-label={isSelfie ? 'Pré-visualização da câmera para selfie' : 'Pré-visualização da câmera para documento'}
         />
-        <div className="document-camera-frame" aria-hidden />
+        {!isSelfie ? <div className="document-camera-frame" aria-hidden /> : null}
       </div>
 
       <canvas ref={canvasRef} className="hidden" aria-hidden />
@@ -182,7 +202,7 @@ export default function InlineDocumentCamera({
               onClick={handleCapture}
               disabled={capturing}
             >
-              {capturing ? 'Capturando…' : 'Capturar foto'}
+              {capturing ? 'Capturando…' : resolvedCaptureLabel}
             </Button>
             <button type="button" className="document-camera-cancel" onClick={handleCancel}>
               Cancelar

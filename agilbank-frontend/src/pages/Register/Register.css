@@ -138,6 +138,10 @@
   text-decoration: underline;
 }
 
+.document-camera-stage--selfie .document-camera-video {
+  transform: scaleX(-1);
+}
+
 .selfie-preview-frame,
 .face-preview-frame,
 .register-media-preview {
