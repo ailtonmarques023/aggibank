@@ -84,7 +84,8 @@
 }
 
 .linear-camera-stage--document {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 4;
+  max-height: min(58dvh, 31rem);
 }
 
 .linear-camera-video {
@@ -112,7 +113,7 @@
 
 .linear-camera-document-frame {
   position: relative;
-  width: min(86%, 22rem);
+  width: min(88%, 22rem);
   aspect-ratio: 1.586 / 1;
   border: 1px solid rgba(255, 255, 255, 0.75);
   border-radius: 0.625rem;

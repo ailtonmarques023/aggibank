@@ -289,6 +289,12 @@ export default function FaceVideoCapture({
     }
   };
 
+  useEffect(() => {
+    if (!isRegister || phase !== 'preview' || !recordedFile || uploadBusy) return;
+    void handleUseVideo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRegister, phase, recordedFile, uploadBusy]);
+
   const elapsedSec = Math.min(Math.ceil(elapsedMs / 1000), Math.ceil(recordMaxMs / 1000));
   const targetSec = Math.ceil(recordMaxMs / 1000);
   const minSec = recordMinMs / 1000;
@@ -501,7 +507,7 @@ export default function FaceVideoCapture({
           </Button>
         ) : null}
 
-        {phase === 'preview' ? (
+        {phase === 'preview' && !isRegister ? (
           <>
             <Button
               type="button"

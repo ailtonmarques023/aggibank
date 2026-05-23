@@ -2877,8 +2877,11 @@ const Register = () => {
             permissionErrorMessage={linearCameraSession.permissionErrorMessage}
             onClose={() => setLinearCameraSession(null)}
             onCapture={(file) => {
-              storeLinearArtifactFile(file, linearCameraSession.artifactType);
+              const stored = storeLinearArtifactFile(file, linearCameraSession.artifactType);
               setLinearCameraSession(null);
+              if (stored) {
+                advanceLinearCaptureStep();
+              }
             }}
           />
         ) : null}

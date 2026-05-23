@@ -4,6 +4,12 @@
 
 .face-video-root--register {
   margin-top: -0.5rem;
+  --face-oval-x: 50%;
+  --face-oval-y: 55%;
+  --face-oval-w: 72%;
+  --face-oval-h: 86%;
+  --face-oval-rx: 36%;
+  --face-oval-ry: 43%;
 }
 
 .face-video-register-title {
@@ -56,38 +62,34 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: rgba(255, 255, 255, 0.88);
   -webkit-mask-image: radial-gradient(
-    ellipse 36% 43% at 50% 55%,
+    ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
     transparent 0%,
-    transparent 96%,
-    black 98%,
+    transparent 99%,
     black 100%
   );
   mask-image: radial-gradient(
-    ellipse 36% 43% at 50% 55%,
+    ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
     transparent 0%,
-    transparent 96%,
-    black 98%,
+    transparent 99%,
     black 100%
   );
 }
 
 .face-video-root--register .face-video-oval {
   position: absolute;
-  left: 50%;
-  top: 55%;
-  width: 72%;
-  height: 86%;
+  left: var(--face-oval-x);
+  top: var(--face-oval-y);
+  width: var(--face-oval-w);
+  height: var(--face-oval-h);
   transform: translate(-50%, -50%);
-  border: 2px solid rgba(255, 255, 255, 0.82);
+  border: 2px solid rgba(255, 255, 255, 0.95);
   border-radius: 999px;
   pointer-events: none;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.25),
-    0 0 24px rgba(0, 0, 0, 0.16);
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 0 20px rgba(0, 0, 0, 0.12);
 }
 
 /* Legado KYC autenticado */
