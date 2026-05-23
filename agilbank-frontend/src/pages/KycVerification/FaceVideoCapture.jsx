@@ -412,7 +412,7 @@ export default function FaceVideoCapture({
         </p>
       ) : null}
 
-      <div className={`face-video-stage relative mx-auto mb-4 w-full ${isRegister ? '' : 'max-w-[320px]'}`}>
+      <div className={`face-video-stage relative mx-auto mb-4 w-full ${isRegister ? 'face-video-stage--register' : 'max-w-[320px]'} ${isRegister && phase === 'preview' ? 'face-video-stage--preview' : ''}`}>
         {phase === 'preview' ? (
           <video
             ref={videoPlaybackRef}

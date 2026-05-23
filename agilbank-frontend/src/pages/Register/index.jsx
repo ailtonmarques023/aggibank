@@ -1189,7 +1189,9 @@ const Register = () => {
     if (ONBOARDING_LINEAR) {
       const atLinear = artifactForUiStep(currentStep);
       if (!atLinear || atLinear === 'FACE_VIDEO') return;
-      storeLinearArtifactFile(file, atLinear);
+      if (storeLinearArtifactFile(file, atLinear)) {
+        advanceLinearCaptureStep();
+      }
       return;
     }
 
@@ -1972,21 +1974,52 @@ const Register = () => {
     FACE_VIDEO: ONBOARDING_LINEAR ? 'Verificação facial' : 'Vídeo facial',
   };
 
-  const renderKycImagePreview = (previewUrl, emptyLabel) =>
-    previewUrl ? (
-      <div className="overflow-hidden rounded-lg border border-gray-100 bg-gray-50/50">
-        <img src={previewUrl} alt="Pré-visualização do arquivo" className="mx-auto max-h-60 w-full object-contain" />
-      </div>
-    ) : ONBOARDING_LINEAR ? (
-      <div className="register-capture-placeholder flex min-h-[180px] items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50/80 px-4 py-10 text-center">
-        <p className="text-sm text-gray-500">{emptyLabel}</p>
-      </div>
-    ) : (
+  const renderKycImagePreview = (previewUrl, emptyLabel, previewVariant = 'document') => {
+    const isPortraitPreview = previewVariant === 'portrait';
+
+    if (previewUrl) {
+      return (
+        <div
+          className={
+            isPortraitPreview
+              ? 'selfie-preview-frame register-media-preview'
+              : 'overflow-hidden rounded-lg border border-gray-100 bg-gray-50/50'
+          }
+        >
+          <img
+            src={previewUrl}
+            alt="Pré-visualização do arquivo"
+            className={
+              isPortraitPreview
+                ? 'selfie-preview-frame__img'
+                : 'mx-auto max-h-60 w-full object-contain'
+            }
+          />
+        </div>
+      );
+    }
+
+    if (ONBOARDING_LINEAR) {
+      return (
+        <div
+          className={
+            isPortraitPreview
+              ? 'selfie-preview-frame selfie-preview-frame--empty register-media-preview flex min-h-[180px] items-center justify-center px-4 py-10 text-center'
+              : 'register-capture-placeholder flex min-h-[180px] items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50/80 px-4 py-10 text-center'
+          }
+        >
+          <p className="text-sm text-gray-500">{emptyLabel}</p>
+        </div>
+      );
+    }
+
+    return (
       <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl bg-white px-6 py-12 text-center">
         <PhotoIcon className="mb-3 h-10 w-10 text-gray-300" aria-hidden />
         <p className="text-sm text-gray-500">{emptyLabel}</p>
       </div>
     );
+  };
 
   const renderDocumentCaptureStep = () => {
     const at = artifactForUiStep(currentStep);
@@ -2036,8 +2069,11 @@ const Register = () => {
               permissionErrorMessage="Permita o acesso à câmera para fotografar o documento."
               onCancel={() => setInlineDocumentCameraActive(false)}
               onCapture={(file) => {
-                if (at) storeLinearArtifactFile(file, at);
-                setInlineDocumentCameraActive(false);
+                const stored = at ? storeLinearArtifactFile(file, at) : false;
+                if (stored) {
+                  setInlineDocumentCameraActive(false);
+                  advanceLinearCaptureStep();
+                }
               }}
             />
           ) : (
@@ -2086,7 +2122,7 @@ const Register = () => {
             : 'Tire uma selfie em local iluminado. Usamos apenas para confirmar que é você — não é aprovação de crédito.'}
         </p>
         <div className="space-y-4">
-          {renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda')}
+          {renderKycImagePreview(previewUrl, 'Nenhuma selfie selecionada ainda', ONBOARDING_LINEAR ? 'portrait' : 'document')}
           {ONBOARDING_LINEAR ? (
             <label className="register-profile-opt flex cursor-pointer items-start gap-2.5 py-1">
               <input
@@ -2907,8 +2943,11 @@ const Register = () => {
             permissionErrorMessage={linearCameraSession.permissionErrorMessage}
             onClose={() => setLinearCameraSession(null)}
             onCapture={(file) => {
-              storeLinearArtifactFile(file, linearCameraSession.artifactType);
-              setLinearCameraSession(null);
+              const stored = storeLinearArtifactFile(file, linearCameraSession.artifactType);
+              if (stored) {
+                setLinearCameraSession(null);
+                advanceLinearCaptureStep();
+              }
             }}
           />
         ) : null}
