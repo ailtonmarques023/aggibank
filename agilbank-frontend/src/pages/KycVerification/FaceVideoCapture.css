@@ -35,7 +35,7 @@
   max-height: min(62vh, 460px);
   margin-top: 0.125rem;
   margin-bottom: 0.875rem;
-  border-radius: 18px;
+  border-radius: 0;
   background: #fff;
   box-shadow: none;
 }
@@ -60,7 +60,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.96);
+  background: #fff;
   -webkit-mask-image: radial-gradient(
     ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
     transparent 0%,
@@ -82,12 +82,10 @@
   width: var(--face-oval-w);
   height: var(--face-oval-h);
   transform: translate(-50%, -50%);
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  border: 2px solid #fff;
   border-radius: 999px;
   pointer-events: none;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.65),
-    0 0 18px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 /* Legado KYC autenticado */
