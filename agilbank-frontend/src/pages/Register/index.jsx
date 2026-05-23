@@ -29,7 +29,9 @@ import {
   sha256HexFromFile,
 } from '../../services/kycService';
 import {
+  isOnboardingLinearSubmitEnabled,
   isOnboardingRegisterEnabled,
+  submitFullOnboardingApplication,
   createApplication,
   updateCurrentApplication,
   getCurrentApplicationStatus,
@@ -43,7 +45,12 @@ import {
 import { resolveRegisterFailure } from '../../services/registerMessage';
 import FaceVideoCapture from '../KycVerification/FaceVideoCapture';
 
-const ONBOARDING_REGISTER = isOnboardingRegisterEnabled();
+const ONBOARDING_LINEAR = isOnboardingLinearSubmitEnabled();
+const ONBOARDING_REGISTER = isOnboardingRegisterEnabled() && !ONBOARDING_LINEAR;
+const ONBOARDING_FLAT = ONBOARDING_LINEAR || ONBOARDING_REGISTER;
+
+const LINEAR_REQUIRES_FACE_VIDEO =
+  String(import.meta.env.VITE_FEATURE_KYC_REQUIRE_FACE_VIDEO || '').toLowerCase().trim() === 'true';
 
 const ONBOARDING_SESSION_ERROR_CODES = new Set([
   'ONBOARDING_SESSION_REQUIRED',
@@ -255,6 +262,13 @@ const Register = () => {
   const scrollAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const previewRegistry = useRef([]);
+  /** Arquivos KYC mantidos no dispositivo até o envio final (fluxo linear). */
+  const linearLocalFilesRef = useRef({
+    documentFront: null,
+    documentBack: null,
+    selfiePortrait: null,
+    faceVideo: null,
+  });
 
   const REGISTER_FORM_DEFAULTS = {
     nomeCompleto: '',
@@ -300,11 +314,13 @@ const Register = () => {
   const [onboardingSessionLost, setOnboardingSessionLost] = useState(false);
   const [finalizeBusy, setFinalizeBusy] = useState(false);
   const [finalizeMessage, setFinalizeMessage] = useState('');
+  const [linearProtocolNumber, setLinearProtocolNumber] = useState('');
+  const [linearSubmitMessage, setLinearSubmitMessage] = useState('');
 
   const watchedValues = watch();
-  const requiresFaceVideo = Boolean(
-    kycStatus?.requiredArtifacts?.includes('FACE_VIDEO')
-  );
+  const requiresFaceVideo = ONBOARDING_LINEAR
+    ? LINEAR_REQUIRES_FACE_VIDEO
+    : Boolean(kycStatus?.requiredArtifacts?.includes('FACE_VIDEO'));
 
   const cpfForErrorClear = watch('cpf');
   const emailForErrorClear = watch('email');
@@ -315,7 +331,7 @@ const Register = () => {
   }, [cpfForErrorClear, emailForErrorClear, senhaForErrorClear]);
 
   useEffect(() => {
-    if (!ONBOARDING_REGISTER || skipOnboardingApiProbeRef.current) return undefined;
+    if (!ONBOARDING_REGISTER || ONBOARDING_LINEAR || skipOnboardingApiProbeRef.current) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -372,7 +388,7 @@ const Register = () => {
   }, []);
 
   useEffect(() => {
-    if (!ONBOARDING_REGISTER || skipOnboardingApiProbeRef.current) return undefined;
+    if (!ONBOARDING_REGISTER || ONBOARDING_LINEAR || skipOnboardingApiProbeRef.current) return undefined;
     if (!onboardingSessionReadyRef.current) return undefined;
     if (!accountCreated || onboardingSessionLost) return undefined;
     if (currentStep < STEP.DOC_FRONT || currentStep > STEP.KYC_REVIEW) return undefined;
@@ -624,6 +640,14 @@ const Register = () => {
     setNeedsSilentLoginRetry(false);
     registeringRef.current = false;
     registrationPostSucceededRef.current = false;
+    linearLocalFilesRef.current = {
+      documentFront: null,
+      documentBack: null,
+      selfiePortrait: null,
+      faceVideo: null,
+    };
+    setLinearProtocolNumber('');
+    setLinearSubmitMessage('');
     resetRegisterForm(REGISTER_FORM_DEFAULTS);
     setCurrentStep(STEP.CPF);
     window.setTimeout(() => {
@@ -651,9 +675,120 @@ const Register = () => {
     }
   };
 
+  const advanceLinearCaptureStep = () => {
+    if (currentStep === STEP.DOC_FRONT) setCurrentStep(STEP.DOC_BACK);
+    else if (currentStep === STEP.DOC_BACK) setCurrentStep(STEP.SELFIE);
+    else if (currentStep === STEP.SELFIE) {
+      setCurrentStep(requiresFaceVideo ? STEP.FACE_VIDEO : STEP.FINAL_TERMS);
+    } else if (currentStep === STEP.FACE_VIDEO) setCurrentStep(STEP.FINAL_TERMS);
+  };
+
+  const buildLinearSubmitFormData = (data) => {
+    const fd = new FormData();
+    fd.append('cpf', String(data.cpf || '').replace(/\D/g, ''));
+    fd.append('dataNascimento', data.dataNascimento || '');
+    fd.append('nome', data.nomeCompleto || '');
+    fd.append('email', String(data.email || '').trim());
+    fd.append('telefone', String(data.telefone || '').replace(/\D/g, ''));
+    fd.append('senha', data.senha || '');
+    fd.append('cep', String(data.cep || '').replace(/\D/g, ''));
+    fd.append('rua', data.logradouro || '');
+    fd.append('numero', data.numero || '');
+    fd.append('complemento', data.complemento || '');
+    fd.append('bairro', data.bairro || '');
+    fd.append('cidade', data.cidade || '');
+    fd.append('estado', data.estado || '');
+    fd.append('profissao', data.profissao || '');
+    if (data.empresa) fd.append('empresa', data.empresa);
+    if (data.cargo) fd.append('cargo', data.cargo);
+    if (data.rendaMensal) fd.append('rendaMensal', data.rendaMensal);
+    fd.append('aceitaConsentimentoBiometrico', 'true');
+    fd.append('acceptedTerms', 'true');
+    fd.append('acceptedPrivacyPolicy', 'true');
+    fd.append('aceitaComunicacoes', data.aceitaComunicacoes ? 'true' : 'false');
+    const files = linearLocalFilesRef.current;
+    fd.append('documentFront', files.documentFront, files.documentFront.name || 'document-front.jpg');
+    fd.append('documentBack', files.documentBack, files.documentBack.name || 'document-back.jpg');
+    fd.append('selfiePortrait', files.selfiePortrait, files.selfiePortrait.name || 'selfie.jpg');
+    if (files.faceVideo) {
+      fd.append('faceVideo', files.faceVideo, files.faceVideo.name || 'face.webm');
+    }
+    return fd;
+  };
+
+  const handleLinearSubmitProposal = async () => {
+    const termsOk = await trigger(['aceitaTermosFinais', 'aceitaPoliticaPrivacidade']);
+    if (!termsOk) return;
+
+    const files = linearLocalFilesRef.current;
+    if (!files.documentFront || !files.documentBack || !files.selfiePortrait) {
+      applyErrorMessage('Envie a frente, o verso do documento e a selfie antes de enviar a proposta.');
+      setCurrentStep(STEP.DOC_FRONT);
+      return;
+    }
+    if (requiresFaceVideo && !files.faceVideo) {
+      applyErrorMessage('Envie o vídeo facial antes de enviar a proposta.');
+      setCurrentStep(STEP.FACE_VIDEO);
+      return;
+    }
+
+    setFinalizeBusy(true);
+    setError('');
+    setRegistrationLoadingCopy({
+      title: 'Enviando sua proposta com segurança...',
+      detail: 'Aguarde enquanto validamos seus dados e documentos.',
+    });
+
+    try {
+      const result = await submitFullOnboardingApplication(buildLinearSubmitFormData(watchedValues));
+      setLinearProtocolNumber(result.protocolNumber || '');
+      setLinearSubmitMessage(result.message || '');
+
+      if (result.status === 'FINALIZED') {
+        setFinalizeMessage(
+          result.message || 'Conta criada com sucesso. Enviamos um e-mail para confirmar seu cadastro.'
+        );
+        setCurrentStep(STEP.FINALIZE_SUCCESS);
+        return;
+      }
+      if (result.status === 'RESUBMISSION_REQUIRED') {
+        setCurrentStep(STEP.RESUBMISSION);
+        return;
+      }
+      setCurrentStep(STEP.PENDING_REVIEW);
+    } catch (err) {
+      const msg =
+        typeof err?.message === 'string' && err.message.trim()
+          ? sanitizeUserFacingError(err.message)
+          : 'Não foi possível enviar sua proposta. Tente novamente.';
+      applyErrorMessage(msg);
+    } finally {
+      setFinalizeBusy(false);
+      setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
+    }
+  };
+
   const prevStep = () => {
     setKycStepError('');
     setReviewError('');
+    if (ONBOARDING_LINEAR) {
+      if (currentStep <= STEP.CPF) {
+        setCurrentStep(STEP.WELCOME);
+        setError('');
+        return;
+      }
+      if (currentStep === STEP.DOC_FRONT) setCurrentStep(STEP.TERMS);
+      else if (currentStep === STEP.DOC_BACK) setCurrentStep(STEP.DOC_FRONT);
+      else if (currentStep === STEP.SELFIE) setCurrentStep(STEP.DOC_BACK);
+      else if (currentStep === STEP.FACE_VIDEO) setCurrentStep(STEP.SELFIE);
+      else if (currentStep === STEP.FINAL_TERMS) {
+        setCurrentStep(requiresFaceVideo ? STEP.FACE_VIDEO : STEP.SELFIE);
+      } else if (currentStep === STEP.PENDING_REVIEW || currentStep === STEP.RESUBMISSION) {
+        setCurrentStep(STEP.FINAL_TERMS);
+      }
+      setError('');
+      return;
+    }
     if (!accountCreated) {
       if (!ONBOARDING_REGISTER) setNeedsSilentLoginRetry(false);
       setCurrentStep((prev) => Math.max(prev - 1, STEP.WELCOME));
@@ -819,6 +954,13 @@ const Register = () => {
     setRegistrationLoadingCopy(REGISTER_LOADING_MESSAGES.intermediate);
 
     try {
+      if (ONBOARDING_LINEAR) {
+        const consentOk = await trigger(['aceitaConsentimentoBiometrico']);
+        if (!consentOk) return;
+        setCurrentStep(STEP.DOC_FRONT);
+        return;
+      }
+
       if (ONBOARDING_REGISTER) {
         await onSubmitOnboardingTerms(data);
         return;
@@ -927,6 +1069,34 @@ const Register = () => {
     const file = input.files && input.files[0];
     input.value = '';
     if (!file) return;
+
+    if (ONBOARDING_LINEAR) {
+      const atLinear = artifactForUiStep(currentStep);
+      if (!atLinear) return;
+      setKycStepError('');
+      const { ok, mime } = mimeAllowedForArtifact(file, atLinear);
+      if (!ok) {
+        setKycStepError(atLinear === 'FACE_VIDEO' ? 'Use vídeo WebM ou MP4.' : 'Use JPG, PNG ou WebP.');
+        return;
+      }
+      const maxBytes = atLinear === 'FACE_VIDEO' ? KYC_VIDEO_MAX_FILE_BYTES : KYC_MAX_FILE_BYTES;
+      if (file.size <= 0 || file.size > maxBytes) {
+        setKycStepError(`O arquivo deve ter até ${Math.round(maxBytes / (1024 * 1024))} MB.`);
+        return;
+      }
+      revokePreviewForType(atLinear);
+      const previewUrl = registerObjectUrl(URL.createObjectURL(file));
+      setLocalPreviewUrlByType((prev) => ({ ...prev, [atLinear]: previewUrl }));
+      const fieldKey =
+        atLinear === 'DOCUMENT_FRONT'
+          ? 'documentFront'
+          : atLinear === 'DOCUMENT_BACK'
+            ? 'documentBack'
+            : 'selfiePortrait';
+      linearLocalFilesRef.current[fieldKey] = file;
+      advanceLinearCaptureStep();
+      return;
+    }
 
     if (ONBOARDING_REGISTER && !hasActiveOnboardingProposal()) {
       setAccountCreated(false);
@@ -1110,6 +1280,16 @@ const Register = () => {
   };
 
   const handleFaceVideoFile = async (file, mime) => {
+    if (ONBOARDING_LINEAR) {
+      revokePreviewForType('FACE_VIDEO');
+      const previewUrl = registerObjectUrl(URL.createObjectURL(file));
+      setLocalPreviewUrlByType((prev) => ({ ...prev, FACE_VIDEO: previewUrl }));
+      linearLocalFilesRef.current.faceVideo = file;
+      setKycStepError('');
+      setCurrentStep(STEP.FINAL_TERMS);
+      return;
+    }
+
     if (ONBOARDING_REGISTER && !hasActiveOnboardingProposal()) {
       setAccountCreated(false);
       setOnboardingSessionLost(true);
@@ -1152,9 +1332,10 @@ const Register = () => {
 
   const progressIndex = pgNum;
 
-  const isOnboardingFlatShell = ONBOARDING_REGISTER;
+  const isOnboardingFlatShell = ONBOARDING_FLAT;
 
   const isOnboardingKycUi =
+    ONBOARDING_REGISTER &&
     isOnboardingFlatShell &&
     accountCreated &&
     currentStep >= STEP.DOC_FRONT &&
@@ -1164,8 +1345,8 @@ const Register = () => {
     isOnboardingFlatShell ? '' : ' shadow-lg shadow-agilbank-primary/20'
   }`;
 
-  const headerExitLabel = ONBOARDING_REGISTER ? 'Tenho conta' : accountCreated ? 'Ir ao app' : 'Tenho conta';
-  const headerExitTo = ONBOARDING_REGISTER ? '/login' : accountCreated ? '/transactions' : '/login';
+  const headerExitLabel = ONBOARDING_FLAT ? 'Tenho conta' : accountCreated ? 'Ir ao app' : 'Tenho conta';
+  const headerExitTo = ONBOARDING_FLAT ? '/login' : accountCreated ? '/transactions' : '/login';
 
   const scrollPaddingBottom =
     currentStep === STEP.WELCOME
@@ -1582,12 +1763,14 @@ const Register = () => {
     <>
       <div className="mb-6">
         <h1 className="text-[1.45rem] font-bold leading-tight text-gray-950 sm:text-2xl">
-          {ONBOARDING_REGISTER ? 'Revise seus dados' : 'Revise e aceite os termos'}
+          {ONBOARDING_FLAT ? 'Revise seus dados' : 'Revise e aceite os termos'}
         </h1>
         <p className="mt-3 text-[0.95rem] leading-relaxed text-gray-600">
-          {ONBOARDING_REGISTER
-            ? 'Confirme as informações abaixo e autorize a verificação para avançar com documento, selfie e vídeo facial.'
-            : 'Assim criamos sua conta agora. Documento e selfie vêm nos próximos passos, na mesma tela.'}
+          {ONBOARDING_LINEAR
+            ? 'Confirme suas informações e autorize a verificação. Os documentos serão enviados somente no final, em uma única proposta.'
+            : ONBOARDING_REGISTER
+              ? 'Confirme as informações abaixo e autorize a verificação para avançar com documento, selfie e vídeo facial.'
+              : 'Assim criamos sua conta agora. Documento e selfie vêm nos próximos passos, na mesma tela.'}
         </p>
       </div>
 
@@ -1617,7 +1800,7 @@ const Register = () => {
       </section>
 
       <div className="space-y-2.5">
-        {ONBOARDING_REGISTER ? (
+        {ONBOARDING_FLAT ? (
           <label
             className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 transition-colors ${
               errors.aceitaConsentimentoBiometrico
@@ -1835,12 +2018,22 @@ const Register = () => {
 
   const renderPendingReviewStep = () => (
     <>
-      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Verificação recebida</h1>
+      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
+        {ONBOARDING_LINEAR ? 'Proposta recebida' : 'Verificação recebida'}
+      </h1>
       <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-        Recebemos sua verificação de segurança. Você poderá acompanhar o status. Quando liberado, volte aqui ou faça login
-        para concluir os termos finais e criar sua conta.
+        {ONBOARDING_LINEAR
+          ? linearSubmitMessage ||
+            'Recebemos sua proposta de abertura. Você receberá uma atualização por e-mail.'
+          : 'Recebemos sua verificação de segurança. Você poderá acompanhar o status. Quando liberado, volte aqui ou faça login para concluir os termos finais e criar sua conta.'}
       </p>
-      {kycStatus?.message ? (
+      {ONBOARDING_LINEAR && linearProtocolNumber ? (
+        <p className={`text-sm text-gray-800 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Protocolo</span>
+          <span className="mt-1 block font-mono font-semibold text-gray-900">{linearProtocolNumber}</span>
+        </p>
+      ) : null}
+      {!ONBOARDING_LINEAR && kycStatus?.message ? (
         <p className={`text-sm text-gray-700 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}>
           {kycStatus.message}
         </p>
@@ -1852,7 +2045,9 @@ const Register = () => {
     <>
       <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Termos finais</h1>
       <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-        Sua verificação de segurança foi concluída. Aceite os termos para criar sua conta AgilBank.
+        {ONBOARDING_LINEAR
+          ? 'Revise e aceite os termos para enviar sua proposta completa de abertura de conta.'
+          : 'Sua verificação de segurança foi concluída. Aceite os termos para criar sua conta AgilBank.'}
       </p>
       <div className="space-y-0 divide-y divide-gray-100">
         <label className={`flex cursor-pointer items-start gap-3 py-4 ${isOnboardingFlatShell ? '' : 'rounded-xl border border-gray-200 bg-white p-4'}`}>
@@ -1899,9 +2094,12 @@ const Register = () => {
     <>
       <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Reenvio necessário</h1>
       <p className="mb-4 text-[0.95rem] leading-relaxed text-gray-600">
-        {kycStatus?.resubmissionMessage ||
-          kycStatus?.message ||
-          'Precisamos que você envie novamente alguns arquivos da verificação de segurança. Em breve você poderá reenviar por aqui.'}
+        {ONBOARDING_LINEAR
+          ? linearSubmitMessage ||
+            'Precisamos que você envie novamente alguns arquivos. Reinicie o cadastro e envie uma nova proposta.'
+          : kycStatus?.resubmissionMessage ||
+            kycStatus?.message ||
+            'Precisamos que você envie novamente alguns arquivos da verificação de segurança. Em breve você poderá reenviar por aqui.'}
       </p>
     </>
   );
@@ -2045,11 +2243,30 @@ const Register = () => {
           loading={loading}
           disabled={loading || (!ONBOARDING_REGISTER && needsSilentLoginRetry)}
         >
-          {ONBOARDING_REGISTER ? 'Continuar para verificação' : 'Criar conta'}
+          {ONBOARDING_LINEAR
+            ? 'Continuar para documentos'
+            : ONBOARDING_REGISTER
+              ? 'Continuar para verificação'
+              : 'Criar conta'}
         </Button>
       );
     }
     if (currentStep === STEP.FINAL_TERMS) {
+      if (ONBOARDING_LINEAR) {
+        return (
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className={primaryFooterBtnClass}
+            loading={finalizeBusy}
+            disabled={finalizeBusy}
+            onClick={handleLinearSubmitProposal}
+          >
+            {finalizeBusy ? 'Enviando…' : 'Enviar proposta'}
+          </Button>
+        );
+      }
       return (
         <Button
           type="button"
@@ -2075,17 +2292,30 @@ const Register = () => {
       );
     }
     if (currentStep >= STEP.DOC_FRONT && currentStep <= STEP.SELFIE) {
+      const hasPreview = localPreviewUrlByType[artifactForUiStep(currentStep)];
       return (
         <Button
           type="button"
           variant="primary"
           size="lg"
           className={primaryFooterBtnClass}
-          onClick={openPicker}
+          onClick={
+            ONBOARDING_LINEAR && hasPreview
+              ? advanceLinearCaptureStep
+              : openPicker
+          }
           disabled={uploadBusy || !!featureDisabledHint}
           loading={uploadBusy}
         >
-          {uploadBusy ? 'Enviando…' : localPreviewUrlByType[artifactForUiStep(currentStep)] ? 'Trocar foto e enviar' : 'Selecionar foto e enviar'}
+          {uploadBusy
+            ? 'Enviando…'
+            : ONBOARDING_LINEAR
+              ? hasPreview
+                ? 'Continuar'
+                : 'Selecionar foto'
+              : hasPreview
+                ? 'Trocar foto e enviar'
+                : 'Selecionar foto e enviar'}
         </Button>
       );
     }
@@ -2348,17 +2578,21 @@ const Register = () => {
                         Tentar novamente
                       </button>
                     ) : null}
-                    <Link
-                      to="/login"
-                      className="block w-full py-1 text-center text-[0.85rem] font-medium text-gray-600 hover:text-agilbank-primary"
-                      aria-label="Voltar depois: ir para login sem entrar no app"
-                    >
-                      Voltar depois
-                    </Link>
-                    <p className="text-center text-[0.72rem] leading-snug text-gray-500">
-                      Você pode continuar a verificação neste aparelho enquanto sua sessão estiver ativa. Sua proposta
-                      permanece salva neste dispositivo.
-                    </p>
+                    {!ONBOARDING_LINEAR ? (
+                      <>
+                        <Link
+                          to="/login"
+                          className="block w-full py-1 text-center text-[0.85rem] font-medium text-gray-600 hover:text-agilbank-primary"
+                          aria-label="Voltar depois: ir para login sem entrar no app"
+                        >
+                          Voltar depois
+                        </Link>
+                        <p className="text-center text-[0.72rem] leading-snug text-gray-500">
+                          Você pode continuar a verificação neste aparelho enquanto sua sessão estiver ativa. Sua
+                          proposta permanece salva neste dispositivo.
+                        </p>
+                      </>
+                    ) : null}
                   </>
                 ) : null}
                 {!ONBOARDING_REGISTER &&
@@ -2400,7 +2634,7 @@ const Register = () => {
         </footer>
 
         {/* Loading fullscreen */}
-        {loading ? (
+        {loading || (ONBOARDING_LINEAR && finalizeBusy) ? (
           <div
             className="register-loading-bg fixed inset-0 z-[200] flex flex-col items-center justify-center px-10 text-white"
             role="status"

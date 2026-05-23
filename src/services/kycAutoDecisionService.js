@@ -173,6 +173,214 @@ function computeRuleEvaluation(ctx) {
 }
 
 /**
+ * AutoDecision para proposta linear (sem User). Não usa score/renda/negativação.
+ * @param {{
+ *   submission: object,
+ *   artifacts: object[],
+ *   applicationCpf: string | null,
+ * }} ctx
+ */
+function computeOnboardingProposalRuleEvaluation(ctx) {
+  const ruleHits = [];
+  const requiredTypes = identityService.getRequiredArtifactTypes();
+  const confirmed = ctx.artifacts.filter((a) => a.uploadStatus === 'UPLOAD_CONFIRMED');
+  const confirmedTypes = new Set(confirmed.map((a) => String(a.type)));
+
+  if (String(ctx.submission.status) !== 'READY_FOR_REVIEW') {
+    ruleHits.push('STATUS_NOT_READY_FOR_REVIEW');
+  }
+
+  const missingRequired = requiredTypes.filter((t) => !confirmedTypes.has(t));
+  if (missingRequired.length > 0) {
+    ruleHits.push('ARTIFACTS_INCOMPLETE');
+  }
+
+  const pendingRequired = ctx.artifacts.filter(
+    (a) =>
+      requiredTypes.includes(String(a.type)) &&
+      a.uploadStatus !== 'UPLOAD_CONFIRMED' &&
+      a.uploadStatus !== 'DELETED_AFTER_POLICY'
+  );
+  if (pendingRequired.length > 0) {
+    ruleHits.push('ARTIFACTS_NOT_CONFIRMED');
+  }
+
+  if (identityService.isFaceVideoRequired() && !confirmedTypes.has('FACE_VIDEO')) {
+    ruleHits.push('FACE_VIDEO_REQUIRED_MISSING');
+  }
+
+  for (const art of ctx.artifacts) {
+    if (!requiredTypes.includes(String(art.type))) continue;
+    const anomaly = detectArtifactAnomaly(art);
+    if (anomaly) ruleHits.push(anomaly);
+  }
+
+  const cpfDigits = ctx.applicationCpf ? String(ctx.applicationCpf).replace(/\D/g, '') : '';
+  if (!isValidCpf(cpfDigits)) {
+    ruleHits.push('CPF_INVALID');
+  }
+
+  if (ctx.submission.versionOrAttempt > 1) {
+    ruleHits.push('MULTIPLE_ATTEMPTS');
+  }
+
+  let recommendation = 'APPROVED';
+  if (ruleHits.includes('STATUS_NOT_READY_FOR_REVIEW')) {
+    recommendation = 'SKIPPED';
+  } else if (ruleHits.includes('ARTIFACT_QUARANTINED')) {
+    recommendation = 'UNDER_MANUAL_REVIEW';
+  } else if (ruleHits.some((r) => OBJECTIVE_RESUBMIT_RULES.has(r))) {
+    recommendation = 'RESUBMISSION_REQUIRED';
+  } else if (ruleHits.length > 0) {
+    recommendation = 'UNDER_MANUAL_REVIEW';
+  }
+
+  const confirmedByType = {};
+  for (const t of requiredTypes) {
+    confirmedByType[t] = confirmedTypes.has(t) ? 1 : 0;
+  }
+
+  return {
+    recommendation,
+    ruleHits: [...new Set(ruleHits)],
+    requiredArtifacts: requiredTypes,
+    artifactCounts: {
+      required: requiredTypes.length,
+      confirmed: confirmed.length,
+      byType: confirmedByType,
+    },
+    cpfValid: isValidCpf(cpfDigits),
+    emailVerified: false,
+    attemptsCount: ctx.submission.versionOrAttempt,
+    recentNegativeDecisions: 0,
+  };
+}
+
+/**
+ * Avalia e opcionalmente aplica decisão em submissão de proposta (fluxo linear).
+ * @param {string} submissionId
+ * @param {{ apply?: boolean, enabled?: boolean, shadow?: boolean, actorId?: string, trigger?: string }} [options]
+ */
+async function evaluateOnboardingProposalSubmission(submissionId, options = {}) {
+  const sid = String(submissionId || '').trim();
+  if (!sid) {
+    throw new Error('submissionId obrigatório');
+  }
+
+  const shadow = options.shadow !== undefined ? Boolean(options.shadow) : isAutoDecisionShadow();
+  const enabled = options.enabled !== undefined ? Boolean(options.enabled) : isAutoDecisionEnabled();
+  const shouldApply = options.apply !== undefined ? Boolean(options.apply) : enabled && !shadow;
+  const auditTrigger =
+    options.trigger != null && String(options.trigger).trim() !== ''
+      ? String(options.trigger).trim().slice(0, 64)
+      : 'onboarding_linear_submit';
+
+  const submission = await prisma.identitySubmission.findUnique({
+    where: { id: sid },
+    include: {
+      artifacts: true,
+      accountApplication: {
+        select: { id: true, cpf: true, status: true },
+      },
+    },
+  });
+
+  if (!submission || !submission.accountApplicationId || submission.userId) {
+    const skipped = {
+      recommendation: 'SKIPPED',
+      ruleHits: ['NOT_ONBOARDING_PROPOSAL'],
+      artifactCounts: { required: 0, confirmed: 0, byType: {} },
+      cpfValid: false,
+      emailVerified: false,
+      applied: false,
+      shadow,
+      enabled,
+      skipped: true,
+    };
+    return skipped;
+  }
+
+  if (TERMINAL_STATUSES.includes(submission.status) || submission.decidedAt != null) {
+    return {
+      recommendation: 'SKIPPED',
+      ruleHits: ['ALREADY_DECIDED'],
+      applied: false,
+      shadow,
+      enabled,
+      submissionStatus: submission.status,
+      skipped: true,
+    };
+  }
+
+  const evalResult = computeOnboardingProposalRuleEvaluation({
+    submission,
+    artifacts: submission.artifacts || [],
+    applicationCpf: submission.accountApplication?.cpf ?? null,
+  });
+
+  if (!ALLOWED_RECOMMENDATIONS.includes(evalResult.recommendation)) {
+    evalResult.recommendation = 'UNDER_MANUAL_REVIEW';
+    evalResult.ruleHits.push('MOTOR_INCONCLUSIVE');
+  }
+
+  if (evalResult.recommendation === 'REJECTED') {
+    throw new Error('REJECTED automático proibido na v1');
+  }
+
+  let applied = false;
+  let submissionStatus = submission.status;
+
+  if (shouldApply && evalResult.recommendation !== 'SKIPPED') {
+    const actorId = String(options.actorId || AUTO_ACTOR_ID).trim().slice(0, 200) || AUTO_ACTOR_ID;
+
+    if (evalResult.recommendation === 'APPROVED') {
+      await internalIdentity.applySubmissionDecision({
+        submissionId: sid,
+        resolution: 'APPROVED',
+        operatorReference: actorId,
+        decisionActorType: AUTO_ACTOR_TYPE,
+      });
+      applied = true;
+      submissionStatus = 'APPROVED';
+    } else if (evalResult.recommendation === 'UNDER_MANUAL_REVIEW') {
+      const moved = await internalIdentity.queueSubmissionForManualReview({
+        submissionId: sid,
+        actorReference: actorId,
+        decisionActorType: AUTO_ACTOR_TYPE,
+      });
+      applied = moved.applied;
+      if (moved.applied) submissionStatus = 'UNDER_MANUAL_REVIEW';
+    } else if (evalResult.recommendation === 'RESUBMISSION_REQUIRED') {
+      await internalIdentity.applySubmissionDecision({
+        submissionId: sid,
+        resolution: 'RESUBMISSION_REQUIRED',
+        operatorReference: actorId,
+        decisionActorType: AUTO_ACTOR_TYPE,
+        internalReasonCode: 'MISSING_OR_UNCONFIRMED_ARTIFACTS',
+        userFacingMessage: KYC_PUBLIC_MESSAGES.RESUBMISSION_REQUIRED,
+      });
+      applied = true;
+      submissionStatus = 'RESUBMISSION_REQUIRED';
+    }
+  }
+
+  await recordAudit({
+    action: 'KYC_AUTO_DECISION',
+    entity: 'IdentitySubmission',
+    entityId: sid,
+    metadata: buildAuditMetadata(evalResult, { shadow, enabled, applied, trigger: auditTrigger }),
+  });
+
+  return {
+    ...evalResult,
+    applied,
+    shadow,
+    enabled,
+    submissionStatus,
+  };
+}
+
+/**
  * @param {object} evalResult
  * @param {{ shadow: boolean, enabled: boolean, applied: boolean }} meta
  */
@@ -387,5 +595,7 @@ module.exports = {
   isAutoDecisionEnabled,
   isAutoDecisionShadow,
   computeRuleEvaluation,
+  computeOnboardingProposalRuleEvaluation,
   evaluateSubmission,
+  evaluateOnboardingProposalSubmission,
 };

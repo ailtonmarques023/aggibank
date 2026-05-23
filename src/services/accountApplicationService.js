@@ -341,6 +341,8 @@ async function noteDuplicateIdentifiers({ cpf, email }) {
 
 module.exports = {
   isOnboardingApplicationEnabled,
+  generateOnboardingToken,
+  generateProtocolNumber,
   hashOnboardingToken,
   createApplication,
   getApplicationStatus,

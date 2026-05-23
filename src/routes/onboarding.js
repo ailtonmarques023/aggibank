@@ -15,9 +15,11 @@ const {
 const logger = require('../utils/logger');
 const onboardingKycRoutes = require('./onboardingKyc');
 const onboardingFinalizeRoutes = require('./onboardingFinalize');
+const onboardingLinearSubmitRoutes = require('./onboardingLinearSubmit');
 
 const router = express.Router();
 
+router.use(onboardingLinearSubmitRoutes);
 router.use(requireOnboardingApplicationEnabled);
 router.use('/kyc', onboardingKycRoutes);
 router.use('/', onboardingFinalizeRoutes);

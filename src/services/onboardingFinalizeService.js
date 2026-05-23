@@ -258,14 +258,16 @@ async function finalizeOnboardingApplication(applicationRow, body, context) {
       data: { userId: user.id },
     });
 
-    await tx.onboardingSession.updateMany({
-      where: {
-        id: context.sessionId,
-        applicationId: appId,
-        status: 'ACTIVE',
-      },
-      data: { status: 'COMPLETED' },
-    });
+    if (context.sessionId) {
+      await tx.onboardingSession.updateMany({
+        where: {
+          id: context.sessionId,
+          applicationId: appId,
+          status: 'ACTIVE',
+        },
+        data: { status: 'COMPLETED' },
+      });
+    }
 
     return { idempotent: false, user };
   });

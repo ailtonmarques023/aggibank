@@ -531,6 +531,48 @@ async function headIdentityObjectMetadata(args) {
   }
 }
 
+/**
+ * Upload server-side (fluxo linear submit-full).
+ * @param {{ objectKey: string, mimeType: string, body: Buffer, artifactType?: string }} args
+ */
+async function putObjectBuffer(args) {
+  const artifactType = args.artifactType != null ? normalizeArtifactType(args.artifactType) : null;
+  const okMime =
+    artifactType != null
+      ? validateAllowedMimeType(artifactType, args.mimeType)
+      : validateAllowedMimeType(args.mimeType);
+  if (!okMime.valid) throw new Error(okMime.message);
+
+  const body = args.body;
+  if (!Buffer.isBuffer(body) || body.length <= 0) {
+    throw new Error('Conteúdo do arquivo inválido');
+  }
+
+  const sz =
+    artifactType != null ? validateMaxFileSize(artifactType, body.length) : validateMaxFileSize(body.length);
+  if (!sz.valid) throw new Error(sz.message);
+
+  const objectKey = String(args.objectKey || '').trim();
+  if (!objectKey.startsWith(`${getNormalizedTenantPrefix()}identity/`)) {
+    throw new Error('objectKey deve seguir o padrão identity/{submissionId}/{artifactId}');
+  }
+
+  const bucket = resolveStorageBucket();
+  const client = getLazyS3();
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+      Body: body,
+      ContentType: okMime.mimeType,
+      ContentLength: body.length,
+    })
+  );
+
+  return { bucket, objectKey, byteSize: body.length, mimeType: okMime.mimeType };
+}
+
 function resetLazyClientForTests() {
   _s3Lazy = null;
 }
@@ -549,6 +591,7 @@ module.exports = {
   createPresignedUploadUrl,
   createPresignedReadUrl,
   headIdentityObjectMetadata,
+  putObjectBuffer,
   normalizeContentTypeMeta,
   resetLazyClientForTests,
   /** @internal apenas testes **/

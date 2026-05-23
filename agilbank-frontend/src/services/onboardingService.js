@@ -60,6 +60,25 @@ export function isOnboardingRegisterEnabled() {
   return String(import.meta.env.VITE_ONBOARDING_APPLICATION_ENABLED || '').toLowerCase().trim() === 'true';
 }
 
+/** Proposta completa em uma requisição — sem cookie nem sessão no browser. */
+export function isOnboardingLinearSubmitEnabled() {
+  return (
+    String(import.meta.env.VITE_ONBOARDING_LINEAR_SUBMIT_ENABLED || '').toLowerCase().trim() === 'true'
+  );
+}
+
+/**
+ * Envia proposta completa (multipart). Sem credentials, JWT ou cookie.
+ * @param {FormData} formData
+ */
+export async function submitFullOnboardingApplication(formData) {
+  const res = await fetch(`${API_BASE}/onboarding/applications/submit-full`, {
+    method: 'POST',
+    body: formData,
+  });
+  return parseJson(res);
+}
+
 export async function createApplication() {
   const res = await fetch(`${API_BASE}/onboarding/applications`, {
     method: 'POST',
