@@ -33,6 +33,7 @@ import {
   createApplication,
   updateCurrentApplication,
   getCurrentApplicationStatus,
+  logoutOnboarding,
   getOnboardingKycStatus,
   presignOnboardingKycArtifact,
   confirmOnboardingKycUpload,
@@ -244,9 +245,37 @@ const Register = () => {
   const registeringRef = useRef(false);
   /** POST /register já retornou sucesso nesta página; próximo submit só tenta login silencioso. */
   const registrationPostSucceededRef = useRef(false);
+  /** Bloqueia GET status/KYC após reinício ou enquanto estado local ainda não reflete proposta ativa. */
+  const skipOnboardingApiProbeRef = useRef(false);
   const scrollAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const previewRegistry = useRef([]);
+
+  const REGISTER_FORM_DEFAULTS = {
+    nomeCompleto: '',
+    cpf: '',
+    email: '',
+    telefone: '',
+    dataNascimento: '',
+    senha: '',
+    confirmarSenha: '',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    profissao: '',
+    empresa: '',
+    cargo: '',
+    rendaMensal: '',
+    aceitaTermos: false,
+    aceitaComunicacoes: false,
+    aceitaConsentimentoBiometrico: false,
+    aceitaPoliticaPrivacidade: false,
+    aceitaTermosFinais: false,
+  };
 
   const { register: registerUser, login } = useAuth();
 
@@ -255,34 +284,11 @@ const Register = () => {
     handleSubmit,
     watch,
     setValue,
+    reset: resetRegisterForm,
     formState: { errors },
-    trigger
+    trigger,
   } = useForm({
-    defaultValues: {
-      nomeCompleto: '',
-      cpf: '',
-      email: '',
-      telefone: '',
-      dataNascimento: '',
-      senha: '',
-      confirmarSenha: '',
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-      profissao: '',
-      empresa: '',
-      cargo: '',
-      rendaMensal: '',
-      aceitaTermos: false,
-      aceitaComunicacoes: false,
-      aceitaConsentimentoBiometrico: false,
-      aceitaPoliticaPrivacidade: false,
-      aceitaTermosFinais: false
-    }
+    defaultValues: REGISTER_FORM_DEFAULTS,
   });
 
   const [applicationStatus, setApplicationStatus] = useState(null);
@@ -304,20 +310,22 @@ const Register = () => {
   }, [cpfForErrorClear, emailForErrorClear, senhaForErrorClear]);
 
   useEffect(() => {
-    if (!ONBOARDING_REGISTER) return undefined;
+    if (!ONBOARDING_REGISTER || skipOnboardingApiProbeRef.current) return undefined;
     let cancelled = false;
     (async () => {
       try {
         const res = await getCurrentApplicationStatus();
-        if (cancelled) return;
+        if (cancelled || skipOnboardingApiProbeRef.current) return;
         const st = res?.data?.status;
         setApplicationStatus(st || null);
         setAccountCreated(true);
+        setOnboardingSessionLost(false);
         if (st === 'DOCUMENTS_APPROVED') {
           setCurrentStep(STEP.FINAL_TERMS);
         } else if (st === 'DOCUMENTS_PENDING' || st === 'DATA_RECEIVED') {
           try {
             const kyc = await getOnboardingKycStatus().then((r) => r.data);
+            if (cancelled || skipOnboardingApiProbeRef.current) return;
             setKycStatus(kyc);
             if (kyc?.identityStatus === 'READY_FOR_REVIEW' || kyc?.identityStatus === 'UNDER_MANUAL_REVIEW') {
               setCurrentStep(STEP.PENDING_REVIEW);
@@ -327,7 +335,9 @@ const Register = () => {
               setCurrentStep(STEP.DOC_FRONT);
             }
           } catch (err) {
+            if (cancelled || skipOnboardingApiProbeRef.current) return;
             if (isOnboardingSessionLostError(err)) {
+              setAccountCreated(false);
               setOnboardingSessionLost(true);
             } else {
               setCurrentStep(STEP.DOC_FRONT);
@@ -340,8 +350,14 @@ const Register = () => {
         } else if (st === 'FINALIZED') {
           setCurrentStep(STEP.FINALIZE_SUCCESS);
         }
-      } catch {
-        /* sem cookie — fluxo novo */
+      } catch (err) {
+        if (cancelled || skipOnboardingApiProbeRef.current) return;
+        if (isOnboardingSessionLostError(err)) {
+          setAccountCreated(false);
+          setOnboardingSessionLost(false);
+          setCurrentStep(STEP.CPF);
+        }
+        /* sem cookie — fluxo novo: permanece em WELCOME/CPF */
       }
     })();
     return () => {
@@ -350,7 +366,8 @@ const Register = () => {
   }, []);
 
   useEffect(() => {
-    if (!ONBOARDING_REGISTER || !accountCreated || onboardingSessionLost) return undefined;
+    if (!ONBOARDING_REGISTER || skipOnboardingApiProbeRef.current) return undefined;
+    if (!accountCreated || onboardingSessionLost) return undefined;
     if (currentStep < STEP.DOC_FRONT || currentStep > STEP.KYC_REVIEW) return undefined;
 
     let cancelled = false;
@@ -358,7 +375,8 @@ const Register = () => {
       try {
         await getCurrentApplicationStatus();
       } catch (err) {
-        if (!cancelled && isOnboardingSessionLostError(err)) {
+        if (!cancelled && !skipOnboardingApiProbeRef.current && isOnboardingSessionLostError(err)) {
+          setAccountCreated(false);
           setOnboardingSessionLost(true);
         }
       }
@@ -406,7 +424,19 @@ const Register = () => {
     };
   }, []);
 
+  const hasActiveOnboardingProposal = useCallback(
+    () =>
+      ONBOARDING_REGISTER &&
+      accountCreated &&
+      !onboardingSessionLost &&
+      !skipOnboardingApiProbeRef.current,
+    [accountCreated, onboardingSessionLost]
+  );
+
   const refreshKycStatus = useCallback(async () => {
+    if (ONBOARDING_REGISTER && !hasActiveOnboardingProposal()) {
+      return null;
+    }
     try {
       const data = ONBOARDING_REGISTER ? await getOnboardingKycStatus().then((r) => r.data) : await fetchKycStatus();
       setKycStatus(data);
@@ -427,17 +457,21 @@ const Register = () => {
           'O envio de documentos está temporariamente indisponível. Você pode continuar usando o AgilBank e concluir isso mais tarde na área Verificação de identidade.'
         );
       }
+      if (ONBOARDING_REGISTER && isOnboardingSessionLostError(err)) {
+        setAccountCreated(false);
+        setOnboardingSessionLost(true);
+      }
       throw e;
     }
-  }, []);
+  }, [hasActiveOnboardingProposal]);
 
   const refreshApplicationStatus = useCallback(async () => {
-    if (!ONBOARDING_REGISTER) return null;
+    if (!ONBOARDING_REGISTER || !hasActiveOnboardingProposal()) return null;
     const res = await getCurrentApplicationStatus();
     const st = res?.data?.status;
     setApplicationStatus(st || null);
     return st;
-  }, []);
+  }, [hasActiveOnboardingProposal]);
 
   const routeAfterKycSubmit = useCallback(async () => {
     const appSt = await refreshApplicationStatus();
@@ -550,7 +584,8 @@ const Register = () => {
     setError(s || 'Erro ao criar conta. Tente novamente.');
   };
 
-  const resetOnboardingProposalFlow = useCallback(() => {
+  const resetOnboardingApplicationState = useCallback(() => {
+    skipOnboardingApiProbeRef.current = true;
     previewRegistry.current.forEach((u) => {
       try {
         URL.revokeObjectURL(u);
@@ -559,8 +594,8 @@ const Register = () => {
       }
     });
     previewRegistry.current = [];
-    setOnboardingSessionLost(false);
     setAccountCreated(false);
+    setOnboardingSessionLost(false);
     setApplicationStatus(null);
     setKycStatus(null);
     setKycStepError('');
@@ -568,8 +603,33 @@ const Register = () => {
     setFeatureDisabledHint('');
     setLocalPreviewUrlByType({});
     setError('');
-    setCurrentStep(STEP.WELCOME);
-  }, []);
+    setUploadBusy(false);
+    setSubmitBusy(false);
+    setUploadPhaseCopy(null);
+    setSubmitOverlayCopy(null);
+    setFinalizeBusy(false);
+    setFinalizeMessage('');
+    setLoading(false);
+    setNeedsSilentLoginRetry(false);
+    registeringRef.current = false;
+    registrationPostSucceededRef.current = false;
+    resetRegisterForm(REGISTER_FORM_DEFAULTS);
+    setCurrentStep(STEP.CPF);
+    window.setTimeout(() => {
+      skipOnboardingApiProbeRef.current = false;
+    }, 0);
+  }, [resetRegisterForm]);
+
+  const handleRestartOnboarding = useCallback(async () => {
+    skipOnboardingApiProbeRef.current = true;
+    try {
+      await logoutOnboarding();
+    } catch (_) {
+      /* 401 ou sem cookie — ignorar */
+    }
+    resetOnboardingApplicationState();
+    scrollAreaRef.current?.scrollTo({ top: 0 });
+  }, [resetOnboardingApplicationState]);
 
   const nextStep = async () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
@@ -688,10 +748,14 @@ const Register = () => {
       await updateCurrentApplication(buildOnboardingPatchBody(data));
       setAccountCreated(true);
       setApplicationStatus('DATA_RECEIVED');
-      await refreshKycStatus().catch(() => {});
+      setOnboardingSessionLost(false);
+      if (hasActiveOnboardingProposal()) {
+        await refreshKycStatus().catch(() => {});
+      }
       setCurrentStep(STEP.DOC_FRONT);
     } catch (err) {
       if (isOnboardingSessionLostError(err)) {
+        setAccountCreated(false);
         setOnboardingSessionLost(true);
         applyErrorMessage(ONBOARDING_SESSION_LOST_MESSAGE);
         return;
@@ -801,6 +865,13 @@ const Register = () => {
   };
 
   const uploadArtifactOnboarding = async (file, at, mime) => {
+    if (!hasActiveOnboardingProposal()) {
+      setAccountCreated(false);
+      setOnboardingSessionLost(true);
+      throw Object.assign(new Error(ONBOARDING_SESSION_LOST_MESSAGE), {
+        code: 'ONBOARDING_SESSION_REQUIRED',
+      });
+    }
     const checksum = await sha256HexFromFile(file);
     const presignPayload = await presignOnboardingKycArtifact({
       artifactType: at,
@@ -819,6 +890,12 @@ const Register = () => {
     const file = input.files && input.files[0];
     input.value = '';
     if (!file) return;
+
+    if (ONBOARDING_REGISTER && !hasActiveOnboardingProposal()) {
+      setAccountCreated(false);
+      setOnboardingSessionLost(true);
+      return;
+    }
 
     const at = artifactForUiStep(currentStep);
     if (!at) return;
@@ -904,6 +981,7 @@ const Register = () => {
       }
       const parsed = parseKycFacingError(err, '');
       if (ONBOARDING_REGISTER && isOnboardingSessionLostError(err)) {
+        setAccountCreated(false);
         setOnboardingSessionLost(true);
         setKycStepError('');
         return;
@@ -926,6 +1004,11 @@ const Register = () => {
   };
 
   const handleSubmitReviewRegister = async () => {
+    if (ONBOARDING_REGISTER && !hasActiveOnboardingProposal()) {
+      setAccountCreated(false);
+      setOnboardingSessionLost(true);
+      return;
+    }
     setReviewError('');
     setSubmitBusy(true);
     setSubmitOverlayCopy({
@@ -990,6 +1073,11 @@ const Register = () => {
   };
 
   const handleFaceVideoFile = async (file, mime) => {
+    if (ONBOARDING_REGISTER && !hasActiveOnboardingProposal()) {
+      setAccountCreated(false);
+      setOnboardingSessionLost(true);
+      return;
+    }
     revokePreviewForType('FACE_VIDEO');
     const previewUrl = registerObjectUrl(URL.createObjectURL(file));
     setLocalPreviewUrlByType((prev) => ({ ...prev, FACE_VIDEO: previewUrl }));
@@ -999,8 +1087,20 @@ const Register = () => {
       await refreshKycStatus();
       setCurrentStep(STEP.KYC_REVIEW);
     } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('[Register FACE_VIDEO upload]', err?.code || err?.status, err?.message);
+      }
+      if (ONBOARDING_REGISTER && isOnboardingSessionLostError(err)) {
+        setAccountCreated(false);
+        setOnboardingSessionLost(true);
+        setKycStepError('');
+        setUploadPhaseCopy(null);
+        return;
+      }
       setKycStepError(
-        typeof err?.message === 'string' ? sanitizeUserFacingError(err.message) : 'Não foi possível enviar o vídeo.'
+        typeof err?.message === 'string'
+          ? sanitizeUserFacingError(err.message) || 'Não foi possível enviar o vídeo.'
+          : 'Não foi possível enviar o vídeo.'
       );
       revokePreviewForType('FACE_VIDEO');
     } finally {
@@ -1790,19 +1890,14 @@ const Register = () => {
       </div>
       <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Sessão encerrada</h1>
       <p className="mb-8 text-[0.95rem] leading-relaxed text-gray-600">{ONBOARDING_SESSION_LOST_MESSAGE}</p>
-      <Button type="button" variant="primary" size="lg" className={primaryFooterBtnClass} onClick={resetOnboardingProposalFlow}>
+      <Button type="button" variant="primary" size="lg" className={primaryFooterBtnClass} onClick={handleRestartOnboarding}>
         Reiniciar cadastro
       </Button>
     </>
   );
 
   const renderStepBody = () => {
-    if (
-      ONBOARDING_REGISTER &&
-      onboardingSessionLost &&
-      currentStep >= STEP.DOC_FRONT &&
-      currentStep <= STEP.KYC_REVIEW
-    ) {
+    if (ONBOARDING_REGISTER && onboardingSessionLost) {
       return renderOnboardingSessionLostStep();
     }
     switch (currentStep) {
@@ -1856,12 +1951,7 @@ const Register = () => {
   };
 
   const renderCompactFooterPrimary = () => {
-    if (
-      ONBOARDING_REGISTER &&
-      onboardingSessionLost &&
-      currentStep >= STEP.DOC_FRONT &&
-      currentStep <= STEP.KYC_REVIEW
-    ) {
+    if (ONBOARDING_REGISTER && onboardingSessionLost) {
       return null;
     }
     if (currentStep <= STEP.WELCOME) return null;
