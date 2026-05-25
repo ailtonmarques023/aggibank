@@ -442,7 +442,7 @@ export default function FaceVideoCapture({
             <video
               ref={videoPlaybackRef}
               src={previewUrl}
-              className={`face-video-live face-video-playback ${isRegister ? '' : 'h-full w-full'}`}
+              className="face-video-live face-video-playback h-full w-full"
               playsInline
               controls={!isRegister}
               muted={isRegister}
@@ -461,7 +461,7 @@ export default function FaceVideoCapture({
           <>
             <video
               ref={videoLiveRef}
-              className={`face-video-live ${isRegister ? '' : 'h-full w-full'}`}
+              className="face-video-live h-full w-full"
               playsInline
               muted
               autoPlay

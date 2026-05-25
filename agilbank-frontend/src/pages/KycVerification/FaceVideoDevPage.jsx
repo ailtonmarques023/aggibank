@@ -30,6 +30,7 @@ export default function FaceVideoDevPage() {
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5 pt-[calc(env(safe-area-inset-top,0)+1rem)] pb-8">
         <FaceVideoCapture
           variant="register"
+          autoAdvanceOnRecord
           onUploadFile={handleUpload}
           uploadBusy={uploadBusy}
           errorMessage={kycStepError}

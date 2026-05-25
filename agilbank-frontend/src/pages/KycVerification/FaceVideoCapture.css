@@ -53,6 +53,7 @@
 }
 
 .face-video-stage--register {
+  position: relative;
   width: 100%;
   max-width: 280px;
   aspect-ratio: 3 / 4;
@@ -60,18 +61,51 @@
   margin: 24px auto 20px;
   overflow: hidden;
   border-radius: 0;
-  background: transparent;
+  background: #fff;
   box-shadow: none;
   flex-shrink: 0;
+  isolation: isolate;
+  --face-oval-x: 50%;
+  /* Centro mais baixo: com ry 38% o topo do oval fica ~6% (evita corte no overflow:hidden). */
+  --face-oval-y: 44%;
+  --face-oval-rx: 38%;
+  --face-oval-ry: 38%;
+  --face-oval-ring-scale: 1;
 }
 
+/* Register: recorte elíptico no vídeo + fundo branco no stage (evita borda entre máscara e vídeo). */
 .face-video-stage--register video,
 .face-video-stage--register .face-video-live {
-  object-position: center 38%;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center var(--face-oval-y);
+  transform: scaleX(-1);
+  -webkit-clip-path: ellipse(
+    var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y)
+  );
+  clip-path: ellipse(var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y));
 }
 
 .face-video-stage--register .face-video-playback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   transform: none;
+  -webkit-clip-path: ellipse(
+    var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y)
+  );
+  clip-path: ellipse(var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y));
+}
+
+/* Overlay branco legado não usado no register — evita elipse da máscara menor que o vídeo. */
+.face-video-stage--register .face-video-white-mask {
+  display: none;
 }
 
 .face-video-white-mask {
@@ -104,12 +138,15 @@
   width: calc(var(--face-oval-rx) * 2 * var(--face-oval-ring-scale));
   height: calc(var(--face-oval-ry) * 2 * var(--face-oval-ring-scale));
   transform: translate(-50%, -50%);
-  /* 50% = elipse real (999px vira “estádio” com lados retos quando a caixa é alta) */
   border-radius: 50%;
   border: 2px solid rgba(15, 23, 42, 0.22);
   box-sizing: border-box;
   pointer-events: none;
   z-index: 2;
+}
+
+.face-video-stage--register .face-video-oval-border {
+  border-color: rgba(0, 102, 179, 0.35);
 }
 
 .face-video-mask {
