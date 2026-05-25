@@ -32,6 +32,7 @@ function instructionForElapsed(elapsedMs, phases) {
  *   errorMessage: string;
  *   onClearError: () => void;
  *   variant?: 'default' | 'register';
+ *   autoAdvanceOnRecord?: boolean;
  * }} props
  */
 export default function FaceVideoCapture({
@@ -40,6 +41,7 @@ export default function FaceVideoCapture({
   errorMessage,
   onClearError,
   variant = 'default',
+  autoAdvanceOnRecord = false,
 }) {
   const isRegister = variant === 'register';
   const recordMinMs = isRegister ? KYC_FACE_VIDEO_REGISTER_MIN_MS : KYC_FACE_VIDEO_RECORD_MIN_MS;
@@ -55,6 +57,7 @@ export default function FaceVideoCapture({
   const autoStopTimerRef = useRef(null);
   const tickTimerRef = useRef(null);
   const previewUrlRef = useRef(null);
+  const autoSubmitStartedRef = useRef(false);
 
   const [phase, setPhase] = useState('init');
   const [cameraError, setCameraError] = useState('');
@@ -180,6 +183,7 @@ export default function FaceVideoCapture({
     setElapsedMs(0);
     onClearError();
     setCameraError('');
+    autoSubmitStartedRef.current = false;
     setPhase('live');
     startCamera();
   }, [clearTimers, revokePreviewUrl, onClearError, startCamera]);
@@ -281,13 +285,35 @@ export default function FaceVideoCapture({
 
   const handleUseVideo = async () => {
     if (!recordedFile || uploadBusy) return;
+    if (!recordedFile.size) {
+      setCameraError(
+        isRegister ? registerRecordFailMessage : 'Nenhum dado foi gravado. Tente novamente.'
+      );
+      setPhase('live');
+      return;
+    }
     onClearError();
     try {
       await onUploadFile(recordedFile);
     } catch (_) {
-      /* parent sets error */
+      autoSubmitStartedRef.current = false;
     }
   };
+
+  useEffect(() => {
+    if (!autoAdvanceOnRecord || phase !== 'preview' || !recordedFile || uploadBusy) return;
+    if (autoSubmitStartedRef.current) return;
+    autoSubmitStartedRef.current = true;
+    void handleUseVideo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdvanceOnRecord, phase, recordedFile, uploadBusy]);
+
+  useEffect(() => {
+    if (!autoAdvanceOnRecord || !errorMessage) return;
+    if (phase === 'preview' || phase === 'live') {
+      autoSubmitStartedRef.current = false;
+    }
+  }, [autoAdvanceOnRecord, errorMessage, phase]);
 
   const elapsedSec = Math.min(Math.ceil(elapsedMs / 1000), Math.ceil(recordMaxMs / 1000));
   const targetSec = Math.ceil(recordMaxMs / 1000);
@@ -500,17 +526,35 @@ export default function FaceVideoCapture({
           </Button>
         ) : null}
 
-        {phase === 'preview' ? (
+        {phase === 'preview' && autoAdvanceOnRecord ? (
+          <>
+            {uploadBusy ? (
+              <p className="text-center text-[0.875rem] font-medium text-gray-600" role="status">
+                Continuando…
+              </p>
+            ) : null}
+            {displayError ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                className={registerBtnClass}
+                onClick={resetRecording}
+                disabled={uploadBusy}
+              >
+                Gravar novamente
+              </Button>
+            ) : null}
+          </>
+        ) : null}
+
+        {phase === 'preview' && !autoAdvanceOnRecord ? (
           <>
             <Button
               type="button"
               variant="primary"
               size="lg"
-              className={
-                isRegister
-                  ? registerBtnClass
-                  : 'w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20'
-              }
+              className="w-full rounded-xl py-4 font-semibold shadow-lg shadow-agilbank-primary/20"
               onClick={handleUseVideo}
               disabled={uploadBusy}
             >
@@ -520,7 +564,7 @@ export default function FaceVideoCapture({
               type="button"
               variant="secondary"
               size="lg"
-              className={isRegister ? registerBtnClass : 'w-full rounded-xl py-4 font-semibold'}
+              className="w-full rounded-xl py-4 font-semibold"
               onClick={resetRecording}
               disabled={uploadBusy}
             >

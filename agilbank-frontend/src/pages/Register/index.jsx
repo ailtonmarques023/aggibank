@@ -1405,8 +1405,14 @@ const Register = () => {
   };
 
   const handleFaceVideoFile = async (file) => {
+    if (!file || file.size <= 0) {
+      setKycStepError('Não conseguimos gravar seu vídeo. Tente novamente.');
+      return;
+    }
+
     if (ONBOARDING_LINEAR) {
       if (!storeLinearArtifactFile(file, 'FACE_VIDEO')) return;
+      setKycStepError('');
       setCurrentStep(STEP.FINAL_TERMS);
       return;
     }
@@ -2398,6 +2404,7 @@ const Register = () => {
         return (
           <FaceVideoCapture
             variant={ONBOARDING_LINEAR ? 'register' : 'default'}
+            autoAdvanceOnRecord={ONBOARDING_LINEAR}
             onUploadFile={async (file) => handleFaceVideoFile(file)}
             uploadBusy={uploadBusy}
             errorMessage={kycStepError}
