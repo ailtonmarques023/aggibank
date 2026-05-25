@@ -21,10 +21,111 @@ const {
 } = require('./accountApplicationService');
 const { isValidCpf } = require('../utils/cpfValidation');
 const { KYC_PUBLIC_MESSAGES } = require('../constants/kycPublicMessages');
+const { sendEmail } = require('../utils/email');
 const logger = require('../utils/logger');
 
 const WAIT_REVIEW_PUBLIC_MESSAGE =
-  'Recebemos sua proposta de abertura. Você receberá uma atualização por e-mail.';
+  'Recebemos sua proposta de abertura. Enviamos um e-mail de confirmação e você receberá uma atualização quando a análise for concluída.';
+
+function isEmailProviderNotConfiguredError(err) {
+  return err && (err.code === 'EMAIL_PROVIDER_NOT_CONFIGURED' || err.name === 'EmailProviderNotConfiguredError');
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function primeiroNome(nomeCompleto) {
+  const s = String(nomeCompleto ?? '').trim();
+  if (!s) return 'Cliente';
+  return s.split(/\s+/)[0] || 'Cliente';
+}
+
+/**
+ * Confirmação transacional — falha de e-mail não impede o recebimento da proposta.
+ * @param {{ email?: string | null, nomeCompleto?: string | null, protocolNumber?: string | null }} applicationRow
+ */
+async function sendProposalReceivedEmailBestEffort(applicationRow) {
+  const to = normalizeEmail(applicationRow?.email);
+  if (!to) return { status: 'skipped_no_email' };
+
+  const nome = primeiroNome(applicationRow.nomeCompleto);
+  const protocol = String(applicationRow.protocolNumber || '').trim() || '—';
+  const subject = 'AgilBank — Proposta de abertura recebida';
+  const text = [
+    `Olá, ${nome}!`,
+    '',
+    'Recebemos sua proposta de abertura de conta no AgilBank.',
+    '',
+    `Protocolo: ${protocol}`,
+    '',
+    'Estamos analisando seus documentos. Você receberá um novo e-mail quando houver atualização sobre a proposta.',
+    '',
+    'Confira também a pasta de spam ou promoções.',
+    '',
+    'Equipe AgilBank',
+  ].join('\n');
+
+  const html = `
+    <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1e293b;">
+      Olá, <strong>${escapeHtml(nome)}</strong>!
+    </p>
+    <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1e293b;">
+      Recebemos sua proposta de abertura de conta no AgilBank.
+    </p>
+    <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#64748b;">
+      Protocolo
+    </p>
+    <p style="margin:0 0 16px;font-family:Consolas,monospace;font-size:16px;font-weight:700;color:#003355;">
+      ${escapeHtml(protocol)}
+    </p>
+    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#475569;">
+      Estamos analisando seus documentos. Você receberá um novo e-mail quando houver atualização.
+      Confira também spam e promoções.
+    </p>`;
+
+  try {
+    await sendEmail({ to, subject, html, text });
+    logger.info(
+      {
+        category: 'operational_audit',
+        component: 'onboarding_linear_submit',
+        op: 'proposal_received_email_sent',
+        toDomain: to.split('@')[1] || 'unknown',
+      },
+      'onboarding_linear_proposal_email_sent'
+    );
+    return { status: 'sent' };
+  } catch (err) {
+    if (isEmailProviderNotConfiguredError(err)) {
+      logger.warn(
+        {
+          category: 'operational_audit',
+          component: 'onboarding_linear_submit',
+          op: 'proposal_received_email_not_configured',
+        },
+        'onboarding_linear_proposal_email_skipped_provider'
+      );
+      return { status: 'not_configured' };
+    }
+    logger.warn(err, {
+      context: 'onboarding-linear-proposal-received-email',
+      toDomain: to.split('@')[1] || 'unknown',
+    });
+    return { status: 'failed' };
+  }
+}
+
+async function returnWaitReview(applicationRow, message = WAIT_REVIEW_PUBLIC_MESSAGE) {
+  await sendProposalReceivedEmailBestEffort(applicationRow);
+  return buildWaitReviewResponse(applicationRow, message);
+}
 
 function resolveAutoDecisionFlags() {
   const autoEnabled = kycAutoDecision.isAutoDecisionEnabled();
@@ -423,7 +524,7 @@ async function submitFullOnboardingApplication(input) {
   let applicationRow = await prisma.accountApplication.findUnique({ where: { id: application.id } });
 
   if (autoDecisionFailed || !autoResult) {
-    return buildWaitReviewResponse(applicationRow);
+    return returnWaitReview(applicationRow);
   }
 
   if (autoResult.recommendation === 'APPROVED' && autoResult.applied && autoDecisionCanFinalize) {
@@ -456,7 +557,7 @@ async function submitFullOnboardingApplication(input) {
         },
         'onboarding_linear_finalize_error'
       );
-      return buildWaitReviewResponse(applicationRow);
+      return returnWaitReview(applicationRow);
     }
   }
 
@@ -469,7 +570,7 @@ async function submitFullOnboardingApplication(input) {
     });
   }
 
-  return buildWaitReviewResponse(applicationRow);
+  return returnWaitReview(applicationRow);
 }
 
 module.exports = {

@@ -2262,30 +2262,91 @@ const Register = () => {
     </>
   );
 
-  const renderPendingReviewStep = () => (
-    <>
-      <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">
-        {ONBOARDING_LINEAR ? 'Proposta recebida' : 'Verificação recebida'}
-      </h1>
-      <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
-        {ONBOARDING_LINEAR
-          ? linearSubmitMessage ||
-            'Recebemos sua proposta de abertura. Você receberá uma atualização por e-mail.'
-          : 'Recebemos sua verificação de segurança. Você poderá acompanhar o status. Quando liberado, volte aqui ou faça login para concluir os termos finais e criar sua conta.'}
-      </p>
-      {ONBOARDING_LINEAR && linearProtocolNumber ? (
-        <p className={`text-sm text-gray-800 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Protocolo</span>
-          <span className="mt-1 block font-mono font-semibold text-gray-900">{linearProtocolNumber}</span>
+  const renderPendingReviewStep = () => {
+    const userEmail = (watchedValues.email || '').trim();
+
+    if (ONBOARDING_LINEAR) {
+      return (
+        <>
+          <h1 className="mb-2 text-[1.25rem] font-semibold leading-tight text-gray-900 sm:text-[1.5rem]">
+            Proposta enviada
+          </h1>
+          <p className="mb-4 text-[0.875rem] leading-snug text-gray-600">
+            {linearSubmitMessage ||
+              'Recebemos sua solicitação de abertura de conta com seus documentos e verificação facial.'}
+          </p>
+          <ul className="mb-5 space-y-2.5 text-[0.875rem] leading-snug text-gray-700" role="list">
+            <li className="flex gap-2">
+              <span className="mt-0.5 shrink-0 text-agilbank-primary" aria-hidden>
+                •
+              </span>
+              <span>Enviamos um e-mail de confirmação com o protocolo da proposta.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-0.5 shrink-0 text-agilbank-primary" aria-hidden>
+                •
+              </span>
+              <span>Estamos analisando seus dados. Esse processo pode levar alguns dias úteis.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-0.5 shrink-0 text-agilbank-primary" aria-hidden>
+                •
+              </span>
+              <span>
+                Você receberá um e-mail com o resultado
+                {userEmail ? (
+                  <>
+                    {' '}
+                    em <span className="font-medium text-gray-900">{userEmail}</span>
+                  </>
+                ) : (
+                  ' no e-mail informado no cadastro'
+                )}
+                .
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-0.5 shrink-0 text-agilbank-primary" aria-hidden>
+                •
+              </span>
+              <span>Se aprovado, você poderá acessar o AgilBank pelo login com o e-mail cadastrado.</span>
+            </li>
+          </ul>
+          {linearProtocolNumber ? (
+            <div
+              className={`text-sm text-gray-800 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Protocolo</p>
+              <p className="mt-1 font-mono text-[0.9375rem] font-semibold text-gray-900">{linearProtocolNumber}</p>
+              <p className="mt-2 text-[0.8125rem] leading-snug text-gray-500">
+                Guarde este número para consultar sua proposta, se precisar.
+              </p>
+            </div>
+          ) : null}
+          <p className="mt-4 text-[0.8125rem] leading-snug text-gray-500">
+            Confira também a caixa de spam ou promoções do seu e-mail.
+          </p>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <h1 className="mb-2 text-[1.5rem] font-bold leading-tight text-gray-900 sm:text-2xl">Verificação recebida</h1>
+        <p className="mb-6 text-[0.95rem] leading-relaxed text-gray-600">
+          Recebemos sua verificação de segurança. Você poderá acompanhar o status. Quando liberado, volte aqui ou faça
+          login para concluir os termos finais e criar sua conta.
         </p>
-      ) : null}
-      {!ONBOARDING_LINEAR && kycStatus?.message ? (
-        <p className={`text-sm text-gray-700 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}>
-          {kycStatus.message}
-        </p>
-      ) : null}
-    </>
-  );
+        {kycStatus?.message ? (
+          <p
+            className={`text-sm text-gray-700 ${isOnboardingFlatShell ? 'border-t border-gray-100 pt-4' : 'rounded-xl border border-gray-200 bg-gray-50 p-4'}`}
+          >
+            {kycStatus.message}
+          </p>
+        ) : null}
+      </>
+    );
+  };
 
   const renderFinalTermsStep = () => (
     <>
@@ -2534,8 +2595,13 @@ const Register = () => {
         <Link
           to="/login"
           className={`flex h-13 w-full items-center justify-center rounded-xl bg-agilbank-primary px-4 text-[1rem] font-semibold text-white${isOnboardingFlatShell ? '' : ' shadow-lg'}`}
+          aria-label={
+            ONBOARDING_LINEAR && currentStep === STEP.PENDING_REVIEW
+              ? 'Ir para a tela de login do AgilBank'
+              : 'Ir para login'
+          }
         >
-          Ir para login
+          {ONBOARDING_LINEAR && currentStep === STEP.PENDING_REVIEW ? 'Ir para o login' : 'Ir para login'}
         </Link>
       );
     }

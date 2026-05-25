@@ -43,6 +43,7 @@ jest.mock('../src/utils/email', () => ({
   sendEmail: jest.fn(() => Promise.resolve({ id: 'mock-email' })),
 }));
 
+const { sendEmail } = require('../src/utils/email');
 const identityStorage = require('../src/services/identityStorageService');
 const kycAutoDecision = require('../src/services/kycAutoDecisionService');
 const onboardingFinalize = require('../src/services/onboardingFinalizeService');
@@ -93,6 +94,7 @@ function wireSuccessfulSubmitMocks({ appId = 'app_linear_1', subId = 'sub_linear
     protocolNumber: 'APP-LIN001',
     cpf: '52998224725',
     email: 'maria.linear@example.com',
+    nomeCompleto: 'Maria Linear',
   });
   prisma.identitySubmission.create.mockResolvedValue({
     id: subId,
@@ -111,6 +113,8 @@ function wireSuccessfulSubmitMocks({ appId = 'app_linear_1', subId = 'sub_linear
     id: appId,
     status: 'DOCUMENTS_PENDING',
     protocolNumber: 'APP-LIN001',
+    email: 'maria.linear@example.com',
+    nomeCompleto: 'Maria Linear',
   });
 }
 
@@ -249,6 +253,12 @@ describe('Onboarding linear submit-full', () => {
     expect(prisma.accountApplication.create).toHaveBeenCalled();
     expect(identityStorage.putObjectBuffer).toHaveBeenCalled();
     expect(prisma.user.create).not.toHaveBeenCalled();
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'maria.linear@example.com',
+        subject: expect.stringContaining('Proposta de abertura recebida'),
+      })
+    );
   });
 
   it('CPF duplicado em User retorna 409', async () => {
