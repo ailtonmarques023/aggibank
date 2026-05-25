@@ -95,6 +95,39 @@ const STEP = {
 
 const JOURNEY_TOTAL = 10;
 
+/** Só em `npm run dev`: `/register?devStep=selfie` abre direto na etapa. */
+const DEV_STEP_ALIASES = {
+  welcome: STEP.WELCOME,
+  cpf: STEP.CPF,
+  personal: STEP.PERSONAL,
+  address: STEP.ADDRESS,
+  professional: STEP.PROFESSIONAL,
+  password: STEP.PASSWORD,
+  terms: STEP.TERMS,
+  'doc-front': STEP.DOC_FRONT,
+  docfront: STEP.DOC_FRONT,
+  'doc-back': STEP.DOC_BACK,
+  docback: STEP.DOC_BACK,
+  selfie: STEP.SELFIE,
+  'face-video': STEP.FACE_VIDEO,
+  facevideo: STEP.FACE_VIDEO,
+  face: STEP.FACE_VIDEO,
+  'kyc-review': STEP.KYC_REVIEW,
+  'final-terms': STEP.FINAL_TERMS,
+};
+
+function readDevInitialStep() {
+  if (!import.meta.env.DEV) return STEP.WELCOME;
+  try {
+    const devStep = new URLSearchParams(window.location.search).get('devStep');
+    if (!devStep) return STEP.WELCOME;
+    const key = devStep.toLowerCase().trim();
+    return DEV_STEP_ALIASES[key] ?? STEP.WELCOME;
+  } catch {
+    return STEP.WELCOME;
+  }
+}
+
 function journeyNumerator(step) {
   switch (step) {
     case STEP.WELCOME:
@@ -231,7 +264,9 @@ const REGISTER_LOADING_MESSAGES = {
 
 const Register = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(STEP.WELCOME);
+  const devInitialStep = readDevInitialStep();
+  const isDevStepPreview = import.meta.env.DEV && devInitialStep !== STEP.WELCOME;
+  const [currentStep, setCurrentStep] = useState(devInitialStep);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -2708,6 +2743,15 @@ const Register = () => {
           } ${currentStep === STEP.WELCOME ? '' : 'px-5 pt-5'}`}
           style={{ paddingBottom: scrollPaddingBottom }}
         >
+          {isDevStepPreview ? (
+            <div
+              className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[0.75rem] leading-snug text-amber-950"
+              role="status"
+            >
+              Modo dev: etapa aberta via <span className="font-mono">?devStep=...</span>. Disponível apenas com{' '}
+              <span className="font-mono">npm run dev</span>.
+            </div>
+          ) : null}
           <form
             id="register-flow-form"
             onSubmit={handleSubmit(onSubmit)}

@@ -11,6 +11,7 @@ import Transactions from './pages/Transactions';
 import Terms from './pages/Terms';
 import Register from './pages/Register/index.jsx';
 import KycVerification from './pages/KycVerification/index.jsx';
+import FaceVideoDevPage from './pages/KycVerification/FaceVideoDevPage.jsx';
 import { hasAcceptedTerms } from './utils/helpers';
 import { BRAND_MEDIA } from './constants/brandMedia';
 
@@ -146,6 +147,10 @@ const AppContent = () => {
             <Register />
           </PublicRoute>
         } />
+
+        {import.meta.env.DEV ? (
+          <Route path="/dev/face-video" element={<FaceVideoDevPage />} />
+        ) : null}
 
         {/* Rota de recuperação de senha (placeholder) */}
         <Route path="/forgot-password" element={

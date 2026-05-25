@@ -15,44 +15,6 @@
   max-width: 22rem;
 }
 
-/* Cadastro linear: oval único, sem stage retangular */
-.face-video-oval-stage {
-  width: min(48vw, 170px);
-  height: min(76vw, 270px);
-  max-width: 180px;
-  max-height: 292px;
-  margin: 30px auto 58px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #f8fafc;
-  position: relative;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
-  flex-shrink: 0;
-}
-
-.face-video-oval-stage::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  border: 1.5px solid rgba(15, 23, 42, 0.14);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.face-video-oval-stage video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 44%;
-  display: block;
-  transform: scaleX(-1);
-}
-
-.face-video-oval-stage .face-video-playback {
-  transform: none;
-}
-
 .face-video-actions {
   align-items: center;
   margin-top: 0;
@@ -66,8 +28,13 @@
   max-height: 420px;
   overflow: hidden;
   border-radius: 1rem;
-  background: #0f172a;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: #fff;
+  box-shadow: none;
+  --face-oval-x: 50%;
+  --face-oval-y: 52%;
+  --face-oval-rx: 36%;
+  --face-oval-ry: 37%;
+  --face-oval-ring-scale: 1.01;
 }
 
 .face-video-stage video,
@@ -85,24 +52,85 @@
   object-position: center center;
 }
 
-.face-video-mask {
-  background: rgba(0, 20, 40, 0.48);
-  -webkit-mask-image: radial-gradient(ellipse 62% 76% at 50% 44%, transparent 96%, black 100%);
-  mask-image: radial-gradient(ellipse 62% 76% at 50% 44%, transparent 96%, black 100%);
-}
-
-.face-video-oval {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.face-video-oval-ring {
-  width: min(64%, 240px);
+.face-video-stage--register {
+  width: 100%;
+  max-width: 280px;
   aspect-ratio: 3 / 4;
+  max-height: none;
+  margin: 24px auto 20px;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
+.face-video-stage--register video,
+.face-video-stage--register .face-video-live {
+  object-position: center 38%;
+}
+
+.face-video-stage--register .face-video-playback {
+  transform: none;
+}
+
+.face-video-white-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #ffffff;
+  z-index: 1;
+  -webkit-mask-image: radial-gradient(
+    ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
+    transparent 0%,
+    transparent 97%,
+    black 99%,
+    black 100%
+  );
+  mask-image: radial-gradient(
+    ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
+    transparent 0%,
+    transparent 97%,
+    black 99%,
+    black 100%
+  );
+}
+
+.face-video-oval-border,
+.face-video-oval-ring {
+  position: absolute;
+  left: var(--face-oval-x);
+  top: var(--face-oval-y);
+  width: calc(var(--face-oval-rx) * 2 * var(--face-oval-ring-scale));
+  height: calc(var(--face-oval-ry) * 2 * var(--face-oval-ring-scale));
+  transform: translate(-50%, -50%);
+  /* 50% = elipse real (999px vira “estádio” com lados retos quando a caixa é alta) */
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.75);
+  border: 2px solid rgba(15, 23, 42, 0.22);
   box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.face-video-mask {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  z-index: 1;
+  -webkit-mask-image: radial-gradient(
+    ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
+    transparent 0%,
+    transparent 97%,
+    black 99%,
+    black 100%
+  );
+  mask-image: radial-gradient(
+    ellipse var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y),
+    transparent 0%,
+    transparent 97%,
+    black 99%,
+    black 100%
+  );
 }
 
 .face-video-instruction {

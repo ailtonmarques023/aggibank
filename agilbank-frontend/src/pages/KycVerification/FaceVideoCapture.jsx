@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { VideoCameraIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Button from '../../components/Button';
 import {
   KYC_FACE_VIDEO_RECORD_MAX_MS,
@@ -357,14 +357,6 @@ export default function FaceVideoCapture({
 
   return (
     <div className={rootClass}>
-      {!isRegister ? (
-        <div className="mb-6 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-agilbank-primary/10 text-agilbank-primary">
-            <VideoCameraIcon className="h-8 w-8" aria-hidden />
-          </div>
-        </div>
-      ) : null}
-
       <h1
         className={
           isRegister
@@ -398,22 +390,30 @@ export default function FaceVideoCapture({
       <div
         className={
           isRegister
-            ? 'face-video-oval-stage'
+            ? 'face-video-stage face-video-stage--register'
             : `face-video-stage relative mx-auto mb-4 w-full max-w-[320px] ${phase === 'preview' ? 'face-video-stage--preview' : ''}`
         }
       >
         {phase === 'preview' ? (
-          <video
-            ref={videoPlaybackRef}
-            src={previewUrl}
-            className={`face-video-live face-video-playback ${isRegister ? '' : 'h-full w-full'}`}
-            playsInline
-            controls={!isRegister}
-            muted={isRegister}
-            loop={isRegister}
-            autoPlay={isRegister}
-            aria-label="Pré-visualização do vídeo gravado"
-          />
+          <>
+            <video
+              ref={videoPlaybackRef}
+              src={previewUrl}
+              className={`face-video-live face-video-playback ${isRegister ? '' : 'h-full w-full'}`}
+              playsInline
+              controls={!isRegister}
+              muted={isRegister}
+              loop={isRegister}
+              autoPlay={isRegister}
+              aria-label="Pré-visualização do vídeo gravado"
+            />
+            {isRegister ? (
+              <>
+                <div className="face-video-white-mask" aria-hidden />
+                <div className="face-video-oval-border" aria-hidden />
+              </>
+            ) : null}
+          </>
         ) : (
           <>
             <video
@@ -424,14 +424,17 @@ export default function FaceVideoCapture({
               autoPlay
               aria-label="Pré-visualização da câmera"
             />
-            {!isRegister ? (
+            {isRegister ? (
               <>
-                <div className="face-video-mask pointer-events-none absolute inset-0" aria-hidden />
-                <div className="face-video-oval pointer-events-none absolute inset-0" aria-hidden>
-                  <div className="face-video-oval-ring" />
-                </div>
+                <div className="face-video-white-mask" aria-hidden />
+                <div className="face-video-oval-border" aria-hidden />
               </>
-            ) : null}
+            ) : (
+              <>
+                <div className="face-video-mask pointer-events-none" aria-hidden />
+                <div className="face-video-oval-ring" aria-hidden />
+              </>
+            )}
           </>
         )}
       </div>

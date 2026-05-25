@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Terms from './pages/Terms';
 import Register from './pages/Register/index.jsx';
 import KycVerification from './pages/KycVerification/index.jsx';
+import FaceVideoDevPage from './pages/KycVerification/FaceVideoDevPage.jsx';
 import { AuthProvider as RegisterAuthProvider } from './hooks/useAuth.jsx';
 import { authService } from './services/authService';
 import { clearStoredAuth, getStoredAuth, storeAuthSession } from './utils/authStorage';
@@ -201,6 +202,10 @@ const App = () => {
               </RegisterAuthProvider>
             </PublicRoute>
           } />
+
+          {import.meta.env.DEV ? (
+            <Route path="/dev/face-video" element={<FaceVideoDevPage />} />
+          ) : null}
 
           {/* KYC — usado pelo /banco (gate cartão/empréstimo) e links diretos */}
           <Route
