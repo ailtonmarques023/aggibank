@@ -1407,11 +1407,13 @@ const Register = () => {
   const handleFaceVideoFile = async (file) => {
     if (!file || file.size <= 0) {
       setKycStepError('Não conseguimos gravar seu vídeo. Tente novamente.');
-      return;
+      throw new Error('FACE_VIDEO_EMPTY');
     }
 
     if (ONBOARDING_LINEAR) {
-      if (!storeLinearArtifactFile(file, 'FACE_VIDEO')) return;
+      if (!storeLinearArtifactFile(file, 'FACE_VIDEO')) {
+        throw new Error('FACE_VIDEO_STORE_FAILED');
+      }
       setKycStepError('');
       setCurrentStep(STEP.FINAL_TERMS);
       return;

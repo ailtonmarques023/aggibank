@@ -188,6 +188,13 @@ export default function FaceVideoCapture({
     startCamera();
   }, [clearTimers, revokePreviewUrl, onClearError, startCamera]);
 
+  useEffect(() => {
+    if (!autoAdvanceOnRecord || !errorMessage) return;
+    if (phase === 'preview' || phase === 'submitting') {
+      autoSubmitStartedRef.current = false;
+    }
+  }, [autoAdvanceOnRecord, errorMessage, phase]);
+
   const finishRecording = useCallback(() => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === 'inactive') return;
@@ -198,6 +205,31 @@ export default function FaceVideoCapture({
     }
     clearTimers();
   }, [clearTimers]);
+
+  const submitRecordedFile = useCallback(
+    async (file) => {
+      if (!file || file.size <= 0) {
+        setCameraError(
+          isRegister ? registerRecordFailMessage : 'Nenhum dado foi gravado. Tente novamente.'
+        );
+        setPhase('live');
+        return;
+      }
+      if (uploadBusy) return;
+      onClearError();
+      try {
+        await onUploadFile(file);
+      } catch (_) {
+        autoSubmitStartedRef.current = false;
+        const url = URL.createObjectURL(file);
+        previewUrlRef.current = url;
+        setPreviewUrl(url);
+        setRecordedFile(file);
+        setPhase('preview');
+      }
+    },
+    [onUploadFile, onClearError, uploadBusy, isRegister, registerRecordFailMessage]
+  );
 
   const startRecording = useCallback(() => {
     if (!streamRef.current || !mimeChoice) return;
@@ -248,11 +280,21 @@ export default function FaceVideoCapture({
         }
 
         const file = new File([blob], `face-video.${mimeChoice.extension}`, { type: mimeChoice.mime });
+        stopStream();
+
+        if (autoAdvanceOnRecord) {
+          if (autoSubmitStartedRef.current) return;
+          autoSubmitStartedRef.current = true;
+          setRecordedFile(file);
+          setPhase('submitting');
+          void submitRecordedFile(file);
+          return;
+        }
+
         const url = URL.createObjectURL(blob);
         previewUrlRef.current = url;
         setPreviewUrl(url);
         setRecordedFile(file);
-        stopStream();
         setPhase('preview');
       };
 
@@ -281,39 +323,14 @@ export default function FaceVideoCapture({
     recordMinMs,
     recordMaxMs,
     isRegister,
+    autoAdvanceOnRecord,
+    submitRecordedFile,
   ]);
 
   const handleUseVideo = async () => {
     if (!recordedFile || uploadBusy) return;
-    if (!recordedFile.size) {
-      setCameraError(
-        isRegister ? registerRecordFailMessage : 'Nenhum dado foi gravado. Tente novamente.'
-      );
-      setPhase('live');
-      return;
-    }
-    onClearError();
-    try {
-      await onUploadFile(recordedFile);
-    } catch (_) {
-      autoSubmitStartedRef.current = false;
-    }
+    await submitRecordedFile(recordedFile);
   };
-
-  useEffect(() => {
-    if (!autoAdvanceOnRecord || phase !== 'preview' || !recordedFile || uploadBusy) return;
-    if (autoSubmitStartedRef.current) return;
-    autoSubmitStartedRef.current = true;
-    void handleUseVideo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoAdvanceOnRecord, phase, recordedFile, uploadBusy]);
-
-  useEffect(() => {
-    if (!autoAdvanceOnRecord || !errorMessage) return;
-    if (phase === 'preview' || phase === 'live') {
-      autoSubmitStartedRef.current = false;
-    }
-  }, [autoAdvanceOnRecord, errorMessage, phase]);
 
   const elapsedSec = Math.min(Math.ceil(elapsedMs / 1000), Math.ceil(recordMaxMs / 1000));
   const targetSec = Math.ceil(recordMaxMs / 1000);
@@ -465,6 +482,12 @@ export default function FaceVideoCapture({
         )}
       </div>
 
+      {isRegister && phase === 'submitting' ? (
+        <p className="face-video-instruction face-video-instruction--register text-center text-[0.875rem] font-medium text-gray-600" role="status">
+          Continuando…
+        </p>
+      ) : null}
+
       {isRegister && phase === 'recording' ? (
         <div className="face-video-instruction face-video-instruction--register text-center" aria-live="polite">
           <p className="text-[1rem] font-semibold leading-snug text-agilbank-primary">{guidedText}</p>
@@ -528,11 +551,6 @@ export default function FaceVideoCapture({
 
         {phase === 'preview' && autoAdvanceOnRecord ? (
           <>
-            {uploadBusy ? (
-              <p className="text-center text-[0.875rem] font-medium text-gray-600" role="status">
-                Continuando…
-              </p>
-            ) : null}
             {displayError ? (
               <Button
                 type="button"
