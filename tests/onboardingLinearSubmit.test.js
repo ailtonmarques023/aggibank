@@ -276,7 +276,7 @@ describe('Onboarding linear submit-full', () => {
     expect(res.body.code).toBe('CPF_ALREADY_EXISTS');
   });
 
-  it('CPF em proposta ativa recente retorna 409', async () => {
+  it('CPF em proposta ativa não expirada retorna 409', async () => {
     prisma.user.findUnique.mockResolvedValue(null);
     prisma.accountApplication.findFirst.mockImplementation(({ where }) => {
       if (where.cpf) {
@@ -292,7 +292,27 @@ describe('Onboarding linear submit-full', () => {
     const res = await attachRequired(req);
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('APPLICATION_CPF_ACTIVE');
+    expect(res.body.message).toContain('proposta em andamento');
     expect(prisma.accountApplication.create).not.toHaveBeenCalled();
+  });
+
+  it('CPF com propostas antigas inativas permite novo submit-full', async () => {
+    wireSuccessfulSubmitMocks();
+
+    let req = request(app).post('/api/onboarding/applications/submit-full');
+    Object.entries(
+      baseFields({
+        cpf: '15377233409',
+        email: 'novo.15377233409@example.com',
+      })
+    ).forEach(([k, v]) => {
+      req = req.field(k, v);
+    });
+    const res = await attachRequired(req);
+
+    expect(res.status).toBe(202);
+    expect(res.body.success).toBe(true);
+    expect(prisma.accountApplication.create).toHaveBeenCalled();
   });
 
   describe('AutoDecision hardened', () => {

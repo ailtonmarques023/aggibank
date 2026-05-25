@@ -6,6 +6,8 @@ export const REGISTER_MESSAGES = Object.freeze({
   connectivity:
     'Não foi possível criar sua conta agora. Verifique sua conexão e tente novamente em instantes.',
   rateLimit: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+  activeApplication:
+    'Já existe uma proposta em andamento com este CPF ou e-mail. Aguarde a conclusão ou entre em contato com o suporte.',
 });
 
 const TECH_HINT =

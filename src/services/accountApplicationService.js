@@ -339,41 +339,44 @@ async function noteDuplicateIdentifiers({ cpf, email }) {
   return hints;
 }
 
-const APPLICATION_TERMINAL_STATUSES = ['FINALIZED', 'EXPIRED', 'CANCELLED', 'REJECTED'];
+/** Status que impedem nova proposta linear (demais = não bloqueiam). */
+const ACTIVE_APPLICATION_DEDUP_STATUSES = Object.freeze([
+  'DRAFT',
+  'DATA_RECEIVED',
+  'DOCUMENTS_PENDING',
+  'READY_TO_FINALIZE',
+  'DOCUMENTS_APPROVED',
+  'RESUBMISSION_REQUIRED',
+]);
 
-function activeApplicationDedupSince() {
-  const hours = parseInt(process.env.ONBOARDING_ACTIVE_APPLICATION_DEDUP_HOURS, 10);
-  const windowHours = Number.isFinite(hours) && hours > 0 ? hours : 48;
-  return new Date(Date.now() - windowHours * 60 * 60 * 1000);
-}
+const ACTIVE_APPLICATION_DEDUP_MESSAGE =
+  'Já existe uma proposta em andamento com este CPF ou e-mail. Aguarde a conclusão ou entre em contato com o suporte.';
 
 /**
- * Bloqueia nova proposta quando CPF/e-mail já possuem User ou proposta ativa recente.
+ * Bloqueia nova proposta quando CPF/e-mail já possuem User ou proposta ainda ativa (não expirada).
  */
 async function noteActiveApplicationDuplicate({ cpf, email }) {
   await noteDuplicateIdentifiers({ cpf, email });
 
-  const since = activeApplicationDedupSince();
+  const now = new Date();
   const normalizedCpf = normalizeCpfDigits(cpf);
   const normalizedEmail = normalizeEmail(email);
-  const statusFilter = { notIn: APPLICATION_TERMINAL_STATUSES };
+  const activeProposalWhere = {
+    status: { in: [...ACTIVE_APPLICATION_DEDUP_STATUSES] },
+    expiresAt: { gt: now },
+  };
 
   if (normalizedCpf) {
     const activeByCpf = await prisma.accountApplication.findFirst({
       where: {
         cpf: normalizedCpf,
-        status: statusFilter,
-        createdAt: { gte: since },
+        ...activeProposalWhere,
       },
       select: { id: true },
       orderBy: { createdAt: 'desc' },
     });
     if (activeByCpf) {
-      throw httpError(
-        409,
-        'APPLICATION_CPF_ACTIVE',
-        'Já existe uma proposta de abertura em andamento para este CPF. Aguarde a análise ou faça login.'
-      );
+      throw httpError(409, 'APPLICATION_CPF_ACTIVE', ACTIVE_APPLICATION_DEDUP_MESSAGE);
     }
   }
 
@@ -381,18 +384,13 @@ async function noteActiveApplicationDuplicate({ cpf, email }) {
     const activeByEmail = await prisma.accountApplication.findFirst({
       where: {
         email: normalizedEmail,
-        status: statusFilter,
-        createdAt: { gte: since },
+        ...activeProposalWhere,
       },
       select: { id: true },
       orderBy: { createdAt: 'desc' },
     });
     if (activeByEmail) {
-      throw httpError(
-        409,
-        'APPLICATION_EMAIL_ACTIVE',
-        'Já existe uma proposta de abertura em andamento para este e-mail. Aguarde a análise ou faça login.'
-      );
+      throw httpError(409, 'APPLICATION_EMAIL_ACTIVE', ACTIVE_APPLICATION_DEDUP_MESSAGE);
     }
   }
 
@@ -410,6 +408,8 @@ module.exports = {
   expireApplicationIfNeeded,
   noteDuplicateIdentifiers,
   noteActiveApplicationDuplicate,
+  ACTIVE_APPLICATION_DEDUP_STATUSES,
+  ACTIVE_APPLICATION_DEDUP_MESSAGE,
   updateApplicationFromSession,
   toPublicStatus,
   TERMINAL_STATUSES,

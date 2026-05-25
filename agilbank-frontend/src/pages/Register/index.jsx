@@ -42,7 +42,7 @@ import {
   submitOnboardingKycForReview,
   finalizeOnboarding,
 } from '../../services/onboardingService';
-import { resolveRegisterFailure } from '../../services/registerMessage';
+import { REGISTER_MESSAGES, resolveRegisterFailure } from '../../services/registerMessage';
 import FaceVideoCapture from '../KycVerification/FaceVideoCapture';
 import InlineDocumentCamera from './InlineDocumentCamera';
 
@@ -819,6 +819,10 @@ const Register = () => {
       }
       setCurrentStep(STEP.PENDING_REVIEW);
     } catch (err) {
+      if (err?.code === 'APPLICATION_CPF_ACTIVE' || err?.code === 'APPLICATION_EMAIL_ACTIVE') {
+        applyErrorMessage(REGISTER_MESSAGES.activeApplication);
+        return;
+      }
       const msg =
         typeof err?.message === 'string' && err.message.trim()
           ? sanitizeUserFacingError(err.message)
