@@ -2470,7 +2470,7 @@ const Register = () => {
       case STEP.FACE_VIDEO:
         return (
           <FaceVideoCapture
-            variant={ONBOARDING_LINEAR ? 'register' : 'default'}
+            variant="register"
             autoAdvanceOnRecord={ONBOARDING_LINEAR}
             onUploadFile={async (file) => handleFaceVideoFile(file)}
             uploadBusy={uploadBusy}

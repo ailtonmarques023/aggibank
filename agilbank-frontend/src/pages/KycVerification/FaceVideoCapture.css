@@ -60,6 +60,7 @@
   max-height: none;
   margin: 24px auto 20px;
   overflow: hidden;
+  border: 0;
   border-radius: 0;
   background: #fff;
   box-shadow: none;
@@ -71,9 +72,13 @@
   --face-oval-rx: 38%;
   --face-oval-ry: 38%;
   --face-oval-ring-scale: 1;
+  -webkit-clip-path: ellipse(
+    var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y)
+  );
+  clip-path: ellipse(var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y));
 }
 
-/* Register: recorte elíptico no vídeo + fundo branco no stage (evita borda entre máscara e vídeo). */
+/* Register: vídeo preenche o stage; recorte elíptico fica no container (mais estável que só no <video>). */
 .face-video-stage--register video,
 .face-video-stage--register .face-video-live {
   position: absolute;
@@ -85,10 +90,8 @@
   object-fit: cover;
   object-position: center var(--face-oval-y);
   transform: scaleX(-1);
-  -webkit-clip-path: ellipse(
-    var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y)
-  );
-  clip-path: ellipse(var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y));
+  -webkit-clip-path: none;
+  clip-path: none;
 }
 
 .face-video-stage--register .face-video-playback {
@@ -97,15 +100,15 @@
   width: 100%;
   height: 100%;
   transform: none;
-  -webkit-clip-path: ellipse(
-    var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y)
-  );
-  clip-path: ellipse(var(--face-oval-rx) var(--face-oval-ry) at var(--face-oval-x) var(--face-oval-y));
+  -webkit-clip-path: none;
+  clip-path: none;
 }
 
-/* Overlay branco legado não usado no register — evita elipse da máscara menor que o vídeo. */
-.face-video-stage--register .face-video-white-mask {
-  display: none;
+/* Legado KYC (máscara retangular) nunca no register. */
+.face-video-stage--register .face-video-white-mask,
+.face-video-stage--register .face-video-mask,
+.face-video-stage--register .face-video-oval-ring {
+  display: none !important;
 }
 
 .face-video-white-mask {

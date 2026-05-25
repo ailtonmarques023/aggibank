@@ -40,6 +40,13 @@
   padding-top: 0.75rem;
 }
 
+#register-flow-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
 /* Shell onboarding: tela branca contínua (sem card/modal) */
 .register-shell--onboarding {
   min-height: 100dvh;
