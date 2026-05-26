@@ -17,6 +17,10 @@ const {
   emitOrGetPromotionPix,
   PromotionPixError,
 } = require('../services/chargePromotionPixService');
+const {
+  findBlockingPromotionForIndividualPix,
+  linkageFromParsedCharge,
+} = require('../services/chargePromotionIndividualPixBlockService');
 
 const router = express.Router();
 
@@ -500,6 +504,24 @@ router.post('/:id/pix', async (req, res) => {
     });
 
     const amount = detail.charge.amount;
+
+    const linkage = linkageFromParsedCharge(req.params.id, parsed);
+    const promotionBlock = await findBlockingPromotionForIndividualPix({
+      userId,
+      ...linkage,
+    });
+    if (promotionBlock.blocked) {
+      return res.status(409).json({
+        success: false,
+        error: 'CHARGE_IN_ACTIVE_PROMOTION',
+        message:
+          'Esta cobrança faz parte de uma promoção ativa. Use o Pix promocional agrupado ou aguarde a expiração da promoção.',
+        data: {
+          promotionId: promotionBlock.promotionId,
+          reason: promotionBlock.reason,
+        },
+      });
+    }
 
     if (pixProviderService.isPixChargeProviderConfigured()) {
       try {
