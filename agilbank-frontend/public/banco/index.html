@@ -11,6 +11,8 @@
     <script src="js/legacyApiClient.js"></script>
     <script src="js/kycJourneyGate.js"></script>
     <script src="js/legacyNavigation.js"></script>
+    <script src="js/chargePromotionApi.js"></script>
+    <script src="js/chargePromotionModal.js"></script>
     <script>
         (function enforceSingleLoginScreen() {
             function redirectGuestToReactLogin() {
@@ -60,6 +62,7 @@
     <link rel="stylesheet" href="css/style.mensagensdeaviso.css">
     <link rel="stylesheet" href="css/style.gerargru.solicitarenvio.css">
     <link rel="stylesheet" href="css/style.gerargruGerarpix.css">
+    <link rel="stylesheet" href="css/chargePromotionModal.css">
     <link rel="stylesheet" href="css/style.containerboleto.css">
     <link rel="stylesheet" href="css/style.conteiner.configuraçoes.css">
     <link rel="stylesheet" href="css/style.containerPerfil.css">
@@ -5268,6 +5271,28 @@
         </div>
     </div>
 
+    <!-- Promoção agrupada de cobranças (Fatia 6 — backend) -->
+    <div id="chargePromotionOverlay" class="charge-promo-overlay" style="display:none;" aria-hidden="true">
+        <div class="charge-promo-overlay-backdrop"></div>
+        <div class="charge-promo-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="chargePromoHdrTitle">
+            <section class="shell">
+                <header class="hdr">
+                    <div class="hdr-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                    </div>
+                    <h1 class="hdr-title" id="chargePromoHdrTitle">Cobranças em aberto</h1>
+                    <div class="hdr-shield" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                </header>
+                <div class="card">
+                    <div id="chargePromoCardInner"></div>
+                </div>
+            </section>
+        </div>
+        <div class="charge-promo-toast" id="chargePromoToast" role="status"></div>
+    </div>
+
     <!-- Container boleto -->
     <div class="boleto-container" id="boletoContainer">
             <div class="header">
@@ -8922,6 +8947,9 @@
                 window.__agilbankChargesList = list;
                 if (!list.length) {
                     agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                    if (window.ChargePromotionModal && typeof window.ChargePromotionModal.hide === 'function') {
+                        window.ChargePromotionModal.hide();
+                    }
                     return;
                 }
                 agilbankChargeSetVisible('gruCobrancasPanel', true);
@@ -8944,7 +8972,14 @@
                         agilbankChargesLoadDetail(sel.value);
                     };
                 }
-                return agilbankChargesLoadDetail(list[0].id);
+                return agilbankChargesLoadDetail(list[0].id).then(function () {
+                    if (
+                        window.ChargePromotionModal &&
+                        typeof window.ChargePromotionModal.tryShowAfterChargesLoaded === 'function'
+                    ) {
+                        return window.ChargePromotionModal.tryShowAfterChargesLoaded(list);
+                    }
+                });
             })
             .catch(function (err) {
                 console.error('agilbankCobrancasRefresh', err);
@@ -8996,6 +9031,21 @@
             .then(function (_ref3) {
                 var res = _ref3.res;
                 var body = _ref3.body;
+                if (res.status === 409 && body && body.error === 'CHARGE_IN_ACTIVE_PROMOTION') {
+                    if (
+                        window.ChargePromotionModal &&
+                        typeof window.ChargePromotionModal.handleIndividualPixBlocked === 'function'
+                    ) {
+                        window.ChargePromotionModal.handleIndividualPixBlocked(body);
+                    } else if (typeof mostrarAgilbankAviso === 'function') {
+                        mostrarAgilbankAviso(
+                            (body && body.message) ||
+                                'Esta cobrança faz parte de uma promoção ativa. Use o Pix promocional agrupado ou aguarde a expiração da promoção.',
+                            'Pix promocional'
+                        );
+                    }
+                    return;
+                }
                 if (res.status === 503) {
                     if (typeof mostrarAgilbankAviso === 'function') {
                         mostrarAgilbankAviso((body && body.message) || 'Pix não configurado no servidor.');
