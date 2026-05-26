@@ -8,6 +8,11 @@ const logger = require('../utils/logger');
 const { resolvePixReceiverKey } = require('../utils/gruCharge');
 const efiPixClient = require('../services/efiPixClient');
 const pixProviderService = require('../services/pix/pixProviderService');
+const { listOpenChargeSummariesForUser } = require('../services/chargesListingService');
+const {
+  isChargePromotionsFeatureEnabled,
+  getOrCreateCurrentChargePromotion,
+} = require('../services/chargePromotionService');
 
 const router = express.Router();
 
@@ -99,18 +104,6 @@ async function loadShipmentForUser(userId, id) {
   });
 }
 
-async function hasBoletoForShipment(shipmentId) {
-  const row = await prisma.boleto.findUnique({
-    where: {
-      solicitacaoTipo_solicitacaoId: {
-        solicitacaoTipo: 'CARD_SHIPMENT',
-        solicitacaoId: shipmentId,
-      },
-    },
-  });
-  return !!row;
-}
-
 /** Pix exibido no detalhe: prioriza cobrança paga (webhook Fase O); senão, cob ativa e não expirada. */
 async function findPixCobrancaForChargeDetail(userId, linkedEntityType, linkedEntityId) {
   const paid = await prisma.pixCobranca.findFirst({
@@ -135,92 +128,13 @@ async function findPixCobrancaForChargeDetail(userId, linkedEntityType, linkedEn
   });
 }
 
-function toPublicChargeSummary(row) {
-  if (row.kind === 'boleto') {
-    const b = row.boleto;
-    return {
-      id: `${PREFIX.BOLETO}_${b.id}`,
-      type: 'gru_boleto',
-      protocol: b.protocolo || chargeProtocol('blt', b.id),
-      product: inferBoletoProduct(b),
-      description: b.descricao,
-      status: normalizeStatusKey(b.status),
-      statusLabel: mapStatusDisplay(b.status),
-      amount: Number(b.valor),
-      createdAt: b.createdAt.toISOString(),
-    };
-  }
-  if (row.kind === 'loan_insurance') {
-    const lic = row.lic;
-    return {
-      id: `${PREFIX.LOAN_INSURANCE}_${lic.id}`,
-      type: 'loan_insurance',
-      protocol: chargeProtocol('lic', lic.id),
-      product: 'Seguro do empréstimo',
-      description: 'Taxa de seguro do empréstimo contratado',
-      status: normalizeStatusKey(lic.status),
-      statusLabel: mapStatusDisplay(lic.status),
-      amount: Number(lic.amount),
-      createdAt: lic.createdAt.toISOString(),
-    };
-  }
-  const sh = row.shipment;
-  return {
-    id: `${PREFIX.CARD_SHIP}_${sh.id}`,
-    type: 'card_shipping',
-    protocol: chargeProtocol('csh', sh.id),
-    product: 'Frete do cartão',
-    description: 'Frete para envio do cartão físico',
-    status: normalizeStatusKey(sh.shippingFeeStatus),
-    statusLabel: mapStatusDisplay(sh.shippingFeeStatus),
-    amount: Number(sh.shippingFeeAmount),
-    createdAt: sh.createdAt.toISOString(),
-  };
-}
-
 /**
  * GET /api/charges — cobranças pendentes (e vencidas pendentes de quitação) do usuário autenticado.
  */
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
-
-    const [boletos, loanCharges, shipments] = await Promise.all([
-      prisma.boleto.findMany({
-        where: { userId, status: { in: ['pendente', 'vencido'] } },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.loanInsuranceCharge.findMany({
-        where: { userId, status: 'pendente' },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.cardShipment.findMany({
-        where: { userId, shippingFeeStatus: 'PENDENTE' },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
-
-    const summaries = [];
-
-    boletos.forEach((b) => {
-      summaries.push({ kind: 'boleto', boleto: b, createdAt: b.createdAt });
-    });
-
-    loanCharges.forEach((lic) => {
-      summaries.push({ kind: 'loan_insurance', lic, createdAt: lic.createdAt });
-    });
-
-    for (const sh of shipments) {
-      // eslint-disable-next-line no-await-in-loop
-      const linked = await hasBoletoForShipment(sh.id);
-      if (!linked) {
-        summaries.push({ kind: 'card_shipment', shipment: sh, createdAt: sh.createdAt });
-      }
-    }
-
-    summaries.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-    const charges = summaries.map(toPublicChargeSummary);
+    const charges = await listOpenChargeSummariesForUser(userId);
 
     if (process.env.AGILBANK_CHARGES_DIAGNOSTIC === 'true' && charges.length === 0) {
       const [
@@ -349,6 +263,45 @@ function buildChargeDetail(kind, entity, userRow) {
     },
   };
 }
+
+/**
+ * GET /api/charges/promotions/current — promoção elegível atual (persistência idempotente; sem Pix).
+ * Deve ficar antes de GET /:id para não capturar "promotions" como id.
+ */
+router.get('/promotions/current', async (req, res) => {
+  try {
+    if (!isChargePromotionsFeatureEnabled()) {
+      return res.json({
+        success: true,
+        data: {
+          promotion: null,
+          reason: 'FEATURE_DISABLED',
+        },
+      });
+    }
+
+    const userId = req.user.id;
+    const openCharges = await listOpenChargeSummariesForUser(userId);
+    const result = await getOrCreateCurrentChargePromotion(userId, openCharges);
+
+    return res.json({
+      success: true,
+      data: {
+        promotion: result.promotion,
+      },
+    });
+  } catch (error) {
+    logger.error('Erro ao obter promoção atual de cobranças:', {
+      requestId: req.requestId,
+      error: error && error.message ? error.message : String(error || ''),
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
 
 /**
  * GET /api/charges/:id — detalhe de uma cobrança (somente do titular; outro usuário → 404).

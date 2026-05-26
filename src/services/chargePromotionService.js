@@ -9,8 +9,11 @@ const crypto = require('crypto');
  * Tipos internos (settlement/PixCobranca): boleto | loan_insurance | card_shipment
  */
 
+const { prisma, transaction } = require('../config/database');
+
 const DEFAULT_DISCOUNT_PERCENT = 15;
 const MIN_OPEN_CHARGES_FOR_PROMOTION = 2;
+const DEFAULT_PROMOTION_TTL_SECONDS = 120;
 
 /** Status considerados em aberto / pagáveis na listagem de cobranças. */
 const OPEN_CHARGE_STATUSES = new Set(['pendente', 'vencido']);
@@ -145,16 +148,51 @@ function itemDedupeKey(item) {
   return `${item.linkedEntityType}:${item.linkedEntityId}`;
 }
 
+function isChargePromotionsFeatureEnabled() {
+  return String(process.env.FEATURE_CHARGE_PROMOTIONS_ENABLED || '')
+    .trim()
+    .toLowerCase() === 'true';
+}
+
+function getChargePromotionTtlSeconds() {
+  const raw = process.env.CHARGE_PROMOTION_TTL_SECONDS;
+  if (raw == null || String(raw).trim() === '') {
+    return DEFAULT_PROMOTION_TTL_SECONDS;
+  }
+  const n = Math.trunc(Number(raw));
+  if (!Number.isFinite(n) || n < 1) {
+    return DEFAULT_PROMOTION_TTL_SECONDS;
+  }
+  return n;
+}
+
 /**
- * Chave idempotente para persistência (Fatia 2+): mesmo usuário + mesmo conjunto de cobranças → mesma promo.
+ * Início da janela temporal estável (segundos Unix) para idempotência por TTL.
+ * @param {Date} [now]
+ * @param {number} [ttlSeconds]
+ * @returns {number}
+ */
+function computePromotionWindowStartEpoch(now = new Date(), ttlSeconds = getChargePromotionTtlSeconds()) {
+  const sec = Math.floor(now.getTime() / 1000);
+  const ttl = Math.max(1, Math.trunc(ttlSeconds));
+  return Math.floor(sec / ttl) * ttl;
+}
+
+/**
+ * Chave idempotente: usuário + conjunto de cobranças + janela temporal.
  * @param {string} userId
  * @param {Array<{ linkedEntityType: string, linkedEntityId: string }>} items
+ * @param {number} windowStartEpoch segundos Unix do início da janela
  * @returns {string}
  */
-function buildPromotionIdempotencyKey(userId, items) {
+function buildPromotionIdempotencyKey(userId, items, windowStartEpoch) {
   const uid = String(userId || '').trim();
   if (!uid) {
     throw new Error('CHARGE_PROMOTION_IDEMPOTENCY_USER_REQUIRED');
+  }
+  const window = Math.trunc(windowStartEpoch);
+  if (!Number.isFinite(window) || window < 0) {
+    throw new Error('CHARGE_PROMOTION_IDEMPOTENCY_WINDOW_INVALID');
   }
   const parts = (items || [])
     .map((it) => `${String(it.linkedEntityType).trim()}:${String(it.linkedEntityId).trim()}`)
@@ -162,7 +200,169 @@ function buildPromotionIdempotencyKey(userId, items) {
     .sort();
   const payload = `${uid}|${parts.join('|')}`;
   const hash = crypto.createHash('sha256').update(payload).digest('hex').slice(0, 32);
-  return `charge_promo:${uid}:${hash}`;
+  return `charge_promo:${uid}:${hash}:${window}`;
+}
+
+function formatPromotionForApi(promotion, now = new Date()) {
+  const expiresAt = promotion.expiresAt instanceof Date ? promotion.expiresAt : new Date(promotion.expiresAt);
+  const expiresInSeconds = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / 1000));
+  return {
+    id: promotion.id,
+    status: promotion.status,
+    discountPercent: promotion.discountPercent,
+    originalAmountCents: promotion.originalAmountCents,
+    discountAmountCents: promotion.discountAmountCents,
+    promotionalAmountCents: promotion.promotionalAmountCents,
+    expiresAt: expiresAt.toISOString(),
+    expiresInSeconds,
+    items: (promotion.items || []).map((it) => ({
+      publicChargeId: it.publicChargeId,
+      publicChargeType: it.publicChargeType,
+      linkedEntityType: it.linkedEntityType,
+      linkedEntityId: it.linkedEntityId,
+      originalAmountCents: it.originalAmountCents,
+    })),
+  };
+}
+
+async function expireStaleActivePromotionsForUser(userId, now = new Date()) {
+  await prisma.chargePromotion.updateMany({
+    where: {
+      userId,
+      status: 'ACTIVE',
+      expiresAt: { lte: now },
+    },
+    data: { status: 'EXPIRED' },
+  });
+}
+
+/**
+ * Cria ou retorna promoção ACTIVE idempotente (sem Pix, sem settlement).
+ * @param {string} userId
+ * @param {object[]} openChargeSummaries — saída de listOpenChargeSummariesForUser
+ * @param {{ now?: Date, ttlSeconds?: number, discountPercent?: number }} [options]
+ * @returns {Promise<{ promotion: object|null }>}
+ */
+async function getOrCreateCurrentChargePromotion(userId, openChargeSummaries, options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date();
+  const ttlSeconds = options.ttlSeconds != null ? Math.trunc(options.ttlSeconds) : getChargePromotionTtlSeconds();
+  const quote = buildPromotionQuoteFromCharges(openChargeSummaries, {
+    discountPercent: options.discountPercent,
+  });
+
+  if (!quote.eligible) {
+    return { promotion: null };
+  }
+
+  await expireStaleActivePromotionsForUser(userId, now);
+
+  let windowStartEpoch = computePromotionWindowStartEpoch(now, ttlSeconds);
+  let idempotencyKey = buildPromotionIdempotencyKey(userId, quote.items, windowStartEpoch);
+
+  const findByKey = async (key) =>
+    prisma.chargePromotion.findUnique({
+      where: { idempotencyKey: key },
+      include: { items: true },
+    });
+
+  let existing = await findByKey(idempotencyKey);
+
+  if (existing) {
+    if (existing.status === 'ACTIVE' && existing.expiresAt > now) {
+      return { promotion: formatPromotionForApi(existing, now) };
+    }
+    if (existing.status === 'ACTIVE' && existing.expiresAt <= now) {
+      await prisma.chargePromotion.update({
+        where: { id: existing.id },
+        data: { status: 'EXPIRED' },
+      });
+      windowStartEpoch = Math.floor(now.getTime() / 1000);
+      idempotencyKey = buildPromotionIdempotencyKey(userId, quote.items, windowStartEpoch);
+      existing = await findByKey(idempotencyKey);
+    } else if (existing.status === 'EXPIRED' || existing.status === 'PAID' || existing.status === 'CANCELLED') {
+      windowStartEpoch = Math.floor(now.getTime() / 1000);
+      idempotencyKey = buildPromotionIdempotencyKey(userId, quote.items, windowStartEpoch);
+      existing = await findByKey(idempotencyKey);
+    }
+  }
+
+  if (existing && existing.status === 'ACTIVE' && existing.expiresAt > now) {
+    return { promotion: formatPromotionForApi(existing, now) };
+  }
+
+  const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
+
+  const createPayload = {
+    userId,
+    idempotencyKey,
+    status: 'ACTIVE',
+    discountPercent: quote.discountPercent,
+    originalAmountCents: quote.originalAmountCents,
+    discountAmountCents: quote.discountAmountCents,
+    promotionalAmountCents: quote.promotionalAmountCents,
+    expiresAt,
+    items: {
+      create: quote.items.map((it) => ({
+        publicChargeId: it.publicChargeId,
+        publicChargeType: it.publicChargeType,
+        linkedEntityType: it.linkedEntityType,
+        linkedEntityId: it.linkedEntityId,
+        originalAmountCents: it.originalAmountCents,
+      })),
+    },
+  };
+
+  try {
+    const created = await transaction(async (tx) => {
+      const row = await tx.chargePromotion.create({
+        data: createPayload,
+        include: { items: true },
+      });
+      return row;
+    });
+    return { promotion: formatPromotionForApi(created, now) };
+  } catch (err) {
+    if (err && err.code === 'P2002') {
+      const raced = await findByKey(idempotencyKey);
+      if (raced) {
+        if (raced.status === 'ACTIVE' && raced.expiresAt > now) {
+          return { promotion: formatPromotionForApi(raced, now) };
+        }
+        if (raced.status === 'ACTIVE' && raced.expiresAt <= now) {
+          await prisma.chargePromotion.update({
+            where: { id: raced.id },
+            data: { status: 'EXPIRED' },
+          });
+        }
+      }
+      const retryWindow = Math.floor(now.getTime() / 1000);
+      const retryKey = buildPromotionIdempotencyKey(userId, quote.items, retryWindow);
+      const retryExisting = await findByKey(retryKey);
+      if (retryExisting && retryExisting.status === 'ACTIVE' && retryExisting.expiresAt > now) {
+        return { promotion: formatPromotionForApi(retryExisting, now) };
+      }
+      if (retryKey !== idempotencyKey) {
+        try {
+          const createdRetry = await transaction(async (tx) =>
+            tx.chargePromotion.create({
+              data: { ...createPayload, idempotencyKey: retryKey },
+              include: { items: true },
+            })
+          );
+          return { promotion: formatPromotionForApi(createdRetry, now) };
+        } catch (retryErr) {
+          if (retryErr && retryErr.code === 'P2002') {
+            const racedRetry = await findByKey(retryKey);
+            if (racedRetry && racedRetry.status === 'ACTIVE' && racedRetry.expiresAt > now) {
+              return { promotion: formatPromotionForApi(racedRetry, now) };
+            }
+          }
+          throw retryErr;
+        }
+      }
+    }
+    throw err;
+  }
 }
 
 /**
@@ -261,9 +461,13 @@ function buildPromotionQuoteFromCharges(charges, options = {}) {
 module.exports = {
   DEFAULT_DISCOUNT_PERCENT,
   MIN_OPEN_CHARGES_FOR_PROMOTION,
+  DEFAULT_PROMOTION_TTL_SECONDS,
   OPEN_CHARGE_STATUSES,
   CLOSED_CHARGE_STATUSES,
   PUBLIC_TO_LINKED_ENTITY_TYPE,
+  isChargePromotionsFeatureEnabled,
+  getChargePromotionTtlSeconds,
+  computePromotionWindowStartEpoch,
   amountBrlToCents,
   calculateDiscountCents,
   calculatePromotionalAmountCents,
@@ -271,4 +475,7 @@ module.exports = {
   resolveChargeLinkage,
   buildPromotionIdempotencyKey,
   buildPromotionQuoteFromCharges,
+  formatPromotionForApi,
+  expireStaleActivePromotionsForUser,
+  getOrCreateCurrentChargePromotion,
 };
