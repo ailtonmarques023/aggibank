@@ -201,11 +201,13 @@ function agilbankWizardGoToStep(n) {
     }
     var nav = document.getElementById('cartaoWizardNav');
     if (nav) {
-        nav.style.display = agilbankWizardStep === 7 ? 'none' : 'flex';
+        nav.classList.remove('cartao-wizard-nav--hidden');
     }
     var next = document.getElementById('cartaoWizardNext');
     if (next) {
-        next.textContent = agilbankWizardStep === 6 ? 'Enviar solicitação' : 'Continuar';
+        if (agilbankWizardStep === 6) next.textContent = 'Enviar solicitação';
+        else if (agilbankWizardStep === 7) next.textContent = 'Continuar';
+        else next.textContent = 'Continuar';
     }
 }
 
@@ -311,6 +313,25 @@ function agilbankFecharSolicitacaoCartao() {
     if (listaSec) listaSec.style.display = 'block';
     if (typeof window.agilbankRefreshPainelCartoes === 'function') {
         window.agilbankRefreshPainelCartoes();
+    }
+}
+
+/** Passo final do wizard: fecha solicitação e volta ao dashboard (sem novo POST). */
+function agilbankWizardFinishToDashboard() {
+    agilbankSetSolicitacaoWizardMode(false);
+    var flow = document.getElementById('cartaoSolicitacaoFlow');
+    if (flow) flow.style.display = 'none';
+    var nav = document.getElementById('cartaoWizardNav');
+    if (nav) nav.classList.remove('cartao-wizard-nav--hidden');
+    if (typeof window.legacyNavigation !== 'undefined' && typeof window.legacyNavigation.show === 'function') {
+        window.legacyNavigation.show('dashboard');
+    } else {
+        var dash = document.getElementById('container');
+        if (dash) dash.style.display = 'block';
+        document.body.classList.remove('agilbank-cartao-wizard-open');
+    }
+    if (typeof window.agilbankRefreshPainelCartoes === 'function') {
+        void window.agilbankRefreshPainelCartoes();
     }
 }
 
@@ -484,6 +505,10 @@ function agilbankWizardNext() {
         enviarSolicitacao();
         return;
     }
+    if (agilbankWizardStep >= WIZARD_TOTAL_STEPS) {
+        agilbankWizardFinishToDashboard();
+        return;
+    }
     if (!agilbankWizardValidateStep(agilbankWizardStep)) return;
     var nextStep = agilbankWizardStep + 1;
 
@@ -564,8 +589,11 @@ function agilbankWizardBindNav() {
     if (ver && !ver._agilWizBound) {
         ver._agilWizBound = true;
         ver.addEventListener('click', function () {
-            if (typeof agilbankRefreshPainelCartoes === 'function') {
-                agilbankRefreshPainelCartoes();
+            agilbankFecharSolicitacaoCartao();
+            if (typeof window.showCartaoGerenciamento === 'function') {
+                window.showCartaoGerenciamento();
+            } else if (typeof agilbankRefreshPainelCartoes === 'function') {
+                void agilbankRefreshPainelCartoes();
             }
         });
     }
@@ -595,7 +623,7 @@ function agilbankWizardAplicarResultadoPosPost(cartoes, proximosPassos) {
                         linhas.push(String(ef.mensagemRemessa));
                     } else if (ef.cobrancaFreteAplicavel) {
                         linhas.push(
-                            'Para receber o cartão físico, acompanhe a cobrança de frete em Cobranças.'
+                            'Para receber o cartão físico, pague a produção e o envio em Cobranças.'
                         );
                     } else {
                         linhas.push(
@@ -1925,8 +1953,8 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
 
     if (uiKey === 'FREIGHT_PENDING') {
         statusLine.classList.add(tonePorDelivery(pd, shipment));
-        statusLabel.textContent = 'Aguardando pagamento do frete';
-        support.textContent = 'Pague o boleto para liberar a produção e entrega do cartão.';
+        statusLabel.textContent = 'Aguardando pagamento';
+        support.textContent = 'Pague para liberar a produção e o envio do seu cartão físico.';
         if (typeof window.levarboletoContainer !== 'function') {
             support.textContent +=
                 ' Abra Cobranças no menu quando o frete estiver listado para concluir o pagamento.';
@@ -2001,7 +2029,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
         statusLine.classList.add('is-info');
         statusLabel.textContent = 'Em produção';
         support.textContent =
-            'Pagamento do frete confirmado. Seu cartão está em produção e será enviado em seguida.';
+            'Pagamento da produção e envio confirmado. Seu cartão está em produção e será enviado em seguida.';
         var stagesProd = agilbankShipmentTimelineStagesFromDelivery(pd, shipment);
         host.innerHTML = agilbankShipmentTimelineHtml(stagesProd);
         l1.textContent = linhaFreteResumo(pd, shipment);
@@ -3695,6 +3723,7 @@ window.agilbankSyncDashboardApprovedMiniCard = agilbankSyncDashboardApprovedMini
 window.agilbankDashboardOpenCartaoPainel = agilbankDashboardOpenCartaoPainel;
 window.agilbankSetSolicitacaoWizardMode = agilbankSetSolicitacaoWizardMode;
 window.agilbankFecharSolicitacaoCartao = agilbankFecharSolicitacaoCartao;
+window.agilbankWizardFinishToDashboard = agilbankWizardFinishToDashboard;
 window.agilbankFetchCartoes = fetchCartoesFromApi;
 window.agilbankFetchCardsStatus = fetchCardsStatusFromApi;
 window.agilbankTemSolicitacaoCartaoPendente = agilbankTemSolicitacaoCartaoPendente;

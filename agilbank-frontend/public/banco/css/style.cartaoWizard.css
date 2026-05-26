@@ -372,6 +372,10 @@ body.agilbank-cartao-wizard-open {
     color: #00a86b;
 }
 
+#cartaoWizardNav.cartao-wizard-nav--hidden {
+    display: none !important;
+}
+
 .cartao-wizard-nav {
     display: flex !important;
     flex: none !important;
