@@ -53,6 +53,24 @@ async function settlePaidPixCobrancaInTx(tx, { pixCobranca, webhookEventId, requ
   }
 
   const type = String(pixCobranca.linkedEntityType || '').trim();
+  if (type === 'charge_promotion') {
+    await recordAudit({
+      userId: pixCobranca.userId,
+      action: 'pix.settlement.charge_promotion_deferred',
+      entity: 'PixCobranca',
+      entityId: pixCobranca.id,
+      metadata: {
+        linkedEntityId: pixCobranca.linkedEntityId,
+        webhookEventId: webhookEventId || null,
+        requestId: requestId || null,
+        message:
+          'Charge promotion Pix paid; grouped settlement pending future implementation.',
+      },
+      ip: ip || null,
+      userAgent: null,
+    });
+    return { settlementResult: 'PROMOTION_SETTLEMENT_PENDING' };
+  }
   const entityId = String(pixCobranca.linkedEntityId || '').trim();
   const userId = pixCobranca.userId;
   const cobAmount = pixCobranca.amount;

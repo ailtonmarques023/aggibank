@@ -341,4 +341,88 @@ describe('pixEfiWebhookService', () => {
     expect(prisma.pixCobranca.update).not.toHaveBeenCalled();
     expect(prisma.pixWebhookEvent.update).not.toHaveBeenCalled();
   });
+
+  it('PROCESSED charge_promotion usa PROMOTION_SETTLEMENT_PENDING sem settlement individual', async () => {
+    const { recordAudit } = require('../src/utils/auditLog');
+
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue({
+      id: 'cob-promo',
+      userId: 'u1',
+      amount: 67.15,
+      status: 'ATIVA',
+      linkedEntityType: 'charge_promotion',
+      linkedEntityId: 'promo-1',
+    });
+    prisma.pixCobranca.update.mockResolvedValue({
+      id: 'cob-promo',
+      userId: 'u1',
+      linkedEntityType: 'charge_promotion',
+      linkedEntityId: 'promo-1',
+      status: 'PAGA',
+    });
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-promo' });
+    prisma.pixWebhookEvent.update.mockResolvedValue({});
+
+    const r = await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2EPromoWebhook01',
+            txid: 'txidPromoWebhook01',
+            valor: '67.15',
+            horario: '2026-05-26T15:00:00.000Z',
+          },
+        ],
+      },
+      { requestId: 'req-promo' },
+    );
+
+    expect(r.ok).toBe(true);
+    expect(r.results[0].result).toBe('PROCESSED');
+    expect(r.results[0].settlementResult).toBe('PROMOTION_SETTLEMENT_PENDING');
+    expect(settlePaidPixCobrancaInTx).not.toHaveBeenCalled();
+    expect(prisma.pixWebhookEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          settlementResult: 'PROMOTION_SETTLEMENT_PENDING',
+        }),
+      }),
+    );
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'efi.pix.webhook.charge_promotion_pending_settlement',
+      }),
+    );
+  });
+
+  it('ALREADY_PAID charge_promotion não chama settlement', async () => {
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue({
+      id: 'cob-promo',
+      userId: 'u1',
+      amount: 67.15,
+      status: 'PAGA',
+      linkedEntityType: 'charge_promotion',
+      linkedEntityId: 'promo-1',
+    });
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-promo-dup' });
+
+    const r = await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2EPromoWebhookDup',
+            txid: 'txidPromoWebhookDup',
+            valor: '67.15',
+            horario: '2026-05-26T15:00:00.000Z',
+          },
+        ],
+      },
+      {},
+    );
+
+    expect(r.results[0].result).toBe('ALREADY_PAID');
+    expect(settlePaidPixCobrancaInTx).not.toHaveBeenCalled();
+  });
 });

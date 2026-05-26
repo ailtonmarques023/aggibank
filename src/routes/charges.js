@@ -13,6 +13,10 @@ const {
   isChargePromotionsFeatureEnabled,
   getOrCreateCurrentChargePromotion,
 } = require('../services/chargePromotionService');
+const {
+  emitOrGetPromotionPix,
+  PromotionPixError,
+} = require('../services/chargePromotionPixService');
 
 const router = express.Router();
 
@@ -294,6 +298,50 @@ router.get('/promotions/current', async (req, res) => {
     logger.error('Erro ao obter promoção atual de cobranças:', {
       requestId: req.requestId,
       error: error && error.message ? error.message : String(error || ''),
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+/**
+ * POST /api/charges/promotions/:promotionId/pix — Pix promocional agrupado (sem settlement nesta fatia).
+ * Registrar antes de GET/POST /:id para não capturar "promotions" como :id.
+ */
+router.post('/promotions/:promotionId/pix', async (req, res) => {
+  try {
+    const pix = await emitOrGetPromotionPix({
+      userId: req.user.id,
+      promotionId: req.params.promotionId,
+      debtorCpf: req.user.cpf,
+      debtorName: req.user.nomeCompleto,
+    });
+
+    return res.json({
+      success: true,
+      data: pix,
+    });
+  } catch (err) {
+    if (err instanceof PromotionPixError) {
+      return res.status(err.httpStatus).json({
+        success: false,
+        message: err.message,
+        code: err.code,
+      });
+    }
+    if (err instanceof efiPixClient.EfiPixClientError) {
+      return res.status(err.httpStatus).json({
+        success: false,
+        message: err.message,
+        code: err.code,
+      });
+    }
+    logger.error('Erro ao emitir Pix promocional de cobranças:', {
+      requestId: req.requestId,
+      error: err && err.message ? err.message : String(err || ''),
     });
     return res.status(500).json({
       success: false,
