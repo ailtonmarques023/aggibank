@@ -4606,7 +4606,7 @@
                 <i class="fas fa-chevron-left"></i>
             </button>
             <h1 class="title">Status de Entrega</h1>
-            <button type="button" class="status-entrega-pay-freight" id="statusEntregaBtnPagarFrete" hidden>Pagar produção e envio</button>
+            <button type="button" class="status-entrega-pay-freight" id="statusEntregaBtnPagarFrete" hidden>Pagar frete</button>
             <button type="button" class="status-entrega-refresh" id="statusEntregaBtnAtualizar" onclick="if (typeof window.agilbankCartaoAcaoStatus==='function') window.agilbankCartaoAcaoStatus();">Atualizar status</button>
         </div>
 
@@ -5200,40 +5200,55 @@
             <div id="gruCobrancasLoading" class="gru-cobrancas-loading" style="display:none;">Carregando cobranças…</div>
             <div id="gruCobrancasEmpty" class="gru-cobrancas-empty" style="display:none;">
                 <p><strong>Você não possui cobranças pendentes.</strong></p>
-                <p class="gru-cobrancas-empty-sub">Quando houver seguro, produção e envio do cartão ou outra cobrança, ela aparecerá aqui.</p>
+                <p class="gru-cobrancas-empty-sub">Quando houver seguro, frete ou outra cobrança, ela aparecerá aqui.</p>
             </div>
             <div id="gruCobrancasPanel" style="display:none;">
-                <div id="gruPaymentUrgencyBanner" class="gru-payment-urgency" style="display:none;" role="status" aria-live="polite">
-                    <div class="gru-payment-urgency-top">
-                        <span class="gru-payment-urgency-badge" id="gruPaymentUrgencyBadge">Condição liberada agora</span>
-                        <span class="gru-payment-timer" id="gruPaymentTimer" aria-label="Tempo restante">02:00</span>
+                <div class="detalhe-pagamento" id="gruCobrancaSelectWrap" style="display:none;">
+                    <span class="label">Cobrança:</span>
+                    <select id="gruChargeSelect" class="gru-charge-select" aria-label="Selecionar cobrança"></select>
+                </div>
+                <div class="info-pagamento" id="gruCobrancaDetalhes">
+                    <div class="detalhe-pagamento">
+                        <span class="label">Produto / cobrança:</span>
+                        <span class="valor" id="gruDetalheProduto">—</span>
                     </div>
-                    <h3 class="gru-payment-urgency-title" id="gruPaymentUrgencyTitle">Seu cartão está quase pronto para produção</h3>
-                    <p class="gru-payment-urgency-text" id="gruPaymentUrgencyText">Finalize em até 2 minutos para liberar a produção e o envio do seu cartão físico.</p>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Número do Protocolo:</span>
+                        <span class="valor" id="gruDetalheProtocolo">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Situação da Solicitação:</span>
+                        <span class="valor" id="gruDetalheSituacao">—</span>
+                    </div>
+                    <div class="detalhe-pagamento" id="gruDetalhePixEfiWrap" style="display:none;">
+                        <span class="label">Pix:</span>
+                        <span class="valor" id="gruDetalhePixEfi">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Data da Solicitação:</span>
+                        <span class="valor" id="gruDetalheData">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">CPF:</span>
+                        <span class="valor" id="gruDetalheCpf">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Nome:</span>
+                        <span class="valor" id="gruDetalheNome">—</span>
+                    </div>
+                    <div class="detalhe-pagamento">
+                        <span class="label">Valor:</span>
+                        <span class="valor" id="gruDetalheValor">—</span>
+                    </div>
                 </div>
-                <p class="gru-payment-lead">Pague para liberar a produção e o envio do seu cartão físico.</p>
-                <h3 class="gru-payment-summary-heading">Resumo do pagamento</h3>
-                <p id="gruPaymentMultiHint" class="gru-payment-multi-hint" style="display:none;"></p>
-                <p id="gruPaymentSeqBar" class="gru-payment-seq-bar" style="display:none;"></p>
-                <div id="gruPaymentCardsHost" class="gru-payment-cards" role="listbox" aria-label="Cobranças pendentes"></div>
-                <div class="info-pagamento gru-payment-legacy-hidden" id="gruCobrancaDetalhes" aria-hidden="true">
-                    <span id="gruDetalheProduto">—</span>
-                    <span id="gruDetalheProtocolo">—</span>
-                    <span id="gruDetalheSituacao">—</span>
-                    <div id="gruDetalhePixEfiWrap" style="display:none;"><span id="gruDetalhePixEfi">—</span></div>
-                    <span id="gruDetalheData">—</span>
-                    <span id="gruDetalheCpf">—</span>
-                    <span id="gruDetalheNome">—</span>
-                    <span id="gruDetalheValor">—</span>
-                </div>
-                <div class="acoes-pagamento gru-payment-actions">
-                    <button type="button" class="btn-gerar-pix gru-payment-primary-btn" id="gruPaymentPrimaryBtn">
-                        <i class="fas fa-qrcode" aria-hidden="true"></i>
-                        Gerar pagamento
-                    </button>
-                    <button type="button" class="btn-gerar-boleto gru-payment-secondary-btn" onclick="agilbankChargesGerarBoleto(event)">
-                        <i class="fas fa-barcode" aria-hidden="true"></i>
+                <div class="acoes-pagamento">
+                    <button type="button" class="btn-gerar-boleto" onclick="agilbankChargesGerarBoleto(event)">
+                        <i class="fas fa-barcode"></i>
                         Gerar Boleto
+                    </button>
+                    <button type="button" class="btn-gerar-pix" onclick="agilbankChargesGerarPix(event)">
+                        <i class="fas fa-qrcode"></i>
+                        Gerar Pix
                     </button>
                 </div>
                 <div id="gruPixResultPanel" class="gru-pix-result-panel" style="display:none;" aria-live="polite">
@@ -5243,9 +5258,6 @@
                     <p id="gruPixKeyLine" class="gru-pix-key-line" style="display:none;"></p>
                     <button type="button" class="btn-gerar-pix" id="gruPixCopyBtn" style="display:none;margin-top:8px;" onclick="agilbankChargesCopiarPixPayload()">
                         <i class="fas fa-copy"></i> <span id="gruPixCopyBtnLabel">Copiar</span>
-                    </button>
-                    <button type="button" class="gru-payment-seq-next" id="gruPixSeqNextBtn" style="display:none;">
-                        Próxima pendência
                     </button>
                 </div>
             </div>
@@ -8811,11 +8823,7 @@
             var el = document.getElementById(id);
             if (el) el.textContent = txt != null ? String(txt) : '—';
         };
-        var disp =
-            window.AgilbankChargesPaymentUI && typeof window.AgilbankChargesPaymentUI.formatChargeDisplay === 'function'
-                ? window.AgilbankChargesPaymentUI.formatChargeDisplay(c)
-                : null;
-        set('gruDetalheProduto', disp ? disp.title : c.product || c.description || '—');
+        set('gruDetalheProduto', c.product || c.description || '—');
         set('gruDetalheProtocolo', c.protocol || '—');
         set('gruDetalheSituacao', c.statusLabel || c.status || '—');
         set('gruDetalheData', agilbankFormatChargeDateTime(c.createdAt));
@@ -8886,7 +8894,67 @@
         if (rb) rb.textContent = agilbankFormatMoneyBr(c.amount);
     }
 
-    /* agilbankCobrancasRefresh — implementado em js/chargesPaymentUi.js */
+    function agilbankCobrancasRefresh() {
+        var api = window.legacyApiClient || (window.AgilBank && window.AgilBank.api);
+        if (!api || typeof api.request !== 'function') {
+            if (typeof mostrarAgilbankAviso === 'function') {
+                mostrarAgilbankAviso('Serviço de cobranças indisponível no cliente.');
+            }
+            return Promise.resolve();
+        }
+        agilbankChargeSetVisible('gruCobrancasLoading', true);
+        agilbankChargeSetVisible('gruCobrancasEmpty', false);
+        agilbankChargeSetVisible('gruCobrancasPanel', false);
+        return api.request('charges', { method: 'GET' })
+            .then(function (res) { return res.json().then(function (body) { return { res: res, body: body }; }); })
+            .then(function (_ref) {
+                var res = _ref.res;
+                var body = _ref.body;
+                agilbankChargeSetVisible('gruCobrancasLoading', false);
+                if (!res.ok || !body || !body.success) {
+                    agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                    if (typeof mostrarAgilbankAviso === 'function' && res.status === 403) {
+                        mostrarAgilbankAviso((body && body.message) || 'Conta não verificada ou sem permissão.');
+                    }
+                    return;
+                }
+                var list = (body.data && body.data.charges) ? body.data.charges : [];
+                window.__agilbankChargesList = list;
+                if (!list.length) {
+                    agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                    return;
+                }
+                agilbankChargeSetVisible('gruCobrancasPanel', true);
+                var sel = document.getElementById('gruChargeSelect');
+                var wrapSel = document.getElementById('gruCobrancaSelectWrap');
+                if (sel) {
+                    sel.innerHTML = '';
+                    list.forEach(function (ch) {
+                        var opt = document.createElement('option');
+                        opt.value = ch.id;
+                        opt.textContent = (ch.product || ch.type) + ' — ' + agilbankFormatMoneyBr(ch.amount);
+                        sel.appendChild(opt);
+                    });
+                    if (list.length > 1) {
+                        agilbankChargeSetVisible('gruCobrancaSelectWrap', true);
+                    } else {
+                        agilbankChargeSetVisible('gruCobrancaSelectWrap', false);
+                    }
+                    sel.onchange = function () {
+                        agilbankChargesLoadDetail(sel.value);
+                    };
+                }
+                return agilbankChargesLoadDetail(list[0].id);
+            })
+            .catch(function (err) {
+                console.error('agilbankCobrancasRefresh', err);
+                agilbankChargeSetVisible('gruCobrancasLoading', false);
+                agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                if (typeof mostrarAgilbankAviso === 'function') {
+                    mostrarAgilbankAviso('Não foi possível carregar cobranças. Verifique a conexão.');
+                }
+            });
+    }
 
     function agilbankChargesLoadDetail(chargeId) {
         var api = window.legacyApiClient || (window.AgilBank && window.AgilBank.api);
@@ -8903,6 +8971,8 @@
                     return;
                 }
                 agilbankChargesPopulateDetailFromPayload(body.data);
+                var sel = document.getElementById('gruChargeSelect');
+                if (sel && sel.value !== chargeId) sel.value = chargeId;
             })
             .catch(function (e) {
                 console.error('agilbankChargesLoadDetail', e);
@@ -8967,12 +9037,6 @@
                     if (btnLbl) btnLbl.textContent = 'Copiar chave Pix';
                 } else {
                     if (typeof mostrarAgilbankAviso === 'function') mostrarAgilbankAviso('Resposta Pix incompleta.');
-                }
-                if (
-                    window.AgilbankChargesPaymentUI &&
-                    typeof window.AgilbankChargesPaymentUI.onPixGenerated === 'function'
-                ) {
-                    window.AgilbankChargesPaymentUI.onPixGenerated();
                 }
             })
             .catch(function (err) {
@@ -9831,7 +9895,6 @@
     <!-- Seus outros elementos HTML aqui -->
     <script src="js/ContainerPerfil.js"></script>
     <script src="js/ContainerConfiguraçoes.js"></script>
-    <script src="js/chargesPaymentUi.js?v=20260525-payment-cards"></script>
     <script src="js/cartao.js?v=20260512-status-entrega-active"></script>
     <script src="js/creditoPessoal.js"></script>
     <script src="js/simulacaoChat.js"></script>

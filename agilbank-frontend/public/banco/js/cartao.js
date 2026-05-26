@@ -623,7 +623,7 @@ function agilbankWizardAplicarResultadoPosPost(cartoes, proximosPassos) {
                         linhas.push(String(ef.mensagemRemessa));
                     } else if (ef.cobrancaFreteAplicavel) {
                         linhas.push(
-                            'Para receber o cartão físico, pague a produção e o envio em Cobranças.'
+                            'Para receber o cartão físico, acompanhe a cobrança de frete em Cobranças.'
                         );
                     } else {
                         linhas.push(
@@ -1953,8 +1953,8 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
 
     if (uiKey === 'FREIGHT_PENDING') {
         statusLine.classList.add(tonePorDelivery(pd, shipment));
-        statusLabel.textContent = 'Aguardando pagamento';
-        support.textContent = 'Pague para liberar a produção e o envio do seu cartão físico.';
+        statusLabel.textContent = 'Aguardando pagamento do frete';
+        support.textContent = 'Pague o boleto para liberar a produção e entrega do cartão.';
         if (typeof window.levarboletoContainer !== 'function') {
             support.textContent +=
                 ' Abra Cobranças no menu quando o frete estiver listado para concluir o pagamento.';
@@ -2029,7 +2029,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
         statusLine.classList.add('is-info');
         statusLabel.textContent = 'Em produção';
         support.textContent =
-            'Pagamento da produção e envio confirmado. Seu cartão está em produção e será enviado em seguida.';
+            'Pagamento do frete confirmado. Seu cartão está em produção e será enviado em seguida.';
         var stagesProd = agilbankShipmentTimelineStagesFromDelivery(pd, shipment);
         host.innerHTML = agilbankShipmentTimelineHtml(stagesProd);
         l1.textContent = linhaFreteResumo(pd, shipment);
