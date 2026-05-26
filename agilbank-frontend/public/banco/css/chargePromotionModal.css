@@ -549,6 +549,45 @@
   transform: translateX(-50%) translateY(0);
 }
 
+#chargePromotionOverlay .charge-promo-polling-status {
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 4px 0 0;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#chargePromotionOverlay .charge-promo-polling-status.is-hidden {
+  display: none;
+}
+
+#chargePromotionOverlay .charge-promo-polling-status--timeout {
+  color: #64748b;
+}
+
+#chargePromotionOverlay .charge-promo-polling-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0066b3;
+  flex-shrink: 0;
+  animation: charge-promo-polling-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes charge-promo-polling-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @media (max-width: 480px) {
   #chargePromotionOverlay .agil-promo-banner-number {
     font-size: 36px;

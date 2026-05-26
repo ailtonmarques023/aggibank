@@ -1,5 +1,5 @@
 /**
- * API de promoção de cobranças (Fatia 6 — frontend).
+ * API de promoção de cobranças (Fatia 6–7 — frontend).
  * Usa legacyApiClient; não calcula valores nem elegibilidade.
  */
 (function (global) {
@@ -29,6 +29,18 @@
   }
 
   /**
+   * Lista cobranças abertas (mesmo contrato de GET /api/charges).
+   * @returns {Promise<{ res: Response, body: object }>}
+   */
+  function fetchCharges() {
+    var api = getApi();
+    if (!api || typeof api.request !== 'function') {
+      return Promise.reject(new Error('API_UNAVAILABLE'));
+    }
+    return api.request('charges', { method: 'GET' }).then(parseJsonResponse);
+  }
+
+  /**
    * @param {string} promotionId
    * @returns {Promise<{ res: Response, body: object }>}
    */
@@ -51,6 +63,7 @@
 
   global.ChargePromotionApi = {
     fetchCurrentPromotion: fetchCurrentPromotion,
+    fetchCharges: fetchCharges,
     emitPromotionPix: emitPromotionPix,
   };
 })(typeof window !== 'undefined' ? window : global);

@@ -1,5 +1,5 @@
 /**
- * Modal/card de promoção de cobranças — integração backend (Fatia 6).
+ * Modal/card de promoção de cobranças — integração backend (Fatias 6–7).
  * Valores e elegibilidade vêm exclusivamente da API.
  */
 (function (global) {
@@ -10,6 +10,8 @@
   var timerLeft = 0;
   var promoExpired = false;
   var isEmittingPix = false;
+  /** @type {'idle'|'waiting'|'timeout'} */
+  var pollingUI = 'idle';
   var state = {
     promotion: null,
     charges: [],
@@ -203,7 +205,95 @@
     }
   }
 
+  function stopPromotionPaymentPolling() {
+    var pol = global.ChargePromotionPolling;
+    if (pol && typeof pol.stop === 'function') {
+      pol.stop();
+    }
+    pollingUI = 'idle';
+  }
+
+  function updatePollingStatusUI() {
+    var el = $('chargePromoPollingStatus');
+    if (!el) return;
+    if (pollingUI === 'waiting') {
+      el.className = 'charge-promo-polling-status charge-promo-polling-status--waiting';
+      el.innerHTML =
+        '<span class="charge-promo-polling-dot" aria-hidden="true"></span> Aguardando confirmação do pagamento...';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      return;
+    }
+    if (pollingUI === 'timeout') {
+      el.className = 'charge-promo-polling-status charge-promo-polling-status--timeout';
+      el.textContent =
+        'Ainda não recebemos a confirmação. Você pode manter esta tela aberta ou voltar mais tarde.';
+      el.setAttribute('role', 'status');
+      return;
+    }
+    el.className = 'charge-promo-polling-status is-hidden';
+    el.textContent = '';
+    el.removeAttribute('role');
+    el.removeAttribute('aria-live');
+  }
+
+  function startPromotionPaymentPolling() {
+    var pol = global.ChargePromotionPolling;
+    if (!pol || typeof pol.start !== 'function' || !state.promotion || !state.pixPayload) {
+      return;
+    }
+    var p = state.pixPayload;
+    var started = pol.start({
+      promotionId: state.promotion.id,
+      promotionItems: state.promotion.items,
+      pixCopiaECola: p.pixCopiaECola,
+      txid: p.txid,
+      callbacks: {
+        onConfirmed: function () {
+          pollingUI = 'idle';
+          stopPromotionPaymentPolling();
+          hide();
+          var refresh = global.agilbankCobrancasRefresh;
+          var msg = 'Pagamento confirmado. Suas cobranças foram atualizadas.';
+          if (typeof refresh === 'function') {
+            void Promise.resolve(refresh()).then(function () {
+              showPromotionMessage(msg, 'Cobranças');
+            });
+          } else {
+            showPromotionMessage(msg, 'Cobranças');
+          }
+        },
+        onExpired: function () {
+          pollingUI = 'idle';
+          stopPromotionPaymentPolling();
+          showPromotionMessage(
+            'A promoção expirou antes da confirmação do pagamento.',
+            'Promoção de cobranças'
+          );
+          void refreshPromotionAndMaybeHide();
+        },
+        onTimeout: function () {
+          pollingUI = 'timeout';
+          updatePollingStatusUI();
+        },
+        onPromotionUnavailable: function () {
+          pollingUI = 'idle';
+          stopPromotionPaymentPolling();
+          hide();
+          if (typeof global.agilbankCobrancasRefresh === 'function') {
+            void global.agilbankCobrancasRefresh();
+          }
+        },
+      },
+    });
+    if (started) {
+      pollingUI = 'waiting';
+      updatePollingStatusUI();
+    }
+  }
+
   function hide() {
+    stopPromotionPaymentPolling();
     stopTimer();
     state.view = 'hidden';
     state.pixPayload = null;
@@ -279,6 +369,7 @@
         esc(p.qrCodePix) +
         '" alt="QR Code Pix promocional" class="charge-promo-qr" /></div>';
     }
+    h += '<p class="charge-promo-polling-status is-hidden" id="chargePromoPollingStatus"></p>';
     if (p.pixCopiaECola) {
       h += '<label class="charge-promo-pix-label" for="chargePromoPixPayload">Código Pix copia e cola</label>';
       h +=
@@ -439,15 +530,18 @@
   function renderPixView() {
     var inner = $('chargePromoCardInner');
     if (!inner) return;
+    pollingUI = 'idle';
     inner.innerHTML = renderPixResult();
     bindPixResultEvents();
     stopTimer();
+    startPromotionPaymentPolling();
   }
 
   function onAcceptPromotion() {
     if (!api || !state.promotion || !state.promotion.id) return;
     if (isEmittingPix || promoExpired) return;
 
+    stopPromotionPaymentPolling();
     isEmittingPix = true;
     var mainBtn = $('chargePromoMainBtn');
     if (mainBtn) {
@@ -543,6 +637,12 @@
 
   function tryShowAfterChargesLoaded(chargesList) {
     if (!api) return Promise.resolve();
+    if (global.ChargePromotionPolling && global.ChargePromotionPolling.isActive()) {
+      return Promise.resolve();
+    }
+    if (state.view === 'pix') {
+      return Promise.resolve();
+    }
     return api
       .fetchCurrentPromotion()
       .then(function (result) {
