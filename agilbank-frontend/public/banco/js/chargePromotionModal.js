@@ -596,7 +596,7 @@
     if (!promotion) return false;
     if (body && body.data && body.data.reason === 'FEATURE_DISABLED') return false;
     if (String(promotion.status || '') !== 'ACTIVE') return false;
-    if (!promotion.items || promotion.items.length < 2) return false;
+    if (!promotion.items || promotion.items.length < 1) return false;
     return true;
   }
 

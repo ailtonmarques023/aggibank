@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const { prisma, transaction } = require('../config/database');
 
 const DEFAULT_DISCOUNT_PERCENT = 15;
-const MIN_OPEN_CHARGES_FOR_PROMOTION = 2;
+const MIN_OPEN_CHARGES_FOR_PROMOTION = 1;
 const DEFAULT_PROMOTION_TTL_SECONDS = 120;
 
 /** Status considerados em aberto / pagáveis na listagem de cobranças. */

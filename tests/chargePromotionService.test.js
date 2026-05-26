@@ -55,7 +55,23 @@ describe('chargePromotionService — quote', () => {
     ]);
     expect(quote.items).toHaveLength(1);
     expect(quote.items[0].publicChargeId).toBe('csh_b');
-    expect(quote.eligible).toBe(false);
+    expect(quote.eligible).toBe(true);
+  });
+
+  it('uma cobrança aberta entra no quote e já é elegível', () => {
+    const quote = buildPromotionQuoteFromCharges([
+      {
+        id: 'csh_ship-1',
+        type: 'card_shipping',
+        status: 'pendente',
+        amount: 39.9,
+      },
+    ]);
+    expect(quote.items).toHaveLength(1);
+    expect(quote.originalAmountCents).toBe(3990);
+    expect(quote.discountAmountCents).toBe(599);
+    expect(quote.promotionalAmountCents).toBe(3391);
+    expect(quote.eligible).toBe(true);
   });
 
   it('cobranças abertas entram no quote com totais corretos', () => {

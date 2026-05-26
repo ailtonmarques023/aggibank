@@ -136,7 +136,7 @@ describe('GET /api/charges/promotions/current', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('com menos de 2 cobranças retorna promotion null e não cria', async () => {
+  it('com uma cobrança aberta cria promoção com centavos corretos e item', async () => {
     prisma.loanInsuranceCharge.findMany.mockResolvedValue([
       {
         id: 'lic-1',
@@ -151,8 +151,21 @@ describe('GET /api/charges/promotions/current', () => {
 
     const res = await request(app).get(ENDPOINT).set('Authorization', BEARER).expect(200);
 
-    expect(res.body.data.promotion).toBeNull();
-    expect(prisma.chargePromotion.create).not.toHaveBeenCalled();
+    expect(res.body.data.promotion).toMatchObject({
+      status: 'ACTIVE',
+      discountPercent: 15,
+      originalAmountCents: 3990,
+      discountAmountCents: 599,
+      promotionalAmountCents: 3391,
+    });
+    expect(res.body.data.promotion.items).toHaveLength(1);
+    expect(res.body.data.promotion.items[0]).toMatchObject({
+      publicChargeId: 'lic_lic-1',
+      publicChargeType: 'loan_insurance',
+      linkedEntityType: 'loan_insurance',
+      linkedEntityId: 'lic-1',
+    });
+    expect(prisma.chargePromotion.create).toHaveBeenCalled();
   });
 
   it('com duas cobranças abertas cria promoção com centavos corretos e items', async () => {

@@ -2575,6 +2575,9 @@
               </span>
               <div class="saldo-card saldo-card-blocked" id="saldoBloqueadoValue">R$ 0,00</div>
               <small class="saldo-blocked-hint" id="saldoBloqueadoHint">Valor aprovado aguardando desbloqueio.</small>
+              <button type="button" class="saldo-blocked-action" onclick="containerGerarBoletoPix()">
+                Gerar pagamento
+              </button>
             </div>
         </div>
       
@@ -8936,7 +8939,7 @@
         if (!wrap || !listEl || !totalEl) return;
 
         listEl.innerHTML = '';
-        if (list.length < 2) {
+        if (list.length < 1) {
             wrap.style.display = 'none';
             totalEl.textContent = '—';
             return;
