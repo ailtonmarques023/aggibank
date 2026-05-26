@@ -5211,6 +5211,14 @@
                     <span class="label">Cobrança:</span>
                     <select id="gruChargeSelect" class="gru-charge-select" aria-label="Selecionar cobrança"></select>
                 </div>
+                <div id="gruCobrancasResumo" class="gru-cobrancas-resumo" style="display:none;" aria-live="polite">
+                    <div class="gru-cobrancas-resumo-title">Cobranças em aberto</div>
+                    <div id="gruCobrancasResumoLista" class="gru-cobrancas-resumo-lista"></div>
+                    <div class="gru-cobrancas-resumo-total">
+                        <span>Valor total</span>
+                        <strong id="gruCobrancasResumoTotal">—</strong>
+                    </div>
+                </div>
                 <div class="info-pagamento" id="gruCobrancaDetalhes">
                     <div class="detalhe-pagamento">
                         <span class="label">Produto / cobrança:</span>
@@ -8920,6 +8928,44 @@
         if (rb) rb.textContent = agilbankFormatMoneyBr(c.amount);
     }
 
+    function agilbankChargesPopulateSummary(charges) {
+        var wrap = document.getElementById('gruCobrancasResumo');
+        var listEl = document.getElementById('gruCobrancasResumoLista');
+        var totalEl = document.getElementById('gruCobrancasResumoTotal');
+        var list = Array.isArray(charges) ? charges : [];
+        if (!wrap || !listEl || !totalEl) return;
+
+        listEl.innerHTML = '';
+        if (list.length < 2) {
+            wrap.style.display = 'none';
+            totalEl.textContent = '—';
+            return;
+        }
+
+        var total = 0;
+        list.forEach(function (ch) {
+            var amount = Number(ch && ch.amount);
+            if (!isFinite(amount)) amount = 0;
+            total += amount;
+
+            var row = document.createElement('div');
+            row.className = 'gru-cobrancas-resumo-row';
+
+            var name = document.createElement('span');
+            name.textContent = ch.product || ch.type || 'Cobrança';
+
+            var value = document.createElement('strong');
+            value.textContent = agilbankFormatMoneyBr(amount);
+
+            row.appendChild(name);
+            row.appendChild(value);
+            listEl.appendChild(row);
+        });
+
+        totalEl.textContent = agilbankFormatMoneyBr(total);
+        wrap.style.display = '';
+    }
+
     function agilbankCobrancasRefresh() {
         var api = window.legacyApiClient || (window.AgilBank && window.AgilBank.api);
         if (!api || typeof api.request !== 'function') {
@@ -8946,8 +8992,10 @@
                 }
                 var list = (body.data && body.data.charges) ? body.data.charges : [];
                 window.__agilbankChargesList = list;
+                agilbankChargesPopulateSummary(list);
                 if (!list.length) {
                     agilbankChargeSetVisible('gruCobrancasEmpty', true);
+                    agilbankChargesPopulateSummary([]);
                     if (window.ChargePromotionModal && typeof window.ChargePromotionModal.hide === 'function') {
                         window.ChargePromotionModal.hide();
                     }

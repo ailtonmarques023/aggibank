@@ -206,6 +206,56 @@
         border: 1px solid #ccc;
     }
 
+    .gru-cobrancas-resumo {
+        margin: 10px 0 12px;
+        padding: 10px;
+        border: 1px solid #d7e3ef;
+        border-radius: 8px;
+        background: #f7fbff;
+        color: #1f2937;
+    }
+
+    .gru-cobrancas-resumo-title {
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #003366;
+        text-transform: uppercase;
+    }
+
+    .gru-cobrancas-resumo-row,
+    .gru-cobrancas-resumo-total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        line-height: 1.35;
+    }
+
+    .gru-cobrancas-resumo-row + .gru-cobrancas-resumo-row {
+        margin-top: 6px;
+    }
+
+    .gru-cobrancas-resumo-row span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .gru-cobrancas-resumo-row strong {
+        white-space: nowrap;
+        color: #111827;
+    }
+
+    .gru-cobrancas-resumo-total {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed #c8d7e6;
+        font-size: 14px;
+        font-weight: 700;
+        color: #003366;
+    }
+
     .gru-pix-result-panel {
         margin-top: 16px;
         padding: 12px;
