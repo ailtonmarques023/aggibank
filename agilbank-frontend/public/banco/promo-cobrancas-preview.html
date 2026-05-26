@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>AgilBank — Preview promo cobranças</title>
+  <style>
+    :root {
+      --navy:       #0a2d4a;
+      --navy-deep:  #061f35;
+      --blue:       #0066b3;
+      --teal:       #00a88f;
+      --teal-dark:  #007f6d;
+      --white:      #ffffff;
+      --gray-50:    #f8fafc;
+      --gray-100:   #f1f5f9;
+      --gray-200:   #e2e8f0;
+      --gray-500:   #64748b;
+      --gray-700:   #334155;
+      --gray-900:   #0f172a;
+      --font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: #dce8f5;
+      min-height: 100vh;
+      color: var(--gray-900);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px 80px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 390px;
+    }
+
+    /* ── Shell (topo navy) ── */
+    .shell {
+      background: linear-gradient(160deg, #0d2f4e 0%, #061f35 60%, #0a3a5c 100%);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 14px 44px rgba(6,31,53,.22);
+    }
+
+    /* ── Header ── */
+    .hdr {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 18px 22px;
+    }
+
+    .hdr-icon {
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,.13);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .hdr-icon svg {
+      width: 22px; height: 22px;
+      stroke: #fff; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .hdr-title {
+      flex: 1;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+    .hdr-title strong { color: #5dd3f5; }
+
+    .hdr-shield {
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,.13);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .hdr-shield svg {
+      width: 22px; height: 22px;
+      stroke: #5dd3f5; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ── White card ── */
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      margin: 0 12px 14px;
+      padding: 18px 16px 20px;
+      box-shadow: 0 3px 18px rgba(15,23,42,.09);
+    }
+
+    /* card header row */
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .card-header-icon {
+      width: 36px; height: 36px;
+      background: #e8f4fc;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-header-icon svg {
+      width: 20px; height: 20px;
+      stroke: var(--blue); fill: none;
+      stroke-width: 1.8;
+    }
+    .card-header-text h2 {
+      font-size: .97rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.3;
+    }
+    .card-header-text p {
+      font-size: .78rem;
+      color: var(--gray-500);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* charge rows */
+    .charges { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; }
+
+    .charge-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      background: var(--gray-50);
+      border-radius: 12px;
+      border: 1px solid var(--gray-100);
+    }
+    .charge-ico {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .charge-ico--card  { background: #dbeafe; }
+    .charge-ico--shield{ background: #d1fae5; }
+    .charge-ico--doc   { background: #ede9fe; }
+    .charge-ico svg {
+      width: 18px; height: 18px;
+      fill: none; stroke-width: 1.8;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .charge-ico--card  svg { stroke: #2563eb; }
+    .charge-ico--shield svg { stroke: #059669; }
+    .charge-ico--doc   svg { stroke: #7c3aed; }
+
+    .charge-body { flex: 1; min-width: 0; }
+    .charge-title {
+      font-size: .85rem; font-weight: 600;
+      color: var(--gray-900); line-height: 1.3; margin-bottom: 2px;
+    }
+    .charge-status {
+      font-size: .73rem;
+      color: #f59e0b;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .charge-status::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #f59e0b;
+    }
+    .charge-amount {
+      font-size: .92rem; font-weight: 700;
+      color: var(--gray-900); flex-shrink: 0;
+    }
+
+    /* divider + original total */
+    .total-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--gray-200);
+      font-size: .82rem;
+      color: var(--gray-500);
+    }
+    .total-strike {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      text-decoration: line-through;
+      color: rgba(215, 15, 25, 1);
+      font-weight: 600;
+    }
+
+    /* ── Banner promocional (referência visual aprovada) ── */
+    .agil-promo-banner {
+      position: relative;
+      width: 100%;
+      min-height: 76px;
+      margin-top: 14px;
+      margin-bottom: 12px;
+      border-radius: 12px;
+      padding: 12px 58px 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      overflow: hidden;
+      color: #fff;
+      background: linear-gradient(135deg, #123fd8 0%, #0788d9 48%, #12d2ad 100%);
+      box-shadow: 0 4px 14px rgba(8, 60, 140, 0.28);
+    }
+    .agil-promo-banner.is-hidden { display: none; }
+
+    /* formas geométricas suaves — canto direito (sem invadir o texto) */
+    .agil-promo-banner::before {
+      content: '';
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      width: 52px;
+      height: 52px;
+      transform: translateY(-50%) rotate(45deg);
+      background: rgba(255, 255, 255, 0.13);
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .agil-promo-banner::after {
+      content: '';
+      position: absolute;
+      right: 42px;
+      top: -2px;
+      width: 34px;
+      height: 34px;
+      transform: rotate(18deg);
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .agil-promo-banner-icon {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .agil-promo-banner-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: #fff;
+      stroke: none;
+    }
+
+    .agil-promo-banner-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .agil-promo-banner-label {
+      font-size: 13px;
+      line-height: 1.15;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+      letter-spacing: 0.01em;
+      text-transform: none;
+      opacity: 1;
+    }
+    #agilPromoBannerAmount,
+    .agil-promo-banner-amount,
+    .agil-promo-banner-value {
+      display: flex;
+      flex-flow: row;
+      align-items: baseline;
+      font-family: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1;
+      font-weight: 900;
+      color: #ffffff;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px rgba(6, 31, 53, 0.22);
+    }
+    .agil-promo-banner-currency,
+    .agil-promo-banner-cents {
+      font-size: 30px;
+      letter-spacing: -0.5px;
+    }
+    .agil-promo-banner-number {
+      font-size: 42px;
+      letter-spacing: -0.6px;
+      line-height: 0.95;
+    }
+
+    /* timer — referência aprovada (#offerTimer) */
+    #offerTimer.offer-timer.agil-promo-timer {
+      width: 100%;
+      min-height: 58px;
+      padding: 10px 14px;
+      border-radius: 11px;
+      background: #eef7ff;
+      border: 1px solid rgba(190, 220, 245, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 0;
+      box-sizing: border-box;
+      box-shadow: none;
+      align-self: stretch;
+      max-width: none;
+      justify-content: flex-start;
+    }
+    #offerTimer.offer-timer.is-hidden { display: none; }
+    #offerTimer .agil-promo-timer-icon,
+    #offerTimer .offer-timer-icon,
+    #offerTimer .timer-icon {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: 999px;
+      background: #0072e5;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #offerTimer .agil-promo-timer-icon svg,
+    #offerTimer .offer-timer-icon svg,
+    #offerTimer .timer-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: #ffffff;
+      fill: none;
+      stroke-width: 2;
+      display: block;
+    }
+    #offerTimer .agil-promo-timer-copy,
+    #offerTimer .offer-timer-texts,
+    #offerTimer .timer-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+      line-height: 1;
+      min-width: 0;
+      flex: 0 1 auto;
+    }
+    #offerTimer .agil-promo-timer-title,
+    #offerTimer .offer-timer-label,
+    #offerTimer .timer-title {
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 700;
+      color: #0071bc;
+    }
+    #offerTimer .agil-promo-timer-subtitle,
+    #offerTimer .offer-timer-sublabel,
+    #offerTimer .timer-subtitle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 500;
+      color: #355f7a;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      width: auto;
+    }
+    #offerTimer .agil-promo-timer-value,
+    #offerTimer .offer-timer-value,
+    #offerTimer .timer-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 52px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 6px;
+      background: #006edc;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+      margin: 0;
+    }
+    #offerTimer.offer-timer.is-expired {
+      background: #fef2f2;
+      border-color: rgba(254, 202, 202, 0.75);
+    }
+    #offerTimer.is-expired .agil-promo-timer-icon,
+    #offerTimer.is-expired .offer-timer-icon,
+    #offerTimer.is-expired .timer-icon { background: #dc2626; }
+    #offerTimer.is-expired .agil-promo-timer-title,
+    #offerTimer.is-expired .offer-timer-label,
+    #offerTimer.is-expired .timer-title { color: #dc2626; }
+    #offerTimer.is-expired .agil-promo-timer-value,
+    #offerTimer.is-expired .offer-timer-value,
+    #offerTimer.is-expired .timer-value {
+      background: #dc2626;
+      color: #ffffff;
+    }
+
+    /* hint — aviso informativo (referência aprovada) */
+    .offer-hint {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: #f0f7fc;
+      border-radius: 10px;
+      border: 1px solid #e3eff8;
+    }
+    .offer-hint.is-hidden { display: none; }
+    .offer-hint-icon {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      background: #dceefb;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .offer-hint-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: #1a4d7a;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .offer-hint-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .offer-hint-title {
+      margin: 0;
+      font-size: 10px;
+      line-height: 1.2;
+      font-weight: 700;
+      color: #0f2d4a;
+      white-space: nowrap;
+      letter-spacing: -0.01em;
+    }
+    .offer-hint-sub {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.4;
+      font-weight: 400;
+      color: #64748b;
+    }
+
+    /* ── Actions ── */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn-main {
+      width: 100%;
+      padding: 15px 18px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(90deg, #0a2d4a 0%, #0d3a5c 100%);
+      box-shadow: 0 4px 14px rgba(0, 53, 209, 0.28);
+      transition: transform .15s, opacity .2s;
+      font-family: inherit;
+    }
+    #promoMainBtn[data-mode="promo"] {
+      justify-content: space-between;
+      gap: 10px;
+      background: linear-gradient(90deg, #0035d1 0%, #0088c9 52%, #00c4b3 100%);
+      box-shadow: 0 5px 16px rgba(0, 53, 209, 0.32);
+    }
+    .btn-main:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn-main:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      background: #94a3b8 !important;
+      box-shadow: none;
+    }
+    .btn-main-label {
+      flex: 1;
+      text-align: center;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    #promoMainBtn[data-mode="pay"] .btn-main-label {
+      flex: none;
+    }
+    .btn-main-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 22px;
+      min-width: 22px;
+    }
+    .btn-main-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: #ffffff;
+      stroke: none;
+      display: block;
+    }
+    .btn-main-chevron {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 18px;
+      min-width: 18px;
+    }
+    .btn-main-chevron svg {
+      width: 18px;
+      height: 18px;
+      stroke: #ffffff;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .btn-separate {
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-size: .875rem;
+      font-family: "Segoe UI";
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn-separate:hover { color: var(--teal-dark); }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 28px 12px;
+    }
+    .empty-icon {
+      width: 52px; height: 52px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: #d1fae5;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .empty-icon svg {
+      width: 26px; height: 26px;
+      stroke: var(--teal); fill: none; stroke-width: 2;
+    }
+    .empty h2 { font-size: 1rem; margin-bottom: 6px; }
+    .empty p  { font-size: .85rem; color: var(--gray-500); line-height: 1.45; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      left: 50%; bottom: 90px;
+      transform: translateX(-50%) translateY(18px);
+      max-width: min(360px, calc(100vw - 32px));
+      padding: 13px 17px;
+      background: var(--gray-900);
+      color: #fff;
+      border-radius: 12px;
+      font-size: .875rem;
+      line-height: 1.4;
+      box-shadow: 0 8px 32px rgba(0,0,0,.28);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s, transform .25s;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Dev panel ── */
+    .dev-panel {
+      margin-top: 22px;
+      padding: 13px 14px;
+      background: rgba(255,255,255,.85);
+      border-radius: 12px;
+      border: 1px dashed #cbd5e1;
+    }
+    .dev-panel-title {
+      font-size: .67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--gray-500);
+      margin-bottom: 9px;
+    }
+    .dev-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .dev-btns button {
+      font-size: .67rem;
+      padding: 5px 9px;
+      border-radius: 7px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: var(--gray-700);
+      cursor: pointer;
+    }
+    .dev-btns button:hover { border-color: var(--blue); color: var(--blue); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="shell" id="promoShell" aria-live="polite">
+      <!-- Header -->
+      <header class="hdr">
+        <div class="hdr-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        </div>
+        <h1 class="hdr-title" id="promoHdrTitle">Você tem <strong>2 cobranças</strong> em aberto</h1>
+        <div class="hdr-shield" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+      </header>
+
+      <!-- White card -->
+      <div class="card" id="promoCard">
+        <div id="promoCardInner"></div>
+      </div>
+    </section>
+
+    <!-- Dev scenarios -->
+    <div class="dev-panel" aria-label="Cenários de teste">
+      <p class="dev-panel-title">Preview — cenários de teste</p>
+      <div class="dev-btns" id="promoDevBtns"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="promoToast" role="status"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var OPEN_STATUSES   = ['PENDING','OPEN','AWAITING_PAYMENT','EM_ABERTO','PENDENTE'];
+    var CLOSED_STATUSES = ['PAID','CANCELED','CANCELLED','EXPIRED','DEBITADO','PAGA'];
+
+    var timerInterval = null;
+    var timerLeft = 0;
+    var promoExpired = false;
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    /* ── helpers ── */
+    function currency(v) {
+      var n = Number(v);
+      if (!isFinite(n)) return '—';
+      return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function promoBannerAmountHtml(v) {
+      var n = Number(v);
+      if (!isFinite(n)) return esc('—');
+      var formatted = n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        .replace(/\u00a0/g, ' ');
+      var commaIdx = formatted.lastIndexOf(',');
+      if (commaIdx === -1) {
+        return '<span class="agil-promo-banner-currency">' + esc(formatted) + '</span>';
+      }
+      var beforeCents = formatted.slice(0, commaIdx);
+      var cents = formatted.slice(commaIdx);
+      var parts = beforeCents.match(/^(R\$)\s*(.+)$/);
+      if (!parts) {
+        return '<span class="agil-promo-banner-currency">' + esc(formatted) + '</span>';
+      }
+      return '<span class="agil-promo-banner-currency">' + esc(parts[1]) + '&nbsp;</span>' +
+        '<span class="agil-promo-banner-number">' + esc(parts[2]) + '</span>' +
+        '<span class="agil-promo-banner-cents">' + esc(cents) + '</span>';
+    }
+
+    function esc(s) {
+      return String(s || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function timerFmt(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      return pad2(Math.floor(sec / 60)) + ':' + pad2(sec % 60);
+    }
+
+    function isOpen(ch) {
+      if (!ch) return false;
+      var s = String(ch.status || '').trim().toUpperCase().replace(/\s+/g,'_');
+      if (CLOSED_STATUSES.indexOf(s) !== -1) return false;
+      return OPEN_STATUSES.indexOf(s) !== -1 || s === '' || s === 'PENDENTE';
+    }
+
+    function openCharges(list) { return (list || []).filter(isOpen); }
+
+    function total(list) {
+      return list.reduce(function (s, c) {
+        var n = Number(c.amount); return s + (isFinite(n) ? n : 0);
+      }, 0);
+    }
+
+    /* ── toast ── */
+    function toast(msg) {
+      var el = $('promoToast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(function () { el.classList.remove('show'); }, 3200);
+    }
+
+    /* ── countdown ── */
+    function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+    function refreshTimerUI() {
+      var block    = $('offerTimer');
+      var labelEl  = $('offerTimerLabel');
+      var subEl    = $('offerTimerSub');
+      var valueEl  = $('offerTimerValue');
+      var hintEl   = $('offerHint');
+      var mainBtn  = $('promoMainBtn');
+      if (!block || !valueEl) return;
+
+      if (promoExpired || timerLeft <= 0) {
+        block.classList.add('is-expired');
+        if (labelEl) labelEl.textContent = 'Promoção expirada';
+        if (subEl)   subEl.textContent   = '';
+        valueEl.textContent = '00:00';
+        if (hintEl)  hintEl.classList.add('is-hidden');
+        if (mainBtn) { mainBtn.disabled = true; mainBtn.querySelector('.btn-main-label').textContent = 'Promoção expirada'; }
+        return;
+      }
+      block.classList.remove('is-expired');
+      if (labelEl) labelEl.textContent = 'Oferta por tempo limitado';
+      if (subEl)   subEl.textContent   = 'Expira em';
+      valueEl.textContent = timerFmt(timerLeft);
+      if (hintEl)  hintEl.classList.remove('is-hidden');
+      if (mainBtn && mainBtn.dataset.mode === 'promo') {
+        mainBtn.disabled = false;
+        mainBtn.querySelector('.btn-main-label').textContent = 'Aproveitar promoção';
+      }
+    }
+
+    function startTimer(secs) {
+      stopTimer();
+      promoExpired = false;
+      timerLeft = Math.max(0, Math.floor(Number(secs) || 0));
+      refreshTimerUI();
+      if (timerLeft <= 0) { promoExpired = true; refreshTimerUI(); return; }
+      timerInterval = setInterval(function () {
+        timerLeft -= 1;
+        if (timerLeft <= 0) { promoExpired = true; stopTimer(); }
+        refreshTimerUI();
+      }, 1000);
+    }
+
+    /* ── icon helpers ── */
+    function chargeIconClass(type) {
+      var t = String(type || '').toUpperCase();
+      if (t.indexOf('SHIP') !== -1 || t.indexOf('CARD') !== -1) return 'charge-ico--card';
+      if (t.indexOf('INSUR') !== -1 || t.indexOf('SHIELD') !== -1) return 'charge-ico--shield';
+      return 'charge-ico--doc';
+    }
+
+    function chargeIconSvg(type) {
+      var t = String(type || '').toUpperCase();
+      if (t.indexOf('SHIP') !== -1 || t.indexOf('CARD') !== -1)
+        return '<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>';
+      if (t.indexOf('INSUR') !== -1)
+        return '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      return '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+    }
+
+    /* ── render ── */
+    function renderChargeRow(ch) {
+      return '<div class="charge-row">' +
+        '<div class="charge-ico ' + chargeIconClass(ch.type) + '" aria-hidden="true">' + chargeIconSvg(ch.type) + '</div>' +
+        '<div class="charge-body">' +
+          '<div class="charge-title">' + esc(ch.title || 'Cobrança') + '</div>' +
+          '<div class="charge-status">Em aberto</div>' +
+        '</div>' +
+        '<div class="charge-amount">' + esc(currency(ch.amount)) + '</div>' +
+      '</div>';
+    }
+
+    function renderEmpty() {
+      return '<div class="empty">' +
+        '<div class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>' +
+        '<h2>Nenhuma cobrança em aberto</h2>' +
+        '<p>Você está em dia com todas as pendências.</p>' +
+      '</div>';
+    }
+
+    function hdrTitle(count) {
+      if (count === 0) return 'Nenhuma cobrança em aberto';
+      if (count === 1) return 'Você tem <strong>1 cobrança</strong> em aberto';
+      return 'Você tem <strong>' + count + ' cobranças</strong> em aberto';
+    }
+
+    function render(payload) {
+      var charges   = (payload && payload.charges)   || [];
+      var promo     = (payload && payload.promotion)  || { enabled: false };
+      var open      = openCharges(charges);
+      var count     = open.length;
+      var tot       = total(open);
+      var showPromo = promo.enabled && count >= 2;
+
+      stopTimer();
+      promoExpired = false;
+
+      /* header */
+      var hdrEl = $('promoHdrTitle');
+      if (hdrEl) hdrEl.innerHTML = hdrTitle(count);
+
+      var inner = $('promoCardInner');
+      if (!inner) return;
+
+      if (count === 0) { inner.innerHTML = renderEmpty(); return; }
+
+      /* subtitle */
+      var subtitle = count >= 2
+        ? 'Combine suas cobranças e pague com condição especial.'
+        : 'Regularize sua cobrança pendente.';
+
+      var h = '';
+
+      /* card header */
+      h += '<div class="card-header">';
+      h +=   '<div class="card-header-icon" aria-hidden="true">';
+      h +=     '<svg viewBox="0 0 24 24"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M4 10h16v4H4z"/><path d="M12 2v4"/><path d="M8 6h8"/></svg>';
+      h +=   '</div>';
+      h +=   '<div class="card-header-text"><h2>Oferta especial de regularização</h2><p>' + esc(subtitle) + '</p></div>';
+      h += '</div>';
+
+      /* charges */
+      h += '<div class="charges">';
+      open.forEach(function (ch) { h += renderChargeRow(ch); });
+      h += '</div>';
+
+      /* total original */
+      h += '<div class="total-row">Total original: <span class="total-strike">' + esc(currency(tot)) + '</span></div>';
+
+      /* banner promocional compacto */
+      if (showPromo) {
+        h += '<div class="agil-promo-banner" id="offerCard" role="region" aria-label="Oferta promocional">';
+        h +=   '<div class="agil-promo-banner-icon" aria-hidden="true">';
+        h +=     '<svg viewBox="0 0 24 24" aria-hidden="true">';
+        h +=       '<path d="M12 2l1.2 4.2 4.2 1.2-4.2 1.2L12 13l-1.2-4.4L6.6 7.4l4.2-1.2L12 2z"/>';
+        h +=       '<path d="M19 13.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3z"/>';
+        h +=     '</svg>';
+        h +=   '</div>';
+        h +=   '<div class="agil-promo-banner-copy">';
+        h +=     '<span class="agil-promo-banner-label">Hoje por</span>';
+        h +=     '<span class="agil-promo-banner-amount" id="agilPromoBannerAmount">' + promoBannerAmountHtml(promo.promotionalAmount) + '</span>';
+        h +=   '</div>';
+        h += '</div>';
+
+        /* timer — referência aprovada (225px, pílula na 2ª linha) */
+        h += '<div class="offer-timer agil-promo-timer" id="offerTimer">';
+        h +=   '<div class="agil-promo-timer-icon offer-timer-icon timer-icon" aria-hidden="true">';
+        h +=     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+        h +=   '</div>';
+        h +=   '<div class="offer-timer-texts agil-promo-timer-copy timer-copy">';
+        h +=     '<span class="offer-timer-label agil-promo-timer-title timer-title" id="offerTimerLabel">Oferta por tempo limitado</span>';
+        h +=     '<div class="offer-timer-sublabel agil-promo-timer-subtitle timer-subtitle">';
+        h +=       '<span id="offerTimerSub">Expira em</span>';
+        h +=       '<span class="offer-timer-value agil-promo-timer-value timer-value" id="offerTimerValue">--:--</span>';
+        h +=     '</div>';
+        h +=   '</div>';
+        h += '</div>';
+
+        /* hint */
+        h += '<div class="offer-hint" id="offerHint">';
+        h +=   '<div class="offer-hint-icon" aria-hidden="true">';
+        h +=     '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>';
+        h +=   '</div>';
+        h +=   '<div class="offer-hint-copy">';
+        h +=     '<p class="offer-hint-title">Quite as ' + count + ' cobranças com uma condição especial.</p>';
+        h +=     '<p class="offer-hint-sub">Após o pagamento, o status é atualizado automaticamente.</p>';
+        h +=   '</div>';
+        h += '</div>';
+      }
+
+      /* actions */
+      h += '<div class="actions">';
+      if (showPromo) {
+        h += '<button type="button" class="btn-main" id="promoMainBtn" data-mode="promo">';
+        h +=   '<span class="btn-main-icon" aria-hidden="true">';
+        h +=     '<svg viewBox="0 0 24 24" aria-hidden="true">';
+        h +=       '<path d="M12 2l1.2 4.2 4.2 1.2-4.2 1.2L12 13l-1.2-4.4L6.6 7.4l4.2-1.2L12 2z"/>';
+        h +=       '<path d="M19 13.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3z"/>';
+        h +=     '</svg>';
+        h +=   '</span>';
+        h +=   '<span class="btn-main-label">Aproveitar promoção</span>';
+        h +=   '<span class="btn-main-chevron" aria-hidden="true">';
+        h +=     '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+        h +=   '</span>';
+        h += '</button>';
+      } else {
+        h += '<button type="button" class="btn-main" id="promoMainBtn" data-mode="pay">' +
+               '<span class="btn-main-label">Pagar cobranças</span>' +
+             '</button>';
+      }
+      h += '<button type="button" class="btn-separate" id="btnSeparate">Pagar separadamente &rsaquo;</button>';
+      h += '</div>';
+
+      inner.innerHTML = h;
+
+      /* events */
+      var mainBtn = $('promoMainBtn');
+      var sepBtn  = $('btnSeparate');
+
+      if (mainBtn) {
+        mainBtn.addEventListener('click', function () {
+          if (mainBtn.disabled) return;
+          toast(mainBtn.dataset.mode === 'promo'
+            ? 'Protótipo: aqui será gerado o Pix promocional agrupado quando o backend estiver pronto.'
+            : 'Protótipo: fluxo de pagamento das cobranças em aberto.');
+        });
+      }
+      if (sepBtn) {
+        sepBtn.addEventListener('click', function () {
+          toast('Protótipo: aqui o usuário poderá pagar cada cobrança individualmente.');
+        });
+      }
+
+      if (showPromo && promo.expiresInSeconds != null) {
+        startTimer(promo.expiresInSeconds);
+      }
+    }
+
+    /* ── scenarios ── */
+    var SCENARIOS = {
+      duasComPromo: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'PENDING',  type: 'CARD_SHIPPING'  },
+          { id: 'lic_1', title: 'Seguro do empréstimo',       amount: 40.0, status: 'PENDING',  type: 'LOAN_INSURANCE' },
+        ],
+        promotion: { enabled: true, promotionalAmount: 59.0, expiresInSeconds: 119 },
+      },
+      umaAberta: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'PENDING', type: 'CARD_SHIPPING' },
+        ],
+        promotion: { enabled: true, promotionalAmount: 35.0, expiresInSeconds: 300 },
+      },
+      tresAbertas: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'PENDING',          type: 'CARD_SHIPPING'  },
+          { id: 'lic_1', title: 'Seguro do empréstimo',       amount: 40.0, status: 'PENDENTE',         type: 'LOAN_INSURANCE' },
+          { id: 'blt_1', title: 'Taxa de serviço',            amount: 15.5, status: 'AWAITING_PAYMENT', type: 'GRU_BOLETO'     },
+        ],
+        promotion: { enabled: true, promotionalAmount: 79.0, expiresInSeconds: 600 },
+      },
+      nenhuma: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'PAID', type: 'CARD_SHIPPING' },
+        ],
+        promotion: { enabled: true, promotionalAmount: 59.0, expiresInSeconds: 119 },
+      },
+      promoOff: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'PENDING', type: 'CARD_SHIPPING'  },
+          { id: 'lic_1', title: 'Seguro do empréstimo',       amount: 40.0, status: 'OPEN',    type: 'LOAN_INSURANCE' },
+        ],
+        promotion: { enabled: false },
+      },
+      timerExpirado: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'PENDING', type: 'CARD_SHIPPING'  },
+          { id: 'lic_1', title: 'Seguro do empréstimo',       amount: 40.0, status: 'PENDING', type: 'LOAN_INSURANCE' },
+        ],
+        promotion: { enabled: true, promotionalAmount: 59.0, expiresInSeconds: 0 },
+      },
+      umaPagaUmaAberta: {
+        charges: [
+          { id: 'csh_1', title: 'Produção e frete do cartão', amount: 39.0, status: 'DEBITADO', type: 'CARD_SHIPPING'  },
+          { id: 'lic_1', title: 'Seguro do empréstimo',       amount: 40.0, status: 'PENDING',  type: 'LOAN_INSURANCE' },
+        ],
+        promotion: { enabled: true, promotionalAmount: 35.0, expiresInSeconds: 90 },
+      },
+    };
+
+    var DEV_LABELS = [
+      ['duasComPromo',    '2 cobranças + promo'],
+      ['umaAberta',       '1 cobrança'],
+      ['tresAbertas',     '3 cobranças'],
+      ['nenhuma',         'Nenhuma aberta'],
+      ['promoOff',        'Promo off'],
+      ['timerExpirado',   'Timer 0'],
+      ['umaPagaUmaAberta','1 paga + 1 aberta'],
+    ];
+
+    function bindDevBtns() {
+      var wrap = $('promoDevBtns');
+      if (!wrap) return;
+      DEV_LABELS.forEach(function (pair) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = pair[1];
+        btn.addEventListener('click', function () { render(SCENARIOS[pair[0]]); });
+        wrap.appendChild(btn);
+      });
+    }
+
+    // Futuro: GET /api/charges
+    // Futuro: GET /api/charges/promotions/current
+    // Futuro: POST /api/charges/promotions/:id/pix
+
+    window.renderPromoCobrancas = render;
+    window.formatCurrencyBRL    = currency;
+
+    bindDevBtns();
+    render(SCENARIOS.duasComPromo);
+  })();
+  </script>
+</body>
+</html>

@@ -9,7 +9,7 @@
       "destination": "/banco/index.html"
     },
     {
-      "source": "/banco/:path*",
+      "source": "/banco/:path((?!.*\\.html$).*)",
       "destination": "/banco/index.html"
     },
     {

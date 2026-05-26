@@ -6,6 +6,7 @@
   "description": "Frontend do AgilBank - Aplicativo bancário digital",
   "scripts": {
     "dev": "vite",
+    "dev:promo": "vite --open /banco/promo-cobrancas-preview.html",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"

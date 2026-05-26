@@ -51,6 +51,7 @@ model User {
   cardShipments       CardShipment[]
   cardShipmentEvents  CardShipmentEvent[]
   pixCobrancas        PixCobranca[]
+  chargePromotions    ChargePromotion[]
   accountDeposits     AccountDeposit[]
   internalTransfersFrom InternalTransfer[] @relation("InternalTransferFrom")
   internalTransfersTo   InternalTransfer[] @relation("InternalTransferTo")
@@ -488,6 +489,56 @@ model Boleto {
 
   @@unique([solicitacaoTipo, solicitacaoId])
   @@map("boletos")
+}
+
+/// Promoção agrupada de cobranças (Fatia 1 — modelagem; Pix/settlement em fatias futuras).
+enum ChargePromotionStatus {
+  ACTIVE
+  EXPIRED
+  PAID
+  CANCELLED
+}
+
+model ChargePromotion {
+  id                     String                @id @default(cuid())
+  userId                 String
+  /// Chave estável: usuário + conjunto ordenado de cobranças elegíveis (criação idempotente na Fatia 2+).
+  idempotencyKey         String                @unique
+  status                 ChargePromotionStatus @default(ACTIVE)
+  discountPercent        Int
+  originalAmountCents    Int
+  discountAmountCents    Int
+  promotionalAmountCents Int
+  expiresAt              DateTime
+  notificationSentAt     DateTime?
+  emailSentAt            DateTime?
+  paidAt                 DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items                  ChargePromotionItem[]
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("charge_promotions")
+}
+
+model ChargePromotionItem {
+  id                  String          @id @default(cuid())
+  promotionId         String
+  publicChargeId      String
+  publicChargeType    String
+  linkedEntityType    String
+  linkedEntityId      String
+  originalAmountCents Int
+  createdAt           DateTime        @default(now())
+  promotion           ChargePromotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, linkedEntityType, linkedEntityId])
+  @@index([promotionId])
+  @@index([linkedEntityType, linkedEntityId])
+  @@map("charge_promotion_items")
 }
 
 model Pagamento {
