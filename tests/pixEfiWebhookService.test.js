@@ -4,14 +4,26 @@ jest.mock('../src/utils/auditLog', () => ({
   recordAudit: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('../src/services/chargePromotionService', () => ({
+  ...jest.requireActual('../src/services/chargePromotionService'),
+  isChargePromotionSettlementEnabled: jest.fn(),
+}));
+
 jest.mock('../src/services/pixSettlementService', () => ({
   settlePaidPixCobrancaInTx: jest.fn().mockResolvedValue({
     settlementResult: 'UNSUPPORTED_ENTITY',
   }),
+  settleChargePromotionInTx: jest.fn().mockResolvedValue({
+    settlementResult: 'SETTLED',
+  }),
 }));
 
 const { prisma } = require('../src/config/database');
-const { settlePaidPixCobrancaInTx } = require('../src/services/pixSettlementService');
+const {
+  settlePaidPixCobrancaInTx,
+  settleChargePromotionInTx,
+} = require('../src/services/pixSettlementService');
+const { isChargePromotionSettlementEnabled } = require('../src/services/chargePromotionService');
 const {
   processEfiPixWebhookBody,
   sanitizeForStorage,
@@ -25,6 +37,10 @@ describe('pixEfiWebhookService', () => {
     settlePaidPixCobrancaInTx.mockResolvedValue({
       settlementResult: 'UNSUPPORTED_ENTITY',
     });
+    settleChargePromotionInTx.mockResolvedValue({
+      settlementResult: 'SETTLED',
+    });
+    isChargePromotionSettlementEnabled.mockReturnValue(false);
   });
 
   it('sanitizeForStorage redige chave sensível', () => {
@@ -342,7 +358,8 @@ describe('pixEfiWebhookService', () => {
     expect(prisma.pixWebhookEvent.update).not.toHaveBeenCalled();
   });
 
-  it('PROCESSED charge_promotion usa PROMOTION_SETTLEMENT_PENDING sem settlement individual', async () => {
+  it('PROCESSED charge_promotion com settlement desligado usa PROMOTION_SETTLEMENT_PENDING', async () => {
+    isChargePromotionSettlementEnabled.mockReturnValue(false);
     const { recordAudit } = require('../src/utils/auditLog');
 
     prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
@@ -382,6 +399,7 @@ describe('pixEfiWebhookService', () => {
     expect(r.results[0].result).toBe('PROCESSED');
     expect(r.results[0].settlementResult).toBe('PROMOTION_SETTLEMENT_PENDING');
     expect(settlePaidPixCobrancaInTx).not.toHaveBeenCalled();
+    expect(settleChargePromotionInTx).not.toHaveBeenCalled();
     expect(prisma.pixWebhookEvent.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -392,6 +410,53 @@ describe('pixEfiWebhookService', () => {
     expect(recordAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'efi.pix.webhook.charge_promotion_pending_settlement',
+      }),
+    );
+  });
+
+  it('PROCESSED charge_promotion com settlement ligado chama settleChargePromotionInTx', async () => {
+    isChargePromotionSettlementEnabled.mockReturnValue(true);
+
+    prisma.pixWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.pixCobranca.findUnique.mockResolvedValue({
+      id: 'cob-promo-on',
+      userId: 'u1',
+      amount: 67.15,
+      status: 'ATIVA',
+      linkedEntityType: 'charge_promotion',
+      linkedEntityId: 'promo-on',
+    });
+    prisma.pixCobranca.update.mockResolvedValue({
+      id: 'cob-promo-on',
+      userId: 'u1',
+      linkedEntityType: 'charge_promotion',
+      linkedEntityId: 'promo-on',
+      status: 'PAGA',
+    });
+    prisma.pixWebhookEvent.create.mockResolvedValue({ id: 'ev-promo-on' });
+    prisma.pixWebhookEvent.update.mockResolvedValue({});
+
+    const r = await processEfiPixWebhookBody(
+      {
+        pix: [
+          {
+            endToEndId: 'E2EPromoWebhookOn',
+            txid: 'txidPromoWebhookOn',
+            valor: '67.15',
+            horario: '2026-05-26T16:00:00.000Z',
+          },
+        ],
+      },
+      { requestId: 'req-promo-on' },
+    );
+
+    expect(r.ok).toBe(true);
+    expect(r.results[0].settlementResult).toBe('SETTLED');
+    expect(settleChargePromotionInTx).toHaveBeenCalled();
+    expect(settlePaidPixCobrancaInTx).not.toHaveBeenCalled();
+    expect(prisma.pixWebhookEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ settlementResult: 'SETTLED' }),
       }),
     );
   });

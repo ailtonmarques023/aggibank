@@ -154,6 +154,14 @@ function isChargePromotionsFeatureEnabled() {
     .toLowerCase() === 'true';
 }
 
+function isChargePromotionSettlementEnabled() {
+  return (
+    String(process.env.FEATURE_CHARGE_PROMOTION_SETTLEMENT_ENABLED || '')
+      .trim()
+      .toLowerCase() === 'true'
+  );
+}
+
 function getChargePromotionTtlSeconds() {
   const raw = process.env.CHARGE_PROMOTION_TTL_SECONDS;
   if (raw == null || String(raw).trim() === '') {
@@ -466,6 +474,7 @@ module.exports = {
   CLOSED_CHARGE_STATUSES,
   PUBLIC_TO_LINKED_ENTITY_TYPE,
   isChargePromotionsFeatureEnabled,
+  isChargePromotionSettlementEnabled,
   getChargePromotionTtlSeconds,
   computePromotionWindowStartEpoch,
   amountBrlToCents,

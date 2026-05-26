@@ -4,7 +4,11 @@ const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 const { recordAudit } = require('../utils/auditLog');
 const { sanitizeUrlForAccessLog } = require('../utils/logSanitizer');
-const { settlePaidPixCobrancaInTx } = require('./pixSettlementService');
+const {
+  settlePaidPixCobrancaInTx,
+  settleChargePromotionInTx,
+} = require('./pixSettlementService');
+const { isChargePromotionSettlementEnabled } = require('./chargePromotionService');
 const { LINKED_ENTITY_TYPE_CHARGE_PROMOTION } = require('./pixCobrancaPromotionEfiService');
 
 const PROMOTION_SETTLEMENT_PENDING = 'PROMOTION_SETTLEMENT_PENDING';
@@ -318,37 +322,80 @@ async function processEfiPixWebhookBody(body, ctx = {}) {
         });
 
         if (String(cob.linkedEntityType || '').trim() === LINKED_ENTITY_TYPE_CHARGE_PROMOTION) {
-          await recordAudit({
-            userId: cob.userId,
-            action: 'efi.pix.webhook.charge_promotion_pending_settlement',
-            entity: 'PixCobranca',
-            entityId: cob.id,
-            metadata: {
-              txid,
-              endToEndId,
-              requestId: requestId || null,
-              message:
-                'Charge promotion Pix paid; grouped settlement pending future implementation.',
-              promotionId: cob.linkedEntityId,
-            },
+          if (!isChargePromotionSettlementEnabled()) {
+            await recordAudit({
+              userId: cob.userId,
+              action: 'efi.pix.webhook.charge_promotion_pending_settlement',
+              entity: 'PixCobranca',
+              entityId: cob.id,
+              metadata: {
+                txid,
+                endToEndId,
+                requestId: requestId || null,
+                message:
+                  'Charge promotion Pix paid; grouped settlement disabled (FEATURE_CHARGE_PROMOTION_SETTLEMENT_ENABLED).',
+                promotionId: cob.linkedEntityId,
+              },
+              ip: ip || null,
+              userAgent: null,
+            });
+
+            await tx.pixWebhookEvent.update({
+              where: { id: ev.id },
+              data: {
+                settlementResult: PROMOTION_SETTLEMENT_PENDING,
+                settlementAt: new Date(),
+              },
+            });
+
+            return {
+              result: 'PROCESSED',
+              event: ev,
+              cob: updated,
+              settlementResult: PROMOTION_SETTLEMENT_PENDING,
+              postCommit: null,
+            };
+          }
+
+          const promotionSettlementPack = await settleChargePromotionInTx(tx, {
+            pixCobranca: updated,
+            webhookEventId: ev.id,
+            requestId: requestId || null,
             ip: ip || null,
-            userAgent: null,
           });
 
           await tx.pixWebhookEvent.update({
             where: { id: ev.id },
             data: {
-              settlementResult: PROMOTION_SETTLEMENT_PENDING,
+              settlementResult: promotionSettlementPack.settlementResult,
               settlementAt: new Date(),
             },
           });
+
+          if (promotionSettlementPack.settlementResult === 'SETTLED') {
+            await recordAudit({
+              userId: cob.userId,
+              action: 'efi.pix.webhook.charge_promotion_settled',
+              entity: 'PixCobranca',
+              entityId: cob.id,
+              metadata: {
+                txid,
+                endToEndId,
+                requestId: requestId || null,
+                promotionId: cob.linkedEntityId,
+                settlementResult: 'SETTLED',
+              },
+              ip: ip || null,
+              userAgent: null,
+            });
+          }
 
           return {
             result: 'PROCESSED',
             event: ev,
             cob: updated,
-            settlementResult: PROMOTION_SETTLEMENT_PENDING,
-            postCommit: null,
+            settlementResult: promotionSettlementPack.settlementResult,
+            postCommit: promotionSettlementPack.postCommit || null,
           };
         }
 
