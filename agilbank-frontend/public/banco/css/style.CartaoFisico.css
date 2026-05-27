@@ -8,6 +8,23 @@
     min-height: 100vh;
     padding-bottom: 60px;
 }
+
+/* Setinha simples de voltar (tela cartão físico) */
+#cartaoFisicoContainer .cartao-back-simple {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#cartaoFisicoContainer .cartao-back-simple:active {
+    transform: translateY(1px);
+}
 /*Cartão virtual*/
 .cartao-virtual-container {
     display: none;
