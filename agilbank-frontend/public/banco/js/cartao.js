@@ -2859,6 +2859,8 @@ function agilbankAbrirModalDesbloqueioCartaoFisico(triggerBtn) {
     }, 0);
 }
 
+window.agilbankAbrirModalDesbloqueioCartaoFisico = agilbankAbrirModalDesbloqueioCartaoFisico;
+
 async function agilbankToggleBloqueioCartao(button) {
     var c = agilbankGetCartaoSelecionado();
     if (!c) {
@@ -3115,6 +3117,8 @@ function agilbankAbrirModalConfirmacaoCartaoVirtual() {
     }
     if (cvc && typeof cvc.focus === 'function') cvc.focus();
 }
+
+window.agilbankAbrirModalConfirmacaoCartaoVirtual = agilbankAbrirModalConfirmacaoCartaoVirtual;
 
 function agilbankEmitirCartaoVirtualConfirmado(validation) {
     var btn = document.getElementById('cartaoVirtualBtnCriar');

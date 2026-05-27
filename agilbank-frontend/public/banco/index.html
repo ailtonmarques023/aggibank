@@ -4909,7 +4909,7 @@
             </div>
 
             <div class="cartao-virtual-actions">
-                <button type="button" class="btn-primary small" id="cartaoFisicoBtnDesbloquear" onclick="criarCartaoVirtual()">
+                <button type="button" class="btn-primary small" id="cartaoFisicoBtnDesbloquear" onclick="if(window.agilbankAbrirModalDesbloqueioCartaoFisico)window.agilbankAbrirModalDesbloqueioCartaoFisico(this);">
                     <i class="fas fa-plus-circle"></i>
                     Desbloquear
                 </button>
@@ -8635,6 +8635,10 @@
 
         // Função para exibir o overlay e o container de validação
         function criarCartaoVirtual() {
+            if (window.agilbankAbrirModalConfirmacaoCartaoVirtual) {
+                window.agilbankAbrirModalConfirmacaoCartaoVirtual();
+                return;
+            }
                 mostrarAnimacaoLogo02(() => {
                 const overlay = document.getElementById('overlay');
                 overlay.style.display = 'flex'; // Exibe o overlay como flexbox

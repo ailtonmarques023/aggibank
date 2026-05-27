@@ -520,6 +520,10 @@ padding: 0 15px;
     white-space: nowrap;
 }
 
+#numeroCartaoFisico {
+    transform: translateY(-20px);
+}
+
 .cartao-card-overlay-holder {
     max-width: 70%;
     font-size: clamp(9px, 2.8vw, 13px);
