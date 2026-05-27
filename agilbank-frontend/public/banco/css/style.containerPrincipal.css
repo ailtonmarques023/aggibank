@@ -1360,3 +1360,59 @@
             text-transform: uppercase;
             letter-spacing: 0.03em;
         }
+
+/* ── Botão voltar global (seta SVG) ── */
+.tela-back-btn {
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    margin: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    color: #fff;
+}
+.tela-back-btn svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    stroke-width: 2.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.tela-back-btn:active {
+    opacity: 0.7;
+}
+/* variação sobre fundo claro */
+.tela-back-btn--dark {
+    color: #0066b3;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+}
+/* variação GRU (fundo azul escuro) */
+.tela-back-btn--gru {
+    color: #fff;
+    position: absolute;
+    top: 14px;
+    left: 10px;
+}
+/* variação perfil (fundo branco/cinza) */
+.tela-back-btn--perfil {
+    color: #0066b3;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+}
+/* garantir que o pai tenha position:relative */
+.payment-options-header,
+.containerStatusProcessamento,
+.header-gru,
+.perfil-header {
+    position: relative;
+}

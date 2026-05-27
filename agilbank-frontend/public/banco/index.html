@@ -5037,6 +5037,9 @@
     <!-- conteiner para pagamento -->
     <div id="paymentOptionsContainer" class="payment-options-container">
         <div class="payment-options-header">
+            <button type="button" class="tela-back-btn" onclick="voltarParaPrincipal()" aria-label="Voltar">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
             <h2 style="color: #005B96;">PAGAMENTO DA GRU</h2>
             <small>Guia de Recolhimento Unificado</small>
         </div>
@@ -5122,6 +5125,9 @@
 
     <!-- container resutado verificacao de pagamento -->
     <div class="containerStatusProcessamento" id="resultadoVerificacaoContainer">
+        <button type="button" class="tela-back-btn tela-back-btn--dark" onclick="voltarParaPrincipal()" aria-label="Voltar">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
         <div class="confirmation-card">
             <div class="loading-spinner"></div>
             <h1 class="confirmation-title">Solicitação Recebida com Sucesso!</h1>
@@ -5188,6 +5194,9 @@
     <!-- container para gerar boleto, gerar pix para pagamento  unicos para recebimento-->
     <div class="container-gerar-boleto-pix" id="containerGerarBoletoPix">
         <div class="header-gru">
+                <button type="button" class="tela-back-btn tela-back-btn--gru" onclick="voltarParaPrincipal()" aria-label="Voltar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
                 <div class="logo-text">
                     <h1>GRU</h1>
                     <span>Guia de Recolhimento da União</span>
@@ -5830,6 +5839,9 @@
     <div class="perfil-container" id="perfilContainer" style="display: none;">
         <!-- Cabeçalho do Perfil -->
         <div class="perfil-header">
+            <button type="button" class="tela-back-btn tela-back-btn--perfil" onclick="voltarParaPrincipal()" aria-label="Voltar">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
             <div class="perfil-avatar">
                 <i class="fas fa-user-circle avatar-img"></i>
                 <button class="editar-foto">
