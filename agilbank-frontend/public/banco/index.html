@@ -11663,7 +11663,8 @@
         }
 
         // Função para esconder o modal
-        function hideAgilModal() {
+        function hideAgilModal(options) {
+            var opts = options || {};
             console.log('🔍 Fechando modal...');
             const modal = document.getElementById('agilModal');
             if (modal) {
@@ -11671,11 +11672,16 @@
                 modal.setAttribute('aria-hidden', 'true');
                 console.log('✅ Modal fechado!');
             }
-            setTimeout(function () {
-                if (typeof agilbankMaybeShowReferralTeaser === 'function') {
-                    agilbankMaybeShowReferralTeaser({ delay: 400 });
-                }
-            }, 300);
+            if (!opts.skipShellRestore && typeof window.agilbankGarantirShellLegadoVisivel === 'function') {
+                window.agilbankGarantirShellLegadoVisivel();
+            }
+            if (!opts.skipReferral) {
+                setTimeout(function () {
+                    if (typeof agilbankMaybeShowReferralTeaser === 'function') {
+                        agilbankMaybeShowReferralTeaser({ delay: 400 });
+                    }
+                }, 300);
+            }
         }
 
         var agilbankReferralCodeCache = null;
@@ -12177,7 +12183,7 @@
             var forceShow = options && options.forceShow === true;
             try {
                 if (typeof hideAgilModal === 'function') {
-                    hideAgilModal();
+                    hideAgilModal({ skipReferral: true });
                 }
                 console.log('🔍 Verificando dados do usuário (modal cartão/crédito contextual)...');
 
