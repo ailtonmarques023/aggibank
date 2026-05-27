@@ -9,8 +9,9 @@
     padding-bottom: 60px;
 }
 
-/* Setinha simples de voltar (tela cartão físico) */
-#cartaoFisicoContainer .cartao-back-simple {
+/* Seta de voltar (cartão físico e virtual) */
+#cartaoFisicoContainer .cartao-back-simple,
+#cartaoVirtualContainer .cartao-back-simple {
     background: transparent;
     border: 0;
     padding: 0;
@@ -25,7 +26,8 @@
     height: 28px;
 }
 
-#cartaoFisicoContainer .cartao-back-simple-icon {
+#cartaoFisicoContainer .cartao-back-simple-icon,
+#cartaoVirtualContainer .cartao-back-simple-icon {
     width: 22px;
     height: 22px;
     stroke: currentColor;
@@ -35,7 +37,8 @@
     stroke-linejoin: round;
 }
 
-#cartaoFisicoContainer .cartao-back-simple:active {
+#cartaoFisicoContainer .cartao-back-simple:active,
+#cartaoVirtualContainer .cartao-back-simple:active {
     transform: translateY(1px);
 }
 /*Cartão virtual*/
@@ -550,7 +553,8 @@ padding: 0 15px;
     white-space: nowrap;
 }
 
-#cartaoFisicoContainer .cartao-card-overlay {
+#cartaoFisicoContainer .cartao-card-overlay,
+#cartaoVirtualContainer .cartao-card-overlay {
     transform: translateY(-20px);
 }
 

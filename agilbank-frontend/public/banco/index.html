@@ -4797,7 +4797,11 @@
     <div class="cartao-virtual-container" id="cartaoVirtualContainer">
         <div class="header">
             <div class="header-left">
-                <i class="fas fa-chevron-left" onclick="voltarParaCartao()"></i>
+                <button type="button" class="cartao-back-simple" onclick="voltarParaCartao()" aria-label="Voltar">
+                    <svg class="cartao-back-simple-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </button>
                 <h1 class="title">Cartão Virtual</h1>
             </div>
         </div>
