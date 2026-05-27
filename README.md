@@ -237,7 +237,7 @@ JWT_SECRET=super-secret-key
 RESEND_API_KEY=re_...
 EMAIL_FROM=noreply@seudominio.com
 EMAIL_FROM_NAME=AgilBank
-FRONTEND_URL=https://seu-frontend.vercel.app
+FRONTEND_URL=https://www.aggilbank.com.br
 # SMTP legado opcional em produção: defina explicitamente (rede deve permitir 587)
 # ALLOW_EMAIL_SMTP_FALLBACK=true
 # SMTP_HOST=...

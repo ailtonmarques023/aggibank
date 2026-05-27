@@ -7274,7 +7274,7 @@
             }
         }
 
-        /** Mantém #mainApp e #container visíveis após falha de rede/API (evita sensação de “tela branca”). */
+        /** Mantém shell visível após falha de rede/API (evita “tela branca”), sem forçar dashboard por cima de telas internas. */
         function agilbankGarantirShellLegadoVisivel() {
             try {
                 var mainApp = document.getElementById('mainApp');
@@ -7287,7 +7287,43 @@
                     loginC.style.display = 'none';
                 }
                 if (mainApp) mainApp.style.display = 'block';
-                if (dash) dash.style.display = 'block';
+
+                // Se já existe alguma tela interna ou alternativa visível, não forçar o dashboard.
+                var secondaryIds = [
+                    'pixContainer',
+                    'notification',
+                    'extratoContainer',
+                    'cartaoGerenciamentoContainer',
+                    'statusEntregaContainer',
+                    'opcoesLimiteContainer',
+                    'cartaoVirtualContainer',
+                    'cartaoFisicoContainer',
+                    'configuracoesContainer',
+                    'perfilContainer',
+                    'chatContainer',
+                    'emprestimoContainer',
+                    'creditoContainer',
+                    'contaContainer',
+                    'paymentOptionsContainer',
+                    'containerGerarBoletoPix',
+                    'boletoContainer',
+                    'resultadoVerificacaoContainer'
+                ];
+
+                var algumaTelaSecundariaVisivel = false;
+                for (var i = 0; i < secondaryIds.length; i++) {
+                    var el = document.getElementById(secondaryIds[i]);
+                    if (!el) continue;
+                    var disp = el.style.display || (window.getComputedStyle ? window.getComputedStyle(el).display : '');
+                    if (disp && disp !== 'none') {
+                        algumaTelaSecundariaVisivel = true;
+                        break;
+                    }
+                }
+
+                if (dash && !algumaTelaSecundariaVisivel) {
+                    dash.style.display = 'block';
+                }
             } catch (e) {
                 if (typeof console !== 'undefined' && console.warn) {
                     console.warn('[AgilBank] agilbankGarantirShellLegadoVisivel:', e);
@@ -11651,7 +11687,7 @@
 
         function agilbankReferralGetInstallLink(code) {
             var safeCode = agilbankReferralSanitizeCode(code);
-            var base = 'https://aggibank.vercel.app/banco/instalar.html';
+            var base = 'https://www.aggilbank.com.br/banco/instalar.html';
             return safeCode ? base + '?ref=' + encodeURIComponent(safeCode) : base;
         }
 

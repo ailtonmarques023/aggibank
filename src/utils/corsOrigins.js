@@ -1,6 +1,6 @@
 'use strict';
 
-const DEFAULT_BROWSER_ORIGINS_PRODUCTION = ['https://aggibank.vercel.app'];
+const DEFAULT_BROWSER_ORIGINS_PRODUCTION = ['https://www.aggilbank.com.br'];
 
 function normalizeBrowserOrigin(raw) {
   const t = String(raw || '').trim();
