@@ -501,9 +501,9 @@ padding: 0 15px;
 
 .cartao-card-overlay {
     position: absolute;
-    left: 9%;
+    left: 12%;
     right: 9%;
-    bottom: 12%;
+    bottom: 27%;
     display: grid;
     gap: 10px;
     color: #fff;
