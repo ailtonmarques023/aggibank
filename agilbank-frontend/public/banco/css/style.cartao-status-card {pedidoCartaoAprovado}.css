@@ -529,6 +529,20 @@
             color: #f08b14;
         }
 
+        .status-entrega-status-line.is-clickable-payment {
+            cursor: pointer;
+        }
+
+        .status-entrega-status-line.is-clickable-payment:hover span {
+            text-decoration: underline;
+        }
+
+        .status-entrega-status-line.is-clickable-payment:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 4px;
+            border-radius: 6px;
+        }
+
         .status-entrega-status-line.is-success {
             color: #0f8a4b;
         }

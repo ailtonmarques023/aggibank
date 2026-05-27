@@ -1058,17 +1058,44 @@ function agilbankShipmentTimelineStagesFromDelivery(pd, shipment) {
 function agilbankBindStatusEntregaPayFreteButton(show) {
     var btn = document.getElementById('statusEntregaBtnPagarFrete');
     if (!btn) return;
-    var can = !!show && typeof window.levarboletoContainer === 'function';
+    var can = !!show && typeof window.containerGerarBoletoPix === 'function';
     btn.hidden = !can;
     btn.onclick = can
         ? function () {
               try {
-                  window.levarboletoContainer();
+                  window.containerGerarBoletoPix();
               } catch (err) {
-                  console.warn('levarboletoContainer:', err);
+                  console.warn('containerGerarBoletoPix:', err);
               }
           }
         : null;
+}
+
+function agilbankBindStatusEntregaFreteStatusClick(enabled) {
+    var line = document.getElementById('statusEntregaStatusLine');
+    if (!line) return;
+    var can = !!enabled && typeof window.containerGerarBoletoPix === 'function';
+    line.classList.toggle('is-clickable-payment', can);
+    if (can) {
+        line.setAttribute('role', 'button');
+        line.setAttribute('tabindex', '0');
+        line.setAttribute('aria-label', 'Abrir cobranças para pagar o frete');
+        line.onclick = function () {
+            window.containerGerarBoletoPix();
+        };
+        line.onkeydown = function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                window.containerGerarBoletoPix();
+            }
+        };
+        return;
+    }
+    line.removeAttribute('role');
+    line.removeAttribute('tabindex');
+    line.removeAttribute('aria-label');
+    line.onclick = null;
+    line.onkeydown = null;
 }
 
 function statusCartaoLabel(status) {
@@ -1330,11 +1357,11 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
         var desb = document.getElementById('cartaoFisicoBtnDesbloquear');
         if (desb) {
             var stf = String(c.status || '').toLowerCase();
-            desb.textContent = stf === 'bloqueado' ? 'Desbloquear' : 'Bloquear';
+            desb.textContent = 'Desbloquear';
             desb.disabled = !agilbankStatusCartaoAtivo(c) && stf !== 'bloqueado';
             desb.title = desb.disabled ? 'Indisponível no momento' : '';
             desb.onclick = function () {
-                agilbankToggleBloqueioCartao(desb);
+                agilbankAbrirModalDesbloqueioCartaoFisico(desb);
             };
         }
         var bqf = document.getElementById('btnBloquearCartaoFisico');
@@ -1350,11 +1377,8 @@ function agilbankPopularDetalheCartaoNaUi(c, opts) {
 
         var pedHost = document.getElementById('cartaoFisicoPedidoResumo');
         if (pedHost) {
-            var pvPed =
-                !virtual && c && c.pedidoPreview != null && typeof c.pedidoPreview === 'object'
-                    ? c.pedidoPreview
-                    : null;
-            agilbankRenderPedidoPreviewFisico(pedHost, pvPed);
+            pedHost.hidden = true;
+            pedHost.innerHTML = '';
         }
     }
 }
@@ -1827,6 +1851,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
     statusLine.className = 'status-entrega-status-line';
 
     agilbankBindStatusEntregaPayFreteButton(false);
+    agilbankBindStatusEntregaFreteStatusClick(false);
 
     if (uiState === 'loading') {
         statusLabel.textContent = 'Consultando entrega';
@@ -1969,6 +1994,7 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
             'Endereço de entrega: não encontramos endereço no cadastro. Atualize seus dados antes do envio físico.';
         eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
         agilbankBindStatusEntregaPayFreteButton(true);
+        agilbankBindStatusEntregaFreteStatusClick(true);
         var origemFrete = agilbankStatusEntregaEnderecoOrigemLog(c, shipment);
         agilbankStatusEntregaDebugLog('RECORTE1_A_frete_pendente', {
             freightPaid: !!(pd && pd.freightPaid),
@@ -1995,7 +2021,8 @@ function agilbankRenderStatusEntregaParaCartao(c, state) {
         var addrRef = agilbankEnderecoEntregaLinhaUi(c, shipment);
         end.textContent = addrRef || 'Endereço de entrega: indisponível.';
         eventsHost.innerHTML = agilbankShipmentEventsHtml(timeline, timelineError);
-        agilbankBindStatusEntregaPayFreteButton(typeof window.levarboletoContainer === 'function');
+        agilbankBindStatusEntregaPayFreteButton(typeof window.containerGerarBoletoPix === 'function');
+        agilbankBindStatusEntregaFreteStatusClick(typeof window.containerGerarBoletoPix === 'function');
         return;
     }
 
@@ -2698,6 +2725,140 @@ async function agilbankExecutarMutacaoCartao(opts) {
     }
 }
 
+function agilbankFecharModalDesbloqueioCartaoFisico() {
+    var modal = document.getElementById('agilbankPhysicalUnlockModal');
+    if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+    }
+}
+
+function agilbankOnlyDigits(value) {
+    return String(value == null ? '' : value).replace(/\D/g, '');
+}
+
+function agilbankNormalizeCardExpiry(value) {
+    var digits = agilbankOnlyDigits(value);
+    if (digits.length === 4) {
+        return digits.slice(0, 2) + '/20' + digits.slice(2);
+    }
+    if (digits.length === 6) {
+        return digits.slice(0, 2) + '/' + digits.slice(2);
+    }
+    return String(value == null ? '' : value).trim();
+}
+
+function agilbankAbrirModalDesbloqueioCartaoFisico(triggerBtn) {
+    var selected = agilbankGetCartaoSelecionado();
+    if (!selected || !selected.id) {
+        showErrorModal('Cartão', 'Nenhum cartão selecionado.');
+        return;
+    }
+
+    agilbankFecharModalDesbloqueioCartaoFisico();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'agilbankPhysicalUnlockModal';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'agilbankPhysicalUnlockTitle');
+    overlay.style.cssText = [
+        'position:fixed',
+        'inset:0',
+        'z-index:1000002',
+        'display:flex',
+        'align-items:center',
+        'justify-content:center',
+        'padding:18px',
+        'background:rgba(8,20,38,.55)'
+    ].join(';');
+
+    overlay.innerHTML =
+        '<form id="agilbankPhysicalUnlockForm" style="width:min(360px,100%);background:#fff;border-radius:12px;padding:18px;box-shadow:0 18px 44px rgba(0,0,0,.22);font-family:inherit;">' +
+        '<h2 id="agilbankPhysicalUnlockTitle" style="margin:0 0 8px;font-size:18px;color:#0f172a;">Desbloquear cartão</h2>' +
+        '<p style="margin:0 0 14px;font-size:13px;line-height:1.4;color:#475569;">Informe os dados do cartão físico para confirmar o desbloqueio.</p>' +
+        '<label style="display:block;margin-bottom:10px;font-size:12px;font-weight:700;color:#334155;">CVC' +
+        '<input id="agilUnlockCvc" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="3 ou 4 dígitos" style="display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">' +
+        '</label>' +
+        '<label style="display:block;margin-bottom:10px;font-size:12px;font-weight:700;color:#334155;">Últimos 4 dígitos' +
+        '<input id="agilUnlockLast4" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="Ex.: 5152" style="display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">' +
+        '</label>' +
+        '<label style="display:block;margin-bottom:12px;font-size:12px;font-weight:700;color:#334155;">Validade' +
+        '<input id="agilUnlockExpiry" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="MM/AAAA" style="display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">' +
+        '</label>' +
+        '<p id="agilUnlockError" style="display:none;margin:0 0 12px;font-size:12px;color:#dc2626;"></p>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button type="button" id="agilUnlockCancel" style="min-height:38px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:700;">Cancelar</button>' +
+        '<button type="submit" id="agilUnlockConfirm" style="min-height:38px;padding:9px 14px;border:0;border-radius:8px;background:#0066b3;color:#fff;font-weight:800;">Desbloquear</button>' +
+        '</div>' +
+        '</form>';
+
+    document.body.appendChild(overlay);
+
+    var form = overlay.querySelector('#agilbankPhysicalUnlockForm');
+    var err = overlay.querySelector('#agilUnlockError');
+    var cancel = overlay.querySelector('#agilUnlockCancel');
+    var cvc = overlay.querySelector('#agilUnlockCvc');
+    var last4 = overlay.querySelector('#agilUnlockLast4');
+    var expiry = overlay.querySelector('#agilUnlockExpiry');
+
+    function setErr(msg) {
+        if (!err) return;
+        err.textContent = msg || '';
+        err.style.display = msg ? 'block' : 'none';
+    }
+
+    cancel.addEventListener('click', agilbankFecharModalDesbloqueioCartaoFisico);
+    overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) agilbankFecharModalDesbloqueioCartaoFisico();
+    });
+    [cvc, last4, expiry].forEach(function (input) {
+        input.addEventListener('input', function () {
+            input.value = input.value.replace(/[^\d/]/g, '');
+            setErr('');
+        });
+    });
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        var expectedLast4 = agilbankOnlyDigits(selected.last4).slice(-4);
+        var expectedExpiry = agilbankNormalizeCardExpiry(selected.validade);
+        var gotCvc = agilbankOnlyDigits(cvc.value);
+        var gotLast4 = agilbankOnlyDigits(last4.value).slice(-4);
+        var gotExpiry = agilbankNormalizeCardExpiry(expiry.value);
+
+        if (!/^\d{3,4}$/.test(gotCvc)) {
+            setErr('Informe um CVC válido com 3 ou 4 dígitos.');
+            return;
+        }
+        if (!expectedLast4 || gotLast4 !== expectedLast4) {
+            setErr('Os últimos 4 dígitos não conferem.');
+            return;
+        }
+        if (!expectedExpiry || gotExpiry !== expectedExpiry) {
+            setErr('A validade informada não confere.');
+            return;
+        }
+
+        agilbankFecharModalDesbloqueioCartaoFisico();
+        var status = String(selected.status || '').toLowerCase();
+        if (status === 'bloqueado' || status === 'blocked') {
+            await agilbankExecutarMutacaoCartao({
+                suffix: '/unblock',
+                loadingLabel: 'Desbloqueando...',
+                request: { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+                requireActive: false,
+                button: triggerBtn
+            });
+            return;
+        }
+        showErrorModal('Cartão desbloqueado', 'Dados confirmados. Seu cartão já está disponível para uso.');
+    });
+
+    setTimeout(function () {
+        if (cvc && typeof cvc.focus === 'function') cvc.focus();
+    }, 0);
+}
+
 async function agilbankToggleBloqueioCartao(button) {
     var c = agilbankGetCartaoSelecionado();
     if (!c) {
@@ -2876,15 +3037,22 @@ function agilbankAbrirModalConfirmacaoCartaoVirtual() {
     ].join(';');
 
     overlay.innerHTML =
-        '<div style="width:min(100%,360px);background:#fff;border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.28);color:#122033;font-family:Arial,Roboto,sans-serif;">' +
+        '<form id="agilbankVirtualConfirmForm" style="width:min(100%,360px);background:#fff;border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.28);color:#122033;font-family:Arial,Roboto,sans-serif;">' +
         '<div style="width:46px;height:46px;border-radius:14px;background:#e8f4fc;color:#0066b3;display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:20px;"><i class="fas fa-credit-card" aria-hidden="true"></i></div>' +
         '<h2 id="agilbankVirtualConfirmTitle" style="margin:0 0 8px;font-size:1.18rem;line-height:1.25;color:#071a2f;">Emitir cartão virtual?</h2>' +
-        '<p style="margin:0;color:#4b5d73;font-size:.94rem;line-height:1.45;">Você vai criar um cartão virtual vinculado ao seu cartão principal.</p>' +
+        '<p style="margin:0 0 14px;color:#4b5d73;font-size:.94rem;line-height:1.45;">Confirme os dados do cartão físico para emitir um cartão virtual vinculado ao cartão principal.</p>' +
+        '<label style="display:block;margin-bottom:10px;font-size:12px;font-weight:700;color:#334155;">CVC do cartão físico' +
+        '<input id="agilbankVirtualBaseCvc" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="3 ou 4 dígitos" style="display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">' +
+        '</label>' +
+        '<label style="display:block;margin-bottom:12px;font-size:12px;font-weight:700;color:#334155;">Validade do cartão físico' +
+        '<input id="agilbankVirtualBaseExpiry" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="MM/AAAA" style="display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">' +
+        '</label>' +
+        '<p id="agilbankVirtualConfirmError" style="display:none;margin:0 0 12px;font-size:12px;color:#dc2626;"></p>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;">' +
         '<button type="button" id="agilbankVirtualCancelBtn" style="min-height:44px;border-radius:10px;border:1px solid #c9d8e6;background:#fff;color:#0066b3;font-weight:800;cursor:pointer;">Cancelar</button>' +
         '<button type="button" id="agilbankVirtualEmitBtn" style="min-height:44px;border-radius:10px;border:0;background:#0066b3;color:#fff;font-weight:800;cursor:pointer;">Emitir cartão virtual</button>' +
         '</div>' +
-        '</div>';
+        '</form>';
 
     overlay.addEventListener('click', function (event) {
         if (event.target === overlay) {
@@ -2898,16 +3066,57 @@ function agilbankAbrirModalConfirmacaoCartaoVirtual() {
     if (cancel) cancel.onclick = agilbankFecharModalConfirmacaoCartaoVirtual;
 
     var emit = document.getElementById('agilbankVirtualEmitBtn');
+    var form = document.getElementById('agilbankVirtualConfirmForm');
+    var cvc = document.getElementById('agilbankVirtualBaseCvc');
+    var expiry = document.getElementById('agilbankVirtualBaseExpiry');
+    var err = document.getElementById('agilbankVirtualConfirmError');
+
+    function setVirtualErr(msg) {
+        if (!err) return;
+        err.textContent = msg || '';
+        err.style.display = msg ? 'block' : 'none';
+    }
+
+    [cvc, expiry].forEach(function (input) {
+        if (!input) return;
+        input.addEventListener('input', function () {
+            input.value = input.value.replace(/[^\d/]/g, '');
+            setVirtualErr('');
+        });
+    });
+
+    function submitVirtualEmission() {
+        var gotCvc = agilbankOnlyDigits(cvc && cvc.value);
+        var gotExpiry = agilbankNormalizeCardExpiry(expiry && expiry.value);
+        var expectedExpiry = agilbankNormalizeCardExpiry(selected.validade);
+        if (!/^\d{3,4}$/.test(gotCvc)) {
+            setVirtualErr('Informe o CVC do cartão físico com 3 ou 4 dígitos.');
+            return;
+        }
+        if (!expectedExpiry || gotExpiry !== expectedExpiry) {
+            setVirtualErr('A validade do cartão físico não confere.');
+            return;
+        }
+        agilbankFecharModalConfirmacaoCartaoVirtual();
+        agilbankEmitirCartaoVirtualConfirmado({ cvc: gotCvc, validade: gotExpiry });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            submitVirtualEmission();
+        });
+    }
+
     if (emit) {
         emit.onclick = function () {
-            agilbankFecharModalConfirmacaoCartaoVirtual();
-            agilbankEmitirCartaoVirtualConfirmado();
+            submitVirtualEmission();
         };
-        emit.focus();
     }
+    if (cvc && typeof cvc.focus === 'function') cvc.focus();
 }
 
-function agilbankEmitirCartaoVirtualConfirmado() {
+function agilbankEmitirCartaoVirtualConfirmado(validation) {
     var btn = document.getElementById('cartaoVirtualBtnCriar');
     var selected = agilbankGetCartaoSelecionado();
     if (!selected || !selected.id) {
@@ -2921,7 +3130,8 @@ function agilbankEmitirCartaoVirtualConfirmado() {
     agilbankSetBtnLoading(btn, true, 'Emitindo...');
     agilbankRequestCards('cards/' + selected.id + '/virtual', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validation || {})
     }, 12000).then(async function (result) {
         if (!result.response.ok) {
             showErrorModal('Cartão virtual', agilbankMensagemErroVirtual(result.response, result.body, 'Falha ao emitir cartão virtual.'));

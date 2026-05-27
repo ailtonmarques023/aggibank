@@ -1,4 +1,5 @@
 const request = require('supertest');
+const crypto = require('crypto');
 const app = require('../src/server');
 const { prisma } = require('../src/config/database');
 const emailUtils = require('../src/utils/email');
@@ -9,6 +10,10 @@ function flushDeferred() {
 }
 
 const BEARER = `Bearer ${global.testToken}`;
+
+function hashCvv(cvv) {
+  return crypto.createHash('sha256').update(String(cvv)).digest('hex');
+}
 
 function authUser(overrides = {}) {
   return { ...global.testUser, ...overrides };
@@ -23,6 +28,7 @@ const FORBIDDEN_CARD_KEYS = [
   'senha',
   'pin',
   'cvv',
+  'cvvHash',
   'pan',
   'password',
 ];
@@ -1352,6 +1358,9 @@ describe('Cards API — POST decisão e GET segurança', () => {
       status: 'aprovado',
       tipo: 'credito',
       bandeira: 'visa',
+      last4: '4242',
+      validade: '12/2031',
+      cvvHash: hashCvv('123'),
     };
 
     it('cria cartão virtual para cartão base aprovado', async () => {
@@ -1359,6 +1368,7 @@ describe('Cards API — POST decisão e GET segurança', () => {
 
       const res = await request(app)
         .post('/api/cards/base-approved/virtual')
+        .send({ cvc: '123', validade: '12/2031' })
         .set('Authorization', BEARER)
         .expect(201);
 
@@ -1370,6 +1380,19 @@ describe('Cards API — POST decisão e GET segurança', () => {
       const createData = prisma.cartaoVirtual.create.mock.calls[0][0].data;
       expect(createData.cvvHash).toBeDefined();
       expect(createData.cvvHash).not.toEqual('');
+    });
+
+    it('impede criação de virtual com CVC do cartão físico inválido', async () => {
+      prisma.cartao.findFirst.mockResolvedValue(baseCardApproved);
+
+      const res = await request(app)
+        .post('/api/cards/base-approved/virtual')
+        .send({ cvc: '999', validade: '12/2031' })
+        .set('Authorization', BEARER)
+        .expect(400);
+
+      expect(res.body.code).toBe('CARD_CVC_MISMATCH');
+      expect(prisma.cartaoVirtual.create).not.toHaveBeenCalled();
     });
 
     it('impede criação de virtual para cartão pendente/bloqueado', async () => {

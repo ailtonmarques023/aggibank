@@ -224,6 +224,7 @@ model Cartao {
   validade            String
   bandeira            String
   cardToken           String?   @unique
+  cvvHash             String?
   limite              Decimal   @db.Decimal(10, 2)
   saldoUtilizado      Decimal   @default(0) @db.Decimal(10, 2)
   status              String    @default("pendente")

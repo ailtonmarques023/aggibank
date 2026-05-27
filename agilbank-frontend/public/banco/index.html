@@ -2631,7 +2631,7 @@
                         <span class="movimente-quickchip-circle"><i class="fa-solid fa-right-left" aria-hidden="true"></i></span>
                         <span class="movimente-quickchip-label">Transferir</span>
                     </button>
-                    <button type="button" class="movimente-quickchip" aria-label="Pagar boletos e cobranças" onclick="if(typeof levarboletoContainer==='function')levarboletoContainer();">
+                    <button type="button" class="movimente-quickchip" aria-label="Pagar boletos e cobranças" onclick="if(typeof containerGerarBoletoPix==='function')containerGerarBoletoPix();">
                         <span class="movimente-quickchip-circle"><i class="fa-solid fa-barcode" aria-hidden="true"></i></span>
                         <span class="movimente-quickchip-label">Pagar</span>
                     </button>
@@ -2685,7 +2685,7 @@
                     </div>
                     <span>Receba com Pix</span>
                 </div>
-                <div class="menu-item" onclick="if(typeof levarboletoContainer==='function')levarboletoContainer();">
+                <div class="menu-item" onclick="if(typeof containerGerarBoletoPix==='function')containerGerarBoletoPix();">
                     <div class="icon-container">
                         <i class="fa-solid fa-barcode"></i>
                     </div>
@@ -2747,7 +2747,7 @@
                 <h3>Consignado e FGTS</h3>
                 <span class="service-item-sub">Simulação informativa</span>
             </div>
-            <div class="service-item" onclick="if(typeof levarboletoContainer==='function')levarboletoContainer();">
+            <div class="service-item" onclick="if(typeof containerGerarBoletoPix==='function')containerGerarBoletoPix();">
                 <div class="icon-container">
                     <i class="fa-solid fa-barcode"></i>
                 </div>
@@ -4619,7 +4619,14 @@
                 <i class="fas fa-chevron-left"></i>
             </button>
             <h1 class="title">Status de Entrega</h1>
-            <button type="button" class="status-entrega-pay-freight" id="statusEntregaBtnPagarFrete" hidden>Pagar frete</button>
+            <button
+                type="button"
+                class="status-entrega-pay-freight"
+                id="statusEntregaBtnPagarFrete"
+                onclick="if(typeof containerGerarBoletoPix==='function')containerGerarBoletoPix();"
+                aria-label="Abrir cobranças para pagar o frete"
+                hidden
+            >Pagar frete</button>
             <button type="button" class="status-entrega-refresh" id="statusEntregaBtnAtualizar" onclick="if (typeof window.agilbankCartaoAcaoStatus==='function') window.agilbankCartaoAcaoStatus();">Atualizar status</button>
         </div>
 
@@ -4799,21 +4806,12 @@
             <!-- cartao virtual -->
             <div class="cartao-virtual-card cartao-virtual-card--preview-img">
                 <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
-            </div>
-            <div class="cartao-mock-dados">
-                <span class="cartao-mock-dados-label">Cartão final</span>
-                <strong class="cartao-mock-dados-numero" id="numeroCartaoVirtual">•••• •••• •••• ••••</strong>
-            </div>
-            <div class="cartao-mock-meta">
-                <div class="cartao-mock-meta-item">
-                    <span class="cartao-mock-meta-lab">Titular</span>
-                    <span id="titularCartaoVirtual" class="cartao-mock-meta-val">NOME DO TITULAR</span>
-                </div>
-                <div class="cartao-mock-meta-item">
-                    <span class="cartao-mock-meta-lab">Validade</span>
-                    <span id="validadeCartaoVirtual" class="cartao-mock-meta-val">MM/AA</span>
+                <div class="cartao-card-overlay">
+                    <strong class="cartao-card-overlay-number" id="numeroCartaoVirtual">•••• •••• •••• ••••</strong>
+                    <span class="cartao-card-overlay-holder" id="titularCartaoVirtual">NOME DO TITULAR</span>
                 </div>
             </div>
+            <span id="validadeCartaoVirtual" class="cartao-mock-meta-val cartao-mock-meta-val--hidden">MM/AA</span>
             <div class="cartao-virtual-status" id="cartaoVirtualStatusBox" role="status" aria-live="polite">
                 <div>
                     <span class="cartao-virtual-status__label">Status do cartão virtual</span>
@@ -4884,21 +4882,12 @@
             <!-- responsavel por mostrar o cartão fisico-->
             <div class="cartao-virtual-card cartao-virtual-card--preview-img">
                 <img src="assets/cards/cartao-agilbank-azul.jpg" alt="Cartão AgilBank" class="agilbank-card-preview-img" decoding="async" />
-            </div>
-            <div class="cartao-mock-dados">
-                <span class="cartao-mock-dados-label">Cartão final</span>
-                <strong class="cartao-mock-dados-numero" id="numeroCartaoFisico">•••• •••• •••• ••••</strong>
-            </div>
-            <div class="cartao-mock-meta">
-                <div class="cartao-mock-meta-item">
-                    <span class="cartao-mock-meta-lab">Titular</span>
-                    <span id="titularCartaoFisico" class="cartao-mock-meta-val">NOME DO TITULAR</span>
-                </div>
-                <div class="cartao-mock-meta-item">
-                    <span class="cartao-mock-meta-lab">Validade</span>
-                    <span id="validadeCartaoFisico" class="cartao-mock-meta-val">MM/AA</span>
+                <div class="cartao-card-overlay">
+                    <strong class="cartao-card-overlay-number" id="numeroCartaoFisico">•••• •••• •••• ••••</strong>
+                    <span class="cartao-card-overlay-holder" id="titularCartaoFisico">NOME DO TITULAR</span>
                 </div>
             </div>
+            <span id="validadeCartaoFisico" class="cartao-mock-meta-val cartao-mock-meta-val--hidden">MM/AA</span>
             <div id="cartaoFisicoPedidoResumo" class="cartao-pedido-resumo" hidden></div>
             <!-- limite disponivel -->
             <div class="cartao-limite-info">
@@ -11493,8 +11482,8 @@
                     showExtratoContainer();
                 } else if (target === 'cartoes' && typeof showCartaoGerenciamento === 'function') {
                     showCartaoGerenciamento();
-                } else if (target === 'pagar' && typeof levarboletoContainer === 'function') {
-                    levarboletoContainer();
+                } else if (target === 'pagar' && typeof containerGerarBoletoPix === 'function') {
+                    containerGerarBoletoPix();
                 }
             }, 480);
         } catch (e2) {
@@ -12695,13 +12684,13 @@
 
         if (typeof window.gerarSegundaVia !== 'function') {
             window.gerarSegundaVia = function() {
-                if (typeof levarboletoContainer === 'function') {
-                    levarboletoContainer();
+                if (typeof containerGerarBoletoPix === 'function') {
+                    containerGerarBoletoPix();
                     return;
                 }
 
-                if (typeof containerGerarBoletoPix === 'function') {
-                    containerGerarBoletoPix();
+                if (typeof levarboletoContainer === 'function') {
+                    levarboletoContainer();
                     return;
                 }
 

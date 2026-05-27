@@ -565,9 +565,9 @@
         btnPay.hidden = !feePend;
         btnPay.onclick = function () {
             /* Fluxo de cobrança vive no index — função global só existe lá. */
-            if (typeof window.levarboletoContainer === 'function') {
+            if (typeof window.containerGerarBoletoPix === 'function') {
                 try {
-                    window.levarboletoContainer();
+                    window.containerGerarBoletoPix();
                 } catch (e2) {
                     window.location.href = './index.html';
                 }

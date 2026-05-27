@@ -1171,23 +1171,16 @@
     }
 
     async payLoanInsurance(loanId) {
-      if (!loanId) return;
-      const result = await this.requestLoan(`loans/${encodeURIComponent(loanId)}/insurance/pay`, {
-        method: "POST"
-      });
-      if (!result.ok) {
-        const msg = this.errorToText(result.error);
-        window.alert(msg);
+      if (typeof window.containerGerarBoletoPix === "function") {
+        window.containerGerarBoletoPix();
         return;
       }
-      const historyResult = await this.requestLoan("loans");
-      if (historyResult.ok) {
-        this.state.history = this.extractHistory(historyResult.data);
-        this.renderHistory();
-        if (this.state.currentStep === "manage") {
-          this.renderFullManagement();
-        }
+      try {
+        sessionStorage.setItem("agilbank_modulos_target", "pagar");
+      } catch (e) {
+        // Ignore storage access issues.
       }
+      window.location.href = "./index.html";
     }
 
     mapHistoryChipClass(status, item, summary) {

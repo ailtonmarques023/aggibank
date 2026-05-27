@@ -47,7 +47,12 @@
         label: "Quitar seguro",
         muted: false,
         run: () => {
-          window.location.assign(`${EMPRESTIMOS_PATH}?loanId=${encodeURIComponent(loanId)}&cta=pay_insurance`);
+          try {
+            window.sessionStorage.setItem("agilbank_modulos_target", "pagar");
+          } catch (e) {
+            /* ignore storage errors */
+          }
+          window.location.assign(HOME_PATH);
         },
       };
     }

@@ -155,6 +155,7 @@ function publicCard(cartao) {
     senha: _omitSenha,
     pin: _omitPin,
     cvv: _omitCvv,
+    cvvHash: _omitCvvHash,
     pan: _omitPan,
     password: _omitPassword,
     ...rest
@@ -183,6 +184,61 @@ function trimStr(v, max) {
   const s = String(v).trim();
   if (s === '') return undefined;
   return s.length > max ? s.slice(0, max) : s;
+}
+
+function onlyDigits(value) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+function normalizeExpiry(value) {
+  const digits = onlyDigits(value);
+  if (digits.length === 4) return `${digits.slice(0, 2)}/20${digits.slice(2)}`;
+  if (digits.length === 6) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return String(value ?? '').trim();
+}
+
+function validatePhysicalCardForVirtualIssue(cartaoBase, body) {
+  const cvc = onlyDigits(body && body.cvc);
+  const validade = normalizeExpiry(body && body.validade);
+  const expectedValidade = normalizeExpiry(cartaoBase && cartaoBase.validade);
+
+  if (!/^\d{3,4}$/.test(cvc)) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'CARD_CVC_REQUIRED',
+      message: 'Informe o CVC do cartão físico.',
+    };
+  }
+
+  if (!expectedValidade || validade !== expectedValidade) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'CARD_EXPIRY_MISMATCH',
+      message: 'Validade do cartão físico não confere.',
+    };
+  }
+
+  if (!cartaoBase.cvvHash) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'CARD_CVC_NOT_CONFIGURED',
+      message: 'Este cartão físico ainda não possui CVC validável no servidor.',
+    };
+  }
+
+  if (hashCvv(cvc) !== cartaoBase.cvvHash) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'CARD_CVC_MISMATCH',
+      message: 'CVC do cartão físico não confere.',
+    };
+  }
+
+  return { ok: true };
 }
 
 function asMoneyNumber(value) {
@@ -941,7 +997,7 @@ router.post('/', validateCardRequest, async (req, res) => {
       });
     }
 
-    const { maskedNumber, last4, bandeira, validade, cardToken } = generateDemoCardFields();
+    const { maskedNumber, last4, bandeira, validade, cardToken, cvvHash } = generateDemoCardFields();
 
     const cartao = await prisma.cartao.create({
       data: {
@@ -951,6 +1007,7 @@ router.post('/', validateCardRequest, async (req, res) => {
         validade,
         bandeira,
         cardToken,
+        cvvHash,
         limite: decisao.limiteFinal,
         tipo,
         status: decisao.statusInicial,
@@ -1482,6 +1539,15 @@ router.post('/:id/virtual', async (req, res) => {
         success: false,
         message: 'Cartão base não elegível para cartão virtual',
         code: 'BASE_CARD_NOT_ELIGIBLE'
+      });
+    }
+
+    const physicalValidation = validatePhysicalCardForVirtualIssue(cartaoBase, req.body || {});
+    if (!physicalValidation.ok) {
+      return res.status(physicalValidation.status).json({
+        success: false,
+        message: physicalValidation.message,
+        code: physicalValidation.code,
       });
     }
 
@@ -2192,7 +2258,9 @@ function generateDemoCardFields() {
   const maskedNumber = `**** **** **** ${last4}`;
   const cardToken = `demo_${uuidv4()}`;
   const validade = generateExpiryDate();
-  return { maskedNumber, last4, bandeira, cardToken, validade };
+  const cvv = String(Math.floor(100 + Math.random() * 900));
+  const cvvHash = hashCvv(cvv);
+  return { maskedNumber, last4, bandeira, cardToken, validade, cvvHash };
 }
 
 /** Demo: PAN mascarado e CVV somente em hash persistido. */

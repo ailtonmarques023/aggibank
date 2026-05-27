@@ -499,6 +499,45 @@ padding: 0 15px;
     object-fit: contain;
 }
 
+.cartao-card-overlay {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    bottom: 12%;
+    display: grid;
+    gap: 10px;
+    color: #fff;
+    pointer-events: none;
+    text-shadow: 0 2px 5px rgba(0, 25, 70, 0.45);
+}
+
+.cartao-card-overlay-number {
+    font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+    font-size: clamp(13px, 4.2vw, 23px);
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.cartao-card-overlay-holder {
+    max-width: 70%;
+    font-size: clamp(9px, 2.8vw, 13px);
+    line-height: 1.15;
+    font-weight: 800;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+
+.cartao-mock-meta-val--hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
 /* Dados sempre abaixo da imagem (sem overlay absoluto) */
 .cartao-mock-dados {
     margin-top: 10px;
@@ -639,6 +678,10 @@ padding: 0 15px;
 }
 
 .cartao-pedido-resumo[hidden] {
+    display: none !important;
+}
+
+#cartaoFisicoPedidoResumo {
     display: none !important;
 }
 
