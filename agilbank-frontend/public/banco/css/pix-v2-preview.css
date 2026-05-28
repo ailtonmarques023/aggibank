@@ -6,6 +6,9 @@
 body.pix-v2-preview-body {
   min-height: 100dvh;
   margin: 0;
+  padding-top: 2px;
+  padding-left: 2px;
+  padding-right: 2px;
   overflow-x: hidden;
   background: #eef4fb;
   color: var(--ab-text);
@@ -181,18 +184,22 @@ body.pix-v2-preview-body {
 }
 
 .pix-v2-preview__hero-pill {
-  margin: 0 0 11px;
-  min-height: 40px;
-  padding: 7px 11px;
+  margin: 10px 0 10px;
+  width: 200px;
+  height: 10px;
+  padding: 5px 0;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(176, 232, 255, 0.2);
+  background: rgba(255, 255, 255, 0);
+  border: 1px solid rgba(176, 232, 255, 0);
+  color: var(--ab-bg);
   font-size: 11px;
   font-weight: 300;
   line-height: 13.36px;
   display: flex;
+  justify-content: flex-start;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
+  transform: rotate(180deg) scaleY(-1) scaleX(-1);
 }
 
 .pix-v2-preview__hero-pill span {
@@ -210,8 +217,8 @@ body.pix-v2-preview-body {
 }
 
 .pix-v2-preview__hero-cta {
-  min-height: 36px;
-  width: 100%;
+  height: 32px;
+  width: 170px;
   border: 0;
   border-radius: 11px;
   background: linear-gradient(180deg, #1a80ff, #0865e8);
@@ -553,7 +560,9 @@ body.pix-v2-preview-body {
 
 .pix-v2-preview__banner-cta {
   min-height: 27px;
-  padding: 4px 11px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 2px 7px;
   border: 0;
   border-radius: 999px;
   background: #fff;
