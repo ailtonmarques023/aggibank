@@ -114,6 +114,15 @@
   --ab-shadow-soft: 0 8px 24px rgba(12, 47, 96, 0.1);
   --ab-shadow-blue: 0 14px 30px rgba(0, 53, 130, 0.32), 0 0 0 1px rgba(91, 218, 255, 0.38);
   --ab-font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --ab-fs-micro: 0.56rem;
+  --ab-fs-caption: 0.62rem;
+  --ab-fs-label: 0.68rem;
+  --ab-fs-small: 0.75rem;
+  --ab-fs-body: 0.82rem;
+  --ab-fs-lead: 0.96rem;
+  --ab-fs-section: 1.02rem;
+  --ab-fs-title: 1.55rem;
+  --ab-fs-display: 2.36rem;
 }
 
 *,

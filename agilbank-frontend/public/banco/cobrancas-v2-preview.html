@@ -49,11 +49,13 @@
               <span class="home-v2-preview__balance-currency">R$</span>
               <span class="home-v2-preview__balance-amount">428,90</span>
             </p>
-            <span class="charges-v2-chip">2 cobranças pendentes</span>
-            <button type="button" class="charges-v2-primary-button" data-preview-action="pagar-agora">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 11h5l-1 9 10-13h-6l2-7z"/></svg>
-              Pagar agora
-            </button>
+            <div class="charges-v2-hero-actions">
+              <button type="button" class="charges-v2-primary-button" data-preview-action="pagar-agora">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 11h5l-1 9 10-13h-6l2-7z"/></svg>
+                Pagar agora
+              </button>
+              <span class="charges-v2-chip">2 cobranças pendentes</span>
+            </div>
           </div>
 
           <div class="charges-v2-hero-art" aria-hidden="true">
@@ -174,6 +176,33 @@
             <h2 class="charges-v2-banner-title">Pague com Pix e ganhe tempo!</h2>
             <p class="charges-v2-banner-text">Quite suas cobranças na hora, de forma segura e sem burocracia.</p>
             <button type="button" class="charges-v2-banner-link" data-preview-action="saiba-mais">Saiba mais <span aria-hidden="true">›</span></button>
+          </div>
+        </section>
+
+        <section class="charges-v2-revvo-offer" aria-label="Ganhe RevvoCoins pagando cobranças">
+          <div class="charges-v2-revvo-offer__glow" aria-hidden="true"></div>
+          <div class="charges-v2-revvo-offer__body">
+            <span class="charges-v2-revvo-offer__badge">
+              <span class="charges-v2-revvo-offer__badge-dot" aria-hidden="true"></span>
+              Revvo no AgilBank
+            </span>
+            <h2 class="charges-v2-revvo-offer__title">Ganhe RevvoCoins ao quitar cobranças</h2>
+            <p class="charges-v2-revvo-offer__text">Cada Pix pago rende RVC. Acumule pontos e troque por missões e recompensas.</p>
+            <div class="charges-v2-revvo-offer__meta">
+              <span class="charges-v2-revvo-offer__pill">+50 RVC por Pix</span>
+              <span class="charges-v2-revvo-offer__pill charges-v2-revvo-offer__pill--highlight">Até +200 RVC</span>
+              <button type="button" class="charges-v2-revvo-offer__cta" data-preview-action="revvo-cobrancas-oferta">Resgatar oferta</button>
+            </div>
+          </div>
+          <div class="charges-v2-revvo-offer__art" aria-hidden="true">
+            <img
+              class="charges-v2-revvo-offer__image"
+              src="assets/charges-v2/charges-v2-revvo-trophy-3d.png"
+              alt=""
+              loading="lazy"
+              width="577"
+              height="576"
+            />
           </div>
         </section>
       </main>

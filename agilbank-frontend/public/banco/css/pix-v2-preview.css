@@ -131,7 +131,7 @@ body.pix-v2-preview-body {
 
 .pix-v2-preview__title {
   margin: 0 0 4px;
-  font-size: 2.85rem;
+  font-size: 2.2rem;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
@@ -141,8 +141,8 @@ body.pix-v2-preview-body {
 .pix-v2-preview__subtitle {
   margin: 0;
   max-width: 260px;
-  font-size: 14px;
-  font-weight: 200;
+  font-size: var(--ab-fs-small);
+  font-weight: 500;
   line-height: 1.2;
   opacity: 0.95;
 }
@@ -170,7 +170,7 @@ body.pix-v2-preview-body {
 .pix-v2-preview__hero-label {
   display: inline-flex;
   margin-bottom: 5px;
-  font-size: 12px;
+  font-size: var(--ab-fs-label);
   font-weight: 700;
 }
 
@@ -192,7 +192,7 @@ body.pix-v2-preview-body {
   background: rgba(255, 255, 255, 0);
   border: 1px solid rgba(176, 232, 255, 0);
   color: var(--ab-bg);
-  font-size: 11px;
+  font-size: var(--ab-fs-caption);
   font-weight: 300;
   line-height: 13.36px;
   display: flex;
@@ -223,7 +223,7 @@ body.pix-v2-preview-body {
   border-radius: 11px;
   background: linear-gradient(180deg, #1a80ff, #0865e8);
   color: #fff;
-  font-size: 0.98rem;
+  font-size: var(--ab-fs-body);
   font-weight: 700;
 }
 
@@ -247,6 +247,11 @@ body.pix-v2-preview-body {
 
 .pix-v2-preview__main {
   padding-top: 0px;
+}
+
+.pix-v2-preview__revvo {
+  margin-top: 2px;
+  margin-bottom: 12px;
 }
 
 .pix-v2-preview__shortcuts-card {
@@ -703,11 +708,11 @@ body.pix-v2-preview-body {
   }
 
   .pix-v2-preview__title {
-    font-size: 2.55rem;
+    font-size: 2rem;
   }
 
   .pix-v2-preview__subtitle {
-    font-size: 14px;
+    font-size: var(--ab-fs-small);
   }
 
   .pix-v2-preview__hero-card {
