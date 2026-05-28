@@ -40,11 +40,16 @@
   function bindBalanceVisibility() {
     var btn = qs('[data-preview-toggle="balance-visibility"]');
     var val = qs('[data-bind="pix-balance"]');
+    var amount = qs('[data-bind="pix-balance-amount"]');
     if (!btn || !val) return;
     var visible = true;
     btn.addEventListener("click", function () {
       visible = !visible;
-      val.textContent = visible ? "R$ 0,00" : "R$ ••••";
+      if (amount) {
+        amount.textContent = visible ? "0,00" : "••••";
+      } else {
+        val.textContent = visible ? "R$ 0,00" : "R$ ••••";
+      }
       btn.setAttribute("aria-label", visible ? "Ocultar saldo" : "Mostrar saldo");
     });
   }
