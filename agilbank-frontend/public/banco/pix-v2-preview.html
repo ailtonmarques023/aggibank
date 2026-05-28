@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>AgilBank - Preview Pix V2</title>
+  <link rel="stylesheet" href="css/home-v2-preview.css" />
+  <link rel="stylesheet" href="css/pix-v2-preview.css" />
+</head>
+<body class="pix-v2-preview-body">
+  <div class="home-v2-app pix-v2-app" id="pixV2AppShell">
+    <div class="pix-v2-preview" id="pixV2PreviewRoot">
+      <section class="pix-v2-preview__hero" aria-label="Area principal Pix">
+        <header class="home-v2-preview__header">
+          <img
+            class="home-v2-preview__logo"
+            src="/brand/logo-agil-bank-clara.png"
+            alt="AgilBank"
+            width="160"
+            height="32"
+          />
+          <div class="home-v2-preview__header-actions">
+            <button type="button" class="home-v2-preview__icon-btn" aria-label="Notificacoes" data-preview-action="notificacoes">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 1 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+            </button>
+            <button type="button" class="home-v2-preview__icon-btn" aria-label="Buscar" data-preview-action="busca">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z"/></svg>
+            </button>
+            <button type="button" class="home-v2-preview__icon-btn" aria-label="Exibir saldo" data-preview-toggle="balance-visibility">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="pix-v2-preview__hero-heading">
+          <h1 class="pix-v2-preview__title">Pix</h1>
+          <p class="pix-v2-preview__subtitle">Envie, receba e gerencie suas chaves com rapidez.</p>
+        </div>
+
+        <article class="pix-v2-preview__hero-card" aria-label="Resumo Pix">
+          <div class="pix-v2-preview__hero-content">
+            <span class="pix-v2-preview__hero-label">Saldo disponivel</span>
+            <p class="pix-v2-preview__hero-balance" data-bind="pix-balance">R$ 0,00</p>
+            <p class="pix-v2-preview__hero-pill">
+              <span aria-hidden="true">+</span>
+              Recebimentos Pix caem na hora.
+            </p>
+            <button type="button" class="pix-v2-preview__hero-cta" data-preview-action="receber-pix">
+              Receber Pix
+            </button>
+          </div>
+          <div class="pix-v2-preview__hero-art" aria-hidden="true">
+            <div class="pix-v2-preview__asset-slot pix-v2-preview__asset-slot--hero">
+              <span>Slot: arte QR 3D + simbolo Pix</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <main class="home-v2-preview__main pix-v2-preview__main">
+        <nav class="pix-v2-preview__shortcuts-card" aria-label="Atalhos Pix">
+          <button type="button" class="pix-v2-preview__shortcut" data-preview-action="enviar">
+            <span class="pix-v2-preview__shortcut-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 21 23 12 2 3v7l15 2-15 2v7Z"/></svg></span>
+            <span class="pix-v2-preview__shortcut-label">Enviar</span>
+          </button>
+          <button type="button" class="pix-v2-preview__shortcut" data-preview-action="receber">
+            <span class="pix-v2-preview__shortcut-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v10h3l-4 5-4-5h3V3Zm-6 14h14v2H5v-2Z"/></svg></span>
+            <span class="pix-v2-preview__shortcut-label">Receber</span>
+          </button>
+          <button type="button" class="pix-v2-preview__shortcut" data-preview-action="qrcode">
+            <span class="pix-v2-preview__shortcut-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm10-2h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-4 4h2v2h-2v-2Zm2 2h2v2h-2v-2Zm2-2h2v2h-2v-2Z"/></svg></span>
+            <span class="pix-v2-preview__shortcut-label">QR Code</span>
+          </button>
+          <button type="button" class="pix-v2-preview__shortcut" data-preview-action="copia-cola">
+            <span class="pix-v2-preview__shortcut-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h10a2 2 0 0 1 2 2v12h-2V6H8V4Zm-2 4h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2Zm0 2v10h10V10H6Z"/></svg></span>
+            <span class="pix-v2-preview__shortcut-label">Copia e Cola</span>
+          </button>
+          <button type="button" class="pix-v2-preview__shortcut" data-preview-action="minhas-chaves">
+            <span class="pix-v2-preview__shortcut-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3a7 7 0 1 0 0 14h1v3h3v-3h3v-3h-7a4 4 0 1 1 0-8 4 4 0 0 1 3.46 2H21A7 7 0 0 0 14 3Z"/></svg></span>
+            <span class="pix-v2-preview__shortcut-label">Minhas chaves</span>
+          </button>
+          <button type="button" class="pix-v2-preview__shortcut" data-preview-action="extrato-pix">
+            <span class="pix-v2-preview__shortcut-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V8h4.5L14 3.5ZM8 12h8v2H8v-2Zm0 4h8v2H8v-2Z"/></svg></span>
+            <span class="pix-v2-preview__shortcut-label">Extrato Pix</span>
+          </button>
+        </nav>
+
+        <section class="pix-v2-preview__section-card" aria-labelledby="pix-hoje-title">
+          <div class="home-v2-preview__section-head pix-v2-preview__section-head">
+            <h2 class="home-v2-preview__section-title" id="pix-hoje-title">Seu Pix hoje</h2>
+            <button type="button" class="home-v2-preview__link-all" data-preview-action="ver-tudo-pix-hoje">Ver tudo</button>
+          </div>
+          <div class="pix-v2-preview__today-grid">
+            <article class="pix-v2-preview__today-item">
+              <span class="pix-v2-preview__today-key">Ultimo recebimento</span>
+              <strong class="pix-v2-preview__today-value pix-v2-preview__today-value--green">+ R$ 450,00</strong>
+              <span class="pix-v2-preview__today-sub">Hoje, 08:32</span>
+            </article>
+            <article class="pix-v2-preview__today-item">
+              <span class="pix-v2-preview__today-key">Pix agendados</span>
+              <strong class="pix-v2-preview__today-value pix-v2-preview__today-value--orange">2</strong>
+              <span class="pix-v2-preview__today-sub">Total: R$ 350,00</span>
+            </article>
+            <article class="pix-v2-preview__today-item">
+              <span class="pix-v2-preview__today-key">Chave principal</span>
+              <strong class="pix-v2-preview__today-value">cpf ***.123.456-**</strong>
+              <span class="pix-v2-preview__today-sub">3 chaves cadastradas</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="pix-v2-preview__section-card" aria-labelledby="minhas-chaves-title">
+          <div class="home-v2-preview__section-head pix-v2-preview__section-head">
+            <h2 class="home-v2-preview__section-title" id="minhas-chaves-title">Minhas chaves Pix</h2>
+            <button type="button" class="home-v2-preview__link-all" data-preview-action="gerenciar-chaves">Gerenciar</button>
+          </div>
+          <div class="pix-v2-preview__keys-list">
+            <button type="button" class="pix-v2-preview__key-row" data-preview-action="chave-cpf">
+              <span class="pix-v2-preview__key-type">CPF</span>
+              <span class="pix-v2-preview__key-value">***.123.456-**</span>
+              <span class="pix-v2-preview__key-tag">Principal</span>
+            </button>
+            <button type="button" class="pix-v2-preview__key-row" data-preview-action="chave-email">
+              <span class="pix-v2-preview__key-type">E-mail</span>
+              <span class="pix-v2-preview__key-value">camila.souza@email.com</span>
+            </button>
+            <button type="button" class="pix-v2-preview__key-row" data-preview-action="chave-telefone">
+              <span class="pix-v2-preview__key-type">Telefone</span>
+              <span class="pix-v2-preview__key-value">(11) 91234-5678</span>
+            </button>
+            <button type="button" class="pix-v2-preview__key-row" data-preview-action="chave-aleatoria">
+              <span class="pix-v2-preview__key-type">Chave aleatoria</span>
+              <span class="pix-v2-preview__key-value">a1b2c3d4-e5f6-7890-abcd-1234567890ab</span>
+            </button>
+            <button type="button" class="pix-v2-preview__key-row pix-v2-preview__key-row--new" data-preview-action="nova-chave">
+              <span class="pix-v2-preview__key-type">Cadastrar nova chave</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="pix-v2-preview__banner" aria-label="Banner QR Code">
+          <div class="pix-v2-preview__banner-copy">
+            <h2 class="pix-v2-preview__banner-title">Receba com QR Code</h2>
+            <p class="pix-v2-preview__banner-text">Compartilhe seu QR Code e receba pagamentos de forma pratica e segura.</p>
+            <button type="button" class="pix-v2-preview__banner-cta" data-preview-action="compartilhar-qr">Compartilhar QR Code</button>
+          </div>
+          <div class="pix-v2-preview__banner-art" aria-hidden="true">
+            <div class="pix-v2-preview__asset-slot pix-v2-preview__asset-slot--banner">
+              <span>Slot: QR inclinado + escudo</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="home-v2-preview__section home-v2-preview__section--last" aria-labelledby="para-voce-pix-title">
+          <div class="home-v2-preview__section-head">
+            <h2 class="home-v2-preview__section-title" id="para-voce-pix-title">Para voce</h2>
+            <button type="button" class="home-v2-preview__link-all" data-preview-action="ver-todos-para-voce">Ver tudo</button>
+          </div>
+          <div class="home-v2-preview__h-scroll">
+            <button type="button" class="home-v2-preview__feature-card" data-preview-action="limites-pix">
+              <span class="home-v2-preview__feature-icon home-v2-preview__feature-icon--green">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4Zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8Z"/></svg>
+              </span>
+              <span class="home-v2-preview__feature-title">Limites</span>
+              <span class="home-v2-preview__feature-sub">Gerencie seus limites Pix</span>
+            </button>
+            <button type="button" class="home-v2-preview__feature-card" data-preview-action="agendar-pix">
+              <span class="home-v2-preview__feature-icon home-v2-preview__feature-icon--blue">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 16H5V10h14v10Zm-7-8h5v5h-5v-5Z"/></svg>
+              </span>
+              <span class="home-v2-preview__feature-title">Agendar Pix</span>
+              <span class="home-v2-preview__feature-sub">Programe seus pagamentos</span>
+            </button>
+            <button type="button" class="home-v2-preview__feature-card" data-preview-action="pix-recorrente">
+              <span class="home-v2-preview__feature-icon home-v2-preview__feature-icon--purple">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 12.65-5.65Z"/></svg>
+              </span>
+              <span class="home-v2-preview__feature-title">Pix recorrente</span>
+              <span class="home-v2-preview__feature-sub">Pagamentos automaticos</span>
+            </button>
+            <button type="button" class="home-v2-preview__feature-card" data-preview-action="seguranca-pix">
+              <span class="home-v2-preview__feature-icon home-v2-preview__feature-icon--teal">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4Zm0 11.99h7c-.53 4.12-3.28 7.79-7 8.94v-8.94Zm0 8.94c-3.72-1.15-6.47-4.82-7-8.94h7v8.94ZM12 11H5V6.3l7-3.11V11Zm0-7.81 7 3.11V11h-7V3.19Z"/></svg>
+              </span>
+              <span class="home-v2-preview__feature-title">Seguranca</span>
+              <span class="home-v2-preview__feature-sub">Dicas e protecao</span>
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="home-v2-preview__bottom-nav" aria-label="Navegacao principal">
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-inicio">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5Z"/></svg>
+          Inicio
+        </button>
+        <button type="button" class="home-v2-preview__nav-item home-v2-preview__nav-item--active" data-preview-action="nav-pix" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 6.5 11 4 4 11l7 7 2.5-2.5L9 11l4.5-4.5Zm-3 11 2.5 2.5L20 13l-7-7-2.5 2.5L15 13l-4.5 4.5Z"/></svg>
+          Pix
+        </button>
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-notificacoes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 1 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+          Notificacoes
+        </button>
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-servicos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4V4H4v4Zm6 12h4v-4h-4v4Zm-6 0h4v-4H4v4Zm0-6h4v-4H4v4Zm6 0h4v-4h-4v4Zm6-10v4h4V4h-4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Z"/></svg>
+          Servicos
+        </button>
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-ajustes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.09-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"/></svg>
+          Ajustes
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <script src="js/pix-v2-preview.js" defer></script>
+</body>
+</html>

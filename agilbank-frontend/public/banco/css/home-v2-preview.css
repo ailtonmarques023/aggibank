@@ -429,13 +429,14 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  height: 30px;
   margin-bottom: 20px;
   padding: 8px 17px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -448,9 +449,9 @@ button {
 .home-v2-preview__balance-divider {
   position: absolute;
   z-index: 2;
-  left: 18px;
-  right: 18px;
-  bottom: 62px;
+  left: 20px;
+  top: 135px;
+  width: 300px;
   height: 1px;
   margin: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
