@@ -202,7 +202,7 @@ body.loans-v2-body {
   max-width: 176px;
   margin: 0 0 12px;
   color: rgba(255, 255, 255, 0.9);
-  font-size: var(--ab-fs-label);
+  font-size: 9px;
   font-weight: 500;
   line-height: 1.28;
 }
@@ -236,12 +236,13 @@ body.loans-v2-body {
   display: block;
   object-fit: contain;
   background: transparent;
+  opacity: 0.7;
 }
 
 .loans-v2-hero-footer {
   grid-column: 1 / -1;
   margin-top: 12px;
-  padding-top: 11px;
+  padding-top: 5px;
   border-top: 1px solid rgba(193, 231, 255, 0.2);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
