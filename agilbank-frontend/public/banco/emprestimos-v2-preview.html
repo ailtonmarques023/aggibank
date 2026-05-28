@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>AgilBank - Preview Empréstimo V2</title>
+  <link rel="stylesheet" href="css/home-v2-preview.css" />
+  <link rel="stylesheet" href="css/emprestimos-v2-preview.css" />
+</head>
+<body class="loans-v2-body">
+  <div class="home-v2-app loans-v2-app" id="loansV2AppShell">
+    <div class="loans-v2-page" id="loansV2PreviewRoot">
+      <section class="loans-v2-top" aria-label="Área principal de empréstimo">
+        <header class="home-v2-preview__header loans-v2-header">
+          <img class="home-v2-preview__logo loans-v2-logo" src="/brand/logo-agil-bank-clara.png" alt="AgilBank" width="160" height="32" />
+          <div class="home-v2-preview__header-actions">
+            <button type="button" class="home-v2-preview__icon-btn loans-v2-icon-btn loans-v2-icon-btn--notif" aria-label="Notificações" data-preview-action="notificacoes">
+              <span class="loans-v2-badge" aria-hidden="true">3</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 1 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+            </button>
+            <button type="button" class="home-v2-preview__icon-btn loans-v2-icon-btn" aria-label="Buscar" data-preview-action="busca">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z"/></svg>
+            </button>
+            <button type="button" class="home-v2-preview__icon-btn loans-v2-icon-btn loans-v2-icon-btn--eye" aria-label="Exibir valores" data-preview-toggle="loans-visibility">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="loans-v2-title-block">
+          <h1 class="loans-v2-title">Empréstimo</h1>
+          <p class="loans-v2-subtitle">Simule e acompanhe opções para você.</p>
+        </div>
+
+        <article class="loans-v2-hero" aria-label="Resumo do empréstimo">
+          <div class="loans-v2-hero-copy">
+            <p class="loans-v2-hero-label">
+              <span>Pré-aprovado até</span>
+              <span class="loans-v2-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9.2 16.2-4-4L6.6 10.8l2.6 2.58 7.2-7.18 1.4 1.4-8.6 8.6Z"/></svg></span>
+            </p>
+            <p class="home-v2-preview__balance-value loans-v2-total" data-bind="loan-limit">
+              <span class="home-v2-preview__balance-currency">R$</span>
+              <span class="home-v2-preview__balance-amount">15.000,00</span>
+            </p>
+            <p class="loans-v2-hero-text">Dinheiro na conta com rapidez e condições especiais.</p>
+            <button type="button" class="loans-v2-primary-button" data-preview-action="simular-agora">Simular agora</button>
+          </div>
+
+          <div class="loans-v2-hero-art" aria-hidden="true">
+            <img class="loans-v2-hero-image" src="assets/loans-v2/loans-v2-hero-money-3d.png" alt="" loading="eager" />
+          </div>
+
+          <div class="loans-v2-hero-footer">
+            <div class="loans-v2-hero-info">
+              <span class="loans-v2-hero-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m13 2-8 11h5l-1 9 10-13h-6l2-7z"/></svg></span>
+              <span>Liberação rápida</span>
+            </div>
+            <div class="loans-v2-hero-info">
+              <span class="loans-v2-hero-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 2 7 3v6c0 5-3.4 9.74-7 11-3.6-1.26-7-6-7-11V5l7-3Zm-1 13 6-6-1.42-1.42L11 12.17 8.92 10.1 7.5 11.5 11 15Z"/></svg></span>
+              <span>Sem compromisso</span>
+            </div>
+            <div class="loans-v2-hero-info">
+              <span class="loans-v2-hero-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg></span>
+              <span>Condições personalizadas</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <main class="loans-v2-main">
+        <section class="loans-v2-simulation" aria-labelledby="loan-simulation-title">
+          <h2 class="loans-v2-section-title" id="loan-simulation-title">Sua simulação</h2>
+          <div class="loans-v2-metrics">
+            <article class="loans-v2-metric">
+              <span class="loans-v2-metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4V6Zm2 2v8h12V8H6Zm8 2h3v2h-3v-2Z"/></svg></span>
+              <span class="loans-v2-metric-label">Valor desejado</span>
+              <strong>R$ 5.000,00</strong>
+              <button type="button" data-preview-action="alterar-valor">Alterar valor</button>
+            </article>
+            <article class="loans-v2-metric">
+              <span class="loans-v2-metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 15H5V10h14v9Zm-5-6h3v3h-3v-3Z"/></svg></span>
+              <span class="loans-v2-metric-label">Parcelas</span>
+              <strong>12x de<br />R$ 512,90</strong>
+              <button type="button" data-preview-action="alterar-parcelas">Alterar parcelas</button>
+            </article>
+            <article class="loans-v2-metric">
+              <span class="loans-v2-metric-icon loans-v2-metric-icon--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7.5 7A2.5 2.5 0 1 1 7.5 12 2.5 2.5 0 0 1 7.5 7Zm9 5A2.5 2.5 0 1 1 16.5 17 2.5 2.5 0 0 1 16.5 12ZM17 5 7 19H5l10-14h2Z"/></svg></span>
+              <span class="loans-v2-metric-label">Taxa a partir de</span>
+              <strong>2,19% a.m.</strong>
+              <button type="button" data-preview-action="ver-detalhes-taxa">Ver detalhes</button>
+            </article>
+          </div>
+
+          <p class="loans-v2-installments-title">Escolha o número de parcelas</p>
+          <div class="loans-v2-installments" role="list">
+            <button type="button" class="loans-v2-installment loans-v2-installment--active" data-preview-action="parcela-12">
+              <span class="loans-v2-installment-badge">Mais escolhido</span>
+              <strong>12x</strong>
+              <span>R$ 512,90/mês</span>
+            </button>
+            <button type="button" class="loans-v2-installment" data-preview-action="parcela-24">
+              <strong>24x</strong>
+              <span>R$ 275,72/mês</span>
+            </button>
+            <button type="button" class="loans-v2-installment" data-preview-action="parcela-36">
+              <strong>36x</strong>
+              <span>R$ 198,61/mês</span>
+            </button>
+          </div>
+          <p class="loans-v2-note">Valores aproximados. Contratação sujeita à análise de crédito.</p>
+        </section>
+
+        <section class="home-v2-preview__section loans-v2-recommend" aria-labelledby="loan-recommend-title">
+          <div class="home-v2-preview__section-head">
+            <h2 class="home-v2-preview__section-title" id="loan-recommend-title">Para você</h2>
+            <button type="button" class="home-v2-preview__link-all loans-v2-link-all" data-preview-action="ver-todas-opcoes">Ver todas <span aria-hidden="true">›</span></button>
+          </div>
+          <div class="loans-v2-recommend-grid">
+            <button type="button" class="loans-v2-recommend-card" data-preview-action="emprestimo-pessoal">
+              <span class="loans-v2-recommend-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h9.2A5.5 5.5 0 0 1 20 14.8V14c0-2.66-5.33-4-8-4Zm6 3v-2h-2v2h-2v2h2v2h2v-2h2v-2h-2Z"/></svg></span>
+              <strong>Empréstimo pessoal</strong>
+              <span>Dinheiro rápido para realizar seus planos.</span>
+              <span class="loans-v2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="loans-v2-recommend-card" data-preview-action="consignado-fgts">
+              <span class="loans-v2-recommend-icon loans-v2-recommend-icon--purple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 0a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM8 13c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4Zm8.3.2c1.75.67 3.7 1.86 3.7 3.8v3h4v-3c0-2.3-4.2-3.58-7.7-3.8Z"/></svg></span>
+              <strong>Consignado e FGTS</strong>
+              <span>Taxas menores e parcelas que cabem no bolso.</span>
+              <span class="loans-v2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="loans-v2-recommend-card" data-preview-action="acompanhar-propostas">
+              <span class="loans-v2-recommend-icon loans-v2-recommend-icon--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10v3h3v15H4V6h3V3Zm2 3h6V5H9v1Zm0 5h6V9H9v2Zm0 4h8v-2H9v2Z"/></svg></span>
+              <strong>Acompanhar propostas</strong>
+              <span>Veja o status das suas solicitações.</span>
+              <span class="loans-v2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="loans-v2-offer" aria-label="Oferta disponível">
+          <div class="loans-v2-offer-art" aria-hidden="true">
+            <img class="loans-v2-offer-image" src="assets/loans-v2/loans-v2-offer-shield-3d.png" alt="" loading="lazy" />
+          </div>
+          <div class="loans-v2-offer-copy">
+            <span class="loans-v2-offer-badge">Boa notícia!</span>
+            <h2>Oferta disponível para você</h2>
+            <p>Seu perfil foi pré-aprovado com condições especiais.</p>
+            <span class="loans-v2-offer-valid"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 5v5.2l3.4 2.04-1 1.64L11 13V7h2Z"/></svg>Válida por 7 dias</span>
+          </div>
+          <span class="loans-v2-offer-chevron" aria-hidden="true">›</span>
+        </section>
+      </main>
+
+      <nav class="home-v2-preview__bottom-nav" aria-label="Navegação principal">
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-inicio">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5Z"/></svg>
+          Início
+        </button>
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-pix">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 6.5 11 4 4 11l7 7 2.5-2.5L9 11l4.5-4.5Zm-3 11 2.5 2.5L20 13l-7-7-2.5 2.5L15 13l-4.5 4.5Z"/></svg>
+          Pix
+        </button>
+        <button type="button" class="home-v2-preview__nav-item home-v2-preview__nav-item--notif" data-preview-action="nav-notificacoes">
+          <span class="loans-v2-nav-dot" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 1 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+          Notificações
+        </button>
+        <button type="button" class="home-v2-preview__nav-item home-v2-preview__nav-item--active" data-preview-action="nav-servicos" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4V4H4v4Zm6 12h4v-4h-4v4Zm-6 0h4v-4H4v4Zm0-6h4v-4H4v4Zm6 0h4v-4h-4v4Zm6-10v4h4V4h-4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Z"/></svg>
+          Serviços
+        </button>
+        <button type="button" class="home-v2-preview__nav-item" data-preview-action="nav-ajustes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.09-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"/></svg>
+          Ajustes
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <script src="js/emprestimos-v2-preview.js" defer></script>
+</body>
+</html>
