@@ -24,7 +24,7 @@ body.pix-v2-preview-body {
 }
 
 .pix-v2-preview__hero {
-  min-height: 382px;
+  min-height: 360px;
   padding: 18px var(--ab-pad) 0;
   position: relative;
   isolation: isolate;
@@ -246,7 +246,7 @@ body.pix-v2-preview-body {
 }
 
 .pix-v2-preview__main {
-  padding-top: 30px;
+  padding-top: 0px;
 }
 
 .pix-v2-preview__shortcuts-card {
@@ -550,7 +550,7 @@ body.pix-v2-preview-body {
 }
 
 .pix-v2-preview__banner-text {
-  margin: 0 0 7px;
+  margin: 0 0 2px;
   max-width: 175px;
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.66rem;
@@ -560,8 +560,8 @@ body.pix-v2-preview-body {
 
 .pix-v2-preview__banner-cta {
   min-height: 27px;
-  margin-top: 2px;
-  margin-bottom: 2px;
+  margin-top: 0;
+  margin-bottom: 0;
   padding: 2px 7px;
   border: 0;
   border-radius: 999px;
