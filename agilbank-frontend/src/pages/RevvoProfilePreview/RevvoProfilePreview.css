@@ -1,0 +1,1009 @@
+@import '../../styles/revvo-canvas-scale.css';
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/banco/fonts/manrope/manrope-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("/banco/fonts/manrope/manrope-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/banco/fonts/manrope/manrope-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url("/banco/fonts/manrope/manrope-latin-800-normal.woff2") format("woff2");
+}
+
+:root {
+  --revvo-profile-design-width: 430px;
+  --revvo-profile-pad: 16px;
+  --revvo-profile-bg: #eef3fb;
+  --revvo-profile-blue: #075bff;
+  --revvo-profile-navy: #061d58;
+  --revvo-profile-purple: #7b2cff;
+  --revvo-profile-green: #16b85f;
+  --revvo-profile-orange: #ff8a00;
+  --revvo-profile-gold: #ffb020;
+  --revvo-profile-text: #07164a;
+  --revvo-profile-muted: #617093;
+  --revvo-profile-font: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.revvo-profile-app,
+.revvo-profile-app * {
+  box-sizing: border-box;
+}
+
+.revvo-profile-app.revvo-canvas-app {
+  --revvo-canvas-design-width: var(--revvo-profile-design-width);
+  background: #dfe8f8;
+  color: var(--revvo-profile-text);
+  font-family: var(--revvo-profile-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.revvo-profile {
+  position: relative;
+  min-height: 100dvh;
+  padding-bottom: 106px;
+  overflow-x: hidden;
+  background: var(--revvo-profile-bg);
+}
+
+.revvo-profile button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.revvo-profile svg {
+  display: block;
+}
+
+/* ── Hero / header ── */
+.revvo-profile__hero {
+  position: relative;
+  padding: 8px var(--revvo-profile-pad) 18px;
+  color: #fff;
+  text-align: left;
+  background:
+    radial-gradient(ellipse 78% 70% at 88% 18%, rgba(123, 44, 255, 0.42), rgba(123, 44, 255, 0) 58%),
+    radial-gradient(ellipse 68% 58% at 8% 88%, rgba(38, 160, 255, 0.48), rgba(38, 160, 255, 0) 58%),
+    linear-gradient(135deg, #061d8e 0%, #0536c2 48%, #006bff 100%);
+}
+
+.revvo-profile__hero::after {
+  content: "";
+  position: absolute;
+  left: -28px;
+  right: -28px;
+  bottom: -20px;
+  height: 48px;
+  border-radius: 0 0 50% 50%;
+  background: var(--revvo-profile-bg);
+  pointer-events: none;
+}
+
+.revvo-profile__toolbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.revvo-profile__toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.revvo-profile__iconBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+
+.revvo-profile__iconBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+.revvo-profile__identity {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 10px;
+}
+
+.revvo-profile__avatarCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.revvo-profile__avatarWrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.revvo-profile__avatar {
+  width: 88px;
+  height: 88px;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 10px 24px rgba(0, 18, 88, 0.28);
+}
+
+.revvo-profile__online {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #16d05a;
+}
+
+.revvo-profile__levelPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  margin-top: -12px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8a42ff 0%, #5b24d8 100%);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(91, 36, 216, 0.32);
+  position: relative;
+  z-index: 2;
+}
+
+.revvo-profile__levelPill svg {
+  width: 11px;
+  height: 11px;
+}
+
+.revvo-profile__identityCopy {
+  position: relative;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.revvo-profile__editBtn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(4, 18, 88, 0.42);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-profile__editBtn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.revvo-profile__identityCopy h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 96px;
+  font-size: 1.08rem;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.revvo-profile__identityCopy h1 svg {
+  width: 16px;
+  height: 16px;
+  color: #62d8ff;
+}
+
+.revvo-profile__handle {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.revvo-profile__bio {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.64rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.revvo-profile__tags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  margin-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.revvo-profile__tags span {
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.revvo-profile__social {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.revvo-profile__socialCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.revvo-profile__socialIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-profile__socialIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-profile__socialCard--blue .revvo-profile__socialIcon { background: rgba(98, 216, 255, 0.22); color: #9fe7ff; }
+.revvo-profile__socialCard--pink .revvo-profile__socialIcon { background: rgba(255, 120, 180, 0.22); color: #ffb8dc; }
+.revvo-profile__socialCard--orange .revvo-profile__socialIcon { background: rgba(255, 176, 32, 0.22); color: #ffd98a; }
+
+.revvo-profile__socialCard strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.revvo-profile__socialCard span {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.56rem;
+  font-weight: 700;
+}
+
+/* ── Stats scroll ── */
+.revvo-profile__statsWrap {
+  position: relative;
+  z-index: 3;
+  margin: -6px var(--revvo-profile-pad) 0;
+}
+
+.revvo-profile__stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0;
+  padding: 10px 4px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(17, 56, 112, 0.12);
+}
+
+.revvo-profile__stat {
+  min-width: 0;
+  padding: 0 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.revvo-profile__stat + .revvo-profile__stat {
+  border-left: 1px solid rgba(22, 58, 125, 0.12);
+}
+
+.revvo-profile__statIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-profile__statIcon svg,
+.revvo-profile__statIcon img {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-profile__stat--gold .revvo-profile__statIcon { background: #fff0bd; color: #b36a00; }
+.revvo-profile__stat--purple .revvo-profile__statIcon { background: #efe2ff; color: var(--revvo-profile-purple); }
+.revvo-profile__stat--blue .revvo-profile__statIcon { background: #e4f0ff; color: var(--revvo-profile-blue); }
+.revvo-profile__stat--orange .revvo-profile__statIcon { background: #fff0df; color: var(--revvo-profile-orange); }
+.revvo-profile__stat--green .revvo-profile__statIcon { background: #dff9e9; color: #11a94e; }
+
+.revvo-profile__statBody strong {
+  display: block;
+  font-size: 0.76rem;
+  line-height: 1;
+  font-weight: 800;
+  color: #07105f;
+}
+
+.revvo-profile__statBody p {
+  margin-top: 3px;
+  color: #172160;
+  font-size: 0.46rem;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.revvo-profile__statBody small {
+  display: block;
+  margin-top: 2px;
+  color: var(--revvo-profile-muted);
+  font-size: 0.42rem;
+  line-height: 1.05;
+  font-weight: 700;
+}
+
+/* ── Achievements ── */
+.revvo-profile__achievements {
+  padding: 0 var(--revvo-profile-pad);
+  margin-top: 4px;
+}
+
+.revvo-profile__achievementsCard {
+  padding: 14px 12px 12px;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(54, 217, 255, 0.28), rgba(54, 217, 255, 0) 42%),
+    linear-gradient(135deg, #0711a8 0%, #0629d8 52%, #0077ff 100%);
+  box-shadow: 0 12px 24px rgba(0, 36, 128, 0.24);
+}
+
+.revvo-profile__sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revvo-profile__sectionHead h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.96rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.revvo-profile__sectionHead h2 svg {
+  width: 18px;
+  height: 18px;
+  color: #ffd361;
+}
+
+.revvo-profile__sectionHead button {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.revvo-profile__sectionHead button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-profile__achievementScroll {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.revvo-profile__achievement {
+  flex-shrink: 0;
+  width: 78px;
+  text-align: center;
+}
+
+.revvo-profile__achievement img {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 8px 14px rgba(0, 13, 80, 0.28));
+}
+
+.revvo-profile__achievement p {
+  margin-top: 5px;
+  font-size: 0.5rem;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+/* ── Body / tabs / grid ── */
+.revvo-profile__body {
+  padding: 14px var(--revvo-profile-pad) 0;
+}
+
+.revvo-profile__tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid #dbe4f2;
+}
+
+.revvo-profile__tabs button {
+  flex-shrink: 0;
+  position: relative;
+  padding: 10px 14px 12px;
+  background: transparent;
+  color: #667292;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-profile__tabs button.is-active {
+  color: var(--revvo-profile-blue);
+}
+
+.revvo-profile__tabs button.is-active::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: var(--revvo-profile-blue);
+}
+
+.revvo-profile__mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 156px;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.revvo-profile__activityList {
+  display: grid;
+  gap: 8px;
+}
+
+.revvo-profile__activity {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 64px;
+  padding: 8px;
+  border: 1px solid #e6edf7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(10, 45, 95, 0.06);
+}
+
+.revvo-profile__activityMedia {
+  position: relative;
+  width: 52px;
+  height: 52px;
+}
+
+.revvo-profile__activityThumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #dce8ff 0%, #f3f7ff 100%);
+}
+
+.revvo-profile__activityThumb--sneaker {
+  background: linear-gradient(135deg, #1a2744 0%, #3d5678 100%);
+}
+
+.revvo-profile__activityThumb--portrait {
+  background: linear-gradient(135deg, #ffb8c8 0%, #ff6b8a 100%);
+}
+
+.revvo-profile__activityThumb--tech {
+  background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+}
+
+.revvo-profile__activityMedia .revvo-profile__platform {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 20px;
+  height: 20px;
+  font-size: 0.52rem;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 18, 88, 0.18);
+}
+
+.revvo-profile__platform {
+  border-radius: 50%;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.revvo-profile__platform--sm {
+  width: 20px;
+  height: 20px;
+  font-size: 0.52rem;
+}
+
+.revvo-profile__platform--md {
+  width: 24px;
+  height: 24px;
+  font-size: 0.58rem;
+}
+
+.revvo-profile__platform--lg {
+  width: 30px;
+  height: 30px;
+  font-size: 0.68rem;
+}
+
+.revvo-profile__platform--instagram {
+  background: radial-gradient(circle at 30% 108%, #ffd24d 0 18%, #ff5a2e 36%, #d82bd3 66%, #684bff 100%);
+}
+
+.revvo-profile__platform--tiktok,
+.revvo-profile__platform--x {
+  background: #111;
+}
+
+.revvo-profile__platform--youtube {
+  background: #fff;
+  color: #ff1010;
+  box-shadow: inset 0 0 0 1px #eef1f6;
+}
+
+.revvo-profile__activityCopy {
+  min-width: 0;
+}
+
+.revvo-profile__activityCopy h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #07105f;
+}
+
+.revvo-profile__activityCopy p {
+  margin-top: 3px;
+  color: #667292;
+  font-size: 0.54rem;
+  font-weight: 600;
+}
+
+.revvo-profile__activityMeta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.revvo-profile__status {
+  display: inline-flex;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.48rem;
+  font-weight: 800;
+  line-height: 1;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.revvo-profile__status--done {
+  background: #e9fbef;
+  color: #0d9d42;
+}
+
+.revvo-profile__status--pending {
+  background: #fff5e8;
+  color: #ff7800;
+}
+
+.revvo-profile__activityMeta strong {
+  font-size: 0.68rem;
+  line-height: 1;
+  font-weight: 800;
+  color: #079c39;
+  white-space: nowrap;
+}
+
+.revvo-profile__moreBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--revvo-profile-blue);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.revvo-profile__moreBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Aside cards ── */
+.revvo-profile__aside {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.revvo-profile__levelCard {
+  padding: 12px 10px;
+  border-radius: 16px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(54, 217, 255, 0.24), rgba(54, 217, 255, 0) 42%),
+    linear-gradient(135deg, #0711a8 0%, #0629d8 52%, #0077ff 100%);
+  box-shadow: 0 8px 18px rgba(0, 36, 128, 0.2);
+}
+
+.revvo-profile__levelTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.revvo-profile__levelTop span {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.revvo-profile__levelTop b {
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.48rem;
+  font-weight: 800;
+  line-height: 20px;
+}
+
+.revvo-profile__levelBar {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.revvo-profile__levelBar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b56bff, #7b2cff);
+  box-shadow: 0 0 12px rgba(181, 107, 255, 0.55);
+}
+
+.revvo-profile__miniHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.revvo-profile__miniHead button {
+  background: transparent;
+  color: var(--revvo-profile-blue);
+  font-size: 0.48rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-profile__levelCard p {
+  margin-top: 7px;
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.revvo-profile__platformsCard,
+.revvo-profile__approvalCard {
+  padding: 10px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e6edf7;
+  box-shadow: 0 4px 14px rgba(10, 45, 95, 0.06);
+  color: #07105f;
+}
+
+.revvo-profile__platformsCard h3,
+.revvo-profile__approvalCard h3 {
+  font-size: 0.62rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #07105f;
+}
+
+.revvo-profile__platformRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.revvo-profile__platformItem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 38px;
+  border-radius: 10px;
+  background: #f4f7fd;
+}
+
+.revvo-profile__platformItem svg {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  color: #16b85f;
+}
+
+.revvo-profile__approvalRing {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  margin: 10px auto 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, #fff 74%, transparent 76% 100%),
+    conic-gradient(#16d05a var(--revvo-profile-approval), #e4ecf8 0);
+  display: grid;
+  place-items: center;
+}
+
+.revvo-profile__approvalRing strong {
+  font-size: 0.88rem;
+  line-height: 1;
+  font-weight: 800;
+  color: #07105f;
+}
+
+.revvo-profile__approvalCard p {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.48rem;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #667292;
+}
+
+.revvo-profile__approvalBadge {
+  display: block;
+  width: fit-content;
+  margin: 6px auto 0;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e9fbef;
+  color: #0d9d42;
+  font-size: 0.44rem;
+  font-weight: 800;
+  line-height: 18px;
+}
+
+/* ── CTA ── */
+.revvo-profile__cta {
+  position: relative;
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin: 14px var(--revvo-profile-pad) 0;
+  padding: 12px 10px;
+  overflow: hidden;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 66% 82% at 12% 74%, rgba(24, 218, 255, 0.42), rgba(24, 218, 255, 0) 58%),
+    linear-gradient(135deg, #1e2ee6 0%, #6b2dff 100%);
+  box-shadow: 0 12px 24px rgba(59, 47, 195, 0.24);
+}
+
+.revvo-profile__cta > img {
+  width: 68px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 16px rgba(0, 14, 96, 0.28));
+}
+
+.revvo-profile__ctaCopy h2 {
+  font-size: 0.82rem;
+  line-height: 1.12;
+  font-weight: 800;
+}
+
+.revvo-profile__ctaCopy p {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.54rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.revvo-profile__ctaBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0ae949 0%, #04c64f 54%, #05a944 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 110, 42, 0.24);
+}
+
+.revvo-profile__ctaBtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Bottom nav ── */
+.revvo-profile-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 100;
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  max-width: 100vw;
+  min-height: 80px;
+  padding: 10px 14px max(9px, env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8px 24px rgba(15, 45, 80, 0.12);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.revvo-profile-bottom-nav button {
+  position: relative;
+  max-width: 76px;
+  flex: 1;
+  min-width: 0;
+  padding: 3px 2px;
+  background: transparent;
+  color: #69758c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.revvo-profile__navIcon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-profile__navIcon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.revvo-profile-bottom-nav button.is-active {
+  color: var(--revvo-profile-blue);
+}
+
+.revvo-profile-bottom-nav button.is-active .revvo-profile__navIcon {
+  width: 56px;
+  height: 56px;
+  margin-top: -30px;
+  border: 4px solid #eaf2ff;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 22%, #62d8ff 0%, #075bff 48%, #041a9b 100%);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(0, 73, 214, 0.34);
+}
+
+.revvo-profile-bottom-nav button.is-active .revvo-profile__navIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.revvo-profile-bottom-nav small {
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 800;
+}

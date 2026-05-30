@@ -1,0 +1,86 @@
+/**
+ * Revvo preview — canvas lógico fixo + scale proporcional.
+ * Usar com useRevvoCanvasScale() para altura do wrapper sem corte vertical.
+ */
+
+.revvo-canvas-app {
+  --revvo-canvas-design-width: 430px;
+  --revvo-canvas-scale: 1;
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+@media (max-width: 429px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.997; }
+}
+
+@media (max-width: 420px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.977; }
+}
+
+@media (max-width: 410px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.953; }
+}
+
+@media (max-width: 400px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.93; }
+}
+
+@media (max-width: 390px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.907; }
+}
+
+@media (max-width: 380px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.884; }
+}
+
+@media (max-width: 375px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.872; }
+}
+
+@media (max-width: 370px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.86; }
+}
+
+@media (max-width: 360px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.837; }
+}
+
+@media (max-width: 350px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.814; }
+}
+
+@media (max-width: 340px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.791; }
+}
+
+@media (max-width: 330px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.767; }
+}
+
+@media (max-width: 320px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.744; }
+}
+
+@media (max-width: 310px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.721; }
+}
+
+@media (max-width: 300px) {
+  .revvo-canvas-app { --revvo-canvas-scale: 0.698; }
+}
+
+.revvo-canvas-scale {
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  overflow: visible;
+}
+
+.revvo-canvas-surface {
+  width: var(--revvo-canvas-design-width);
+  max-width: none;
+  transform: scale(var(--revvo-canvas-scale));
+  transform-origin: top left;
+}

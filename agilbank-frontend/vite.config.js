@@ -5,27 +5,27 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const PROMO_PREVIEW_PATH = '/banco/promo-cobrancas-preview.html'
-const PROMO_PREVIEW_FILE = path.resolve(__dirname, 'public/banco/promo-cobrancas-preview.html')
+const PUBLIC_BANCO_DIR = path.resolve(__dirname, 'public/banco')
 
-function promoPreviewDevPlugin() {
+/** Garante HTML em public/banco/*.html (evita 404 quando a porta 5173 é outro processo). */
+function bancoPreviewDevPlugin() {
   return {
-    name: 'promo-preview-dev',
+    name: 'banco-preview-dev',
     configureServer(server) {
       return () => {
         server.middlewares.use((req, res, next) => {
-          const url = req.url?.split('?')[0]
-          if (url !== PROMO_PREVIEW_PATH) {
+          const url = req.url?.split('?')[0] ?? ''
+          if (!url.startsWith('/banco/') || !url.endsWith('.html')) {
             next()
             return
           }
-          if (!fs.existsSync(PROMO_PREVIEW_FILE)) {
-            res.statusCode = 404
-            res.end('promo-cobrancas-preview.html not found')
+          const file = path.join(PUBLIC_BANCO_DIR, path.basename(url))
+          if (!file.startsWith(PUBLIC_BANCO_DIR) || !fs.existsSync(file)) {
+            next()
             return
           }
           res.setHeader('Content-Type', 'text/html; charset=utf-8')
-          res.end(fs.readFileSync(PROMO_PREVIEW_FILE, 'utf-8'))
+          res.end(fs.readFileSync(file, 'utf-8'))
         })
       }
     },
@@ -34,11 +34,13 @@ function promoPreviewDevPlugin() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), promoPreviewDevPlugin()],
+  plugins: [react(), bancoPreviewDevPlugin()],
   server: {
-    port: 5173,
+    // 5173 costuma ser usada pelo preview do Cursor — AgilBank usa 5180
+    port: 5180,
+    strictPort: true,
     host: true,
-    open: true,
+    open: false,
     proxy: {
       '/api': {
         target: 'https://aggibank-production.up.railway.app',
@@ -46,6 +48,11 @@ export default defineConfig({
         secure: true,
       },
     },
+  },
+  preview: {
+    port: 5180,
+    strictPort: true,
+    host: true,
   },
   build: {
     outDir: 'dist',

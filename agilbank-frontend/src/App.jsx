@@ -12,6 +12,14 @@ import Terms from './pages/Terms';
 import Register from './pages/Register/index.jsx';
 import KycVerification from './pages/KycVerification/index.jsx';
 import FaceVideoDevPage from './pages/KycVerification/FaceVideoDevPage.jsx';
+import RevvoHomePreview from './pages/RevvoHomePreview/index.jsx';
+import RevvoMissionsPreview from './pages/RevvoMissionsPreview/index.jsx';
+import RevvoCreateMissionPreview from './pages/RevvoCreateMissionPreview/index.jsx';
+import RevvoMissionExecutionPreview from './pages/RevvoMissionExecutionPreview/index.jsx';
+import RevvoWalletPreview from './pages/RevvoWalletPreview/index.jsx';
+import RevvoRankingPreview from './pages/RevvoRankingPreview/index.jsx';
+import RevvoProfilePreview from './pages/RevvoProfilePreview/index.jsx';
+import RevvoFeedPreview from './pages/RevvoFeedPreview/index.jsx';
 import { hasAcceptedTerms } from './utils/helpers';
 import { BRAND_MEDIA } from './constants/brandMedia';
 
@@ -149,7 +157,19 @@ const AppContent = () => {
         } />
 
         {import.meta.env.DEV ? (
-          <Route path="/dev/face-video" element={<FaceVideoDevPage />} />
+          <>
+            <Route path="/dev/face-video" element={<FaceVideoDevPage />} />
+            <Route path="/dev/revvo-home" element={<RevvoHomePreview />} />
+            <Route path="/dev/revvo-feed" element={<RevvoFeedPreview />} />
+            <Route path="/dev/revvo-missions" element={<RevvoMissionsPreview />} />
+            <Route path="/dev/revvo-carteira" element={<RevvoWalletPreview />} />
+            <Route path="/dev/revvo-ganhos" element={<RevvoWalletPreview />} />
+            <Route path="/dev/revvo-ranking" element={<RevvoRankingPreview />} />
+            <Route path="/dev/revvo-profile" element={<RevvoProfilePreview />} />
+            <Route path="/dev/revvo-criar-missao" element={<RevvoCreateMissionPreview />} />
+            <Route path="/dev/revvo-mission" element={<RevvoMissionExecutionPreview />} />
+            <Route path="/dev/revvo-mission/:id" element={<RevvoMissionExecutionPreview />} />
+          </>
         ) : null}
 
         {/* Rota de recuperação de senha (placeholder) */}

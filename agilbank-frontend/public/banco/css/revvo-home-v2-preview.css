@@ -1,0 +1,1129 @@
+/**
+ * Revvo Home V2 Preview — mobile 430px
+ * Calibrado com home-v2-preview.css (AgilBank)
+ */
+
+@import url("revvo-canvas-scale.css");
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/banco/fonts/manrope/manrope-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("/banco/fonts/manrope/manrope-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("/banco/fonts/manrope/manrope-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/banco/fonts/manrope/manrope-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url("/banco/fonts/manrope/manrope-latin-800-normal.woff2") format("woff2");
+}
+
+:root {
+  --revvo-width: 430px;
+  --revvo-design-width: 430px;
+  --revvo-pad: 16px;
+  --revvo-bg: #f4f7fb;
+  --revvo-white: #fff;
+  --revvo-blue: #006dff;
+  --revvo-blue-2: #0454d8;
+  --revvo-navy: #07105f;
+  --revvo-text: #101638;
+  --revvo-muted: #59647c;
+  --revvo-green: #08a561;
+  --revvo-orange: #f07a2d;
+  --revvo-purple: #8a42ff;
+  --revvo-radius-xl: 18px;
+  --revvo-radius-lg: 17px;
+  --revvo-radius-md: 12px;
+  --revvo-shadow-card: 0 5px 18px rgba(10, 45, 95, 0.11);
+  --revvo-shadow-soft: 0 8px 24px rgba(12, 47, 96, 0.1);
+  --revvo-shadow-blue: 0 14px 30px rgba(0, 53, 130, 0.32), 0 0 0 1px rgba(91, 218, 255, 0.38);
+  --revvo-font: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.revvo-preview,
+.revvo-preview *,
+.revvo-preview *::before,
+.revvo-preview *::after {
+  box-sizing: border-box;
+}
+
+.revvo-app,
+.revvo-app * {
+  box-sizing: border-box;
+}
+
+.revvo-preview button,
+.revvo-preview a {
+  font: inherit;
+  text-decoration: none;
+}
+
+.revvo-preview button {
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+.revvo-app.revvo-canvas-app {
+  --revvo-canvas-design-width: var(--revvo-design-width);
+  background: #eef4fb;
+  font-family: var(--revvo-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.revvo-preview {
+  min-height: 100dvh;
+  padding-bottom: 88px;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, #eaf5ff 0, var(--revvo-bg) 300px);
+  font-size: 14px;
+  color: var(--revvo-text);
+  position: relative;
+}
+
+.revvo-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* —— Hero azul —— */
+.revvo-preview__hero {
+  display: flex;
+  flex-direction: column;
+  min-height: 286px;
+  padding: 16px var(--revvo-pad) 0;
+  position: relative;
+  overflow-x: clip;
+  overflow-y: visible;
+  background:
+    radial-gradient(ellipse 74% 90% at 102% 10%, rgba(111, 69, 255, 0.46), rgba(111, 69, 255, 0) 54%),
+    radial-gradient(ellipse 72% 62% at 0 100%, rgba(21, 127, 255, 0.72), rgba(21, 127, 255, 0) 48%),
+    linear-gradient(136deg, #06105e 0%, #09257f 36%, #004fd0 69%, #006dff 100%);
+}
+
+.revvo-preview__hero::before {
+  content: "";
+  position: absolute;
+  right: -40px;
+  bottom: 48px;
+  width: 220px;
+  height: 120px;
+  border-radius: 58% 42% 0 100%;
+  background:
+    radial-gradient(circle at 36% 34%, rgba(125, 238, 255, 0.28), rgba(125, 238, 255, 0) 52%),
+    linear-gradient(135deg, rgba(37, 120, 255, 0.45), rgba(101, 57, 232, 0.28));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.revvo-preview__hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 70px;
+  background: linear-gradient(180deg, rgba(244, 247, 251, 0), var(--revvo-bg) 82%);
+  pointer-events: none;
+}
+
+.revvo-preview__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 18px;
+}
+
+.revvo-preview__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revvo-preview__logoMark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px 12px 12px 4px;
+  background: linear-gradient(145deg, #2fe3ff 0%, #0d78ff 48%, #8a42ff 100%);
+  color: #06105e;
+  font-size: 1.15rem;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px rgba(0, 30, 90, 0.28);
+}
+
+.revvo-preview__logoText {
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 10px rgba(0, 30, 90, 0.2);
+}
+
+.revvo-preview__headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.revvo-preview__iconBtn {
+  width: 29px;
+  height: 29px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.revvo-preview__iconBtn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.revvo-preview__notifBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ff3131;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.revvo-preview__profileBtn {
+  position: relative;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.revvo-preview__profileAvatar {
+  display: block;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: #d7eaff;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 50, 110, 0.28);
+  flex-shrink: 0;
+}
+
+.revvo-preview__profileAvatar img,
+.revvo-preview__greetingAvatar img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  display: block;
+  object-fit: cover;
+}
+
+.revvo-preview__profileOnline,
+.revvo-preview__greetingOnline {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2ad17c;
+  border: 2px solid #ffffff;
+}
+
+.revvo-preview__greeting {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.revvo-preview__greeting > div:last-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.revvo-preview__greetingAvatar {
+  display: block;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  background: #d7eaff;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 8px 22px rgba(0, 40, 100, 0.28);
+}
+
+.revvo-preview__greetingTitle {
+  font-size: 1.42rem;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-shadow: 0 2px 12px rgba(0, 30, 90, 0.22);
+}
+
+.revvo-preview__greetingSub {
+  margin-top: 4px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.25;
+  opacity: 0.94;
+}
+
+/* —— Card carteira Revvo —— */
+.revvo-preview__wallet {
+  position: relative;
+  z-index: 3;
+  margin: 0 0 -22px;
+  padding: 16px 16px 12px;
+  overflow: hidden;
+  border: 1px solid rgba(100, 220, 255, 0.42);
+  border-radius: var(--revvo-radius-xl);
+  background:
+    radial-gradient(ellipse 74% 112% at 96% 18%, rgba(141, 67, 255, 0.42), rgba(141, 67, 255, 0) 50%),
+    radial-gradient(ellipse 72% 110% at 90% 44%, rgba(36, 219, 255, 0.28), rgba(36, 219, 255, 0) 54%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(135deg, #082178 0%, #092d92 38%, #0a1680 70%, #06105e 100%);
+  box-shadow: var(--revvo-shadow-blue);
+  color: #fff;
+}
+
+.revvo-preview__wallet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(105deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 30%),
+    radial-gradient(circle at 92% 86%, rgba(0, 13, 76, 0.3), rgba(0, 13, 76, 0) 34%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.revvo-preview__walletTop {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 40%);
+  gap: 6px;
+  align-items: end;
+  min-height: 108px;
+}
+
+.revvo-preview__walletCopy {
+  min-width: 0;
+  align-self: start;
+}
+
+.revvo-preview__balanceLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.revvo-preview__balanceLabel {
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.revvo-preview__eyeBtn {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-preview__eyeBtn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.revvo-preview__balanceValue {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.2em;
+  font-size: 2.24rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 2px 14px rgba(0, 50, 100, 0.24);
+}
+
+.revvo-preview__balanceValue.is-hidden {
+  filter: blur(8px);
+  user-select: none;
+}
+
+.revvo-preview__balanceCurrency {
+  font-size: 0.53em;
+  font-weight: 800;
+  padding-top: 0.04em;
+  opacity: 0.92;
+}
+
+.revvo-preview__balanceAmount {
+  letter-spacing: -0.045em;
+}
+
+.revvo-preview__balanceBrl {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.revvo-preview__walletArt {
+  width: min(168px, 40vw);
+  line-height: 0;
+  justify-self: end;
+  align-self: end;
+  margin: 0;
+  pointer-events: none;
+}
+
+.revvo-preview__trophyImg {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  display: block;
+  margin: 0;
+  filter: drop-shadow(0 14px 26px rgba(0, 14, 82, 0.5));
+}
+
+.revvo-preview__level {
+  position: relative;
+  z-index: 2;
+  margin-top: 2px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.revvo-preview__levelBadge {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #fff;
+  background: radial-gradient(80% 80% at 20% 20%, #d4a8ff 0%, #8c54e9 50%, #5b3cff 100%);
+  clip-path: polygon(50% 0%, 86% 16%, 100% 50%, 86% 84%, 50% 100%, 14% 84%, 0% 50%, 14% 16%);
+  box-shadow: 0 8px 20px rgba(107, 75, 255, 0.35);
+}
+
+.revvo-preview__levelBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.revvo-preview__levelTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.revvo-preview__levelTitle span {
+  opacity: 0.65;
+  padding: 0 3px;
+}
+
+.revvo-preview__xpTrack {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.revvo-preview__xpFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #00d4ff, #7d4bff 55%, #ff4bd1);
+}
+
+.revvo-preview__xpText {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.revvo-preview__walletFoot {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.revvo-preview__walletMsg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.revvo-preview__walletMsg p {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.revvo-preview__walletMsg strong {
+  font-weight: 800;
+}
+
+.revvo-preview__hourglass {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-preview__hourglass svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-preview__pixBtn {
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 12px 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #1f8cff, #0b62ff);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 8px 20px rgba(0, 111, 240, 0.38);
+  white-space: nowrap;
+}
+
+.revvo-preview__pixBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* —— Conteúdo —— */
+.revvo-preview__main {
+  position: relative;
+  z-index: 4;
+  padding: 10px var(--revvo-pad) 20px;
+}
+
+.revvo-preview__shortcuts {
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 12px 14px 10px;
+  border-radius: var(--revvo-radius-lg);
+  background: #fff;
+  box-shadow: var(--revvo-shadow-soft);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.revvo-preview__shortcut {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--revvo-text);
+}
+
+.revvo-preview__shortcutCircle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff, #f2f7ff);
+  color: var(--revvo-blue-2);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 1px 0 #fff, 0 7px 16px rgba(18, 48, 90, 0.11), 0 0 0 6px rgba(245, 249, 255, 0.9);
+}
+
+.revvo-preview__shortcutCircle svg {
+  width: 22px;
+  height: 22px;
+}
+
+.revvo-preview__shortcutLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.revvo-preview__section {
+  margin-bottom: 14px;
+}
+
+.revvo-preview__section--last {
+  margin-bottom: 10px;
+}
+
+.revvo-preview__sectionHead {
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.revvo-preview__sectionTitle {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.revvo-preview__sectionTitle--solo {
+  margin-bottom: 9px;
+}
+
+.revvo-preview__linkAll {
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--revvo-blue);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* Para hoje — cards separados */
+.revvo-preview__todayScroll {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.revvo-preview__todayCard {
+  min-width: 0;
+  min-height: 112px;
+  padding: 11px 10px 9px;
+  border-radius: var(--revvo-radius-md);
+  background: #fff;
+  box-shadow: var(--revvo-shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.revvo-preview__todayCard--green {
+  border: 1px solid rgba(8, 165, 97, 0.12);
+}
+
+.revvo-preview__todayCard--orange {
+  border: 1px solid rgba(240, 122, 45, 0.14);
+}
+
+.revvo-preview__todayCard--purple {
+  border: 1px solid rgba(140, 84, 233, 0.14);
+}
+
+.revvo-preview__todayTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 8px;
+}
+
+.revvo-preview__todayKey {
+  color: var(--revvo-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.revvo-preview__todayVal {
+  margin-top: 6px;
+  color: var(--revvo-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.revvo-preview__todayCard--green .revvo-preview__todayVal {
+  color: var(--revvo-green);
+}
+
+.revvo-preview__todayCard--orange .revvo-preview__todayVal {
+  color: var(--revvo-orange);
+}
+
+.revvo-preview__todayCard--purple .revvo-preview__todayVal {
+  color: var(--revvo-purple);
+}
+
+.revvo-preview__todayIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+.revvo-preview__todayCard--green .revvo-preview__todayIcon {
+  background: #e5f8ef;
+  color: var(--revvo-green);
+}
+
+.revvo-preview__todayCard--orange .revvo-preview__todayIcon {
+  background: #fff0e8;
+  color: var(--revvo-orange);
+}
+
+.revvo-preview__todayCard--purple .revvo-preview__todayIcon {
+  background: #f0e9ff;
+  color: var(--revvo-purple);
+}
+
+.revvo-preview__todayIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-preview__todayBottom {
+  margin-top: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revvo-preview__todaySub {
+  color: #8894aa;
+  font-size: 0.58rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.revvo-preview__todayGo {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-preview__todayCard--green .revvo-preview__todayGo {
+  background: rgba(8, 165, 97, 0.14);
+  color: var(--revvo-green);
+}
+
+.revvo-preview__todayCard--orange .revvo-preview__todayGo {
+  background: rgba(240, 122, 45, 0.14);
+  color: var(--revvo-orange);
+}
+
+.revvo-preview__todayCard--purple .revvo-preview__todayGo {
+  background: rgba(140, 84, 233, 0.14);
+  color: var(--revvo-purple);
+}
+
+.revvo-preview__todayGo svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Banner campanhas */
+.revvo-preview__bannerWrap {
+  margin-bottom: 12px;
+}
+
+.revvo-preview__banner {
+  min-height: 132px;
+  overflow: hidden;
+  border-radius: var(--revvo-radius-lg);
+  background:
+    radial-gradient(ellipse 82% 95% at 88% 55%, rgba(142, 66, 255, 0.36), rgba(142, 66, 255, 0) 58%),
+    radial-gradient(ellipse 74% 86% at 72% 82%, rgba(0, 213, 255, 0.28), rgba(0, 213, 255, 0) 55%),
+    linear-gradient(128deg, #07105f 0%, #062790 42%, #073ad1 100%);
+  box-shadow: 0 12px 26px rgba(6, 35, 70, 0.3);
+  color: #fff;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.revvo-preview__banner::before {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: -19px;
+  width: 205px;
+  height: 52px;
+  border: 1px solid rgba(63, 225, 255, 0.28);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(28, 204, 255, 0.22), rgba(28, 204, 255, 0) 66%);
+  pointer-events: none;
+}
+
+.revvo-preview__bannerCopy {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-width: 0;
+  padding: 14px 12px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.revvo-preview__bannerKicker {
+  align-self: flex-start;
+  margin-bottom: 4px;
+  padding: 3px 8px;
+  border: 1px solid rgba(40, 150, 255, 0.58);
+  border-radius: 999px;
+  background: rgba(0, 90, 220, 0.28);
+  color: #bfe9ff;
+  font-size: 0.56rem;
+  font-weight: 700;
+}
+
+.revvo-preview__bannerTitle {
+  max-width: 185px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.revvo-preview__bannerCta {
+  align-self: flex-start;
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #0054bf;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.revvo-preview__bannerArt {
+  width: min(168px, 46%);
+  flex-shrink: 0;
+  line-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.revvo-preview__bannerImg {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  display: block;
+  object-fit: contain;
+  object-position: bottom right;
+  filter: drop-shadow(0 8px 20px rgba(0, 40, 100, 0.35));
+}
+
+.revvo-preview__dots {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+
+.revvo-preview__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d3dce7;
+}
+
+.revvo-preview__dot--active {
+  width: 18px;
+  border-radius: 999px;
+  background: var(--revvo-blue);
+}
+
+/* Descubra */
+.revvo-preview__discoverScroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x mandatory;
+}
+
+.revvo-preview__discoverScroll::-webkit-scrollbar {
+  height: 0;
+}
+
+.revvo-preview__discoverCard {
+  position: relative;
+  flex: 0 0 auto;
+  width: 206px;
+  min-height: 126px;
+  padding: 14px 12px 40px;
+  border-radius: var(--revvo-radius-md);
+  color: #fff;
+  overflow: hidden;
+  scroll-snap-align: start;
+  box-shadow: 0 10px 24px rgba(10, 45, 95, 0.18);
+}
+
+.revvo-preview__discoverCard--blue {
+  background: linear-gradient(135deg, #1e6fff 0%, #0a4fc8 55%, #062f86 100%);
+}
+
+.revvo-preview__discoverCard--green {
+  background: linear-gradient(135deg, #19c37d 0%, #0a9a62 55%, #067a52 100%);
+}
+
+.revvo-preview__discoverCard--purple {
+  background: linear-gradient(135deg, #9b6bff 0%, #6b4bff 55%, #4a35d4 100%);
+}
+
+.revvo-preview__discoverCard--pink {
+  background: linear-gradient(135deg, #ff5ec4 0%, #b84bff 55%, #5b3cff 100%);
+}
+
+.revvo-preview__discoverCopy {
+  position: relative;
+  z-index: 2;
+  max-width: 72%;
+}
+
+.revvo-preview__discoverCopy h3 {
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.revvo-preview__discoverCopy p {
+  margin-top: 6px;
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.revvo-preview__discoverArt {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(100px, 46%);
+  line-height: 0;
+  z-index: 1;
+  pointer-events: none;
+  margin: 0;
+}
+
+.revvo-preview__discoverArt img {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  display: block;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.28));
+}
+
+.revvo-preview__discoverGo {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-preview__discoverGo svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Serviços */
+.revvo-preview__servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.revvo-preview__serviceCard {
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 8px;
+  border: 1px solid #e5ebf3;
+  border-radius: var(--revvo-radius-md);
+  background: #fff;
+  box-shadow: 0 5px 15px rgba(10, 45, 95, 0.09);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.revvo-preview__serviceIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-preview__serviceIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.revvo-preview__serviceIcon--blue {
+  background: #eaf4ff;
+  color: var(--revvo-blue);
+}
+
+.revvo-preview__serviceIcon--teal {
+  background: #e6f7f4;
+  color: #0bb77c;
+}
+
+.revvo-preview__serviceText {
+  min-width: 0;
+  padding-top: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.revvo-preview__serviceTitle {
+  color: var(--revvo-text);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.revvo-preview__serviceSub {
+  color: var(--revvo-muted);
+  font-size: 0.56rem;
+  font-weight: 500;
+  line-height: 1.16;
+}
+
+/* Bottom nav */
+.revvo-preview__bottomNav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 100;
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  max-width: 100vw;
+  padding: 10px 14px max(9px, env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -8px 24px rgba(15, 45, 80, 0.12);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.revvo-preview__navItem {
+  max-width: 76px;
+  flex: 1;
+  padding: 3px 2px;
+  border: 0;
+  background: transparent;
+  color: #69758c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.revvo-preview__navItem svg {
+  width: 22px;
+  height: 22px;
+}
+
+.revvo-preview__navItem--active {
+  color: var(--revvo-blue);
+  font-weight: 700;
+}

@@ -1,0 +1,954 @@
+@import '../../styles/revvo-canvas-scale.css';
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/banco/fonts/manrope/manrope-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("/banco/fonts/manrope/manrope-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/banco/fonts/manrope/manrope-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url("/banco/fonts/manrope/manrope-latin-800-normal.woff2") format("woff2");
+}
+
+:root {
+  --revvo-missions-width: 430px;
+  --revvo-missions-design-width: 430px;
+  --revvo-missions-pad: 14px;
+  --revvo-missions-bg: #f5f8fc;
+  --revvo-missions-blue: #0667ff;
+  --revvo-missions-text: #0d1642;
+  --revvo-missions-muted: #65718d;
+  --revvo-missions-font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.revvo-missions-app,
+.revvo-missions-app * {
+  box-sizing: border-box;
+}
+
+.revvo-missions-app.revvo-canvas-app {
+  --revvo-canvas-design-width: var(--revvo-missions-design-width);
+  background: #eef4fb;
+  color: var(--revvo-missions-text);
+  font-family: var(--revvo-missions-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.revvo-missions {
+  position: relative;
+  min-height: 100dvh;
+  padding-bottom: 88px;
+  overflow-x: hidden;
+  background: var(--revvo-missions-bg);
+}
+
+.revvo-missions button,
+.revvo-missions input {
+  font: inherit;
+}
+
+.revvo-missions button {
+  cursor: pointer;
+}
+
+.revvo-missions svg {
+  display: block;
+}
+
+.revvo-missions__hero {
+  position: relative;
+  min-height: 182px;
+  padding: 13px var(--revvo-missions-pad) 46px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 62% 78% at 93% 40%, rgba(117, 76, 255, 0.48), rgba(117, 76, 255, 0) 58%),
+    radial-gradient(ellipse 68% 70% at 5% 72%, rgba(16, 148, 255, 0.42), rgba(16, 148, 255, 0) 56%),
+    linear-gradient(137deg, #07105f 0%, #08227c 42%, #0048ca 72%, #076cff 100%);
+}
+
+.revvo-missions__hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -18px -28px;
+  height: 70px;
+  border-radius: 0 0 50% 50%;
+  background: var(--revvo-missions-bg);
+}
+
+.revvo-missions__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+.revvo-missions__backBtn,
+.revvo-missions__bell {
+  border: 0;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-missions__backBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(3, 20, 91, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 5px 18px rgba(0, 20, 90, 0.26);
+}
+
+.revvo-missions__backBtn svg {
+  width: 27px;
+  height: 27px;
+}
+
+.revvo-missions__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.revvo-missions__logoMark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px 12px 12px 4px;
+  background: linear-gradient(145deg, #2fe3ff 0%, #0d78ff 48%, #8a42ff 100%);
+  color: #06105e;
+  font-size: 1.15rem;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px rgba(0, 30, 90, 0.28);
+}
+
+.revvo-missions__logoText {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.revvo-missions__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.revvo-missions__bell {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+}
+
+.revvo-missions__bell svg {
+  width: 25px;
+  height: 25px;
+}
+
+.revvo-missions__bell span {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 23px;
+  height: 23px;
+  border-radius: 999px;
+  background: #ff333d;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  display: grid;
+  place-items: center;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.revvo-missions__profile {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  background: #d7eaff;
+  box-shadow: 0 4px 14px rgba(0, 50, 110, 0.28);
+}
+
+.revvo-missions__profile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.revvo-missions__profile i {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #2ad17c;
+}
+
+.revvo-missions__heroBody {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 132px;
+  gap: 12px;
+  align-items: center;
+  margin-top: 26px;
+}
+
+.revvo-missions__targetBadge {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  padding: 11px;
+  background: linear-gradient(135deg, #21d8ff, #8c50ff);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12), 0 12px 28px rgba(0, 20, 90, 0.42);
+}
+
+.revvo-missions__targetBadge span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 14%, #0b66ff 15% 25%, #fff 26% 43%, #0b66ff 44% 54%, #fff 55% 100%);
+}
+
+.revvo-missions__heroCopy h1 {
+  font-size: 2.15rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.revvo-missions__heroCopy p {
+  margin-top: 8px;
+  max-width: 188px;
+  color: rgba(255, 255, 255, 0.93);
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.33;
+}
+
+.revvo-missions__heroArt {
+  position: relative;
+  height: 96px;
+}
+
+.revvo-missions__bullseye {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 92px;
+  height: 92px;
+  border: 8px solid #88b3ff;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0f34b3 0 10%, #fff 11% 27%, #2456db 28% 43%, #fff 44% 62%, #2456db 63% 100%);
+  box-shadow: 0 12px 30px rgba(0, 13, 84, 0.42);
+}
+
+.revvo-missions__bullseye::before {
+  content: "";
+  position: absolute;
+  left: 42px;
+  top: 8px;
+  width: 78px;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #dbeaff, #8ea8ff);
+  transform: rotate(-33deg);
+  transform-origin: left center;
+}
+
+.revvo-missions__bullseye::after {
+  content: "";
+  position: absolute;
+  left: 101px;
+  top: -15px;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, #fff, #aabaff);
+  clip-path: polygon(0 42%, 100% 0, 78% 50%, 100% 100%, 0 58%);
+  transform: rotate(-33deg);
+}
+
+.revvo-missions__coin {
+  position: absolute;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #ffcf58;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #ffef88, #ff8a20 62%, #d66a00 100%);
+  color: #fff4cf;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 900;
+  box-shadow: 0 7px 15px rgba(0, 20, 90, 0.24);
+}
+
+.revvo-missions__coin--one {
+  left: 8px;
+  bottom: 8px;
+}
+
+.revvo-missions__coin--two {
+  left: 32px;
+  top: 6px;
+  width: 25px;
+  height: 25px;
+  font-size: 0.72rem;
+}
+
+.revvo-missions__coin--three {
+  right: -5px;
+  bottom: 8px;
+}
+
+.revvo-missions__main {
+  position: relative;
+  z-index: 5;
+  margin-top: -31px;
+  padding: 0 var(--revvo-missions-pad) 24px;
+}
+
+.revvo-missions__searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.revvo-missions__search,
+.revvo-missions__filterBtn,
+.revvo-missions__chip,
+.revvo-missions__tabs,
+.revvo-missions__card {
+  box-shadow: 0 4px 18px rgba(10, 45, 95, 0.08);
+}
+
+.revvo-missions__search {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 15px;
+  border: 1px solid #e1e8f3;
+  border-radius: 26px;
+  background: #fff;
+  color: #667590;
+}
+
+.revvo-missions__search svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.revvo-missions__search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--revvo-missions-text);
+  font-weight: 500;
+}
+
+.revvo-missions__search input::placeholder {
+  color: #77829b;
+}
+
+.revvo-missions__filterBtn {
+  height: 52px;
+  border: 1px solid #e1e8f3;
+  border-radius: 26px;
+  background: #fff;
+  color: var(--revvo-missions-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.revvo-missions__filterBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-missions__chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-bottom: 13px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.revvo-missions__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.revvo-missions__chip {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid #dde6f2;
+  border-radius: 999px;
+  background: #fff;
+  color: #17235a;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.revvo-missions__chip svg {
+  width: 17px;
+  height: 17px;
+  color: #1b3f8c;
+}
+
+.revvo-missions__chip--active {
+  border-color: var(--revvo-missions-blue);
+  background: var(--revvo-missions-blue);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(0, 95, 255, 0.28);
+}
+
+.revvo-missions__brandMark {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-weight: 900;
+  background: linear-gradient(135deg, #1d7fff, #6b4bff);
+}
+
+.revvo-missions__brandMark--instagram {
+  background: radial-gradient(circle at 30% 108%, #ffd24d 0 18%, #ff5a2e 36%, #d82bd3 66%, #684bff 100%);
+  font-size: 1.55rem;
+}
+
+.revvo-missions__brandMark--tiktok,
+.revvo-missions__brandMark--adidas {
+  background: #05070b;
+  font-size: 1.55rem;
+}
+
+.revvo-missions__brandMark--youtube {
+  background: #fff;
+  color: #ff1111;
+  font-size: 1.3rem;
+  box-shadow: inset 0 0 0 1px #eef2f7;
+}
+
+.revvo-missions__chip .revvo-missions__brandMark {
+  width: 18px;
+  height: 18px;
+  font-size: 0.72rem;
+}
+
+.revvo-missions__progress {
+  position: relative;
+  overflow: hidden;
+  min-height: 112px;
+  margin-bottom: 12px;
+  padding: 15px 15px 14px;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 70% 100% at 92% 30%, rgba(137, 66, 255, 0.44), rgba(137, 66, 255, 0) 54%),
+    linear-gradient(135deg, #052eab 0%, #004edb 58%, #095ff6 100%);
+  box-shadow: 0 13px 28px rgba(0, 63, 180, 0.25);
+}
+
+.revvo-missions__progressCopy {
+  position: relative;
+  z-index: 2;
+}
+
+.revvo-missions__progress h2 {
+  margin: 0 0 13px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.revvo-missions__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-right: 128px;
+}
+
+.revvo-missions__stats div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: center;
+}
+
+.revvo-missions__stats strong {
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.revvo-missions__stats small {
+  font-size: 0.72rem;
+}
+
+.revvo-missions__stats span:last-child {
+  grid-column: 2;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.67rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.revvo-missions__statIcon {
+  grid-row: span 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-missions__statIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.revvo-missions__statIcon--blue {
+  background: #0e85ff;
+}
+
+.revvo-missions__statIcon--green {
+  background: #18bc68;
+}
+
+.revvo-missions__statIcon--orange {
+  background: #ff7c1e;
+}
+
+.revvo-missions__levelCard {
+  position: absolute;
+  right: 11px;
+  bottom: 11px;
+  z-index: 3;
+  width: 126px;
+  padding: 46px 8px 8px;
+  border-radius: 13px;
+  background: rgba(7, 23, 124, 0.68);
+}
+
+.revvo-missions__levelCard img {
+  position: absolute;
+  right: 0;
+  top: -43px;
+  width: 112px;
+  filter: drop-shadow(0 10px 18px rgba(0, 20, 90, 0.4));
+}
+
+.revvo-missions__levelCard div {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.revvo-missions__levelCard span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #c78bff, #5a4cff);
+  clip-path: polygon(50% 0%, 86% 16%, 100% 50%, 86% 84%, 50% 100%, 14% 84%, 0% 50%, 14% 16%);
+}
+
+.revvo-missions__levelCard p,
+.revvo-missions__levelCard small,
+.revvo-missions__levelCard i {
+  grid-column: 2;
+}
+
+.revvo-missions__levelCard p {
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.revvo-missions__levelCard small {
+  margin-top: 2px;
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.revvo-missions__levelCard i {
+  height: 5px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #071262;
+  overflow: hidden;
+}
+
+.revvo-missions__levelCard b {
+  display: block;
+  width: 74%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #08d8ff, #8b4dff, #ff63c8);
+}
+
+.revvo-missions__tabs {
+  height: 51px;
+  margin-bottom: 10px;
+  padding: 4px;
+  border: 1px solid #e3eaf4;
+  border-radius: 25px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.revvo-missions__tabs button {
+  min-width: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: #72809d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-missions__tabs svg {
+  width: 19px;
+  height: 19px;
+}
+
+.revvo-missions__tabs button.is-active {
+  background: #fff;
+  color: var(--revvo-missions-blue);
+  box-shadow: 0 4px 14px rgba(10, 45, 95, 0.11), inset 0 0 0 1px #e6edf7;
+}
+
+.revvo-missions__list {
+  display: grid;
+  gap: 7px;
+}
+
+.revvo-missions__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 9px;
+  min-height: 96px;
+  padding: 11px 10px 11px 9px;
+  border: 1px solid #e0e8f3;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.revvo-missions__card--hot {
+  border-color: #2d72ff;
+  box-shadow: 0 6px 18px rgba(17, 95, 255, 0.14);
+  background: linear-gradient(135deg, #edf6ff, #fff 58%);
+}
+
+.revvo-missions__brand {
+  position: relative;
+  align-self: center;
+  justify-self: center;
+}
+
+.revvo-missions__verified {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 19px;
+  height: 19px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--revvo-missions-blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-missions__verified svg {
+  width: 13px;
+  height: 13px;
+}
+
+.revvo-missions__cardBody {
+  min-width: 0;
+}
+
+.revvo-missions__cardTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.revvo-missions__bonus {
+  display: inline-flex;
+  height: 22px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #156eff, #694dff);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.revvo-missions__card h3 {
+  margin: 2px 0 2px;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.revvo-missions__card p {
+  color: #1a2652;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.revvo-missions__badges {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 128px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.revvo-missions__badges::-webkit-scrollbar {
+  display: none;
+}
+
+.revvo-missions__tag {
+  flex: 0 0 auto;
+  height: 25px;
+  padding: 0 9px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #0b824b;
+  background: #dcf8e9;
+  font-size: 0.62rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-missions__tag--orange {
+  color: #e35e00;
+  background: #fff1df;
+}
+
+.revvo-missions__tag--purple {
+  color: #7e31e9;
+  background: #efe2ff;
+}
+
+.revvo-missions__cardFoot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 7px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.revvo-missions__metrics {
+  min-width: 0;
+  height: 34px;
+  padding: 0 5px;
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.revvo-missions__metric {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #13205a;
+}
+
+.revvo-missions__metric + .revvo-missions__metric {
+  border-left: 1px solid #dfe7f2;
+  padding-left: 4px;
+}
+
+.revvo-missions__metricIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #2b68f5;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-missions__metricIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-missions__metricText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.revvo-missions__metric strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.revvo-missions__metric small {
+  margin-top: 1px;
+  color: #546382;
+  font-size: 0.47rem;
+  line-height: 1;
+}
+
+.revvo-missions__metric:first-child small {
+  text-decoration: line-through;
+}
+
+.revvo-missions__metric--muted .revvo-missions__metricIcon {
+  color: #506494;
+}
+
+.revvo-missions__xp {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.39rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #c98cff, #5f39ff);
+  clip-path: polygon(50% 0%, 86% 16%, 100% 50%, 86% 84%, 50% 100%, 14% 84%, 0% 50%, 14% 16%);
+}
+
+.revvo-missions__doBtn {
+  height: 36px;
+  border: 1px solid #b9cdf9;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--revvo-missions-blue);
+  font-size: 0.6rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-missions__card--hot .revvo-missions__doBtn {
+  border-color: var(--revvo-missions-blue);
+  background: var(--revvo-missions-blue);
+  color: #fff;
+  box-shadow: 0 7px 15px rgba(0, 95, 255, 0.25);
+}
+
+.revvo-missions__bottomNav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 100;
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  max-width: 100vw;
+  padding: 10px 14px max(9px, env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8px 24px rgba(15, 45, 80, 0.12);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.revvo-missions__bottomNav button {
+  max-width: 76px;
+  flex: 1;
+  padding: 3px 2px;
+  border: 0;
+  background: transparent;
+  color: #69758c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.revvo-missions__bottomNav svg {
+  width: 22px;
+  height: 22px;
+}
+
+.revvo-missions__bottomNav button.is-active {
+  color: var(--revvo-missions-blue);
+  font-weight: 700;
+}

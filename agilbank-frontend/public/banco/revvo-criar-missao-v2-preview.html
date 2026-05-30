@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Revvo — Criar missão (Preview)</title>
+  <link rel="stylesheet" href="css/revvo-criar-missao-v2-preview.css" />
+</head>
+<body>
+  <div class="revvo-create-app revvo-canvas-app">
+    <div class="revvo-create__scale revvo-canvas-scale">
+    <div class="revvo-create revvo-canvas-surface" id="revvoCreateMissionRoot">
+      <div class="revvo-create__shell">
+        <header class="revvo-create__topbar">
+          <button type="button" class="revvo-create__backBtn" aria-label="Voltar">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="revvo-create__logo" aria-label="Revvo">
+            <span class="revvo-create__logoMark">R</span>
+            <span class="revvo-create__logoText">Revvo</span>
+          </div>
+          <button type="button" class="revvo-create__profileCapsule" aria-label="Perfil">
+            <span class="revvo-create__profileAvatar">
+              <img src="assets/revvo-home-v2/revvo-home-v2-avatar-camila.png" alt="" width="40" height="40" decoding="async" />
+              <i aria-hidden="true"></i>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </header>
+
+        <section class="revvo-create__intro">
+          <div class="revvo-create__introCopy">
+            <h1>Criar missão</h1>
+            <p>Engaje sua comunidade e recompense ações.</p>
+          </div>
+          <div class="revvo-create__heroArt" aria-hidden="true">
+            <div class="revvo-create__bullseye"></div>
+          </div>
+        </section>
+
+        <nav class="revvo-create__stepper" aria-label="Etapas da criação">
+          <div class="revvo-create__step revvo-create__step--active"><span class="revvo-create__stepNum">1</span><span class="revvo-create__stepLabel">Dados</span></div>
+          <span class="revvo-create__stepLine" aria-hidden="true"></span>
+          <div class="revvo-create__step"><span class="revvo-create__stepNum">2</span><span class="revvo-create__stepLabel">Ação</span></div>
+          <span class="revvo-create__stepLine" aria-hidden="true"></span>
+          <div class="revvo-create__step"><span class="revvo-create__stepNum">3</span><span class="revvo-create__stepLabel">Recompensa</span></div>
+          <span class="revvo-create__stepLine" aria-hidden="true"></span>
+          <div class="revvo-create__step"><span class="revvo-create__stepNum">4</span><span class="revvo-create__stepLabel">Revisão</span></div>
+        </nav>
+      </div>
+
+      <main class="revvo-create__main">
+        <section class="revvo-create__card">
+          <h2 class="revvo-create__cardTitle"><span class="revvo-create__cardNum">1</span> Informações básicas</h2>
+          <label class="revvo-create__field">
+            <span>Nome da missão</span>
+            <input id="revvoMissionName" type="text" placeholder="Ex.: Convide 3 amigos" maxlength="60" />
+            <em id="revvoNameCount">0/60</em>
+          </label>
+          <label class="revvo-create__field">
+            <span>Descrição</span>
+            <textarea id="revvoMissionDesc" rows="3" placeholder="Explique o que o usuário precisa fazer para concluir a missão..." maxlength="200"></textarea>
+            <em id="revvoDescCount">0/200</em>
+          </label>
+          <label class="revvo-create__field revvo-create__field--select">
+            <span>Categoria</span>
+            <div class="revvo-create__selectWrap">
+              <svg class="revvo-create__selectIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 8h4V4H4v4Zm6 12h4v-4h-4v4Zm-6 0h4v-4H4v4Zm0-6h4v-4H4v4Zm6 0h4v-4h-4v4Zm6-10v4h4V4h-4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Z"/></svg>
+              <select><option value="" disabled selected>Selecione uma categoria</option><option>Redes sociais</option><option>Convites</option></select>
+            </div>
+          </label>
+        </section>
+
+        <section class="revvo-create__card">
+          <h2 class="revvo-create__cardTitle"><span class="revvo-create__cardNum">2</span> Tipo de missão</h2>
+          <div class="revvo-create__typeRow" role="radiogroup" aria-label="Tipo de missão">
+            <button type="button" class="revvo-create__typeBtn revvo-create__typeBtn--active" data-type="like" aria-checked="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5A5.45 5.45 0 0 1 7.5 3C9.24 3 10.91 3.81 12 5.08A6.02 6.02 0 0 1 16.5 3 5.45 5.45 0 0 1 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"/></svg><span>Curtir</span></button>
+            <button type="button" class="revvo-create__typeBtn" data-type="follow" aria-checked="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm-8 0c1.66 0 3-1.34 3-3S8.66 6 7 6 4 7.34 4 9s1.34 3 3 3Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg><span>Seguir</span></button>
+            <button type="button" class="revvo-create__typeBtn" data-type="comment" aria-checked="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Zm-2 12H6v-2h12v2Zm0-3H6V9h12v2Zm0-3H6V6h12v2Z"/></svg><span>Comentar</span></button>
+            <button type="button" class="revvo-create__typeBtn" data-type="watch" aria-checked="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg><span>Assistir</span></button>
+            <button type="button" class="revvo-create__typeBtn" data-type="share" aria-checked="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3Z"/></svg><span>Compartilhar</span></button>
+          </div>
+        </section>
+
+        <section class="revvo-create__card">
+          <h2 class="revvo-create__cardTitle"><span class="revvo-create__cardNum">3</span><span>Objetivo</span></h2>
+          <div class="revvo-create__grid2">
+            <label class="revvo-create__field revvo-create__field--select">
+              <span>Plataforma</span>
+              <div class="revvo-create__selectWrap">
+                <span class="revvo-create__igMark" aria-hidden="true">◎</span>
+                <select><option selected>Instagram</option><option>TikTok</option><option>YouTube</option></select>
+              </div>
+            </label>
+            <label class="revvo-create__field">
+              <span>Meta</span>
+              <input type="number" value="100" min="1" />
+              <small>Número de vezes que a ação precisa ser realizada</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="revvo-create__card">
+          <h2 class="revvo-create__cardTitle"><span class="revvo-create__cardNum">4</span><span>Recompensa</span></h2>
+          <div class="revvo-create__rewardGrid">
+            <div class="revvo-create__rewardCol">
+              <div class="revvo-create__rewardRow" role="radiogroup" aria-label="Tipo de recompensa">
+                <button type="button" class="revvo-create__rewardBtn revvo-create__rewardBtn--active" aria-checked="true"><span class="revvo-create__rewardIcon revvo-create__rewardIcon--rvc">R</span><span>RVC</span></button>
+                <button type="button" class="revvo-create__rewardBtn" aria-checked="false"><span class="revvo-create__rewardIcon revvo-create__rewardIcon--xp">XP</span><span>XP</span></button>
+                <button type="button" class="revvo-create__rewardBtn" aria-checked="false"><span class="revvo-create__rewardIcon revvo-create__rewardIcon--badge">★</span><span>Badge</span></button>
+              </div>
+            </div>
+            <label class="revvo-create__field revvo-create__field--qty">
+              <span>Quantidade</span>
+              <div class="revvo-create__qtyWrap">
+                <input id="revvoRewardQty" type="number" value="100" min="1" />
+                <span class="revvo-create__qtyBadge"><i>R</i> RVC</span>
+              </div>
+              <small>Quantidade que o usuário receberá ao concluir a missão</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="revvo-create__card">
+          <h2 class="revvo-create__cardTitle"><span class="revvo-create__cardNum">5</span> Configurações</h2>
+          <div class="revvo-create__period">
+            <span>Período</span>
+            <div class="revvo-create__dates">
+              <label><input type="text" value="17/05/2025" readonly /><svg viewBox="0 0 24 24" fill="none"><path d="M7 2v2M17 2v2M4 6h16M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></label>
+              <em>até</em>
+              <label><input type="text" value="24/05/2025" readonly /><svg viewBox="0 0 24 24" fill="none"><path d="M7 2v2M17 2v2M4 6h16M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></label>
+            </div>
+          </div>
+          <div class="revvo-create__grid2">
+            <label class="revvo-create__field revvo-create__field--select">
+              <span>Visibilidade</span>
+              <div class="revvo-create__selectWrap">
+                <svg class="revvo-create__selectIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 3a7 7 0 1 1-7 7 7 7 0 0 1 7-7Zm0 2.2c-1.2 0-2.2 1-2.2 2.2 0 .6.2 1.1.6 1.5l2.8 2.8 2.8-2.8c.4-.4.6-.9.6-1.5 0-1.2-1-2.2-2.2-2.2Z"/></svg>
+                <select><option selected>Pública</option><option>Privada</option></select>
+              </div>
+            </label>
+            <label class="revvo-create__field revvo-create__field--select">
+              <span>Vagas</span>
+              <div class="revvo-create__selectWrap">
+                <svg class="revvo-create__selectIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg>
+                <select><option selected>Ilimitadas</option><option>300 vagas</option></select>
+              </div>
+            </label>
+          </div>
+          <div class="revvo-create__toggles">
+            <label class="revvo-create__toggle"><div><strong>Destacar missão</strong><small>A missão ficará em destaque</small></div><input type="checkbox" checked /><span class="revvo-create__switch" aria-hidden="true"></span></label>
+            <label class="revvo-create__toggle"><div><strong>Ativar missão</strong><small>A missão ficará disponível</small></div><input type="checkbox" checked /><span class="revvo-create__switch" aria-hidden="true"></span></label>
+          </div>
+        </section>
+
+        <section class="revvo-create__card revvo-create__card--preview">
+          <div class="revvo-create__previewHead">
+            <h2 class="revvo-create__cardTitle"><span class="revvo-create__cardNum">6</span> Prévia da missão</h2>
+            <span class="revvo-create__previewPill">Como será exibido</span>
+          </div>
+          <article class="revvo-create__previewCard">
+            <span class="revvo-create__previewIcon revvo-create__previewIcon--like" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5A5.45 5.45 0 0 1 7.5 3C9.24 3 10.91 3.81 12 5.08A6.02 6.02 0 0 1 16.5 3 5.45 5.45 0 0 1 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"/></svg>
+            </span>
+            <div class="revvo-create__previewBody">
+              <span class="revvo-create__previewBonus">BÔNUS +25%</span>
+              <h3 id="revvoPreviewTitle">Curta este post no Instagram</h3>
+              <p>Ajude a espalhar e ganhe recompensas!</p>
+              <div class="revvo-create__previewRewards">
+                <span><i>R</i> <span id="revvoPreviewRvc">100 RVC</span></span>
+                <span><b>XP</b> 50 XP</span>
+              </div>
+            </div>
+            <button type="button" class="revvo-create__previewCta">Fazer missão</button>
+          </article>
+        </section>
+      </main>
+
+      <footer class="revvo-create__footer">
+        <button type="button" class="revvo-create__draftBtn">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V7l4-4h10l4 4v12a2 2 0 0 1-2 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v4h10V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Salvar rascunho
+        </button>
+        <button type="button" class="revvo-create__continueBtn">
+          Continuar
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg>
+        </button>
+      </footer>
+    </div>
+    </div>
+  </div>
+  <script src="js/revvo-canvas-scale.js"></script>
+  <script src="js/revvo-criar-missao-v2-preview.js"></script>
+</body>
+</html>

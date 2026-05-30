@@ -1,0 +1,83 @@
+---
+description: Codinome TRUCK — recortar PNG hero e CSS sem area vazia nos previews V2
+globs: agilbank-frontend/public/banco/**/*
+alwaysApply: false
+---
+
+# Codinome: TRUCK (imagens hero preview)
+
+Quando o usuario disser **truck**, **truck a img**, **dar truck** ou similar, executar esta correcao na imagem indicada (ou na hero do preview em edicao).
+
+**TRUCK** = recortar padding transparente da PNG + simplificar CSS do wrapper/img (sem calc/margin negativo).
+
+---
+
+# Previews V2 — imagens hero 3D sem area vazia
+
+Quando uma imagem hero 3D (cartao, pix, cobrancas, extrato, home, etc.) aparecer **pequena dentro de uma caixa enorme** no DevTools, com espaco vazio embaixo ou nas laterais, aplicar **sempre** esta correcao (nao tentar compensar so com CSS).
+
+## Causa
+
+PNG com padding transparente. O navegador reserva o tamanho do **arquivo inteiro**, nao so do desenho visivel.
+
+## Correcao obrigatoria (ordem)
+
+### 1) Recortar o asset PNG
+
+Remover transparencia vazia **antes** de ajustar CSS:
+
+```bash
+python -c "
+from PIL import Image
+src = r'CAMINHO/para/imagem.png'
+img = Image.open(src)
+bbox = img.getbbox()
+if not bbox:
+    raise SystemExit('Imagem sem pixels visiveis')
+cropped = img.crop(bbox)
+cropped.save(src, optimize=True)
+print('OK', cropped.size, 'bbox', bbox)
+"
+```
+
+Validar: `getbbox()` deve ser `(0, 0, largura, altura)` igual a `size`.
+
+### 2) CSS minimo no wrapper + img
+
+```css
+.secao-hero-art {  /* wrapper */
+  width: min(280px, 52vw);
+  line-height: 0;
+  align-self: end;
+  justify-self: start;
+}
+
+.secao-hero-art img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+```
+
+## Nao fazer
+
+- `width` fixo grande na `<img>` sem recortar o PNG
+- `calc()`, `margin-left` negativo ou `aspect-ratio` forcado para "esconder" padding da PNG
+- `object-fit: cover` como unica solucao quando o arquivo ainda tem bordas transparentes
+- Aprovar layout hero com caixa da `<img>` muito maior que o desenho visivel
+
+## Verificacao
+
+1. Inspecionar `<img>` no DevTools: contorno azul deve encostar no desenho.
+2. Hard refresh (Ctrl+F5) por causa de cache de imagem.
+3. Ajustar tamanho so no **wrapper** (`width: min(...)`), nao reinventar crop no CSS.
+
+## Referencia
+
+Primeira aplicacao TRUCK: `assets/card-v2/card-v2-hero-card-3d.png` + `css/cartao-v2-preview.css` (cartao V2 preview).
+
+## Exemplos de pedido do usuario
+
+- "truck a img do pix"
+- "da truck nessa png"
+- "truck assets/charges-v2/charge-hero-3d.png"

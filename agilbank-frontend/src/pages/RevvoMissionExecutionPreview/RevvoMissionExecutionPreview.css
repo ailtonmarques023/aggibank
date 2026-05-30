@@ -1,0 +1,1151 @@
+@import '../../styles/revvo-canvas-scale.css';
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/banco/fonts/manrope/manrope-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("/banco/fonts/manrope/manrope-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/banco/fonts/manrope/manrope-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url("/banco/fonts/manrope/manrope-latin-800-normal.woff2") format("woff2");
+}
+
+:root {
+  --revvo-mexec-design-width: 430px;
+  --revvo-mexec-pad: 14px;
+  --revvo-mexec-bg: #f5f8ff;
+  --revvo-mexec-blue: #075bff;
+  --revvo-mexec-blue-2: #006bff;
+  --revvo-mexec-navy: #061d58;
+  --revvo-mexec-purple: #7b2cff;
+  --revvo-mexec-green: #16b85f;
+  --revvo-mexec-orange: #ff8a00;
+  --revvo-mexec-text: #0d1642;
+  --revvo-mexec-muted: #65718d;
+  --revvo-mexec-border: rgba(10, 40, 100, 0.08);
+  --revvo-mexec-font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.revvo-mexec-app,
+.revvo-mexec-app * {
+  box-sizing: border-box;
+}
+
+.revvo-mexec-app.revvo-canvas-app {
+  --revvo-canvas-design-width: var(--revvo-mexec-design-width);
+  background: #e8eef8;
+  color: var(--revvo-mexec-text);
+  font-family: var(--revvo-mexec-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.revvo-mexec {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: #f5f8ff;
+}
+
+/* —— Top block (header + chips + hero unified) —— */
+.revvo-mission-top {
+  position: relative;
+  height: 300px;
+  background: linear-gradient(0deg, rgba(6, 57, 200, 0) 35%, rgba(6, 57, 200, 1) 8%, rgba(61, 82, 240, 1) 82%);
+  padding: 15px 12px 0;
+  overflow: visible;
+}
+
+.revvo-mission-header {
+  height: 46px;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+}
+
+.revvo-mission-header-title {
+  margin: 0;
+  text-align: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.revvo-mission-header .revvo-mexec__backBtn,
+.revvo-mission-header .revvo-mexec__helpBtn {
+  justify-self: center;
+}
+
+.revvo-mission-chips {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-height: 24px;
+  margin: 2px 0 0;
+  padding: 0 2px 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.revvo-mission-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.revvo-mission-chipSep {
+  flex-shrink: 0;
+  margin: 0 5px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+
+.revvo-mission-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.96);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.revvo-mission-chip--bonus {
+  color: #4ade80;
+}
+
+.revvo-mission-hero-group {
+  position: relative;
+  z-index: 2;
+  border-radius: 26px;
+  overflow: visible;
+  box-shadow: 0 16px 36px rgba(5, 35, 120, 0.18);
+}
+
+.revvo-mission-body {
+  background: #f5f8ff;
+  padding: 0 12px 120px;
+}
+
+.revvo-mexec__backBtn,
+.revvo-mexec__helpBtn {
+  border: 0;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__backBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #111827;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(8, 36, 104, 0.14);
+}
+
+.revvo-mexec__helpBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #075bff;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(8, 36, 104, 0.14);
+}
+
+.revvo-mexec__backIcon,
+.revvo-mexec__helpIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-mexec__chipIcon {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__chipIcon--ig {
+  background: linear-gradient(135deg, #f58529, #dd2a7b 52%, #8134af);
+}
+
+.revvo-mexec__chipSvg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__chipSvg--target {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.revvo-mexec__chipSvg--bolt {
+  color: #4ade80;
+}
+
+.revvo-mexec button,
+.revvo-mexec input {
+  font: inherit;
+}
+
+.revvo-mexec button {
+  cursor: pointer;
+}
+
+.revvo-mexec svg {
+  display: block;
+}
+
+/* —— Hero —— */
+.revvo-mission-hero {
+  position: relative;
+  height: 140px;
+  overflow: visible;
+  border-radius: 26px 26px 0 0;
+  color: #fff;
+  background:
+    radial-gradient(circle at 82% 42%, rgba(58, 186, 255, 0.48), transparent 34%),
+    linear-gradient(135deg, #075bff 0%, #0639c8 48%, #061d58 100%);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-bottom: 0;
+}
+
+.revvo-mission-hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 54%;
+  max-width: 220px;
+  min-width: 0;
+  padding: 12px 8px 10px 14px;
+}
+
+.revvo-mission-hero__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.revvo-mission-brand-logo {
+  flex-shrink: 0;
+}
+
+.revvo-mission-hero__head .revvo-mexec__brandLogo {
+  width: 46px;
+  height: 46px;
+  border-width: 1.5px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+}
+
+.revvo-mission-hero__head .revvo-mexec__brandLogo svg {
+  width: 24px;
+  height: 24px;
+}
+
+.revvo-mission-rarity {
+  display: inline-flex;
+  align-items: center;
+  margin: 2px 0 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #9b4dff, #7b2cff);
+  box-shadow: 0 4px 12px rgba(123, 44, 255, 0.35);
+}
+
+.revvo-mission-hero__copy {
+  width: 100%;
+  min-width: 0;
+}
+
+.revvo-mission-hero__title {
+  margin: 0 0 3px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.revvo-mission-hero__subtitle {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.revvo-mission-rewards {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-top: 7px;
+  width: 100%;
+}
+
+.revvo-mission-hero__content .revvo-mexec__rewardPill {
+  height: 22px;
+  padding: 4px 8px;
+  font-size: 10px;
+  gap: 4px;
+}
+
+.revvo-mission-hero__content .revvo-mexec__coin,
+.revvo-mission-hero__content .revvo-mexec__xp {
+  width: 18px;
+  height: 18px;
+  font-size: 8px;
+}
+
+.revvo-mission-hero__content .revvo-mexec__xp {
+  font-size: 7px;
+}
+
+.revvo-mission-hero__phoneArt {
+  position: absolute;
+  z-index: 1;
+  right: -8px;
+  bottom: -20px;
+  width: 188px;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.revvo-mission-hero__phone {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 16px 26px rgba(4, 21, 74, 0.24));
+}
+
+.revvo-mission-hero__phone--placeholder {
+  height: 168px;
+}
+
+.revvo-mission-hero__phoneHeart {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 10px 10px 10px 2px;
+  background: linear-gradient(145deg, #ff6b9d, #e91e63);
+  box-shadow: 0 4px 10px rgba(233, 30, 99, 0.35);
+}
+
+.revvo-mission-hero__phoneHeart::after {
+  content: "♥";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #fff;
+}
+
+.revvo-mission-hero__phoneHeart--left {
+  left: 8px;
+  top: 18px;
+  transform: rotate(-12deg);
+}
+
+.revvo-mission-hero__phoneHeart--right {
+  right: 18px;
+  top: 8px;
+  transform: rotate(8deg);
+}
+
+.revvo-mission-hero__phoneDevice {
+  position: absolute;
+  left: 50%;
+  top: 28px;
+  width: 78px;
+  height: 128px;
+  border-radius: 16px;
+  border: 3px solid #1a1a2e;
+  background: linear-gradient(160deg, #2a2a4a 0%, #12122a 100%);
+  transform: translateX(-50%) rotate(-8deg);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.revvo-mission-hero__phoneScreen {
+  position: absolute;
+  inset: 10px 8px 12px;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 30% 108%, #feda75, transparent 42%),
+    radial-gradient(circle at 10% 20%, #d62976, transparent 48%),
+    radial-gradient(circle at 90% 10%, #962fbf, transparent 42%),
+    radial-gradient(circle at 60% 60%, #4f5bd5, transparent 55%);
+}
+
+.revvo-mission-hero__phoneScreen::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  transform: translate(-50%, -50%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.revvo-mission-hero__phoneBase {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 110px;
+  height: 28px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(66, 184, 255, 0.55), transparent 70%);
+  box-shadow:
+    0 0 0 18px rgba(66, 184, 255, 0.12),
+    0 0 0 36px rgba(66, 184, 255, 0.06);
+}
+
+.revvo-mexec__brandLogo {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+.revvo-mexec__brandLogo svg {
+  width: 30px;
+  height: 30px;
+}
+
+.revvo-mexec__brandLogo--adidas {
+  background: #0a0a0a;
+}
+
+.revvo-mexec__brandLogo--ig {
+  background: linear-gradient(135deg, #f58529, #dd2a7b 52%, #8134af);
+}
+
+.revvo-mexec__rewardPill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 25px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.revvo-mexec__rewardPill--rvc {
+  color: var(--revvo-mexec-green);
+}
+
+.revvo-mexec__rewardPill--xp {
+  color: var(--revvo-mexec-purple);
+}
+
+.revvo-mexec__coin,
+.revvo-mexec__xp {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.revvo-mexec__coin {
+  background: linear-gradient(145deg, #ffb347, #ff8a00);
+}
+
+.revvo-mexec__xp {
+  background: linear-gradient(145deg, #a96bff, #7b2cff);
+  font-size: 8px;
+}
+
+
+/* —— Metrics —— */
+.revvo-mission-metrics {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  height: 60px;
+  padding: 8px 12px;
+  border-radius: 0 0 26px 26px;
+  background: #fff;
+  border-top: 1px solid rgba(10, 40, 100, 0.05);
+}
+
+.revvo-mexec__metric {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 6px;
+  min-width: 0;
+}
+
+.revvo-mexec__metric + .revvo-mexec__metric {
+  border-left: 1px solid var(--revvo-mexec-border);
+}
+
+.revvo-mexec__metricIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__metricIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-mexec__metricIcon--blue {
+  color: var(--revvo-mexec-blue);
+  background: rgba(7, 91, 255, 0.1);
+}
+
+.revvo-mexec__metricIcon--green {
+  color: var(--revvo-mexec-green);
+  background: rgba(22, 184, 95, 0.12);
+}
+
+.revvo-mexec__metric small {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--revvo-mexec-muted);
+  line-height: 1.2;
+}
+
+.revvo-mexec__metric strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.revvo-mexec__metricAuto {
+  color: var(--revvo-mexec-green);
+}
+
+.revvo-mexec__metricBar {
+  display: block;
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(7, 91, 255, 0.12);
+  overflow: hidden;
+}
+
+.revvo-mexec__metricBar b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #075bff, #3d8bff);
+}
+
+/* —— Bonus —— */
+.revvo-mexec__bonus {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fff8f0 0%, #fff3e6 100%);
+  border: 1px solid rgba(255, 138, 0, 0.28);
+  box-shadow: 0 4px 16px rgba(255, 138, 0, 0.1);
+}
+
+.revvo-mexec__bonusBolt {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(145deg, #ffb347, #ff8a00);
+  box-shadow: 0 6px 14px rgba(255, 138, 0, 0.35);
+}
+
+.revvo-mexec__bonusBolt svg {
+  width: 24px;
+  height: 24px;
+}
+
+.revvo-mexec__bonusCopy strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #c45a00;
+}
+
+.revvo-mexec__bonusCopy p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a86820;
+  line-height: 1.35;
+}
+
+.revvo-mexec__bonusTimer {
+  text-align: right;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 138, 0, 0.22);
+}
+
+.revvo-mexec__bonusTimer small {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #b87830;
+}
+
+.revvo-mexec__bonusTimer strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--revvo-mexec-orange);
+  letter-spacing: 0.02em;
+}
+
+/* —— Cards —— */
+.revvo-mexec__card {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid var(--revvo-mexec-border);
+  box-shadow: 0 6px 20px rgba(10, 45, 95, 0.07);
+}
+
+.revvo-mexec__cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.revvo-mexec__cardHead h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.revvo-mexec__stepsCount {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--revvo-mexec-blue);
+}
+
+/* —— Steps —— */
+.revvo-mexec__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.revvo-mexec__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px 0;
+  align-items: start;
+}
+
+.revvo-mexec__step:not(:last-child) {
+  border-bottom: 1px solid rgba(10, 40, 100, 0.06);
+}
+
+.revvo-mexec__step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 44px;
+  bottom: -4px;
+  width: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(7, 91, 255, 0.25) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.revvo-mexec__step--locked:not(:last-child)::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(101, 113, 141, 0.25) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.revvo-mexec__stepNum {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--revvo-mexec-blue);
+  z-index: 1;
+}
+
+.revvo-mexec__step--locked .revvo-mexec__stepNum {
+  color: var(--revvo-mexec-muted);
+  background: #e8ecf4;
+}
+
+.revvo-mexec__step--done .revvo-mexec__stepNum {
+  background: var(--revvo-mexec-green);
+}
+
+.revvo-mexec__stepBody strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.revvo-mexec__step--locked .revvo-mexec__stepBody strong,
+.revvo-mexec__step--locked .revvo-mexec__stepBody p {
+  color: var(--revvo-mexec-muted);
+}
+
+.revvo-mexec__stepBody p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--revvo-mexec-muted);
+}
+
+.revvo-mexec__stepLinkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1.5px solid rgba(7, 91, 255, 0.55);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--revvo-mexec-blue);
+  background: #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(7, 91, 255, 0.1);
+}
+
+.revvo-mexec__stepAction {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.revvo-mexec__extIcon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__stepLock {
+  color: #b8c0d4;
+  padding-top: 4px;
+}
+
+.revvo-mexec__stepLock svg {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-mexec__stepDone {
+  align-self: center;
+  color: var(--revvo-mexec-green);
+}
+
+.revvo-mexec__stepDone svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* —— Proof —— */
+.revvo-mexec__proofBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--revvo-mexec-purple);
+  background: rgba(123, 44, 255, 0.1);
+}
+
+.revvo-mexec__proofBadge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.revvo-mexec__proofGrid {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.revvo-mexec__fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.revvo-mexec__upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 132px;
+  padding: 12px 8px;
+  border: 2px dashed rgba(7, 91, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(7, 91, 255, 0.04);
+  color: var(--revvo-mexec-blue);
+  text-align: center;
+}
+
+.revvo-mexec__upload strong {
+  font-size: 12px;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.revvo-mexec__upload small {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--revvo-mexec-muted);
+}
+
+.revvo-mexec__uploadIcon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-mexec__uploadIcon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.revvo-mexec__proofFields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.revvo-mexec__field span:first-child {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--revvo-mexec-muted);
+}
+
+.revvo-mexec__inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--revvo-mexec-border);
+  background: #f8faff;
+}
+
+.revvo-mexec__fieldIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--revvo-mexec-muted);
+}
+
+.revvo-mexec__inputWrap input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--revvo-mexec-text);
+  outline: none;
+}
+
+.revvo-mexec__inputWrap input::placeholder {
+  color: #9aa5bc;
+  font-weight: 500;
+}
+
+/* —— Earnings —— */
+.revvo-mexec__earnings {
+  margin-top: 12px;
+  padding: 12px 12px 10px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--revvo-mexec-border);
+  box-shadow: 0 4px 14px rgba(10, 45, 95, 0.06);
+}
+
+.revvo-mexec__earnings h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--revvo-mexec-text);
+}
+
+.revvo-mexec__rewards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  align-items: stretch;
+}
+
+.revvo-mexec__earnCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 5px 3px 6px;
+  border-radius: 10px;
+  text-align: center;
+  background: #f8faff;
+  border: 1px solid var(--revvo-mexec-border);
+  box-shadow: none;
+}
+
+.revvo-mexec__earnLabel {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  line-height: 1.15;
+}
+
+.revvo-mexec__earnLabel strong {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.revvo-mexec__earnLabel span {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+  opacity: 0.9;
+}
+
+.revvo-mexec__earnIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__earnIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.revvo-mexec__earnIcon--coin {
+  color: #fff;
+  background: linear-gradient(145deg, #ffb347, #ff8a00);
+}
+
+.revvo-mexec__earnIcon--xp {
+  color: #fff;
+  background: linear-gradient(145deg, #a96bff, #7b2cff);
+  font-size: 8px;
+}
+
+.revvo-mexec__earnIcon--rank {
+  color: var(--revvo-mexec-blue);
+  background: rgba(7, 91, 255, 0.1);
+}
+
+.revvo-mexec__earnIcon--streak {
+  color: var(--revvo-mexec-green);
+  background: rgba(22, 184, 95, 0.12);
+}
+
+.revvo-mexec__earnIcon--badge {
+  color: #fff;
+  background: linear-gradient(145deg, #ffd54f, #ff8a00);
+  font-size: 11px;
+}
+
+.revvo-mexec__earnCard--green .revvo-mexec__earnLabel,
+.revvo-mexec__earnCard--green .revvo-mexec__earnLabel strong {
+  color: var(--revvo-mexec-green);
+}
+
+.revvo-mexec__earnCard--purple .revvo-mexec__earnLabel,
+.revvo-mexec__earnCard--purple .revvo-mexec__earnLabel strong {
+  color: var(--revvo-mexec-purple);
+}
+
+.revvo-mexec__earnCard--blue .revvo-mexec__earnLabel,
+.revvo-mexec__earnCard--blue .revvo-mexec__earnLabel strong {
+  color: var(--revvo-mexec-blue);
+}
+
+.revvo-mexec__earnCard--gold .revvo-mexec__earnLabel,
+.revvo-mexec__earnCard--gold .revvo-mexec__earnLabel strong {
+  color: #d97706;
+}
+
+/* —— Footer —— */
+.revvo-mexec__footer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 20;
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  max-width: 100vw;
+  transform: translateX(-50%);
+  padding: 12px var(--revvo-mexec-pad) 16px;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--revvo-mexec-border);
+  box-shadow: 0 -8px 28px rgba(10, 45, 95, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.revvo-mexec__ctaPrimary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #075bff 0%, #006bff 100%);
+  box-shadow: 0 10px 24px rgba(7, 91, 255, 0.35);
+}
+
+.revvo-mexec__ctaIg {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af);
+}
+
+.revvo-mexec__ctaExt {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.revvo-mexec__ctaSecondary {
+  width: 100%;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--revvo-mexec-blue);
+  background: transparent;
+}
+
+.revvo-mexec__bookmark {
+  width: 18px;
+  height: 18px;
+}

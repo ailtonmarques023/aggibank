@@ -7,12 +7,17 @@
   "scripts": {
     "dev": "vite",
     "dev:promo": "vite --open /banco/promo-cobrancas-preview.html",
+    "dev:revvo": "vite --open /banco/revvo-home-v2-preview.html",
+    "dev:revvo-missions": "vite --open /dev/revvo-missions",
+    "dev:revvo-criar-missao": "vite --open /banco/revvo-criar-missao-v2-preview.html",
+    "preview:revvo": "vite preview --port 5180 --open /banco/revvo-home-v2-preview.html",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "playwright": "^1.49.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.13",
     "typescript": "~5.8.3",

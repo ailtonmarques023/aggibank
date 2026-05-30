@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Revvo: Simple Browser (Cursor)",
+      "type": "shell",
+      "command": "cursor",
+      "args": [
+        "-r",
+        "vscode://vscode.simple-browser/show?url=http%3A%2F%2Flocalhost%3A5180%2Fdev%2Frevvo-home"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      }
+    }
+  ]
+}

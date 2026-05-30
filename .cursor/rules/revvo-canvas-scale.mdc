@@ -1,0 +1,97 @@
+---
+description: Revvo preview — canvas mobile-first 430px fixo + scale proporcional; proíbe reflow por viewport
+globs: agilbank-frontend/src/pages/Revvo*/**/*,agilbank-frontend/public/banco/revvo-*.html,agilbank-frontend/public/banco/css/revvo-*.css,agilbank-frontend/public/banco/js/revvo-*.js,agilbank-frontend/src/styles/revvo-canvas-scale.css,agilbank-frontend/src/hooks/useRevvoCanvasScale.js
+alwaysApply: false
+---
+
+# Revvo — Canvas Escalável
+
+## Fonte de Verdade
+
+Esta é a regra única para telas Revvo preview/dev. Antes de mexer em qualquer tela Revvo, verificar se a mudança preserva:
+
+**Mesmo desenho, apenas menor.**
+
+Quando a viewport diminuir, a tela inteira deve reduzir proporcionalmente, como zoom. O desenho não deve reorganizar por largura da viewport.
+
+## Padrão Obrigatório
+
+- Telas Revvo mobile-first usam canvas lógico fixo de **430px**, salvo exceção documentada no próprio arquivo e no relatório da entrega.
+- Em telas menores que 430px, o canvas inteiro deve reduzir com `transform: scale(...)`.
+- O CSS é a fonte de verdade para a proporção visual: `--revvo-canvas-scale`.
+- `--revvo-canvas-scale` deve ser definido no CSS utilitário. É permitido usar `@media` apenas para mudar essa variável de escala; `@media` não pode mudar estrutura, grid, colunas, direção ou empilhamento do layout principal.
+- A superfície escalada usa `transform-origin: top left` para não cortar lateralmente em refresh nem resize.
+- JavaScript da página não deve sobrescrever a escala do CSS.
+- Se algum JS auxiliar for necessário, ele só pode ajustar a altura do wrapper após o scale; ele deve ler o scale computado pelo CSS e nunca recalcular ou redefinir a proporção visual.
+- Não usar canvas de **943px** em tela Revvo mobile-first. 943px só pode existir como referência visual externa ou exceção explícita documentada.
+
+## Estrutura Obrigatória
+
+React:
+
+```jsx
+import { useRevvoCanvasScale } from '../../hooks/useRevvoCanvasScale';
+import './MinhaTelaRevvo.css';
+
+const { scaleRef, innerRef } = useRevvoCanvasScale();
+
+<div className="minha-app revvo-canvas-app">
+  <div className="minha__scale revvo-canvas-scale" ref={scaleRef}>
+    <div className="minha-surface revvo-canvas-surface" ref={innerRef}>
+      ...
+    </div>
+  </div>
+</div>
+```
+
+HTML estático `/banco/revvo-*.html`:
+
+```html
+<link rel="stylesheet" href="css/revvo-...css" />
+<div class="minha-app revvo-canvas-app">
+  <div class="minha__scale revvo-canvas-scale">
+    <div class="minha-surface revvo-canvas-surface">
+      ...
+    </div>
+  </div>
+</div>
+<script src="js/revvo-canvas-scale.js"></script>
+```
+
+## Proibido
+
+- `@media (max-width: ...)` que mude `grid-template-columns` do layout principal.
+- Transformar 5 colunas em 3, 2 ou 1 coluna.
+- Empilhar cards, busca, atalhos, stats, abas ou botões principais por largura da viewport.
+- Mudar `flex-direction` para `column` por viewport em blocos principais.
+- Usar `flex-wrap: wrap` em chips/filtros/atalhos principais para resolver largura.
+- JS escrevendo `--revvo-canvas-scale`, `--revvo-create-scale` ou qualquer variável equivalente de proporção visual.
+- JS usando `window.innerWidth / 943` ou outro cálculo de escala visual da página.
+- Wrapper recebendo `width` inline para controlar escala visual.
+- `overflow: hidden` que cause corte lateral do canvas escalado.
+
+## Permitido
+
+- Grids fixos que preservam o desenho planejado: `repeat(5, minmax(0, 1fr))`, `repeat(3, minmax(0, 1fr))`, etc.
+- `flex-direction: column` como desenho base de um componente, desde que não seja alteração por viewport.
+- Chips/filtros sem espaço podem usar `flex-wrap: nowrap` + `overflow-x: auto`.
+- JS auxiliar pode ajustar apenas `height` do `.revvo-canvas-scale`, lendo `--revvo-canvas-scale` via `getComputedStyle`.
+- Bottom nav pode usar `width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale))`.
+
+## Checklist Antes de Entregar
+
+1. Canvas lógico continua 430px?
+2. O CSS continua sendo a única fonte de verdade de `--revvo-canvas-scale`?
+3. Não há JS sobrescrevendo escala?
+4. Não há `@media` quebrando layout principal?
+5. Botões/chips principais continuam em uma linha?
+6. Busca, stats, atalhos e cards principais mantêm a estrutura?
+7. Testou 430, 390, 375, 360 e 320px?
+8. Não há corte lateral nem diferença entre refresh e resize?
+
+## Arquivos Base
+
+- CSS React: `agilbank-frontend/src/styles/revvo-canvas-scale.css`
+- Hook React: `agilbank-frontend/src/hooks/useRevvoCanvasScale.js`
+- CSS estático: `agilbank-frontend/public/banco/css/revvo-canvas-scale.css`
+- JS estático: `agilbank-frontend/public/banco/js/revvo-canvas-scale.js`

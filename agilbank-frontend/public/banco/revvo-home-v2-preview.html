@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Revvo — Preview Home V2</title>
+  <link rel="stylesheet" href="css/revvo-home-v2-preview.css" />
+</head>
+<body>
+  <div class="revvo-app revvo-canvas-app">
+    <div class="revvo-preview__scale revvo-canvas-scale">
+    <div class="revvo-preview revvo-canvas-surface" id="revvoHomeV2PreviewRoot">
+      <section class="revvo-preview__hero" aria-label="Área principal Revvo">
+        <header class="revvo-preview__header">
+          <div class="revvo-preview__logo" aria-label="Revvo">
+            <span class="revvo-preview__logoMark">R</span>
+            <span class="revvo-preview__logoText">Revvo</span>
+          </div>
+          <div class="revvo-preview__headerActions">
+            <button type="button" class="revvo-preview__iconBtn revvo-preview__iconBtn--notif" aria-label="Notificações">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 1 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+              <span class="revvo-preview__notifBadge">3</span>
+            </button>
+            <button type="button" class="revvo-preview__iconBtn" aria-label="Buscar">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z"/></svg>
+            </button>
+            <button type="button" class="revvo-preview__profileBtn" aria-label="Perfil">
+              <span class="revvo-preview__profileAvatar" aria-hidden="true">
+                <img src="assets/revvo-home-v2/revvo-home-v2-avatar-camila.png" alt="" width="42" height="42" decoding="async" />
+              </span>
+              <span class="revvo-preview__profileOnline" aria-hidden="true"></span>
+            </button>
+          </div>
+        </header>
+
+        <div class="revvo-preview__greeting">
+          <div class="revvo-preview__greetingAvatar" aria-hidden="true">
+            <img src="assets/revvo-home-v2/revvo-home-v2-avatar-camila.png" alt="" width="54" height="54" decoding="async" />
+            <span class="revvo-preview__greetingOnline"></span>
+          </div>
+          <div>
+            <h1 class="revvo-preview__greetingTitle">Olá, Camila! 👋</h1>
+            <p class="revvo-preview__greetingSub">Pronta para subir no ranking hoje?</p>
+          </div>
+        </div>
+
+        <article class="revvo-preview__wallet" aria-label="Saldo e nível Revvo">
+          <div class="revvo-preview__walletTop">
+            <div class="revvo-preview__walletCopy">
+              <div class="revvo-preview__balanceLabelRow">
+                <span class="revvo-preview__balanceLabel">Saldo disponível</span>
+                <button type="button" class="revvo-preview__eyeBtn" id="revvoBalanceToggle" aria-label="Ocultar saldo">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                </button>
+              </div>
+              <p class="revvo-preview__balanceValue" id="revvoBalanceValue">
+                <span class="revvo-preview__balanceCurrency">RVC</span>
+                <span class="revvo-preview__balanceAmount" id="revvoBalanceAmount">2.480</span>
+              </p>
+              <p class="revvo-preview__balanceBrl" id="revvoBalanceBrl">≈ R$ 74,40</p>
+            </div>
+            <div class="revvo-preview__walletArt" aria-hidden="true">
+              <img class="revvo-preview__trophyImg" src="assets/revvo-home-v2/revvo-home-v2-trophy-cutout-3d.png" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="revvo-preview__level">
+            <span class="revvo-preview__levelBadge" aria-label="Nível 12">12</span>
+            <div class="revvo-preview__levelBody">
+              <p class="revvo-preview__levelTitle">Nível 12 <span>•</span> Creator Pro</p>
+              <div class="revvo-preview__xpTrack" aria-hidden="true"><span class="revvo-preview__xpFill" style="width:62%"></span></div>
+              <p class="revvo-preview__xpText">780 XP para o próximo nível</p>
+            </div>
+          </div>
+          <div class="revvo-preview__walletFoot">
+            <div class="revvo-preview__walletMsg">
+              <span class="revvo-preview__hourglass" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 2h12v3.2l-4.2 4.8 4.2 4.8V22H6v-7.2l4.2-4.8L6 5.2V2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              </span>
+              <p>Você tem <strong>8 missões</strong> aguardando validação.</p>
+            </div>
+            <button type="button" class="revvo-preview__pixBtn">Sacar via PIX
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg>
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <main class="revvo-preview__main">
+        <nav class="revvo-preview__shortcuts" aria-label="Atalhos principais">
+          <button type="button" class="revvo-preview__shortcut"><span class="revvo-preview__shortcutCircle"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2a8 8 0 1 1-8 8 8 8 0 0 1 8-8Zm0 2.5A5.5 5.5 0 1 0 17.5 12 5.51 5.51 0 0 0 12 6.5Z"/></svg></span><span class="revvo-preview__shortcutLabel">Missões</span></button>
+          <a href="/dev/revvo-carteira" class="revvo-preview__shortcut"><span class="revvo-preview__shortcutCircle"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 14H4V8h16v10Zm-2-6h-2a2 2 0 1 0 0 4h2v-4Z"/></svg></span><span class="revvo-preview__shortcutLabel">Carteira</span></a>
+          <button type="button" class="revvo-preview__shortcut"><span class="revvo-preview__shortcutCircle"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 20h16v-2H4v2Zm2-4h3V9H6v7Zm5 0h3V5h-3v11Zm5 0h3V12h-3v4Z"/></svg></span><span class="revvo-preview__shortcutLabel">Ranking</span></button>
+          <button type="button" class="revvo-preview__shortcut"><span class="revvo-preview__shortcutCircle"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 4.5 4.9.7-3.5 3.4.8 4.9L12 13.8 7.6 15.5l.8-4.9L5 7.2l4.9-.7L12 2Z"/></svg></span><span class="revvo-preview__shortcutLabel">Conquistas</span></button>
+          <button type="button" class="revvo-preview__shortcut"><span class="revvo-preview__shortcutCircle"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4Zm6 12h4v-4h-4v4Zm-6 0h4v-4H4v4Zm0-6h4v-4H4v4Zm6 0h4v-4h-4v4Zm6-10v4h4V4h-4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Zm0 6h4v-4h-4v4Z"/></svg></span><span class="revvo-preview__shortcutLabel">Ver tudo</span></button>
+        </nav>
+
+        <section class="revvo-preview__section" aria-labelledby="revvo-today-title">
+          <div class="revvo-preview__sectionHead">
+            <h2 class="revvo-preview__sectionTitle" id="revvo-today-title">Hoje no Revvo</h2>
+            <button type="button" class="revvo-preview__linkAll">Ver tudo</button>
+          </div>
+          <div class="revvo-preview__todayScroll">
+            <article class="revvo-preview__todayCard revvo-preview__todayCard--green">
+              <div class="revvo-preview__todayTop">
+                <div><p class="revvo-preview__todayKey">Missões abertas</p><p class="revvo-preview__todayVal">12 disponíveis</p></div>
+                <span class="revvo-preview__todayIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7.4V8h-6.4l.4-2Z"/></svg></span>
+              </div>
+              <div class="revvo-preview__todayBottom"><p class="revvo-preview__todaySub">Ganhe até 320 RVC hoje</p><button type="button" class="revvo-preview__todayGo" aria-label="Abrir Missões abertas"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button></div>
+            </article>
+            <article class="revvo-preview__todayCard revvo-preview__todayCard--orange">
+              <div class="revvo-preview__todayTop">
+                <div><p class="revvo-preview__todayKey">Sua sequência</p><p class="revvo-preview__todayVal">7 dias seguidos</p></div>
+                <span class="revvo-preview__todayIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67c-.32.66-1.04 2.12-1.93 4.13-.86 1.93-1.9 4.22-2.67 6.16-.77-1.94-1.81-4.23-2.67-6.16-.89-2.01-1.61-3.47-1.93-4.13C3.79 2.17 5.07 1 6.5 1c1.2 0 2.17.72 2.67 1.67.5-.95 1.47-1.67 2.67-1.67 1.43 0 2.71 1.17 2.83 2.67ZM12 22c-2.76 0-5-2.24-5-5 0-1.53.69-2.9 1.78-3.83.55 2.46 2.18 5.08 3.22 6.83 1.04-1.75 2.67-4.37 3.22-6.83A4.98 4.98 0 0 1 17 17c0 2.76-2.24 5-5 5Z"/></svg></span>
+              </div>
+              <div class="revvo-preview__todayBottom"><p class="revvo-preview__todaySub">Mantenha o ritmo!</p><button type="button" class="revvo-preview__todayGo" aria-label="Abrir Sua sequência"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button></div>
+            </article>
+            <article class="revvo-preview__todayCard revvo-preview__todayCard--purple">
+              <div class="revvo-preview__todayTop">
+                <div><p class="revvo-preview__todayKey">Ranking semanal</p><p class="revvo-preview__todayVal">Você está em #14</p></div>
+                <span class="revvo-preview__todayIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v2c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-4.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 11.63 21 9.55 21 7V7c0-1.1-.9-2-2-2ZM5 7V5h2v6.82C5.55 11.1 5 9.14 5 7Zm14 0c0 2.14-.55 4.1-2 5.82V5h2v2Z"/></svg></span>
+              </div>
+              <div class="revvo-preview__todayBottom"><p class="revvo-preview__todaySub">Top 10 está perto</p><button type="button" class="revvo-preview__todayGo" aria-label="Abrir Ranking semanal"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="revvo-preview__bannerWrap" aria-label="Campanhas em alta">
+          <div class="revvo-preview__banner">
+            <div class="revvo-preview__bannerCopy">
+              <span class="revvo-preview__bannerKicker">Campanhas em alta</span>
+              <h2 class="revvo-preview__bannerTitle">Missões com bônus de até +25% RVC</h2>
+              <button type="button" class="revvo-preview__bannerCta">Ver campanhas</button>
+            </div>
+            <div class="revvo-preview__bannerArt" aria-hidden="true">
+              <img class="revvo-preview__bannerImg" src="assets/revvo-home-v2/revvo-home-v2-campaign-3d.png" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="revvo-preview__dots" role="tablist" aria-label="Banners">
+            <span class="revvo-preview__dot"></span>
+            <span class="revvo-preview__dot revvo-preview__dot--active" aria-selected="true"></span>
+            <span class="revvo-preview__dot"></span>
+            <span class="revvo-preview__dot"></span>
+            <span class="revvo-preview__dot"></span>
+          </div>
+        </section>
+
+        <section class="revvo-preview__section" aria-labelledby="revvo-discover-title">
+          <div class="revvo-preview__sectionHead">
+            <h2 class="revvo-preview__sectionTitle" id="revvo-discover-title">Descubra no Revvo</h2>
+            <button type="button" class="revvo-preview__linkAll">Ver tudo</button>
+          </div>
+          <div class="revvo-preview__discoverScroll">
+            <article class="revvo-preview__discoverCard revvo-preview__discoverCard--blue">
+              <div class="revvo-preview__discoverCopy"><h3>Missões patrocinadas</h3><p>Descubra campanhas e ganhe mais RVC.</p></div>
+              <div class="revvo-preview__discoverArt"><img src="assets/revvo-home-v2/revvo-home-v2-megaphone-3d.png" alt="" width="100" height="100" decoding="async" /></div>
+              <button type="button" class="revvo-preview__discoverGo" aria-label="Abrir Missões patrocinadas"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button>
+            </article>
+            <article class="revvo-preview__discoverCard revvo-preview__discoverCard--green">
+              <div class="revvo-preview__discoverCopy"><h3>Convide amigos e ganhe</h3><p>Convide, ajude e ganhe recompensas.</p></div>
+              <div class="revvo-preview__discoverArt"><img src="assets/revvo-home-v2/revvo-home-v2-invite-3d.png" alt="" width="100" height="76" decoding="async" /></div>
+              <button type="button" class="revvo-preview__discoverGo" aria-label="Abrir Convide amigos"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button>
+            </article>
+            <article class="revvo-preview__discoverCard revvo-preview__discoverCard--purple">
+              <div class="revvo-preview__discoverCopy"><h3>Badges e metas</h3><p>Complete objetivos e suba de nível.</p></div>
+              <div class="revvo-preview__discoverArt"><img src="assets/revvo-home-v2/revvo-home-v2-badge-3d.png" alt="" width="100" height="91" decoding="async" /></div>
+              <button type="button" class="revvo-preview__discoverGo" aria-label="Abrir Badges"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button>
+            </article>
+            <article class="revvo-preview__discoverCard revvo-preview__discoverCard--pink">
+              <div class="revvo-preview__discoverCopy"><h3>Loja de benefícios</h3><p>Troque RVC por vantagens.</p></div>
+              <div class="revvo-preview__discoverArt"><img src="assets/revvo-home-v2/revvo-home-v2-store-3d.png" alt="" width="100" height="65" decoding="async" /></div>
+              <button type="button" class="revvo-preview__discoverGo" aria-label="Abrir Loja"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></button>
+            </article>
+          </div>
+        </section>
+
+        <section class="revvo-preview__section revvo-preview__section--last" aria-labelledby="revvo-services-title">
+          <h2 class="revvo-preview__sectionTitle revvo-preview__sectionTitle--solo" id="revvo-services-title">Serviços Revvo</h2>
+          <div class="revvo-preview__servicesGrid">
+            <button type="button" class="revvo-preview__serviceCard"><span class="revvo-preview__serviceIcon revvo-preview__serviceIcon--blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-2 14H7v-2h10v2Zm0-4H7v-2h10v2Zm0-4H7V7h10v2Z"/></svg></span><span class="revvo-preview__serviceText"><span class="revvo-preview__serviceTitle">Feed</span><span class="revvo-preview__serviceSub">Veja novidades</span></span></button>
+            <button type="button" class="revvo-preview__serviceCard"><span class="revvo-preview__serviceIcon revvo-preview__serviceIcon--blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2a8 8 0 1 1-8 8 8 8 0 0 1 8-8Zm0 2.5A5.5 5.5 0 1 0 17.5 12 5.51 5.51 0 0 0 12 6.5Z"/></svg></span><span class="revvo-preview__serviceText"><span class="revvo-preview__serviceTitle">Missões</span><span class="revvo-preview__serviceSub">Curta, siga e ganhe</span></span></button>
+            <button type="button" class="revvo-preview__serviceCard"><span class="revvo-preview__serviceIcon revvo-preview__serviceIcon--teal"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 6.5 11 4 4 11l7 7 2.5-2.5L9 11l4.5-4.5Zm-3 11 2.5 2.5L20 13l-7-7-2.5 2.5L15 13l-4.5 4.5Z"/></svg></span><span class="revvo-preview__serviceText"><span class="revvo-preview__serviceTitle">Saque PIX</span><span class="revvo-preview__serviceSub">Converta RVC</span></span></button>
+            <button type="button" class="revvo-preview__serviceCard"><span class="revvo-preview__serviceIcon revvo-preview__serviceIcon--blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg></span><span class="revvo-preview__serviceText"><span class="revvo-preview__serviceTitle">Perfil público</span><span class="revvo-preview__serviceSub">Sua vitrine</span></span></button>
+            <button type="button" class="revvo-preview__serviceCard"><span class="revvo-preview__serviceIcon revvo-preview__serviceIcon--blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Zm0 14H5.17L4 17.17V4h16v12Z"/></svg></span><span class="revvo-preview__serviceText"><span class="revvo-preview__serviceTitle">Mensagens</span><span class="revvo-preview__serviceSub">Fale com marcas</span></span></button>
+            <button type="button" class="revvo-preview__serviceCard"><span class="revvo-preview__serviceIcon revvo-preview__serviceIcon--blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2Z"/></svg></span><span class="revvo-preview__serviceText"><span class="revvo-preview__serviceTitle">Loja/Benefícios</span><span class="revvo-preview__serviceSub">Resgate vantagens</span></span></button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="revvo-preview__bottomNav" aria-label="Navegação principal">
+        <button type="button" class="revvo-preview__navItem revvo-preview__navItem--active" aria-current="page"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5Z"/></svg><span>Início</span></button>
+        <button type="button" class="revvo-preview__navItem"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2a8 8 0 1 1-8 8 8 8 0 0 1 8-8Zm0 2.5A5.5 5.5 0 1 0 17.5 12 5.51 5.51 0 0 0 12 6.5Z"/></svg><span>Missões</span></button>
+        <button type="button" class="revvo-preview__navItem"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-2 14H7v-2h10v2Zm0-4H7v-2h10v2Zm0-4H7V7h10v2Z"/></svg><span>Feed</span></button>
+        <button type="button" class="revvo-preview__navItem"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 20h16v-2H4v2Zm2-4h3V9H6v7Zm5 0h3V5h-3v11Zm5 0h3V12h-3v4Z"/></svg><span>Ranking</span></button>
+        <button type="button" class="revvo-preview__navItem"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg><span>Perfil</span></button>
+      </nav>
+    </div>
+    </div>
+  </div>
+  <script src="js/revvo-canvas-scale.js"></script>
+  <script src="js/revvo-home-v2-preview.js"></script>
+</body>
+</html>
