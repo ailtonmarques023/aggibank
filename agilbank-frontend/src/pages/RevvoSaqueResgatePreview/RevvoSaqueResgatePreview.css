@@ -1,0 +1,985 @@
+@import '../../styles/revvo-canvas-scale.css';
+
+.revvo-saque-app {
+  --revvo-saque-blue: #006dff;
+  --revvo-saque-blue-2: #0454d8;
+  --revvo-saque-navy: #07105f;
+  --revvo-saque-bg: #eef4fb;
+  --revvo-saque-surface: #ffffff;
+  --revvo-saque-text: #0b1642;
+  --revvo-saque-muted: #617093;
+  --revvo-saque-green: #04c64f;
+  --revvo-create-green: #10a65d;
+  --revvo-saque-radius: 22px;
+  --revvo-saque-pad: 16px;
+  --revvo-saque-font: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
+  --revvo-canvas-design-width: 430px;
+  min-height: 100dvh;
+  background: var(--revvo-saque-bg);
+  font-family: var(--revvo-saque-font);
+  color: var(--revvo-saque-text);
+}
+
+.revvo-saque-app,
+.revvo-saque-app * {
+  box-sizing: border-box;
+}
+
+.revvo-saque {
+  width: 430px;
+  min-height: 100dvh;
+  background: var(--revvo-saque-bg);
+  padding-bottom: 110px;
+}
+
+.revvo-saque button {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+.revvo-saque svg {
+  display: block;
+}
+
+/* —— Header —— */
+.revvo-saque__top {
+  position: relative;
+  color: #fff;
+  min-height: 173px;
+  padding: 0 var(--revvo-saque-pad) 26px;
+  background:
+    radial-gradient(ellipse 78% 88% at 96% 8%, rgba(112, 0, 255, 0.42), rgba(112, 0, 255, 0) 54%),
+    radial-gradient(ellipse 70% 60% at 0 100%, rgba(0, 109, 255, 0.55), rgba(0, 109, 255, 0) 52%),
+    linear-gradient(136deg, #06105e 0%, #09257f 36%, #004fd0 69%, #006dff 100%);
+}
+
+.revvo-saque__statusBar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 4px 0;
+  height: 16px;
+}
+
+.revvo-saque__statusTime {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  opacity: 0.98;
+}
+
+.revvo-saque__statusIcons {
+  width: 54px;
+  height: 10px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.revvo-saque__statusBattery {
+  width: 26px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  position: relative;
+}
+
+.revvo-saque__statusBattery::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.revvo-saque__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.revvo-saque__backBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__pointsPillWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.revvo-saque__pointsPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(0, 55, 150, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.revvo-saque__pointsText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+}
+
+.revvo-saque__pointsText b {
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.revvo-saque__pointsText small {
+  margin-top: 3px;
+  font-size: 0.56rem;
+  font-weight: 800;
+  opacity: 0.98;
+}
+
+.revvo-saque__chevron {
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+}
+
+.revvo-saque__coinIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 22%, #fff8a9 0, #ffd361 32%, #ff8a00 75%, #ce5900 100%);
+  box-shadow: 0 2px 10px rgba(255, 138, 0, 0.28);
+  display: grid;
+  place-items: center;
+  position: relative;
+  transform: translateY(-1px);
+}
+
+.revvo-saque__coinIcon i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.revvo-saque__coinIcon i:nth-child(1) { left: 5px; top: 5px; }
+.revvo-saque__coinIcon i:nth-child(2) { right: 5px; top: 6px; }
+.revvo-saque__coinIcon i:nth-child(3) { left: 6px; bottom: 5px; }
+.revvo-saque__coinIcon i:nth-child(4) { right: 7px; bottom: 6px; }
+
+.revvo-saque__bellBtn {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__bellBtn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.revvo-saque__bellDot {
+  position: absolute;
+  top: 6px;
+  right: 9px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 0 2px rgba(6, 16, 94, 0.5);
+}
+
+.revvo-saque__titleBlock {
+  position: relative;
+  z-index: 2;
+  margin-top: 0px;
+  max-width: 290px;
+}
+
+.revvo-saque__titleBlock h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.revvo-saque__titleSub {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.revvo-saque__titleSubLine {
+  display: block;
+}
+
+.revvo-saque__heroArt {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 26px rgba(0, 13, 80, 0.42));
+  z-index: 1;
+}
+
+.revvo-saque__heroArt img {
+  position: absolute;
+  right: 0;
+  top: -7px;
+  width: 160px;
+  height: auto;
+}
+
+.revvo-saque__heroSpark {
+  position: absolute;
+  font-size: 0.9rem;
+  color: #ffd24d;
+  text-shadow: 0 0 10px rgba(255, 210, 77, 0.85);
+}
+
+.revvo-saque__heroSpark--1 { top: 18px; left: 10px; }
+.revvo-saque__heroSpark--2 { top: 64px; right: 18px; }
+
+/* —— Main —— */
+.revvo-saque__main {
+  position: relative;
+  z-index: 2;
+  margin-top: -41px;
+  padding: 0 var(--revvo-saque-pad) 16px;
+}
+
+.revvo-saque__balanceCard {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  background: var(--revvo-saque-surface);
+  border-radius: 22px;
+  padding: 14px 12px 12px;
+  box-shadow: 0 10px 26px rgba(10, 45, 95, 0.08);
+}
+
+.revvo-saque__balanceRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.revvo-saque__balanceLabel {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--revvo-saque-muted);
+}
+
+.revvo-saque__balanceValue {
+  display: block;
+  margin-top: 10px;
+  font-size: 2.0rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.revvo-saque__balanceSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.revvo-saque__pointsChip {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(255, 176, 32, 0.42);
+  color: #2d4fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.revvo-saque__pointsChipCoin {
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__pointsChipCoin .revvo-saque__coinIcon {
+  width: 16px;
+  height: 16px;
+  transform: translateY(-1px);
+}
+
+.revvo-saque__pointsChipCoin .revvo-saque__coinIcon i {
+  transform: scale(0.8);
+  transform-origin: center;
+}
+
+.revvo-saque__balanceSideTitle {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #0b4fff;
+}
+
+.revvo-saque__balanceSideRate {
+  margin: 8px 0 0;
+  color: var(--revvo-saque-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.revvo-saque__extractLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--revvo-saque-blue);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* —— Options —— */
+.revvo-saque__options {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.revvo-saque__option {
+  border-radius: 18px;
+  padding: 12px 10px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(10, 40, 100, 0.06);
+  border: 1.5px solid rgba(7, 16, 95, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.revvo-saque__option.is-active {
+  border-color: rgba(0, 109, 255, 0.55);
+  box-shadow: 0 12px 24px rgba(0, 109, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.revvo-saque__optionIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.revvo-saque__smallSvg {
+  width: 20px;
+  height: 20px;
+}
+
+.revvo-saque__optionIcon--pix { background: rgba(4, 198, 79, 0.14); color: #09a64d; }
+.revvo-saque__optionIcon--saldo { background: rgba(0, 109, 255, 0.12); color: #0454d8; }
+.revvo-saque__optionIcon--bonus { background: rgba(112, 0, 255, 0.12); color: #7000ff; }
+.revvo-saque__optionIcon--missoes { background: rgba(0, 109, 255, 0.12); color: #7000ff; }
+
+.revvo-saque__optionText b {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 900;
+  text-align: left;
+}
+
+.revvo-saque__optionText span {
+  display: block;
+  margin-top: 4px;
+  color: var(--revvo-saque-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* —— Cards —— */
+.revvo-saque__card {
+  margin-top: 14px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(10, 45, 95, 0.07);
+  padding: 16px 14px;
+}
+
+.revvo-saque__cardHead {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.revvo-saque__cardHeadIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(4, 198, 79, 0.12);
+  color: #09a64d;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__cardHeadIcon .revvo-saque__smallSvg { width: 22px; height: 22px; }
+
+.revvo-saque__cardHeadText h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--revvo-saque-navy);
+  letter-spacing: -0.02em;
+}
+
+.revvo-saque__cardHeadText p {
+  margin: 4px 0 0;
+  color: var(--revvo-saque-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.revvo-saque__feeBadge {
+  justify-self: end;
+  align-self: start;
+  background: rgba(4, 198, 79, 0.14);
+  color: #059652;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 5px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.revvo-saque__form {
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.revvo-saque__field label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--revvo-saque-navy);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.revvo-saque__inputBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(7, 16, 95, 0.12);
+  background: #fff;
+}
+
+.revvo-saque__inputBox--amount {
+  border: 1.5px solid rgba(0, 109, 255, 0.55);
+  box-shadow: 0 4px 14px rgba(0, 109, 255, 0.08);
+  padding: 10px 12px;
+  min-height: 48px;
+}
+
+.revvo-saque__inputBoxPix {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(4, 198, 79, 0.12);
+  color: #09a64d;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__inputBoxPix .revvo-saque__smallSvg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-saque__inputBoxValue {
+  min-width: 0;
+  flex: 1;
+  color: var(--revvo-saque-text);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.revvo-saque__inputBoxLink {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--revvo-saque-blue);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.revvo-saque__amountMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.revvo-saque__amountValue {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--revvo-saque-navy);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.revvo-saque__amountInput {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--revvo-saque-navy);
+  letter-spacing: -0.03em;
+}
+
+.revvo-saque__fieldRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.revvo-saque__fieldValue {
+  min-width: 0;
+  flex: 1;
+  color: var(--revvo-saque-text);
+  font-weight: 800;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.revvo-saque__editSvg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.95;
+}
+
+.revvo-saque__quickGrid {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: nowrap;
+}
+
+.revvo-saque__quick {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(7, 16, 95, 0.12);
+  color: #2a3a6d;
+  font-size: 10px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  padding: 0 4px;
+}
+
+.revvo-saque__quick.is-selected {
+  border-color: rgba(0, 109, 255, 0.65);
+  color: var(--revvo-saque-blue);
+  background: rgba(0, 109, 255, 0.04);
+  box-shadow: none;
+}
+
+.revvo-saque__quick--other {
+  flex: 0.85;
+}
+
+.revvo-saque__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 12px 6px;
+  border-radius: 12px;
+  background: rgba(238, 244, 251, 0.95);
+  border: 1px solid rgba(7, 16, 95, 0.08);
+}
+
+.revvo-saque__summaryItem {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.revvo-saque__summaryItem + .revvo-saque__summaryItem {
+  border-left: 1px solid rgba(7, 16, 95, 0.1);
+}
+
+.revvo-saque__summaryIcon {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__summarySvg {
+  width: 20px;
+  height: 20px;
+}
+
+.revvo-saque__summaryIcon--wallet { color: var(--revvo-saque-blue); }
+.revvo-saque__summaryIcon--money { color: #059652; }
+.revvo-saque__summaryIcon--clock { color: #8a96b3; }
+
+.revvo-saque__summaryItem small {
+  color: var(--revvo-saque-muted);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.revvo-saque__summaryItem strong {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--revvo-saque-navy);
+  line-height: 1.15;
+}
+
+.revvo-saque__summaryItem--liquid strong {
+  color: #059652;
+}
+
+.revvo-saque__summaryEta {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.revvo-saque__cardSimpleTitle {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.revvo-saque__cardSimpleText {
+  margin: 8px 0 0;
+  color: var(--revvo-saque-muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.revvo-saque__simpleBalance {
+  margin-top: 12px;
+  padding: 12px 10px;
+  border-radius: 18px;
+  background: rgba(0, 109, 255, 0.06);
+  border: 1px solid rgba(0, 109, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.revvo-saque__simpleBalance span {
+  color: var(--revvo-saque-muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+
+.revvo-saque__simpleBalance strong {
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.revvo-saque__amountInputWrap {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border-radius: 14px;
+  padding: 0 12px;
+  border: 1.5px solid rgba(7, 16, 95, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revvo-saque__amountInputWrap input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-weight: 900;
+  font-size: 0.86rem;
+}
+
+.revvo-saque__amountPrefix,
+.revvo-saque__amountSuffix {
+  color: var(--revvo-saque-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.revvo-saque__bonusGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.revvo-saque__bonusItem {
+  padding: 12px 10px;
+  border-radius: 18px;
+  font-weight: 900;
+  font-size: 0.72rem;
+  border: 1px solid rgba(7, 16, 95, 0.08);
+  background: #fff;
+}
+
+.revvo-saque__bonusItem--green { color: #059652; background: rgba(4, 198, 79, 0.08); border-color: rgba(4, 198, 79, 0.2); }
+.revvo-saque__bonusItem--purple { color: #7000ff; background: rgba(112, 0, 255, 0.08); border-color: rgba(112, 0, 255, 0.2); }
+.revvo-saque__bonusItem--blue { color: #0454d8; background: rgba(0, 109, 255, 0.08); border-color: rgba(0, 109, 255, 0.2); }
+
+.revvo-saque__primaryBtn {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 50px;
+  border-radius: 18px;
+  background-color: var(--revvo-create-green);
+  background: var(--revvo-create-green);
+  color: rgba(255, 255, 255, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 0.76rem;
+  box-shadow: 0 16px 26px rgba(0, 85, 255, 0.28);
+}
+
+.revvo-saque__primaryBtn--wide {
+  margin-top: 14px;
+}
+
+.revvo-saque__ctaSvg {
+  width: 18px;
+  height: 18px;
+}
+
+.revvo-saque__security {
+  margin-top: 14px;
+  background: #fff;
+  border-radius: 22px;
+  padding: 14px 12px;
+  box-shadow: 0 10px 26px rgba(10, 45, 95, 0.08);
+}
+
+.revvo-saque__securityHead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.revvo-saque__lockSvg {
+  width: 36px;
+  height: 36px;
+  color: #0454d8;
+  background: rgba(0, 109, 255, 0.1);
+  border-radius: 14px;
+  padding: 8px;
+}
+
+.revvo-saque__securityHead h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.revvo-saque__securityHead p {
+  margin: 8px 0 0;
+  color: var(--revvo-saque-muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.revvo-saque__terms {
+  margin: 10px 0 0;
+  color: var(--revvo-saque-muted);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.revvo-saque__termsLink {
+  color: var(--revvo-saque-blue);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+/* —— Bottom nav —— */
+.revvo-saque__bottomNav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 100;
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  max-width: 100vw;
+  padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 -8px 24px rgba(15, 45, 80, 0.1);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+}
+
+.revvo-saque__bottomNav button {
+  max-width: 72px;
+  flex: 1;
+  padding: 0 2px 2px;
+  border: 0;
+  background: transparent;
+  color: #69758c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.52rem;
+  font-weight: 600;
+}
+
+.revvo-saque__navIconWrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-saque__navIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.revvo-saque__navActiveMark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(112, 0, 255, 0.12);
+  color: var(--revvo-saque-blue);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.revvo-saque__bottomNav button.is-active {
+  color: #7000ff;
+  font-weight: 800;
+}
+
+.revvo-saque__bottomNav button.is-active .revvo-saque__navIconWrap {
+  background: rgba(112, 0, 255, 0.12);
+  color: #7000ff;
+}
+
+.revvo-saque__bottomNav button.is-active::before {
+  content: "";
+  width: 26px;
+  height: 3px;
+  margin-bottom: 2px;
+  border-radius: 999px;
+  background: #7000ff;
+}
+
+/* —— Toast —— */
+.revvo-saque__toastOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 40, 0.35);
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.revvo-saque__toastCard {
+  width: min(420px, 92vw);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+  padding: 14px 12px;
+}
+
+.revvo-saque__toastCard h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--revvo-saque-text);
+}
+
+.revvo-saque__toastCard p {
+  margin: 8px 0 0;
+  color: var(--revvo-saque-muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.revvo-saque__toastOk {
+  margin-top: 12px;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 16px;
+  background: rgba(0, 109, 255, 0.08);
+  color: var(--revvo-saque-blue);
+  font-weight: 900;
+  font-size: 0.72rem;
+}
+

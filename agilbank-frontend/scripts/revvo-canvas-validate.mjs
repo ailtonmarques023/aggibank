@@ -27,14 +27,8 @@ const routes = [
     minChildren: 3
   },
   { name: 'criar-missao', path: '/dev/revvo-criar-missao', grid: '.revvo-create__typeRow', minChildren: 5 },
-  { name: 'missions', path: '/dev/revvo-missions', grid: '.revvo-missions__searchRow', minChildren: 2 },
-  {
-    name: 'feed',
-    path: '/dev/revvo-feed',
-    grid: '.revvo-feed__columns',
-    childSelector: '.revvo-feed__feedCol, .revvo-feed__sidebar',
-    minChildren: 2
-  },
+  { name: 'missions', path: '/dev/revvo-missions', grid: '.revvo-missions__quickGrid', minChildren: 4 },
+  { name: 'feed', path: '/dev/revvo-feed', grid: '.revvo-feed__statsCard', minChildren: 4 },
   {
     name: 'mission-exec',
     path: '/dev/revvo-mission/adidas-like',
@@ -117,8 +111,7 @@ for (const width of viewports) {
       route.minChildren === 5
         ? metrics.childCount >= 5 && metrics.rowCount === 1
         : metrics.rowCount === 1;
-    const expectedDesignWidth = route.name === 'feed' ? '530px' : '430px';
-    const designOk = metrics.designWidth === expectedDesignWidth;
+    const designOk = metrics.designWidth === '430px';
     const jsOk =
       !metrics.jsOverrodeScale &&
       !metrics.jsOverrodeDesignWidth &&

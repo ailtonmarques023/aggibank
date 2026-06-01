@@ -1,4 +1,4 @@
-/** Mock centralizado — Feed Revvo (preview). Integrar com API quando existir. */
+/** Mock centralizado — Feed Revvo v2 (referência maio/2026). */
 
 const FEED_ASSETS = '/banco/assets/revvo-feed';
 const HOME_ASSETS = '/banco/assets/revvo-home-v2';
@@ -8,45 +8,119 @@ export const feedData = {
   notificationCount: 3,
   searchPlaceholder: 'Buscar no feed...',
 
+  userStats: {
+    balance: { label: 'Saldo', value: '3.210 RVC', icon: 'coin' },
+    level: { label: 'Nível', value: 'Criador Ativo', progress: 62, icon: 'star' },
+    streak: { label: 'Sequência', value: '7 dias', icon: 'fire', fireImage: `${RANKING_ASSETS}/revvo-ranking-fire.png` },
+    progress: {
+      label: 'Progresso',
+      percent: 80,
+      hint: 'Rumo ao próximo nível',
+      badgeImage: `${HOME_ASSETS}/revvo-home-v2-badge-3d.png`
+    }
+  },
+
+  stories: [
+    { id: 'new-mission', label: 'Nova missão', image: `${FEED_ASSETS}/revvo-feed-campaign-phone.png`, ring: '#0066ff', badge: '+' },
+    { id: 'top10', label: 'Top 10', image: `${FEED_ASSETS}/revvo-story-top10.png`, ring: '#ffb020' },
+    { id: 'badge', label: 'Badge', image: `${FEED_ASSETS}/revvo-story-badge.png`, ring: '#7b2cff' },
+    { id: 'bonus', label: 'Bônus', image: `${FEED_ASSETS}/revvo-story-bonus.png`, ring: '#ff8a00' },
+    { id: 'ranking', label: 'Ranking', image: `${FEED_ASSETS}/revvo-feed-trophy-top10.png`, ring: '#16b85f' }
+  ],
+
   filters: [
     { id: 'all', label: 'Todos', icon: 'grid' },
-    { id: 'achievements', label: 'Conquistas', icon: 'trophy' },
     { id: 'missions', label: 'Missões', icon: 'target' },
+    { id: 'achievements', label: 'Conquistas', icon: 'trophy' },
     { id: 'ranking', label: 'Ranking', icon: 'chart' },
     { id: 'campaigns', label: 'Campanhas', icon: 'megaphone' }
   ],
 
-  sidebar: {
-    streak: {
-      title: 'Sua sequência',
-      days: 7,
-      label: '7 dias seguidos!',
-      weekDays: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
-      checked: [true, true, true, true, true, true, false],
-      fireImage: `${RANKING_ASSETS}/revvo-ranking-fire.png`
+  posts: [
+    {
+      id: 'post_1',
+      type: 'mission_completed',
+      userName: 'Camila Santos',
+      textBefore: 'concluiu uma missão da ',
+      textHighlight: 'Adidas',
+      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
+      avatarBadge: 'star',
+      reward: '+25 RVC',
+      time: '2h atrás',
+      badgeImage: `${FEED_ASSETS}/revvo-brand-adidas-avatar.png`,
+      brandLogo: `${FEED_ASSETS}/revvo-brand-adidas-avatar.png`,
+      ctaLabel: 'Ver missão',
+      missionId: 'adidas-like',
+      likes: 128,
+      comments: 24,
+      shares: 12,
+      badgeCheck: true
     },
-    progress: {
-      title: 'Seu progresso',
-      percent: 80,
-      hint: 'Rumo ao próximo nível',
-      badgeImage: `${HOME_ASSETS}/revvo-home-v2-badge-3d.png`
+    {
+      id: 'post_2',
+      type: 'ranking',
+      userName: 'Pedro Henrique',
+      textBefore: 'entrou no ',
+      textHighlight: 'Top 10',
+      textAfter: ' semanal',
+      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
+      avatarBadge: 'crown',
+      reward: '+50 RVC',
+      time: '3h atrás',
+      badgeImage: `${FEED_ASSETS}/revvo-feed-trophy-top10.png`,
+      ctaLabel: 'Ver ranking',
+      rankingPath: '/dev/revvo-ranking',
+      likes: 31,
+      comments: 7,
+      shares: 3
     },
-    weeklyRanking: {
-      title: 'Ranking semanal',
-      top: [
-        { id: 'lucas', name: 'Lucas M.', rvc: '4.820 RVC', avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png` },
-        { id: 'camila', name: 'Camila S.', rvc: '4.510 RVC', avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png` },
-        { id: 'pedro', name: 'Pedro H.', rvc: '4.200 RVC', avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png` }
-      ],
-      you: { position: 10, label: 'Você', rvc: '3.210 RVC' },
-      linkLabel: 'Ver ranking completo'
+    {
+      id: 'post_3',
+      type: 'achievement',
+      userName: 'Ana Beatriz',
+      textBefore: 'desbloqueou o badge ',
+      textHighlight: 'Creator Ativo',
+      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
+      avatarBadge: 'check',
+      reward: '+15 RVC',
+      time: '5h atrás',
+      badgeImage: `${FEED_ASSETS}/revvo-feed-achievement-creator-ativo.png`,
+      ctaLabel: 'Ver conquista',
+      likes: 18,
+      comments: 4,
+      shares: 1
+    },
+    {
+      id: 'post_4',
+      type: 'system_campaign',
+      userName: 'Revvo',
+      textBefore: 'Nova campanha disponível!',
+      reward: '+25%',
+      time: '6h atrás',
+      badgeImage: `${HOME_ASSETS}/revvo-home-v2-megaphone-3d.png`,
+      ctaLabel: 'Ver campanha',
+      missionId: 'tiktok-comment',
+      likes: 42,
+      comments: 9,
+      shares: 6
     }
+  ],
+
+  weeklyRanking: {
+    title: 'Ranking semanal',
+    countdown: 'Atualiza em 2d 6h',
+    top: [
+      { id: 'lucas', name: 'Lucas M.', rvc: '4.820 RVC', position: 1, avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`, frame: `${RANKING_ASSETS}/ranking-frame-1-gold.png` },
+      { id: 'camila', name: 'Camila S.', rvc: '4.510 RVC', position: 2, avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`, frame: `${RANKING_ASSETS}/ranking-frame-2-silver.png` },
+      { id: 'pedro', name: 'Pedro H.', rvc: '4.200 RVC', position: 3, avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`, frame: `${RANKING_ASSETS}/ranking-frame-3-bronze.png` }
+    ],
+    you: { position: 10, label: 'Você', rvc: '3.210 RVC', avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png` },
+    linkLabel: 'Ver ranking completo'
   },
 
   spotlightCampaigns: [
     {
       id: 'adidas-summer',
-      brand: 'Adidas',
       title: 'Adidas – Coleção Verão',
       descriptionBefore: 'Conclua missões e ganhe até',
       descriptionHighlight: '+25% RVC',
@@ -62,7 +136,6 @@ export const feedData = {
     },
     {
       id: 'nike-air',
-      brand: 'Nike',
       title: 'Nike Air – New',
       descriptionBefore: 'Missões com bônus de até',
       descriptionHighlight: '+20%',
@@ -76,90 +149,5 @@ export const feedData = {
       tone: 'orange',
       variant: 'light'
     }
-  ],
-
-  posts: [
-    {
-      id: 'post_1',
-      type: 'mission_completed',
-      userName: 'Camila Santos',
-      textBefore: 'concluiu uma missão da ',
-      textHighlight: 'Adidas',
-      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
-      avatarBadge: 'star',
-      reward: '+25 RVC',
-      rewardTone: 'purple',
-      time: '2h atrás',
-      badgeImage: `${FEED_ASSETS}/revvo-brand-adidas-avatar.png`,
-      likes: 24,
-      comments: 5,
-      shares: 2
-    },
-    {
-      id: 'post_2',
-      type: 'ranking',
-      userName: 'Pedro Henrique',
-      textBefore: 'entrou no ',
-      textHighlight: 'Top 10',
-      textAfter: ' semanal',
-      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
-      avatarBadge: 'crown',
-      reward: '+50 RVC',
-      rewardSub: 'TOP 10',
-      rewardTone: 'gold',
-      time: '3h atrás',
-      badgeImage: `${FEED_ASSETS}/revvo-feed-trophy-top10.png`,
-      likes: 31,
-      comments: 7,
-      shares: 3
-    },
-    {
-      id: 'post_3',
-      type: 'achievement',
-      userName: 'Ana Beatriz',
-      textBefore: 'desbloqueou o badge ',
-      textHighlight: 'Creator Ativo',
-      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
-      avatarBadge: 'check',
-      reward: '+15 RVC',
-      rewardTone: 'blue',
-      time: '5h atrás',
-      badgeImage: `${FEED_ASSETS}/revvo-feed-achievement-creator-ativo.png`,
-      likes: 18,
-      comments: 4,
-      shares: 1
-    },
-    {
-      id: 'post_4',
-      type: 'system_campaign',
-      userName: 'Revvo',
-      textBefore: 'Nova campanha disponível!',
-      reward: '+25%',
-      rewardTone: 'orange',
-      time: '6h atrás',
-      badgeImage: `${HOME_ASSETS}/revvo-home-v2-megaphone-3d.png`,
-      likes: 42,
-      comments: 9,
-      shares: 6
-    },
-    {
-      id: 'post_5',
-      type: 'pix_withdrawal',
-      userName: 'João Victor',
-      textBefore: 'sacou ',
-      textHighlight: 'R$ 120,00',
-      textAfter: ' via PIX',
-      avatar: `${FEED_ASSETS}/revvo-feed-avatar-camila.png`,
-      avatarBadge: 'check',
-      reward: '+120 RVC',
-      rewardTone: 'green',
-      time: '8h atrás',
-      badgeImage: `${FEED_ASSETS}/revvo-feed-pix-wallet.png`,
-      likes: 15,
-      comments: 2,
-      shares: 1
-    }
   ]
 };
-
-/** TODO: avatares distintos por usuário quando assets dedicados existirem. */

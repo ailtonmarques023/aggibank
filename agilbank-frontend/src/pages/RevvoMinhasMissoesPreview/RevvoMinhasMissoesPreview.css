@@ -1,0 +1,833 @@
+/**
+ * Minhas Missões Revvo — canvas 430px, preview/dev
+ */
+
+@import '../../styles/revvo-canvas-scale.css';
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/banco/fonts/manrope/manrope-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("/banco/fonts/manrope/manrope-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("/banco/fonts/manrope/manrope-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/banco/fonts/manrope/manrope-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url("/banco/fonts/manrope/manrope-latin-800-normal.woff2") format("woff2");
+}
+
+.revvo-minhas-app {
+  --revvo-minhas-purple: #7000ff;
+  --revvo-minhas-blue: #0055ff;
+  --revvo-minhas-blue-dark: #06105e;
+  --revvo-minhas-bg: #f4f6fb;
+  --revvo-minhas-surface: #fff;
+  --revvo-minhas-text: #0b1642;
+  --revvo-minhas-muted: #66708d;
+  --revvo-minhas-green: #00c853;
+  --revvo-minhas-orange: #ff9100;
+  --revvo-minhas-pink: #ff4081;
+  --revvo-minhas-yellow: #ffb300;
+  --revvo-minhas-red: #ff5252;
+  --revvo-minhas-pad: 14px;
+  --revvo-minhas-font: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
+  --revvo-canvas-design-width: 430px;
+  min-height: 100dvh;
+  background: var(--revvo-minhas-bg);
+  font-family: var(--revvo-minhas-font);
+  color: var(--revvo-minhas-text);
+}
+
+.revvo-minhas-app,
+.revvo-minhas-app * {
+  box-sizing: border-box;
+}
+
+.revvo-minhas {
+  width: 430px;
+  min-height: 100dvh;
+  padding-bottom: 88px;
+  background: var(--revvo-minhas-bg);
+}
+
+.revvo-minhas button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.revvo-minhas svg {
+  display: block;
+}
+
+/* —— Header —— */
+.revvo-minhas-top {
+  position: relative;
+  padding: 0 var(--revvo-minhas-pad) 72px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 78% 88% at 96% 8%, rgba(112, 0, 255, 0.42), rgba(112, 0, 255, 0) 54%),
+    radial-gradient(ellipse 70% 60% at 0 100%, rgba(0, 109, 255, 0.55), rgba(0, 109, 255, 0) 52%),
+    linear-gradient(136deg, #06105e 0%, #09257f 36%, #004fd0 69%, #006dff 100%);
+}
+
+.revvo-minhas-top::after {
+  content: "";
+  position: absolute;
+  left: -28px;
+  right: -28px;
+  bottom: -34px;
+  height: 72px;
+  border-radius: 0 0 50% 50%;
+  background: var(--revvo-minhas-bg);
+  pointer-events: none;
+}
+
+.revvo-minhas__statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.92;
+}
+
+.revvo-minhas__statusIcons {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.revvo-minhas__statusIcons i {
+  display: block;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 2px;
+}
+
+.revvo-minhas__statusIcons i:nth-child(1) {
+  width: 14px;
+  height: 8px;
+  clip-path: polygon(0 100%, 20% 40%, 40% 70%, 60% 20%, 80% 50%, 100% 0, 100% 100%);
+}
+
+.revvo-minhas__statusIcons i:nth-child(2) {
+  width: 12px;
+  height: 9px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.revvo-minhas__statusIcons i:nth-child(3) {
+  width: 18px;
+  height: 9px;
+  border-radius: 3px;
+  position: relative;
+}
+
+.revvo-minhas__statusIcons i:nth-child(3)::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 58%;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.revvo-minhas__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.revvo-minhas__backBtn,
+.revvo-minhas__bellBtn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-minhas__backBtn svg,
+.revvo-minhas__bellBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-minhas__headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revvo-minhas__pointsPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 8px 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.revvo-minhas__pointsPill img {
+  width: 14px;
+  height: 14px;
+}
+
+.revvo-minhas__pointsChevron svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.85;
+}
+
+.revvo-minhas__bellBtn {
+  position: relative;
+}
+
+.revvo-minhas__bellDot {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 0 2px rgba(6, 16, 94, 0.55);
+}
+
+.revvo-minhas__heroCopy {
+  position: relative;
+  z-index: 1;
+  max-width: 240px;
+  margin-top: 14px;
+}
+
+.revvo-minhas__heroCopy h1 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.revvo-minhas__heroCopy p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.revvo-minhas__heroArt {
+  position: absolute;
+  right: -8px;
+  top: 54px;
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+}
+
+.revvo-minhas__rocket {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 18px rgba(0, 20, 90, 0.28));
+}
+
+.revvo-minhas__spark {
+  position: absolute;
+  color: #ffd24d;
+  font-size: 0.82rem;
+  text-shadow: 0 0 8px rgba(255, 210, 77, 0.8);
+}
+
+.revvo-minhas__spark--1 {
+  top: 18px;
+  left: 8px;
+}
+
+.revvo-minhas__spark--2 {
+  top: 42px;
+  right: 12px;
+}
+
+.revvo-minhas__spark--3 {
+  bottom: 28px;
+  left: 24px;
+  font-size: 1rem;
+}
+
+/* —— Main —— */
+.revvo-minhas__main {
+  position: relative;
+  z-index: 2;
+  margin-top: -46px;
+  padding: 0 var(--revvo-minhas-pad) 16px;
+}
+
+.revvo-minhas__summary {
+  padding: 14px 12px 12px;
+  border-radius: 20px;
+  background: var(--revvo-minhas-surface);
+  box-shadow: 0 8px 24px rgba(10, 40, 100, 0.08);
+}
+
+.revvo-minhas__summaryHead,
+.revvo-minhas__sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.revvo-minhas__summaryHead h2,
+.revvo-minhas__sectionHead h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.revvo-minhas__linkBtn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--revvo-minhas-blue);
+  font-size: 0.58rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.revvo-minhas__summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.revvo-minhas__summaryItem {
+  min-width: 0;
+  padding: 8px 4px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.revvo-minhas__summaryItem--blue {
+  background: rgba(0, 85, 255, 0.08);
+  color: var(--revvo-minhas-blue);
+}
+
+.revvo-minhas__summaryItem--yellow {
+  background: rgba(255, 179, 0, 0.12);
+  color: #c68400;
+}
+
+.revvo-minhas__summaryItem--purple {
+  background: rgba(112, 0, 255, 0.08);
+  color: var(--revvo-minhas-purple);
+}
+
+.revvo-minhas__summaryItem--green {
+  background: rgba(0, 200, 83, 0.1);
+  color: #059652;
+}
+
+.revvo-minhas__summaryItem--red {
+  background: rgba(255, 82, 82, 0.1);
+  color: #d93636;
+}
+
+.revvo-minhas__summaryIcon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 0 auto 4px;
+}
+
+.revvo-minhas__summaryIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-minhas__summaryItem strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.revvo-minhas__summaryItem small {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.46rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* —— Filters —— */
+.revvo-minhas__filters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin: 14px 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.revvo-minhas__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.revvo-minhas__filter {
+  flex-shrink: 0;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--revvo-minhas-surface);
+  color: var(--revvo-minhas-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(10, 40, 100, 0.06);
+}
+
+.revvo-minhas__filter--active {
+  background: var(--revvo-minhas-blue);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 85, 255, 0.24);
+}
+
+/* —— Sections —— */
+.revvo-minhas__section {
+  margin-bottom: 18px;
+}
+
+.revvo-minhas__sectionIcon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 85, 255, 0.1);
+  color: var(--revvo-minhas-blue);
+}
+
+.revvo-minhas__sectionIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.revvo-minhas__missionList {
+  display: grid;
+  gap: 12px;
+}
+
+/* —— Mission cards —— */
+.revvo-minhas__mission {
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--revvo-minhas-surface);
+  box-shadow: 0 4px 14px rgba(10, 40, 100, 0.05);
+}
+
+.revvo-minhas__missionTop {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.revvo-minhas__missionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-minhas__missionIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.revvo-minhas__missionIcon--pix {
+  background: rgba(0, 200, 83, 0.12);
+  color: var(--revvo-minhas-green);
+}
+
+.revvo-minhas__missionIcon--convite {
+  background: rgba(112, 0, 255, 0.1);
+  color: var(--revvo-minhas-purple);
+}
+
+.revvo-minhas__missionIcon--compra {
+  background: rgba(255, 145, 0, 0.12);
+  color: var(--revvo-minhas-orange);
+}
+
+.revvo-minhas__missionIcon--social {
+  background: rgba(255, 64, 129, 0.1);
+  color: var(--revvo-minhas-pink);
+}
+
+.revvo-minhas__missionIcon--desafio {
+  background: rgba(0, 85, 255, 0.1);
+  color: var(--revvo-minhas-blue);
+}
+
+.revvo-minhas__missionTag {
+  display: inline-flex;
+  margin-bottom: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.revvo-minhas__missionTag--pix {
+  background: rgba(0, 200, 83, 0.12);
+  color: #059652;
+}
+
+.revvo-minhas__missionTag--convite {
+  background: rgba(112, 0, 255, 0.1);
+  color: var(--revvo-minhas-purple);
+}
+
+.revvo-minhas__missionTag--compra {
+  background: rgba(255, 145, 0, 0.12);
+  color: #d97706;
+}
+
+.revvo-minhas__missionTag--social {
+  background: rgba(255, 64, 129, 0.1);
+  color: var(--revvo-minhas-pink);
+}
+
+.revvo-minhas__missionTag--desafio {
+  background: rgba(0, 85, 255, 0.1);
+  color: var(--revvo-minhas-blue);
+}
+
+.revvo-minhas__missionCopy h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.revvo-minhas__missionCopy p {
+  margin: 4px 0 0;
+  color: var(--revvo-minhas-muted);
+  font-size: 0.64rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.revvo-minhas__missionProgress {
+  margin-top: 10px;
+}
+
+.revvo-minhas__progressTrack {
+  height: 7px;
+  border-radius: 999px;
+  background: #edf1f7;
+  overflow: hidden;
+}
+
+.revvo-minhas__progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.revvo-minhas__progressFill--pix {
+  background: linear-gradient(90deg, #00c853, #16a34a);
+}
+
+.revvo-minhas__progressFill--convite {
+  background: linear-gradient(90deg, #9333ea, #7000ff);
+}
+
+.revvo-minhas__progressFill--compra {
+  background: linear-gradient(90deg, #ff9100, #f97316);
+}
+
+.revvo-minhas__progressFill--social,
+.revvo-minhas__progressFill--desafio {
+  background: linear-gradient(90deg, #0055ff, #7000ff);
+}
+
+.revvo-minhas__progressMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.revvo-minhas__progressMeta strong {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--revvo-minhas-text);
+}
+
+.revvo-minhas__avatars {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.revvo-minhas__avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.46rem;
+  font-weight: 800;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(10, 40, 100, 0.12);
+}
+
+.revvo-minhas__avatar--blue {
+  background: linear-gradient(145deg, #006dff, #004fd0);
+}
+
+.revvo-minhas__avatar--green {
+  background: linear-gradient(145deg, #22c55e, #16a34a);
+}
+
+.revvo-minhas__avatarAdd {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1.5px dashed rgba(112, 0, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(112, 0, 255, 0.06);
+  color: var(--revvo-minhas-purple);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.revvo-minhas__missionMeta {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.revvo-minhas__missionMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8a94ad;
+  font-size: 0.58rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.revvo-minhas__metaIcon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.revvo-minhas__missionFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.revvo-minhas__reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.revvo-minhas__reward strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--revvo-minhas-blue);
+  white-space: nowrap;
+}
+
+.revvo-minhas button.revvo-minhas__actionBtn {
+  flex-shrink: 0;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.54rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.revvo-minhas__actionBtn--primary {
+  border: 0;
+  background: var(--revvo-minhas-blue);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 85, 255, 0.22);
+}
+
+.revvo-minhas__actionBtn--outline-purple {
+  border: 1.5px solid rgba(112, 0, 255, 0.35);
+  background: #fff;
+  color: var(--revvo-minhas-purple);
+}
+
+.revvo-minhas__actionBtn--outline-orange {
+  border: 1.5px solid rgba(255, 145, 0, 0.4);
+  background: #fff;
+  color: #d97706;
+}
+
+.revvo-minhas__actionBtn--outline-pink {
+  border: 1.5px solid rgba(255, 64, 129, 0.35);
+  background: #fff;
+  color: var(--revvo-minhas-pink);
+}
+
+.revvo-minhas__actionBtn--outline-green {
+  border: 1.5px solid rgba(0, 200, 83, 0.35);
+  background: #fff;
+  color: #059652;
+}
+
+/* —— Empty —— */
+.revvo-minhas__empty {
+  padding: 28px 16px;
+  border-radius: 18px;
+  background: var(--revvo-minhas-surface);
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(10, 40, 100, 0.05);
+}
+
+.revvo-minhas__emptyIcon {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.6rem;
+}
+
+.revvo-minhas__empty p {
+  margin: 0;
+  color: var(--revvo-minhas-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* —— Bottom nav —— */
+.revvo-minhas__bottomNav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 100;
+  width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
+  max-width: 100vw;
+  padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 -8px 24px rgba(15, 45, 80, 0.1);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+}
+
+.revvo-minhas__bottomNav button {
+  max-width: 68px;
+  flex: 1;
+  padding: 0 2px 2px;
+  border: 0;
+  background: transparent;
+  color: #69758c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.46rem;
+  font-weight: 600;
+}
+
+.revvo-minhas__navIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-minhas__navIconWrap svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revvo-minhas__bottomNav button.is-active {
+  color: var(--revvo-minhas-purple);
+  font-weight: 800;
+}
+
+.revvo-minhas__bottomNav button.is-active .revvo-minhas__navIconWrap {
+  background: rgba(112, 0, 255, 0.12);
+  color: var(--revvo-minhas-purple);
+}
+
+.revvo-minhas__bottomNav button.is-active::before {
+  content: "";
+  width: 20px;
+  height: 2px;
+  margin-bottom: 2px;
+  border-radius: 999px;
+  background: var(--revvo-minhas-purple);
+}

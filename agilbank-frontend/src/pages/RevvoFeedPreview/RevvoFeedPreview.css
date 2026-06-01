@@ -1,35 +1,8 @@
 /**
- * Feed Revvo — preview 530px (exceção documentada: mais respiro no layout da referência)
+ * Feed Revvo v2 — referência maio/2026, canvas 430px
  */
 
 @import '../../styles/revvo-canvas-scale.css';
-
-/* Escala proporcional para canvas lógico 530px (só .revvo-feed-app) */
-@media (max-width: 529px) { .revvo-feed-app { --revvo-canvas-scale: 0.998; } }
-@media (max-width: 520px) { .revvo-feed-app { --revvo-canvas-scale: 0.981; } }
-@media (max-width: 510px) { .revvo-feed-app { --revvo-canvas-scale: 0.962; } }
-@media (max-width: 500px) { .revvo-feed-app { --revvo-canvas-scale: 0.943; } }
-@media (max-width: 490px) { .revvo-feed-app { --revvo-canvas-scale: 0.925; } }
-@media (max-width: 480px) { .revvo-feed-app { --revvo-canvas-scale: 0.906; } }
-@media (max-width: 470px) { .revvo-feed-app { --revvo-canvas-scale: 0.887; } }
-@media (max-width: 460px) { .revvo-feed-app { --revvo-canvas-scale: 0.868; } }
-@media (max-width: 450px) { .revvo-feed-app { --revvo-canvas-scale: 0.849; } }
-@media (max-width: 440px) { .revvo-feed-app { --revvo-canvas-scale: 0.830; } }
-@media (max-width: 430px) { .revvo-feed-app { --revvo-canvas-scale: 0.811; } }
-@media (max-width: 420px) { .revvo-feed-app { --revvo-canvas-scale: 0.792; } }
-@media (max-width: 410px) { .revvo-feed-app { --revvo-canvas-scale: 0.774; } }
-@media (max-width: 400px) { .revvo-feed-app { --revvo-canvas-scale: 0.755; } }
-@media (max-width: 390px) { .revvo-feed-app { --revvo-canvas-scale: 0.736; } }
-@media (max-width: 380px) { .revvo-feed-app { --revvo-canvas-scale: 0.717; } }
-@media (max-width: 375px) { .revvo-feed-app { --revvo-canvas-scale: 0.708; } }
-@media (max-width: 370px) { .revvo-feed-app { --revvo-canvas-scale: 0.698; } }
-@media (max-width: 360px) { .revvo-feed-app { --revvo-canvas-scale: 0.679; } }
-@media (max-width: 350px) { .revvo-feed-app { --revvo-canvas-scale: 0.660; } }
-@media (max-width: 340px) { .revvo-feed-app { --revvo-canvas-scale: 0.642; } }
-@media (max-width: 330px) { .revvo-feed-app { --revvo-canvas-scale: 0.623; } }
-@media (max-width: 320px) { .revvo-feed-app { --revvo-canvas-scale: 0.604; } }
-@media (max-width: 310px) { .revvo-feed-app { --revvo-canvas-scale: 0.585; } }
-@media (max-width: 300px) { .revvo-feed-app { --revvo-canvas-scale: 0.566; } }
 
 @font-face {
   font-family: "Manrope";
@@ -61,18 +34,21 @@
 }
 
 .revvo-feed-app {
-  --revvo-feed-blue: #0066ff;
-  --revvo-feed-blue-2: #075bff;
-  --revvo-feed-bg: #f5f8ff;
+  --revvo-feed-blue: #0055ff;
+  --revvo-feed-purple: #7000ff;
+  --revvo-feed-bg: #f4f7fc;
   --revvo-feed-text: #07164a;
   --revvo-feed-muted: #617093;
-  --revvo-feed-purple: #7b2cff;
   --revvo-feed-green: #16b85f;
   --revvo-feed-orange: #ff8a00;
   --revvo-feed-gold: #ffb020;
-  --revvo-feed-pad: 18px;
+  --revvo-feed-pad: 12px;
+  --revvo-feed-gap: 8px;
+  --revvo-feed-gap-sm: 6px;
+  --revvo-feed-radius: 18px;
+  --revvo-feed-radius-sm: 12px;
   --revvo-feed-font: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
-  --revvo-canvas-design-width: 530px;
+  --revvo-canvas-design-width: 430px;
   min-height: 100dvh;
   background: var(--revvo-feed-bg);
   font-family: var(--revvo-feed-font);
@@ -90,33 +66,32 @@
 }
 
 .revvo-feed {
-  width: 530px;
+  width: 430px;
   min-height: 100dvh;
   background: var(--revvo-feed-bg);
-  padding-bottom: 92px;
+  padding-bottom: 76px;
 }
 
-/* Topo azul — chips e busca ficam aqui */
+/* —— Header azul —— */
 .revvo-feed-top {
-  padding: 12px var(--revvo-feed-pad) 20px;
-  background: linear-gradient(165deg, #0a6bff 0%, #0066ff 48%, #0550e8 100%);
-  box-shadow: 0 8px 24px rgba(0, 80, 255, 0.22);
+  padding: 10px var(--revvo-feed-pad) 0;
+  background: linear-gradient(165deg, #0a5fff 0%, #0055ff 50%, #0046d9 100%);
 }
 
 .revvo-feed__header {
   display: grid;
-  grid-template-columns: 40px 1fr 40px;
+  grid-template-columns: 36px 1fr 36px;
   align-items: start;
   gap: 6px;
 }
 
 .revvo-feed__iconBtn,
 .revvo-feed__filterBtn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: 0;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -143,9 +118,10 @@
 
 .revvo-feed__titleBlock h1 {
   margin: 0;
-  font-size: 1.22rem;
+  font-size: 1.12rem;
   font-weight: 800;
   color: #fff;
+  letter-spacing: -0.02em;
 }
 
 .revvo-feed__titleBlock h1 span {
@@ -153,20 +129,20 @@
 }
 
 .revvo-feed__titleBlock p {
-  margin: 3px 0 0;
-  font-size: 0.66rem;
+  margin: 2px 0 0;
+  font-size: 0.62rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   line-height: 1.3;
 }
 
 .revvo-feed__bell {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: 0;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -174,48 +150,191 @@
 }
 
 .revvo-feed__bell svg {
-  width: 21px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
 }
 
 .revvo-feed__bell span {
   position: absolute;
   top: 3px;
   right: 3px;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
   border-radius: 999px;
   background: #ff3b30;
   color: #fff;
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   font-weight: 800;
-  line-height: 15px;
+  line-height: 14px;
   text-align: center;
 }
 
-.revvo-feed__searchRow {
-  margin-top: 12px;
+/* Card stats — sobrepõe o header */
+.revvo-feed__statsCard {
+  margin: 10px 0 -20px;
+  padding: 10px 8px;
+  border-radius: 20px;
+  background: #fff;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  box-shadow: 0 12px 32px rgba(8, 40, 100, 0.12);
+  border: 1px solid rgba(10, 40, 100, 0.06);
+  position: relative;
+  z-index: 3;
+}
+
+.revvo-feed__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.revvo-feed__stat small {
+  font-size: 0.52rem;
+  font-weight: 600;
+  color: var(--revvo-feed-muted);
+}
+
+.revvo-feed__stat > strong {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--revvo-feed-text);
+  line-height: 1.15;
+}
+
+.revvo-feed__statIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.revvo-feed__statIcon--coin {
+  background: linear-gradient(145deg, #e8dcff, #d4c4ff);
+  color: var(--revvo-feed-purple);
+}
+
+.revvo-feed__statIcon--star {
+  background: linear-gradient(145deg, #f0e8ff, #e2d4ff);
+  color: var(--revvo-feed-purple);
+}
+
+.revvo-feed__statIcon--star svg {
+  width: 15px;
+  height: 15px;
+}
+
+.revvo-feed__statFire {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.revvo-feed__stat--level {
+  gap: 2px;
+}
+
+.revvo-feed__levelBar {
+  width: 100%;
+  max-width: 48px;
+  height: 3px;
+  border-radius: 999px;
+  background: #e8eef8;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.revvo-feed__levelBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--revvo-feed-purple), #9333ea);
+}
+
+.revvo-feed__stat--progress {
+  gap: 2px;
+}
+
+.revvo-feed__statRing {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.revvo-feed__statRing svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.revvo-feed__ringTrack {
+  fill: none;
+  stroke: #e8eef8;
+  stroke-width: 3;
+}
+
+.revvo-feed__ringFill {
+  fill: none;
+  stroke: var(--revvo-feed-blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 88;
+  stroke-dashoffset: calc(88 - (88 * var(--progress, 80) / 100));
+}
+
+.revvo-feed__statRing > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: var(--revvo-feed-blue);
+}
+
+.revvo-feed__statHint {
+  font-size: 0.46rem;
+  font-weight: 700;
+  color: var(--revvo-feed-muted);
+  line-height: 1.15;
+}
+
+/* —— Corpo —— */
+.revvo-feed-body {
+  padding: 30px var(--revvo-feed-pad) 0;
+  background: var(--revvo-feed-bg);
+}
+
+.revvo-feed__searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: var(--revvo-feed-gap-sm);
+  margin-bottom: var(--revvo-feed-gap);
 }
 
 .revvo-feed__search {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: 40px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--revvo-feed-radius-sm);
   background: #fff;
   border: 1px solid rgba(10, 40, 100, 0.06);
-  box-shadow: 0 4px 14px rgba(8, 40, 100, 0.1);
+  box-shadow: 0 4px 12px rgba(10, 40, 100, 0.06);
 }
 
 .revvo-feed__searchIcon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   color: #8a96ad;
   flex-shrink: 0;
 }
@@ -233,125 +352,220 @@
 
 .revvo-feed__filterBtn {
   background: #fff;
-  color: #617093;
+  color: var(--revvo-feed-muted);
+  border: 1px solid rgba(10, 40, 100, 0.08);
+  border-radius: var(--revvo-feed-radius-sm);
+  box-shadow: 0 3px 10px rgba(10, 40, 100, 0.05);
 }
 
 .revvo-feed__iconSvg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
-/* Folha branca sobre o header (referência) */
-.revvo-feed-sheet {
-  margin-top: -22px;
-  padding: 16px var(--revvo-feed-pad) 0;
-  background: #fff;
-  border-radius: 28px 28px 0 0;
+/* Stories */
+.revvo-feed__stories {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--revvo-feed-gap);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: var(--revvo-feed-gap);
+  padding-bottom: 2px;
+}
+
+.revvo-feed__stories::-webkit-scrollbar {
+  display: none;
+}
+
+.revvo-feed__story {
+  flex-shrink: 0;
+  width: 58px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.revvo-feed__storyRing {
   position: relative;
-  z-index: 2;
-  box-shadow: 0 -6px 28px rgba(8, 40, 100, 0.08);
+  width: 52px;
+  height: 52px;
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--story-ring, #0055ff), #c084fc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.revvo-feed__storyRing img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.revvo-feed__storyBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--revvo-feed-blue);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-style: normal;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 85, 255, 0.3);
+}
+
+.revvo-feed__story small {
+  font-size: 0.54rem;
+  font-weight: 700;
+  color: var(--revvo-feed-text);
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Chips */
 .revvo-feed__chips {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 5px;
   overflow-x: auto;
   scrollbar-width: none;
-  margin-top: 12px;
-  padding-bottom: 2px;
+  margin-bottom: 8px;
 }
 
 .revvo-feed__chips::-webkit-scrollbar {
   display: none;
 }
 
-.revvo-feed-top .revvo-feed__chip {
+.revvo-feed__chip {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 0;
+  gap: 3px;
+  min-height: 26px;
+  padding: 1px 8px;
+  border: 1px solid rgba(10, 40, 100, 0.07);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--revvo-feed-muted);
-  font-size: 0.68rem;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(8, 40, 100, 0.08);
-}
-
-.revvo-feed-top .revvo-feed__chip--active {
   background: #fff;
-  color: var(--revvo-feed-blue);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  color: var(--revvo-feed-muted);
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 5px rgba(10, 40, 100, 0.04);
 }
 
-.revvo-feed-top .revvo-feed__chip--active .revvo-feed__filterIcon {
-  color: var(--revvo-feed-blue);
+.revvo-feed__chip span {
+  font-size: 13px;
 }
 
-.revvo-feed-top .revvo-feed__chip--achievements:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
-  color: #8b5cf6;
+.revvo-feed__chip--active {
+  background: var(--revvo-feed-blue);
+  border-color: var(--revvo-feed-blue);
+  color: #fff;
 }
 
-.revvo-feed-top .revvo-feed__chip--missions:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
+.revvo-feed__chip--active .revvo-feed__filterIcon {
+  color: #fff;
+}
+
+.revvo-feed__chip--missions:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
   color: #ef4444;
 }
 
-.revvo-feed-top .revvo-feed__chip--ranking:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
+.revvo-feed__chip--achievements:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
+  color: #8b5cf6;
+}
+
+.revvo-feed__chip--ranking:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
   color: #22c55e;
 }
 
-.revvo-feed-top .revvo-feed__chip--campaigns:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
+.revvo-feed__chip--campaigns:not(.revvo-feed__chip--active) .revvo-feed__filterIcon {
   color: #f97316;
 }
 
 .revvo-feed__filterIcon {
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
 }
 
-/* Duas colunas ~65% / 35% */
-.revvo-feed__columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.revvo-feed__feedCol {
+/* Posts — coluna única */
+.revvo-feed__feedList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 0;
+  gap: var(--revvo-feed-gap);
 }
 
-/* Posts — referência */
 .revvo-feed__post {
-  padding: 14px 14px 10px;
-  border-radius: 22px;
+  padding: 10px 10px 9px;
+  border-radius: var(--revvo-feed-radius);
   background: #fff;
   border: 1px solid rgba(10, 40, 100, 0.06);
-  box-shadow: 0 6px 20px rgba(10, 40, 100, 0.08);
+  box-shadow: 0 4px 14px rgba(10, 40, 100, 0.06);
+}
+
+.revvo-feed__postGrid {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 84px;
+  grid-template-areas:
+    "avatar main aside"
+    "foot foot foot";
+  column-gap: var(--revvo-feed-gap-sm);
+}
+
+.revvo-feed__postGrid > .revvo-feed__avatarWrap {
+  grid-area: avatar;
+  align-self: start;
 }
 
 .revvo-feed__postMain {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 76px;
-  gap: 10px;
-  align-items: start;
+  grid-area: main;
+  min-width: 0;
+  padding-right: 4px;
+}
+
+.revvo-feed__postAside {
+  grid-area: aside;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.revvo-feed__postFoot {
+  grid-area: foot;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(10, 40, 100, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--revvo-feed-gap-sm);
 }
 
 .revvo-feed__avatarWrap {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
 }
 
 .revvo-feed__avatar {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
   background: #e8eef8;
@@ -361,25 +575,36 @@
 .revvo-feed__avatar--system {
   display: grid;
   place-items: center;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: #fff;
-  background: linear-gradient(145deg, #0a6bff, #075bff);
+  background: linear-gradient(145deg, #0a5fff, #0055ff);
 }
 
 .revvo-feed__avatarBadge {
   position: absolute;
   right: -2px;
   bottom: -2px;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 5px rgba(80, 40, 160, 0.22);
 }
 
 .revvo-feed__avatarBadge--star {
-  background: linear-gradient(145deg, #ffd54f, #ffb020);
+  background: linear-gradient(145deg, #9333ea, #7000ff);
+}
+
+.revvo-feed__avatarBadge--star::after {
+  content: "★";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.46rem;
+  line-height: 1;
 }
 
 .revvo-feed__avatarBadge--crown {
@@ -390,89 +615,148 @@
   background: linear-gradient(145deg, #34d399, #16b85f);
 }
 
-.revvo-feed__postLine {
-  margin: 0;
-  font-size: 0.76rem;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--revvo-feed-text);
-}
-
-.revvo-feed__postLine > strong:first-child {
-  font-weight: 800;
-}
-
-.revvo-feed__postHighlight {
-  font-weight: 800;
-  color: var(--revvo-feed-text);
-}
-
-.revvo-feed__postCopy time {
+.revvo-feed__postMain time {
   display: block;
-  margin-top: 4px;
-  font-size: 0.62rem;
+  margin-top: 2px;
+  font-size: 0.56rem;
   font-weight: 600;
   color: var(--revvo-feed-muted);
 }
 
-.revvo-feed__postReward {
-  text-align: center;
+.revvo-feed__postLine {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.32;
+  color: var(--revvo-feed-text);
+}
+
+.revvo-feed__postLine > strong:first-child,
+.revvo-feed__postHighlight {
+  font-weight: 800;
+  color: var(--revvo-feed-blue);
+}
+
+.revvo-feed__postMenu {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
+  flex-shrink: 0;
 }
 
-.revvo-feed__rewardShield {
-  width: 58px;
-  height: 58px;
+.revvo-feed__postMenu span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #8a96ad;
+}
+
+.revvo-feed__postRewardRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.revvo-feed__postRewardRow .revvo-feed__rvcMark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--revvo-feed-green);
+  color: #fff;
+  font-size: 0.52rem;
+  font-weight: 800;
   display: grid;
   place-items: center;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #f4ecff, #ebe2ff);
-  box-shadow: inset 0 0 0 1px rgba(123, 44, 255, 0.12);
+  flex-shrink: 0;
 }
 
-.revvo-feed__postReward--gold .revvo-feed__rewardShield {
-  background: linear-gradient(145deg, #fff8e8, #ffefcc);
-  box-shadow: inset 0 0 0 1px rgba(255, 176, 32, 0.2);
-}
-
-.revvo-feed__postReward--blue .revvo-feed__rewardShield {
-  background: linear-gradient(145deg, #e8f2ff, #dceaff);
-}
-
-.revvo-feed__postReward--green .revvo-feed__rewardShield {
-  background: linear-gradient(145deg, #e8faf0, #d4f5e4);
-}
-
-.revvo-feed__postReward--orange .revvo-feed__rewardShield {
-  background: linear-gradient(145deg, #fff4e8, #ffe8cc);
-}
-
-.revvo-feed__rewardShield img {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-}
-
-.revvo-feed__postReward small {
-  font-size: 0.5rem;
-  font-weight: 800;
-  color: var(--revvo-feed-purple);
-  letter-spacing: 0.04em;
-}
-
-.revvo-feed__postReward strong {
-  font-size: 0.62rem;
+.revvo-feed__postRewardRow strong {
+  font-size: 0.82rem;
   font-weight: 800;
   color: var(--revvo-feed-green);
+  letter-spacing: -0.01em;
+}
+
+.revvo-feed__postBadge {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -4px;
+}
+
+.revvo-feed__postBadge::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.22) 0%, rgba(147, 51, 234, 0) 70%);
+  z-index: 0;
+}
+
+.revvo-feed__postBadge--mission::before {
+  inset: 4px;
+  background: radial-gradient(circle, rgba(192, 132, 252, 0.45) 0%, rgba(147, 51, 234, 0.08) 55%, rgba(147, 51, 234, 0) 72%);
+}
+
+.revvo-feed__badgeAura {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(216, 180, 254, 0.55) 0%, rgba(147, 51, 234, 0) 68%);
+  z-index: 0;
+}
+
+.revvo-feed__badgeShield {
+  position: relative;
+  z-index: 1;
+  width: 68px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(165deg, #c084fc 0%, #9333ea 42%, #7c3aed 100%);
+  clip-path: polygon(50% 0%, 96% 16%, 90% 68%, 50% 100%, 10% 68%, 4% 16%);
+  box-shadow: 0 8px 18px rgba(112, 0, 255, 0.24);
+}
+
+.revvo-feed__badgeBrand {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+}
+
+.revvo-feed__postBadge img:not(.revvo-feed__badgeCheck):not(.revvo-feed__badgeBrand) {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 6px 14px rgba(80, 40, 160, 0.2));
+}
+
+.revvo-feed__badgeCheck {
+  position: absolute;
+  right: 2px;
+  bottom: 6px;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  z-index: 2;
 }
 
 .revvo-feed__postActions {
-  margin-top: 8px;
-  padding-top: 7px;
-  border-top: 1px solid rgba(10, 40, 100, 0.06);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -491,255 +775,205 @@
 }
 
 .revvo-feed__actionBtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.revvo-feed__actionBtn--like {
+  color: #ef4444;
+}
+
+.revvo-feed__actionBtn--like svg {
   width: 15px;
   height: 15px;
 }
 
-.revvo-feed__actionMore {
-  margin-left: auto;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 8px;
-  background: #f0f4fc;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-}
-
-.revvo-feed__actionMore span {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #8a96ad;
-}
-
-/* Sidebar */
-.revvo-feed__sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-
-.revvo-feed__widget {
-  padding: 12px;
-  border-radius: 18px;
-  background: #fff;
-  border: 1px solid rgba(10, 40, 100, 0.07);
-  box-shadow: 0 4px 14px rgba(10, 40, 100, 0.07);
-}
-
-.revvo-feed__widget h3 {
-  margin: 0 0 6px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--revvo-feed-text);
-}
-
-.revvo-feed__widget--streak {
-  text-align: center;
-}
-
-.revvo-feed__streakHero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin: 4px 0 2px;
-}
-
-.revvo-feed__widgetFire {
-  width: 48px;
-  height: auto;
-  object-fit: contain;
-}
-
-.revvo-feed__streakNum {
-  font-size: 2rem;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--revvo-feed-orange);
-  letter-spacing: -0.04em;
-}
-
-.revvo-feed__widgetHighlight {
-  margin: 0 0 8px;
-  font-size: 0.76rem;
-  font-weight: 800;
-  color: var(--revvo-feed-orange);
-}
-
-.revvo-feed__week {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
-}
-
-.revvo-feed__week span {
-  text-align: center;
-  font-size: 0.48rem;
-  font-weight: 700;
-  color: var(--revvo-feed-muted);
-}
-
-.revvo-feed__week span.is-done {
-  color: var(--revvo-feed-orange);
-}
-
-.revvo-feed__week span i {
-  display: block;
-  font-style: normal;
-  font-size: 0.52rem;
-  margin-top: 1px;
-}
-
-.revvo-feed__widget--progress {
-  text-align: center;
-}
-
-.revvo-feed__ring {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 8px;
-}
-
-.revvo-feed__ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.revvo-feed__ringTrack {
-  fill: none;
-  stroke: #e8eef8;
-  stroke-width: 3;
-}
-
-.revvo-feed__ringFill {
-  fill: none;
-  stroke: url(#revvo-feed-ring-gradient);
-  stroke: var(--revvo-feed-blue);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 97.4;
-  stroke-dashoffset: calc(97.4 - (97.4 * var(--progress, 80) / 100));
-}
-
-.revvo-feed__ring > span {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 0.82rem;
-  font-weight: 800;
+.revvo-feed__postCta {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1.5px solid var(--revvo-feed-blue);
+  background: transparent;
   color: var(--revvo-feed-blue);
-}
-
-.revvo-feed__widgetHint {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 0.52rem;
-  font-weight: 700;
-  color: var(--revvo-feed-muted);
-  line-height: 1.25;
-}
-
-.revvo-feed__widgetHint img {
-  object-fit: contain;
-}
-
-.revvo-feed__rankList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.revvo-feed__rankList li {
-  display: grid;
-  grid-template-columns: 14px 24px minmax(0, 1fr) auto;
-  gap: 4px;
-  align-items: center;
-  font-size: 0.54rem;
-  font-weight: 700;
-}
-
-.revvo-feed__rankList img {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.revvo-feed__rankPos {
-  color: var(--revvo-feed-muted);
+  font-size: 0.6rem;
   font-weight: 800;
-}
-
-.revvo-feed__rankName {
-  color: var(--revvo-feed-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Ranking semanal */
+.revvo-feed__rankingBlock {
+  margin-top: var(--revvo-feed-gap-sm);
+  padding: 12px;
+  border-radius: var(--revvo-feed-radius);
+  background: #fff;
+  border: 1px solid rgba(10, 40, 100, 0.06);
+  box-shadow: 0 6px 20px rgba(10, 40, 100, 0.08);
+}
+
+.revvo-feed__rankingHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--revvo-feed-gap-sm);
+  margin-bottom: var(--revvo-feed-gap);
+}
+
+.revvo-feed__rankingHead h2 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.revvo-feed__rankingTimer {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--revvo-feed-muted);
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f0f4fc;
+}
+
+.revvo-feed__rankPodium {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--revvo-feed-gap-sm);
+  align-items: start;
+}
+
+.revvo-feed__podiumItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.revvo-feed__podiumItem strong {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--revvo-feed-text);
+  line-height: 1.15;
+}
+
+.revvo-feed__podiumItem .revvo-feed__rankRvc {
+  font-size: 0.52rem;
+}
+
+.revvo-feed__podiumAvatar {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+}
+
+.revvo-feed__podiumFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.revvo-feed__podiumPhoto {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.revvo-feed__podiumAvatar--you {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(0, 85, 255, 0.1);
+  border: 2px solid var(--revvo-feed-blue);
+}
+
+.revvo-feed__podiumAvatar--you .revvo-feed__podiumPhoto {
+  width: 34px;
+  height: 34px;
+}
+
+.revvo-feed__podiumPos {
+  position: absolute;
+  bottom: -2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--revvo-feed-blue);
+  color: #fff;
+  font-size: 0.48rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  z-index: 3;
+  border: 1.5px solid #fff;
+}
+
+.revvo-feed__podiumItem--1 .revvo-feed__podiumPos {
+  background: linear-gradient(145deg, #ffd54f, #ffb020);
+  color: #5c3d00;
+}
+
+.revvo-feed__podiumItem--2 .revvo-feed__podiumPos {
+  background: linear-gradient(145deg, #e2e8f0, #94a3b8);
+  color: #334155;
+}
+
+.revvo-feed__podiumItem--3 .revvo-feed__podiumPos {
+  background: linear-gradient(145deg, #fdba74, #ea580c);
+  color: #fff;
+}
+
+.revvo-feed__podiumItem--you .revvo-feed__podiumPos {
+  background: var(--revvo-feed-blue);
+  color: #fff;
+}
+
 .revvo-feed__rankRvc {
-  color: var(--revvo-feed-gold);
+  color: var(--revvo-feed-green);
   font-weight: 800;
   white-space: nowrap;
 }
 
 .revvo-feed__rankYou {
-  margin-top: 8px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(0, 102, 255, 0.08);
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: 4px;
-  align-items: center;
-  font-size: 0.56rem;
-  font-weight: 800;
-  color: var(--revvo-feed-blue);
+  display: none;
 }
 
 .revvo-feed__rankLink {
-  margin-top: 6px;
+  margin-top: var(--revvo-feed-gap);
   width: 100%;
   border: 0;
   background: transparent;
   color: var(--revvo-feed-blue);
-  font-size: 0.54rem;
+  font-size: 0.66rem;
   font-weight: 800;
-  text-align: left;
-  padding: 0;
+  text-align: center;
+  padding: 6px 0 0;
 }
 
-/* Campanhas em destaque — cards brancos + painel lilás (referência) */
+/* Campanhas */
 .revvo-feed__spotlight {
-  margin-top: 16px;
+  margin-top: var(--revvo-feed-gap);
 }
 
 .revvo-feed__spotlightHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: var(--revvo-feed-gap);
 }
 
 .revvo-feed__spotlightHead h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 800;
 }
 
@@ -747,7 +981,7 @@
   border: 0;
   background: transparent;
   color: var(--revvo-feed-blue);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 800;
   padding: 0;
 }
@@ -755,10 +989,10 @@
 .revvo-feed__spotlightScroll {
   display: flex;
   flex-wrap: nowrap;
-  gap: 14px;
+  gap: var(--revvo-feed-gap);
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 2px 2px 6px;
+  padding-bottom: 2px;
 }
 
 .revvo-feed__spotlightScroll::-webkit-scrollbar {
@@ -767,16 +1001,15 @@
 
 .revvo-feed__spotCard {
   flex-shrink: 0;
-  width: 420px;
-  border-radius: 24px;
+  width: 300px;
+  border-radius: var(--revvo-feed-radius);
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(10, 40, 100, 0.12);
+  box-shadow: 0 8px 22px rgba(10, 40, 100, 0.1);
 }
 
 .revvo-feed__spotCard--gradient {
-  background: linear-gradient(125deg, #6d28d9 0%, #9333ea 38%, #c026d3 72%, #e879f9 100%);
+  background: linear-gradient(125deg, #6d28d9 0%, #9333ea 45%, #c026d3 100%);
   color: #fff;
-  border: 0;
 }
 
 .revvo-feed__spotCard--orange {
@@ -787,12 +1020,12 @@
 
 .revvo-feed__spotInner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 175px;
-  min-height: 176px;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  min-height: 138px;
 }
 
 .revvo-feed__spotCopy {
-  padding: 14px 12px 14px 16px;
+  padding: 11px 10px 11px 12px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -800,16 +1033,16 @@
 
 .revvo-feed__spotBonus {
   align-self: flex-start;
-  padding: 4px 10px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 0.56rem;
+  font-size: 0.5rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  color: #fff;
+  letter-spacing: 0.04em;
 }
 
 .revvo-feed__spotCard--gradient .revvo-feed__spotBonus {
   background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .revvo-feed__spotCard--orange .revvo-feed__spotBonus {
@@ -820,141 +1053,112 @@
 .revvo-feed__spotBrand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 10px 0 6px;
+  gap: 6px;
+  margin: 7px 0 4px;
 }
 
 .revvo-feed__spotBrand img {
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.95);
-  padding: 3px;
-}
-
-.revvo-feed__spotCard--orange .revvo-feed__spotBrand img {
-  background: #f4f7fc;
+  padding: 2px;
 }
 
 .revvo-feed__spotBrand h3 {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.76rem;
   font-weight: 800;
-  line-height: 1.2;
-}
-
-.revvo-feed__spotCard--gradient .revvo-feed__spotBrand h3 {
-  color: #fff;
+  line-height: 1.15;
 }
 
 .revvo-feed__spotDesc {
   margin: 0;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.35;
   flex: 1;
 }
 
 .revvo-feed__spotCard--gradient .revvo-feed__spotDesc {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.revvo-feed__spotCard--gradient .revvo-feed__spotDesc strong {
+  color: #bbf7d0;
+  font-weight: 800;
 }
 
 .revvo-feed__spotCard--orange .revvo-feed__spotDesc {
   color: var(--revvo-feed-muted);
 }
 
-.revvo-feed__spotDesc strong {
+.revvo-feed__spotCard--orange .revvo-feed__spotDesc strong {
+  color: #e56a00;
   font-weight: 800;
 }
 
-.revvo-feed__spotCard--gradient .revvo-feed__spotDesc strong {
-  color: #86efac;
-}
-
-.revvo-feed__spotCard--orange .revvo-feed__spotDesc strong {
-  color: #e56a00;
-}
-
 .revvo-feed__spotFoot {
-  margin-top: 10px;
+  margin-top: 7px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .revvo-feed__spotTimer {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.62rem;
+  gap: 3px;
+  font-size: 0.54rem;
   font-weight: 700;
 }
 
 .revvo-feed__spotTimer--green {
-  color: var(--revvo-feed-green);
+  color: #bbf7d0;
 }
 
-.revvo-feed__spotTimer--urgent {
+.revvo-feed__spotCard--orange .revvo-feed__spotTimer--urgent {
   color: #e53935;
 }
 
-.revvo-feed__spotTimer svg {
-  width: 15px;
-  height: 15px;
-}
-
 .revvo-feed__spotCard--gradient .revvo-feed__spotCta {
-  background: rgba(255, 255, 255, 0.95);
-  color: #7c3aed;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 11px;
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(91, 33, 182, 0.3);
 }
 
 .revvo-feed__spotCard--orange .revvo-feed__spotCta {
-  background: var(--revvo-feed-blue);
-  color: #fff;
-  box-shadow: 0 6px 14px rgba(0, 102, 255, 0.28);
-}
-
-.revvo-feed__spotCta {
   border: 0;
   border-radius: 999px;
-  padding: 8px 16px;
-  font-size: 0.66rem;
+  padding: 6px 11px;
+  background: var(--revvo-feed-purple);
+  color: #fff;
+  font-size: 0.58rem;
   font-weight: 800;
-  white-space: nowrap;
 }
 
 .revvo-feed__spotArt {
-  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.revvo-feed__spotCard--gradient .revvo-feed__spotArt {
-  background: transparent;
-}
-
-.revvo-feed__spotCard--orange .revvo-feed__spotArt {
-  background: linear-gradient(180deg, #fff8f0 0%, #ffe8cc 100%);
 }
 
 .revvo-feed__spotArt img {
   width: 100%;
   height: 100%;
-  min-height: 176px;
+  min-height: 138px;
   object-fit: cover;
   object-position: center top;
 }
 
-.revvo-feed__spotCard--gradient .revvo-feed__spotTimer--green {
-  color: #bbf7d0;
-}
-
-/* Bottom nav + FAB */
+/* Bottom nav */
 .revvo-feed-bottom-nav {
   position: fixed;
   left: 50%;
@@ -962,10 +1166,10 @@
   z-index: 100;
   width: calc(var(--revvo-canvas-design-width) * var(--revvo-canvas-scale));
   max-width: 100vw;
-  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
-  border-radius: 26px 26px 0 0;
+  padding: 6px 10px max(6px, env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
   background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 -8px 24px rgba(15, 45, 80, 0.12);
+  box-shadow: 0 -6px 20px rgba(15, 45, 80, 0.1);
   transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
@@ -973,25 +1177,25 @@
 }
 
 .revvo-feed-bottom-nav button:not(.revvo-feed__navFab) {
-  max-width: 68px;
+  max-width: 64px;
   flex: 1;
-  padding: 2px;
+  padding: 1px;
   border: 0;
   background: transparent;
   color: #69758c;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .revvo-feed-bottom-nav button:not(.revvo-feed__navFab) svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .revvo-feed-bottom-nav small {
-  font-size: 0.6rem;
+  font-size: 0.54rem;
   font-weight: 600;
 }
 
@@ -1001,21 +1205,21 @@
 }
 
 .revvo-feed__navFab {
-  width: 52px;
-  height: 52px;
-  margin-top: -22px;
+  width: 46px;
+  height: 46px;
+  margin-top: -18px;
   border: 0;
   border-radius: 50%;
-  background: linear-gradient(145deg, #0a6bff, #0066ff);
+  background: linear-gradient(145deg, #9333ea, #7000ff);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 22px rgba(0, 102, 255, 0.38);
+  box-shadow: 0 8px 18px rgba(112, 0, 255, 0.32);
   flex: 0 0 auto;
 }
 
 .revvo-feed__navFab svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }

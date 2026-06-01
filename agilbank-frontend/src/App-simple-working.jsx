@@ -14,6 +14,8 @@ import RevvoWalletPreview from './pages/RevvoWalletPreview/index.jsx';
 import RevvoRankingPreview from './pages/RevvoRankingPreview/index.jsx';
 import RevvoProfilePreview from './pages/RevvoProfilePreview/index.jsx';
 import RevvoFeedPreview from './pages/RevvoFeedPreview/index.jsx';
+import RevvoMinhasMissoesPreview from './pages/RevvoMinhasMissoesPreview/index.jsx';
+import RevvoSaqueResgatePreview from './pages/RevvoSaqueResgatePreview/index.jsx';
 import { AuthProvider as RegisterAuthProvider } from './hooks/useAuth.jsx';
 import { authService } from './services/authService';
 import { clearStoredAuth, getStoredAuth, storeAuthSession } from './utils/authStorage';
@@ -214,6 +216,9 @@ const App = () => {
           <Route path="/dev/revvo-home" element={<RevvoHomePreview />} />
           <Route path="/dev/revvo-feed" element={<RevvoFeedPreview />} />
           <Route path="/dev/revvo-missions" element={<RevvoMissionsPreview />} />
+          <Route path="/dev/revvo-minhas-missoes" element={<RevvoMinhasMissoesPreview />} />
+          <Route path="/dev/revvo-saque" element={<RevvoSaqueResgatePreview />} />
+          <Route path="/dev/revvo-resgate" element={<RevvoSaqueResgatePreview />} />
           <Route path="/dev/revvo-carteira" element={<RevvoWalletPreview />} />
           <Route path="/dev/revvo-ganhos" element={<RevvoWalletPreview />} />
           <Route path="/dev/revvo-ranking" element={<RevvoRankingPreview />} />

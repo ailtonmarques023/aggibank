@@ -27,119 +27,157 @@ const FilterIcon = ({ type }) => {
   return <Icon className="revvo-feed__filterIcon">{paths[type] || paths.grid}</Icon>;
 };
 
-const PostActions = ({ likes, comments, shares }) => (
-  <div className="revvo-feed__postActions">
-    <button type="button" className="revvo-feed__actionBtn" aria-label="Curtir">
-      <OutlineIcon>
-        <path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5A5.45 5.45 0 0 1 7.5 3C9.24 3 10.91 3.81 12 5.08A6.02 6.02 0 0 1 16.5 3 5.45 5.45 0 0 1 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z" stroke="currentColor" strokeWidth="1.5" />
-      </OutlineIcon>
-      <span>{likes}</span>
-    </button>
-    <button type="button" className="revvo-feed__actionBtn" aria-label="Comentar">
-      <OutlineIcon>
-        <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Zm-2 12H6v-2h12v2Z" stroke="currentColor" strokeWidth="1.5" />
-      </OutlineIcon>
-      <span>{comments}</span>
-    </button>
-    <button type="button" className="revvo-feed__actionBtn" aria-label="Compartilhar">
-      <OutlineIcon>
-        <path d="M18 16.08c-.76 1.64-2.55 2.7-4.18 2.7-2.2 0-4-1.79-4-4 0-.55.11-1.08.32-1.57L3 9.5V7l4.5 1.2C8.4 7.45 9.67 7 11 7c2.76 0 5 2.24 5 5 0 .69-.14 1.35-.4 1.96L21 16l-3-3.92Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      </OutlineIcon>
-      <span>{shares}</span>
-    </button>
-    <button type="button" className="revvo-feed__actionMore" aria-label="Mais opções">
-      <span /><span /><span />
-    </button>
-  </div>
+const UserStatsCard = ({ stats }) => (
+  <article className="revvo-feed__statsCard" aria-label="Seu resumo no Revvo">
+    <div className="revvo-feed__stat">
+      <span className="revvo-feed__statIcon revvo-feed__statIcon--coin">R</span>
+      <small>{stats.balance.label}</small>
+      <strong>{stats.balance.value}</strong>
+    </div>
+    <div className="revvo-feed__stat revvo-feed__stat--level">
+      <span className="revvo-feed__statIcon revvo-feed__statIcon--star">
+        <Icon><path d="M12 2l2.2 4.5 4.9.7-3.5 3.4.8 4.9L12 13.8 7.6 15.5l.8-4.9L5 7.2l4.9-.7L12 2Z" /></Icon>
+      </span>
+      <small>{stats.level.label}</small>
+      <strong>{stats.level.value}</strong>
+      <div className="revvo-feed__levelBar" aria-hidden="true">
+        <span style={{ width: `${stats.level.progress}%` }} />
+      </div>
+    </div>
+    <div className="revvo-feed__stat">
+      <img src={stats.streak.fireImage} alt="" className="revvo-feed__statFire" decoding="async" />
+      <small>{stats.streak.label}</small>
+      <strong>{stats.streak.value}</strong>
+    </div>
+    <div className="revvo-feed__stat revvo-feed__stat--progress">
+      <div className="revvo-feed__statRing" style={{ '--progress': stats.progress.percent }}>
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <circle className="revvo-feed__ringTrack" cx="18" cy="18" r="14" />
+          <circle className="revvo-feed__ringFill" cx="18" cy="18" r="14" />
+        </svg>
+        <span>{stats.progress.percent}%</span>
+      </div>
+      <small>{stats.progress.label}</small>
+      <span className="revvo-feed__statHint">{stats.progress.hint}</span>
+    </div>
+  </article>
 );
 
-const FeedPostCard = ({ post }) => (
+const WeeklyRankingPodium = ({ ranking, onOpen }) => (
+  <section className="revvo-feed__rankingBlock" aria-label={ranking.title}>
+    <div className="revvo-feed__rankingHead">
+      <h2>{ranking.title}</h2>
+      <span className="revvo-feed__rankingTimer">{ranking.countdown}</span>
+    </div>
+    <div className="revvo-feed__rankPodium">
+      {ranking.top.map((item) => (
+        <div key={item.id} className={`revvo-feed__podiumItem revvo-feed__podiumItem--${item.position}`}>
+          <div className="revvo-feed__podiumAvatar">
+            <img src={item.frame} alt="" className="revvo-feed__podiumFrame" decoding="async" />
+            <img src={item.avatar} alt="" className="revvo-feed__podiumPhoto" decoding="async" />
+            <span className="revvo-feed__podiumPos">{item.position}</span>
+          </div>
+          <strong>{item.name}</strong>
+          <span className="revvo-feed__rankRvc">{item.rvc}</span>
+        </div>
+      ))}
+      <div className="revvo-feed__podiumItem revvo-feed__podiumItem--you">
+        <div className="revvo-feed__podiumAvatar revvo-feed__podiumAvatar--you">
+          <img src={ranking.you.avatar} alt="" className="revvo-feed__podiumPhoto" decoding="async" />
+          <span className="revvo-feed__podiumPos">{ranking.you.position}</span>
+        </div>
+        <strong>{ranking.you.label}</strong>
+        <span className="revvo-feed__rankRvc">{ranking.you.rvc}</span>
+      </div>
+    </div>
+    <button type="button" className="revvo-feed__rankLink" onClick={onOpen}>
+      {ranking.linkLabel} <span aria-hidden="true">›</span>
+    </button>
+  </section>
+);
+
+const FeedPostCard = ({ post, onCta }) => (
   <article className={`revvo-feed__post revvo-feed__post--${post.type}`}>
-    <div className="revvo-feed__postMain">
+    <div className="revvo-feed__postGrid">
       <div className="revvo-feed__avatarWrap">
         {post.avatar ? (
-          <img className="revvo-feed__avatar" src={post.avatar} alt="" width="44" height="44" decoding="async" />
+          <img className="revvo-feed__avatar" src={post.avatar} alt="" width="38" height="38" decoding="async" />
         ) : (
           <span className="revvo-feed__avatar revvo-feed__avatar--system" aria-hidden="true">R</span>
         )}
-        {post.avatarBadge ? <span className={`revvo-feed__avatarBadge revvo-feed__avatarBadge--${post.avatarBadge}`} aria-hidden="true" /> : null}
+        {post.avatarBadge ? (
+          <span className={`revvo-feed__avatarBadge revvo-feed__avatarBadge--${post.avatarBadge}`} aria-hidden="true" />
+        ) : null}
       </div>
-      <div className="revvo-feed__postCopy">
+
+      <div className="revvo-feed__postMain">
         <p className="revvo-feed__postLine">
           <strong>{post.userName}</strong> {post.textBefore}
           {post.textHighlight ? <strong className="revvo-feed__postHighlight">{post.textHighlight}</strong> : null}
           {post.textAfter}
         </p>
         <time>{post.time}</time>
-      </div>
-      <div className={`revvo-feed__postReward revvo-feed__postReward--${post.rewardTone || 'default'}`}>
-        <div className="revvo-feed__rewardShield">
-          <img src={post.badgeImage} alt="" decoding="async" />
+        <div className="revvo-feed__postRewardRow">
+          <span className="revvo-feed__rvcMark">R</span>
+          <strong>{post.reward}</strong>
         </div>
-        {post.rewardSub ? <small>{post.rewardSub}</small> : null}
-        <strong>{post.reward}</strong>
+      </div>
+
+      <div className="revvo-feed__postAside">
+        <button type="button" className="revvo-feed__postMenu" aria-label="Mais opções">
+          <span /><span /><span />
+        </button>
+        <div className={`revvo-feed__postBadge ${post.type === 'mission_completed' ? 'revvo-feed__postBadge--mission' : ''}`}>
+          {post.type === 'mission_completed' ? (
+            <>
+              <span className="revvo-feed__badgeAura" aria-hidden="true" />
+              <span className="revvo-feed__badgeShield">
+                <img className="revvo-feed__badgeBrand" src={post.brandLogo || post.badgeImage} alt="" decoding="async" />
+              </span>
+            </>
+          ) : (
+            <img src={post.badgeImage} alt="" decoding="async" />
+          )}
+          {post.badgeCheck ? (
+            <img
+              className="revvo-feed__badgeCheck"
+              src="/banco/assets/revvo-feed/revvo-feed-check-approved.png"
+              alt=""
+              decoding="async"
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <div className="revvo-feed__postFoot">
+        <div className="revvo-feed__postActions">
+          <button type="button" className="revvo-feed__actionBtn revvo-feed__actionBtn--like" aria-label="Curtir">
+            <Icon>
+              <path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5A5.45 5.45 0 0 1 7.5 3C9.24 3 10.91 3.81 12 5.08A6.02 6.02 0 0 1 16.5 3 5.45 5.45 0 0 1 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z" />
+            </Icon>
+            <span>{post.likes}</span>
+          </button>
+          <button type="button" className="revvo-feed__actionBtn" aria-label="Comentar">
+            <OutlineIcon>
+              <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Zm-2 12H6v-2h12v2Z" stroke="currentColor" strokeWidth="1.5" />
+            </OutlineIcon>
+            <span>{post.comments}</span>
+          </button>
+          <button type="button" className="revvo-feed__actionBtn" aria-label="Compartilhar">
+            <OutlineIcon>
+              <path d="M18 16.08c-.76 1.64-2.55 2.7-4.18 2.7-2.2 0-4-1.79-4-4 0-.55.11-1.08.32-1.57L3 9.5V7l4.5 1.2C8.4 7.45 9.67 7 11 7c2.76 0 5 2.24 5 5 0 .69-.14 1.35-.4 1.96L21 16l-3-3.92Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            </OutlineIcon>
+            <span>{post.shares}</span>
+          </button>
+        </div>
+        {post.ctaLabel ? (
+          <button type="button" className="revvo-feed__postCta" onClick={() => onCta(post)}>
+            {post.ctaLabel}
+          </button>
+        ) : null}
       </div>
     </div>
-    <PostActions likes={post.likes} comments={post.comments} shares={post.shares} />
   </article>
-);
-
-const SidebarWidgets = ({ sidebar, onRanking }) => (
-  <aside className="revvo-feed__sidebar" aria-label="Seu progresso no Revvo">
-    <article className="revvo-feed__widget revvo-feed__widget--streak">
-      <h3>{sidebar.streak.title}</h3>
-      <div className="revvo-feed__streakHero">
-        <img src={sidebar.streak.fireImage} alt="" className="revvo-feed__widgetFire" decoding="async" />
-        <span className="revvo-feed__streakNum">{sidebar.streak.days}</span>
-      </div>
-      <p className="revvo-feed__widgetHighlight">{sidebar.streak.label}</p>
-      <div className="revvo-feed__week" aria-label="Dias da semana">
-        {sidebar.streak.weekDays.map((day, i) => (
-          <span key={`${day}-${i}`} className={sidebar.streak.checked[i] ? 'is-done' : ''}>
-            <small>{day}</small>
-            {sidebar.streak.checked[i] ? <i aria-hidden="true">✓</i> : null}
-          </span>
-        ))}
-      </div>
-    </article>
-
-    <article className="revvo-feed__widget revvo-feed__widget--progress">
-      <h3>{sidebar.progress.title}</h3>
-      <div className="revvo-feed__ring" style={{ '--progress': sidebar.progress.percent }}>
-        <svg viewBox="0 0 36 36" aria-hidden="true">
-          <circle className="revvo-feed__ringTrack" cx="18" cy="18" r="15.5" />
-          <circle className="revvo-feed__ringFill" cx="18" cy="18" r="15.5" />
-        </svg>
-        <span>{sidebar.progress.percent}%</span>
-      </div>
-      <p className="revvo-feed__widgetHint">
-        <img src={sidebar.progress.badgeImage} alt="" width="20" height="20" decoding="async" />
-        {sidebar.progress.hint}
-      </p>
-    </article>
-
-    <article className="revvo-feed__widget revvo-feed__widget--ranking">
-      <h3>{sidebar.weeklyRanking.title}</h3>
-      <ul className="revvo-feed__rankList">
-        {sidebar.weeklyRanking.top.map((item, index) => (
-          <li key={item.id}>
-            <span className="revvo-feed__rankPos">{index + 1}</span>
-            <img src={item.avatar} alt="" width="30" height="30" decoding="async" />
-            <span className="revvo-feed__rankName">{item.name}</span>
-            <span className="revvo-feed__rankRvc">{item.rvc}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="revvo-feed__rankYou">
-        <span>{sidebar.weeklyRanking.you.position}.</span>
-        <span>{sidebar.weeklyRanking.you.label}</span>
-        <span className="revvo-feed__rankRvc">{sidebar.weeklyRanking.you.rvc}</span>
-      </div>
-      <button type="button" className="revvo-feed__rankLink" onClick={onRanking}>
-        {sidebar.weeklyRanking.linkLabel} <span aria-hidden="true">›</span>
-      </button>
-    </article>
-  </aside>
 );
 
 const RevvoFeedPreview = () => {
@@ -157,6 +195,12 @@ const RevvoFeedPreview = () => {
     ],
     []
   );
+
+  const handlePostCta = (post) => {
+    if (post.rankingPath) navigate(post.rankingPath);
+    else if (post.missionId) navigate(`/dev/revvo-mission/${post.missionId}`);
+    else navigate('/dev/revvo-missions');
+  };
 
   const goMission = (id) => navigate(id ? `/dev/revvo-mission/${id}` : '/dev/revvo-missions');
 
@@ -185,6 +229,10 @@ const RevvoFeedPreview = () => {
               </button>
             </header>
 
+            <UserStatsCard stats={feedData.userStats} />
+          </section>
+
+          <main className="revvo-feed-body">
             <div className="revvo-feed__searchRow">
               <label className="revvo-feed__search">
                 <OutlineIcon className="revvo-feed__searchIcon">
@@ -197,6 +245,18 @@ const RevvoFeedPreview = () => {
                   <path d="M4 7h10M18 7h2M4 17h3M11 17h9M8 5v4M15 15v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </OutlineIcon>
               </button>
+            </div>
+
+            <div className="revvo-feed__stories" aria-label="Atalhos rápidos">
+              {feedData.stories.map((story) => (
+                <button key={story.id} type="button" className="revvo-feed__story" style={{ '--story-ring': story.ring }}>
+                  <span className="revvo-feed__storyRing">
+                    <img src={story.image} alt="" decoding="async" />
+                    {story.badge ? <em className="revvo-feed__storyBadge">{story.badge}</em> : null}
+                  </span>
+                  <small>{story.label}</small>
+                </button>
+              ))}
             </div>
 
             <nav className="revvo-feed__chips" aria-label="Filtros do feed">
@@ -212,18 +272,14 @@ const RevvoFeedPreview = () => {
                 </button>
               ))}
             </nav>
-          </section>
 
-          <main className="revvo-feed-sheet">
-            <div className="revvo-feed__columns">
-              <section className="revvo-feed__feedCol" aria-label="Atividades da comunidade">
-                {feedData.posts.map((post) => (
-                  <FeedPostCard key={post.id} post={post} />
-                ))}
-              </section>
+            <section className="revvo-feed__feedList" aria-label="Atividades da comunidade">
+              {feedData.posts.map((post) => (
+                <FeedPostCard key={post.id} post={post} onCta={handlePostCta} />
+              ))}
+            </section>
 
-              <SidebarWidgets sidebar={feedData.sidebar} onRanking={() => navigate('/dev/revvo-ranking')} />
-            </div>
+            <WeeklyRankingPodium ranking={feedData.weeklyRanking} onOpen={() => navigate('/dev/revvo-ranking')} />
 
             <section className="revvo-feed__spotlight" aria-labelledby="revvo-feed-spotlight-title">
               <div className="revvo-feed__spotlightHead">
